@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>orbital — AI CLI environment manager</title>
+  <meta name="description" content="Per-shell environment manager for AI CLI tools. Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts." />
+  <link rel="icon" href="../assets/icon-1024x1024.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #161920;
+      --border:    #252932;
+      --accent:    #7c6af7;
+      --accent2:   #5eead4;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --code-bg:   #1e2130;
+      --radius:    12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,15,20,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -.02em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .nav-logo img { width: 28px; height: 28px; border-radius: 6px; }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+      font-size: .9rem;
+    }
+
+    .nav-links a { color: var(--muted); transition: color .15s; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 6rem 2rem 5rem;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .hero-logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 24px;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 60px rgba(124,106,247,.3);
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(124,106,247,.15);
+      color: var(--accent);
+      border: 1px solid rgba(124,106,247,.3);
+      border-radius: 100px;
+      padding: .25rem .9rem;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #e2e8f0 30%, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: .75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .65rem 1.4rem;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      transition: opacity .15s, transform .1s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn:hover { opacity: .85; transform: translateY(-1px); text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Install block ── */
+    .install-block {
+      margin: 0 auto 5rem;
+      max-width: 560px;
+      padding: 0 2rem;
+    }
+
+    .install-label {
+      text-align: center;
+      font-size: .8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .75rem;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .85rem;
+      color: var(--accent2);
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .code-block .prompt { color: var(--muted); user-select: none; }
+
+    /* ── Features ── */
+    .section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color .2s;
+    }
+
+    .feature-card:hover { border-color: rgba(124,106,247,.4); }
+
+    .feature-icon {
+      font-size: 1.75rem;
+      margin-bottom: .75rem;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: .4rem;
+    }
+
+    .feature-card p {
+      font-size: .9rem;
+      color: var(--muted);
+    }
+
+    /* ── Demo / commands ── */
+    .commands-section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    .commands-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .commands-grid { grid-template-columns: 1fr; }
+    }
+
+    .command-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .command-group-title {
+      padding: .65rem 1rem;
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .command-list {
+      padding: .5rem 0;
+    }
+
+    .command-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: .5rem 1rem;
+      padding: .4rem 1rem;
+      font-size: .85rem;
+    }
+
+    .cmd { font-family: "SF Mono", "Fira Mono", monospace; color: var(--accent2); white-space: nowrap; }
+    .cmd-desc { color: var(--muted); }
+
+    /* ── How it works ── */
+    .how-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+      text-align: center;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-align: left;
+      margin-top: 2rem;
+    }
+
+    .step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(124,106,247,.15);
+      border: 1px solid rgba(124,106,247,.3);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: .9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-body h4 { font-size: .95rem; font-weight: 700; margin-bottom: .2rem; }
+    .step-body p { font-size: .875rem; color: var(--muted); }
+    .step-body code {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .8rem;
+      color: var(--accent2);
+      background: var(--code-bg);
+      padding: .1rem .35rem;
+      border-radius: 4px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 2.5rem 2rem;
+      color: var(--muted);
+      font-size: .875rem;
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-logo" href="#">
+    <img src="../assets/icon-1024x1024.png" alt="orbital" />
+    orbital
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#commands">Commands</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="https://github.com/OffskyLab/orbital">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <img class="hero-logo" src="../assets/icon-1024x1024.png" alt="orbital" />
+  <div class="badge">v0.1.2</div>
+  <h1>Manage AI CLI environments, per shell</h1>
+  <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — no config collisions, no manual swapping.</p>
+  <div class="cta-group">
+    <a class="btn btn-primary" href="#install">Get Started</a>
+    <a class="btn btn-secondary" href="https://github.com/OffskyLab/orbital">View on GitHub</a>
+  </div>
+</section>
+
+<!-- Install -->
+<div class="install-block" id="install">
+  <div class="install-label">Install via Homebrew</div>
+  <div class="code-block">
+    <span class="prompt">$ </span>brew tap OffskyLab/orbital<br/>
+    <span class="prompt">$ </span>brew install orbital<br/>
+    <span class="prompt">$ </span>orbital setup
+  </div>
+</div>
+
+<!-- Features -->
+<section class="section" id="features">
+  <h2 class="section-title">Everything you need to context-switch</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🔒</span>
+      <h3>Isolated config dirs</h3>
+      <p>Each environment gets its own <code>CLAUDE_CONFIG_DIR</code>, <code>CODEX_CONFIG_DIR</code>, and <code>GEMINI_CONFIG_DIR</code> — completely separate auth tokens and settings.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🐚</span>
+      <h3>Per-shell activation</h3>
+      <p><code>orbital use work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">✦</span>
+      <h3>Interactive wizard</h3>
+      <p>Create environments with a guided multi-select UI. Pick your tools with arrow keys and space — no flags needed.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔑</span>
+      <h3>Custom env vars</h3>
+      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orbital use</code>.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <h3>Zero runtime overhead</h3>
+      <p>Built in Swift — native binary, instant startup. Shell integration is a tiny eval'd function, not a daemon.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📦</span>
+      <h3>Homebrew tap</h3>
+      <p>Install with a single <code>brew install</code>. Updates are as easy as <code>brew upgrade</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how-section">
+  <h2 class="section-title">How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Install shell integration</h4>
+        <p>Run <code>orbital setup</code> once. It appends <code>eval "$(orbital init)"</code> to your <code>~/.zshrc</code>, adding the <code>use</code> and <code>deactivate</code> shell functions.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Create environments</h4>
+        <p>Run <code>orbital create work</code>. An interactive multi-select lets you pick which AI tools to include. Environments are stored under <code>~/.orbital/envs/</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Switch with one command</h4>
+        <p><code>orbital use work</code> is intercepted by the shell function, which exports the right config dirs and custom env vars into your current session only.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Run your AI tools normally</h4>
+        <p>Claude Code, Codex, and Gemini CLI automatically pick up the isolated config dirs. Log in to each tool inside the environment once, and you're done.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Commands -->
+<section class="commands-section" id="commands">
+  <h2 class="section-title">Commands</h2>
+  <div class="commands-grid">
+    <div class="command-group">
+      <div class="command-group-title">Environments</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orbital create &lt;name&gt;</span><span class="cmd-desc">Create a new environment</span></div>
+        <div class="command-item"><span class="cmd">orbital delete &lt;name&gt;</span><span class="cmd-desc">Delete an environment</span></div>
+        <div class="command-item"><span class="cmd">orbital rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename an environment</span></div>
+        <div class="command-item"><span class="cmd">orbital list</span><span class="cmd-desc">List all environments</span></div>
+        <div class="command-item"><span class="cmd">orbital info [name]</span><span class="cmd-desc">Show environment details</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Switching</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orbital use &lt;name&gt;</span><span class="cmd-desc">Activate in current shell</span></div>
+        <div class="command-item"><span class="cmd">orbital deactivate</span><span class="cmd-desc">Deactivate current environment</span></div>
+        <div class="command-item"><span class="cmd">orbital current</span><span class="cmd-desc">Print active environment</span></div>
+        <div class="command-item"><span class="cmd">orbital which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Configuration</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">Manage tools interactively</span></div>
+        <div class="command-item"><span class="cmd">orbital set env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orbital unset env &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Shell integration</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">Install shell integration</span></div>
+        <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>
+    Released under the <a href="https://github.com/OffskyLab/orbital/blob/main/LICENSE">Apache 2.0 License</a> &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/orbital">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/orbital/releases">Releases</a>
+  </p>
+</footer>
+
+</body>
+</html>
