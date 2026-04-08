@@ -29,13 +29,13 @@ public struct SessionsCommand: ParsableCommand {
             print("")
             print("  \(tool.rawValue)")
             print("  \(String(repeating: "-", count: 76))")
-            print("  \(L10n.Sessions.header)")
+            print(L10n.Sessions.detailHeader)
             for e in sorted {
-                let idShort = String(e.id.prefix(8))
-                let title = String(e.firstMessage.prefix(36))
+                let title = String(e.firstMessage.prefix(40))
                 let msgs = "\(e.userCount) msgs"
                 let timeStr = e.lastTime.map { displayFormatter.string(from: $0) } ?? "?"
-                print("  \(idShort)  \(title.padding(toLength: 38, withPad: " ", startingAt: 0))\(msgs.padding(toLength: 12, withPad: " ", startingAt: 0))\(timeStr)")
+                print("  \(e.id)")
+                print("    \(title.padding(toLength: 42, withPad: " ", startingAt: 0))\(msgs.padding(toLength: 12, withPad: " ", startingAt: 0))\(timeStr)")
             }
         }
 
