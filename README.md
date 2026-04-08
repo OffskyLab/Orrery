@@ -1,12 +1,14 @@
-# orbital
+# Orbital
 
 <p align="center">
-  <img src="assets/icon-1024x1024.png" alt="orbital" width="256" height="256" />
+  <img src="assets/icon-1024x1024.png" alt="Orbital" width="256" height="256" />
 </p>
 
 [繁體中文](docs/README-zh_TW.md)
 
 Per-shell environment manager for AI CLI tools — isolate accounts for Claude Code, Codex CLI, and Gemini CLI across work and personal contexts, **while keeping your conversations continuous across account switches**.
+
+> **Note:** The CLI command is lowercase `orbital`. The product name is capitalized as **Orbital**.
 
 ## The Problem
 
@@ -14,9 +16,9 @@ AI CLI tools like Claude Code, Codex, and Gemini store their config (API keys, a
 
 Worse, switching accounts usually means **losing your conversation history**. You're mid-task with Claude, switch to a different account, and your session is gone — you have to start over and re-explain all the context.
 
-## How orbital Solves This
+## How Orbital Solves This
 
-`orbital` manages named environments stored under `~/.orbital/envs/`. Each environment has its own isolated auth credentials, while **session data is shared by default** — so you can switch accounts and pick up exactly where you left off.
+Orbital manages named environments stored under `~/.orbital/envs/`. Each environment has its own isolated auth credentials, while **session data is shared by default** — so you can switch accounts and pick up exactly where you left off.
 
 - **Auth isolation**: each environment gets its own config directory per tool, so credentials never leak between accounts
 - **Session sharing**: conversation history, project context, and session data are symlinked to a shared location (`~/.orbital/shared/`), so `claude --resume` works seamlessly after switching environments
@@ -83,7 +85,7 @@ claude                    # start a conversation
 orbital use personal
 claude --resume           # pick up right where you left off
 
-# Deactivate (clear all orbital env vars)
+# Deactivate (clear all Orbital env vars)
 orbital deactivate
 ```
 
@@ -187,7 +189,7 @@ Custom env vars set with `orbital set env` are also exported on `orbital use`.
 
 ## Localization
 
-orbital auto-detects your system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`) and displays messages in Traditional Chinese (`zh_TW`) or English.
+Orbital auto-detects your system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`) and displays messages in Traditional Chinese (`zh_TW`) or English.
 
 ## License
 

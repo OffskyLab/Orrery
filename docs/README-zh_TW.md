@@ -1,7 +1,7 @@
-# orbital
+# Orbital
 
 <p align="center">
-  <img src="../assets/icon-1024x1024.png" alt="orbital" width="256" height="256" />
+  <img src="../assets/icon-1024x1024.png" alt="Orbital" width="256" height="256" />
 </p>
 
 Per-shell 環境管理工具，為 AI CLI 工具（Claude Code、Codex CLI、Gemini CLI）隔離帳號，輕鬆切換工作與個人情境，**同時保留跨帳號的對話連續性**。
@@ -12,9 +12,9 @@ Claude Code、Codex、Gemini 等 AI CLI 工具，會將設定（API 金鑰、認
 
 更麻煩的是，切換帳號通常意味著**對話歷史全部消失**。你正在用 Claude 處理任務，切到另一個帳號，session 就斷了 — 只能重頭開始、重新解釋所有上下文。
 
-## orbital 如何解決
+## Orbital 如何解決
 
-`orbital` 管理存放在 `~/.orbital/envs/` 下的命名環境。每個環境有自己獨立的認證憑證，但**預設共享 session 資料** — 讓你切換帳號後能直接接續對話。
+Orbital 管理存放在 `~/.orbital/envs/` 下的命名環境。每個環境有自己獨立的認證憑證，但**預設共享 session 資料** — 讓你切換帳號後能直接接續對話。
 
 - **認證隔離**：每個環境的每個工具都有獨立的設定目錄，憑證不會互相干擾
 - **Session 共享**：對話歷史、專案上下文、session 資料透過 symlink 指向共享位置（`~/.orbital/shared/`），切換環境後 `claude --resume` 無縫接續
@@ -81,7 +81,7 @@ claude                    # 開始對話
 orbital use personal
 claude --resume           # 無縫接續同一個 session
 
-# 停用（清除所有 orbital 環境變數）
+# 停用（清除所有 Orbital 環境變數）
 orbital deactivate
 ```
 
@@ -161,7 +161,7 @@ orbital deactivate
 
 設定 `ORBITAL_HOME` 環境變數可使用自訂路徑。
 
-## orbital use 設定的環境變數
+## `orbital use` 設定的環境變數
 
 | 工具 | 變數 |
 |---|---|
@@ -173,7 +173,7 @@ orbital deactivate
 
 ## 多語系支援
 
-orbital 會偵測系統語系（`LC_ALL`、`LC_MESSAGES`、`LANG`），自動切換繁體中文或英文介面。
+Orbital 會偵測系統語系（`LC_ALL`、`LC_MESSAGES`、`LANG`），自動切換繁體中文或英文介面。
 
 ## 授權
 

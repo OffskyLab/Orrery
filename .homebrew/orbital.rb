@@ -1,5 +1,5 @@
 class Orbital < Formula
-  desc "AI CLI environment manager for Claude Code, Codex, and Gemini CLI"
+  desc "Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI"
   homepage "https://github.com/OffskyLab/orbital"
   url "https://github.com/OffskyLab/orbital/archive/refs/tags/v0.1.4.tar.gz"
   # sha256 updated on each release — run: brew fetch --build-from-source orbital
