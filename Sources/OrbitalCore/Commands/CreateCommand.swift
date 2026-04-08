@@ -52,17 +52,12 @@ public struct CreateCommand: ParsableCommand {
     }
 
     static func runWizard() -> [Tool] {
-        print("\nSelect tools to add (y/N):")
-        var selected: [Tool] = []
-        for t in Tool.allCases {
-            print("  \(t.rawValue): ", terminator: "")
-            fflush(stdout)
-            let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
-            if input == "y" || input == "yes" {
-                selected.append(t)
-            }
-        }
-        return selected
+        let selector = MultiSelect(
+            title: "Select tools to add (↑↓ move, space toggle, enter confirm):",
+            options: Tool.allCases.map(\.rawValue)
+        )
+        let indices = selector.run()
+        return indices.map { Tool.allCases[$0] }
     }
 
     public static func createEnvironment(
