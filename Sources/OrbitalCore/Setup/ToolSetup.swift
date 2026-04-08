@@ -1,11 +1,9 @@
 import Foundation
-// Uses flushStdout() from Platform/CStdio.swift
 
 public struct ToolSetup {
 
     public enum SetupError: Error {
         case installFailed(String)
-        case authFailed(String)
     }
 
     /// Run the full setup flow for a tool: check install → offer install.
@@ -16,8 +14,7 @@ public struct ToolSetup {
 
         if !isInstalled(tool) {
             print(L10n.ToolSetup.notInstalled(tool.rawValue))
-            print(L10n.ToolSetup.installNow, terminator: "")
-            flushStdout()
+            FileHandle.standardOutput.write(Data(L10n.ToolSetup.installNow.utf8))
             let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
             guard input.isEmpty || input == "y" || input == "yes" else {
                 print(L10n.ToolSetup.skipping(tool.rawValue))
@@ -43,9 +40,8 @@ public struct ToolSetup {
     static func install(_ tool: Tool) throws {
         guard let cmd = tool.installCommand else { return }
 
-        enterAlternateScreen()
+        FileHandle.standardOutput.write(Data("\u{1B}[?1049h".utf8))
         print(L10n.ToolSetup.installing(tool.rawValue, cmd.joined(separator: " ")))
-        flushStdout()
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -53,23 +49,11 @@ public struct ToolSetup {
         try process.run()
         process.waitUntilExit()
 
-        exitAlternateScreen()
+        FileHandle.standardOutput.write(Data("\u{1B}[?1049l".utf8))
 
         guard process.terminationStatus == 0 else {
             throw SetupError.installFailed(tool.rawValue)
         }
         print(L10n.ToolSetup.installed(tool.rawValue))
-    }
-
-    // MARK: - Terminal helpers
-
-    private static func enterAlternateScreen() {
-        print("\u{1B}[?1049h", terminator: "")
-        flushStdout()
-    }
-
-    private static func exitAlternateScreen() {
-        print("\u{1B}[?1049l", terminator: "")
-        flushStdout()
     }
 }

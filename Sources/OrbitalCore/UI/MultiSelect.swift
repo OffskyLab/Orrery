@@ -1,16 +1,16 @@
 import Foundation
-// Uses flushStdout() from Platform/CStdio.swift
-// Terminal I/O uses platform imports from CStdio.swift
 #if canImport(Darwin)
 import Darwin
 #else
-@preconcurrency import Glibc
+import Glibc
 #endif
 
 public struct MultiSelect: Sendable {
     public let title: String
     public let options: [String]
     private let preSelected: IndexSet
+
+    private static let out = FileHandle.standardOutput
 
     public init(title: String, options: [String], selected: IndexSet = IndexSet()) {
         self.title = title
@@ -33,7 +33,7 @@ public struct MultiSelect: Sendable {
         defer { tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios) }
 
         print(title)
-        hideCursor()
+        write("\u{1B}[?25l") // hide cursor
         render(cursor: cursor, selected: selected)
 
         loop: while true {
@@ -47,7 +47,7 @@ public struct MultiSelect: Sendable {
                 break loop
             case .ctrlC:
                 clearLines(options.count)
-                showCursor()
+                write("\u{1B}[?25h") // show cursor
                 return preSelected
             case .other:
                 break
@@ -57,42 +57,47 @@ public struct MultiSelect: Sendable {
         }
 
         clearLines(options.count)
-        showCursor()
+        write("\u{1B}[?25h") // show cursor
         return selected
     }
 
     private func render(cursor: Int, selected: IndexSet) {
+        var buf = ""
         for (i, option) in options.enumerated() {
             let check = selected.contains(i) ? "\u{1B}[32m[*]\u{1B}[0m" : "[ ]"
             if i == cursor {
-                print("  \u{1B}[1m> \(check) \(option)\u{1B}[0m")
+                buf += "  \u{1B}[1m> \(check) \(option)\u{1B}[0m\n"
             } else {
-                print("    \(check) \(option)")
+                buf += "    \(check) \(option)\n"
             }
         }
-        flushStdout()
+        write(buf)
     }
 
     private func clearLines(_ count: Int) {
+        var buf = ""
         for _ in 0..<count {
-            print("\u{1B}[1A\u{1B}[2K", terminator: "")
+            buf += "\u{1B}[1A\u{1B}[2K"
         }
-        flushStdout()
+        write(buf)
     }
 
-    private func hideCursor() { print("\u{1B}[?25l", terminator: ""); flushStdout() }
-    private func showCursor() { print("\u{1B}[?25h", terminator: ""); flushStdout() }
+    /// Write directly to stdout (unbuffered, no flush needed).
+    private func write(_ str: String) {
+        Self.out.write(Data(str.utf8))
+    }
 
     private enum Key { case up, down, space, enter, ctrlC, other }
 
     private func readKey() -> Key {
         var c: UInt8 = 0
-        _ = read(STDIN_FILENO, &c, 1)
+        let fd = STDIN_FILENO
+        _ = Glibc_read(fd, &c, 1)
 
         if c == 27 {  // ESC sequence
             var a: UInt8 = 0, b: UInt8 = 0
-            _ = read(STDIN_FILENO, &a, 1)
-            _ = read(STDIN_FILENO, &b, 1)
+            _ = Glibc_read(fd, &a, 1)
+            _ = Glibc_read(fd, &b, 1)
             if a == 91 {  // [
                 switch b {
                 case 65: return .up    // ↑
@@ -110,4 +115,15 @@ public struct MultiSelect: Sendable {
         default:      return .other
         }
     }
+}
+
+// POSIX read() conflicts with Swift's read on some platforms.
+// Wrap it to avoid ambiguity.
+@inline(__always)
+private func Glibc_read(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ count: Int) -> Int {
+    #if canImport(Darwin)
+    Darwin.read(fd, buf, count)
+    #else
+    Glibc.read(fd, buf, count)
+    #endif
 }
