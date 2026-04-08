@@ -55,6 +55,14 @@ public struct CreateCommand: ParsableCommand {
             let configDir = store.toolConfigDir(tool: t, environment: name)
             try ToolSetup.setup(t, configDir: configDir)
         }
+
+        // Auto-activate if this is the first environment
+        let allNames = try store.listNames()
+        if allNames.count == 1 {
+            try store.setCurrent(name)
+            print("\nFirst environment created — activating '\(name)' automatically.")
+            print("Run 'orbital use \(name)' to apply it to this shell.")
+        }
     }
 
     static func runWizard() -> [Tool] {
