@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>orbital — AI CLI environment manager</title>
-  <meta name="description" content="Per-shell environment manager for AI CLI tools. Isolate accounts for Claude Code, Codex, and Gemini CLI — keep your conversations continuous across account switches." />
+  <title>orbital — AI CLI 環境管理工具</title>
+  <meta name="description" content="Per-shell 環境管理工具，為 AI CLI 工具隔離帳號。切換帳號同時保留對話連續性。" />
   <link rel="icon" href="icon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,7 +26,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
       font-size: 16px;
       line-height: 1.65;
       min-height: 100vh;
@@ -107,7 +107,7 @@
       font-size: clamp(2.2rem, 5vw, 3.4rem);
       font-weight: 800;
       letter-spacing: -.04em;
-      line-height: 1.1;
+      line-height: 1.2;
       margin-bottom: 1.25rem;
       background: linear-gradient(135deg, #e2e8f0 30%, #94a3b8);
       -webkit-background-clip: text;
@@ -374,11 +374,11 @@
     orbital
   </a>
   <ul class="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#commands">Commands</a></li>
-    <li><a href="#install">Install</a></li>
+    <li><a href="#features">功能</a></li>
+    <li><a href="#commands">指令</a></li>
+    <li><a href="#install">安裝</a></li>
     <li><a href="https://github.com/OffskyLab/orbital">GitHub</a></li>
-    <li><a href="zh_TW.html">繁體中文</a></li>
+    <li><a href="index.html">English</a></li>
   </ul>
 </nav>
 
@@ -386,96 +386,96 @@
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="orbital" />
   <div class="badge">v0.1.4</div>
-  <h1>Manage AI CLI environments, per shell</h1>
-  <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
+  <h1>Per-shell AI CLI 環境管理</h1>
+  <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
-    <a class="btn btn-primary" href="#install">Get Started</a>
-    <a class="btn btn-secondary" href="https://github.com/OffskyLab/orbital">View on GitHub</a>
+    <a class="btn btn-primary" href="#install">開始使用</a>
+    <a class="btn btn-secondary" href="https://github.com/OffskyLab/orbital">GitHub</a>
   </div>
 </section>
 
 <!-- Install -->
 <div class="install-block" id="install">
-  <div class="install-label">Install via Homebrew</div>
+  <div class="install-label">透過 Homebrew 安裝</div>
   <div class="code-block" id="install-brew">
-    <button class="copy-btn" onclick="copyCode('install-brew')">Copy</button>
+    <button class="copy-btn" onclick="copyCode('install-brew')">複製</button>
     <span class="prompt">$ </span>brew install OffskyLab/orbital/orbital
   </div>
   <div style="height:.75rem"></div>
-  <div class="install-label">Activate shell integration</div>
+  <div class="install-label">啟用 Shell 整合</div>
   <div class="code-block" id="install-setup">
-    <button class="copy-btn" onclick="copyCode('install-setup')">Copy</button>
+    <button class="copy-btn" onclick="copyCode('install-setup')">複製</button>
     <span class="prompt">$ </span>eval "$(orbital setup)"
   </div>
 </div>
 
 <!-- Features -->
 <section class="section" id="features">
-  <h2 class="section-title">Everything you need to context-switch</h2>
+  <h2 class="section-title">無痛切換所需的一切</h2>
   <div class="features-grid">
     <div class="feature-card">
       <span class="feature-icon">🔒</span>
-      <h3>Isolated credentials</h3>
-      <p>Each environment gets its own <code>CLAUDE_CONFIG_DIR</code>, <code>CODEX_CONFIG_DIR</code>, and <code>GEMINI_CONFIG_DIR</code> — auth tokens never leak between accounts.</p>
+      <h3>憑證隔離</h3>
+      <p>每個環境擁有獨立的 <code>CLAUDE_CONFIG_DIR</code>、<code>CODEX_CONFIG_DIR</code>、<code>GEMINI_CONFIG_DIR</code> — 認證 token 不會互相干擾。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">💬</span>
-      <h3>Shared sessions</h3>
-      <p>Switch accounts and pick up where you left off. Session data is shared by default — <code>claude --resume</code> works seamlessly after switching environments.</p>
+      <h3>Session 共享</h3>
+      <p>切換帳號後直接接續對話。Session 資料預設共享 — <code>claude --resume</code> 在切換環境後無縫運作。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
-      <h3>Per-shell activation</h3>
-      <p><code>orbital use work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
+      <h3>Per-shell 生效</h3>
+      <p><code>orbital use work</code> 只在當前 shell 設定環境變數。其他終端機視窗維持各自的環境，互不影響。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">✦</span>
-      <h3>Interactive wizard</h3>
-      <p>Create environments with a guided multi-select UI. Pick your tools with arrow keys and space — no flags needed.</p>
+      <h3>互動式精靈</h3>
+      <p>透過方向鍵與空白鍵選擇工具，引導式建立環境 — 不需要記任何參數。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">🔑</span>
-      <h3>Custom env vars</h3>
-      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orbital use</code>.</p>
+      <h3>自訂環境變數</h3>
+      <p>每個環境可儲存 API 金鑰等變數，<code>orbital use</code> 切換時自動匯出。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
-      <h3>Zero runtime overhead</h3>
-      <p>Built in Swift — native binary, instant startup. Shell integration is a tiny eval'd function, not a daemon. Supports bash and zsh.</p>
+      <h3>零執行開銷</h3>
+      <p>Swift 原生編譯，啟動瞬間完成。Shell 整合只是一個輕量的 eval 函式，不是背景程式。支援 bash 與 zsh。</p>
     </div>
   </div>
 </section>
 
 <!-- How it works -->
 <section class="how-section">
-  <h2 class="section-title">How it works</h2>
+  <h2 class="section-title">運作方式</h2>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <h4>Install shell integration</h4>
-        <p>Run <code>eval "$(orbital setup)"</code> once. It adds shell functions to your rc file (<code>~/.zshrc</code> or <code>~/.bashrc</code>, auto-detected) and activates immediately.</p>
+        <h4>安裝 Shell 整合</h4>
+        <p>執行一次 <code>eval "$(orbital setup)"</code>。會自動將 shell function 寫入 rc 檔（<code>~/.zshrc</code> 或 <code>~/.bashrc</code>，自動偵測）並立即生效。</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <h4>Create environments</h4>
-        <p>Run <code>orbital create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orbital/envs/</code>.</p>
+        <h4>建立環境</h4>
+        <p>執行 <code>orbital create work</code>。互動式精靈讓你選擇工具並設定 session 共享。環境存放在 <code>~/.orbital/envs/</code>。</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <h4>Switch with one command</h4>
-        <p><code>orbital use work</code> exports the right config dirs and custom env vars into your current session. Your conversation history stays intact across switches.</p>
+        <h4>一行指令切換</h4>
+        <p><code>orbital use work</code> 將正確的設定目錄與自訂環境變數匯出到當前 session。對話歷史在切換後完整保留。</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <h4>Resume where you left off</h4>
-        <p>After switching accounts, <code>claude --resume</code> picks up your last session. Auth is isolated, but sessions are shared — the best of both worlds.</p>
+        <h4>接續上次的對話</h4>
+        <p>切換帳號後，<code>claude --resume</code> 直接接續上一個 session。認證隔離，session 共享 — 兩全其美。</p>
       </div>
     </div>
   </div>
@@ -483,40 +483,40 @@
 
 <!-- Commands -->
 <section class="commands-section" id="commands">
-  <h2 class="section-title">Commands</h2>
+  <h2 class="section-title">指令一覽</h2>
   <div class="commands-grid">
     <div class="command-group">
-      <div class="command-group-title">Environments</div>
+      <div class="command-group-title">環境管理</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital create &lt;name&gt;</span><span class="cmd-desc">Create a new environment</span></div>
-        <div class="command-item"><span class="cmd">orbital delete &lt;name&gt;</span><span class="cmd-desc">Delete an environment</span></div>
-        <div class="command-item"><span class="cmd">orbital rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename an environment</span></div>
-        <div class="command-item"><span class="cmd">orbital list</span><span class="cmd-desc">List all environments</span></div>
-        <div class="command-item"><span class="cmd">orbital info [name]</span><span class="cmd-desc">Show environment details</span></div>
+        <div class="command-item"><span class="cmd">orbital create &lt;name&gt;</span><span class="cmd-desc">建立新環境</span></div>
+        <div class="command-item"><span class="cmd">orbital delete &lt;name&gt;</span><span class="cmd-desc">刪除環境</span></div>
+        <div class="command-item"><span class="cmd">orbital rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名環境</span></div>
+        <div class="command-item"><span class="cmd">orbital list</span><span class="cmd-desc">列出所有環境</span></div>
+        <div class="command-item"><span class="cmd">orbital info [name]</span><span class="cmd-desc">顯示環境詳細資訊</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Switching</div>
+      <div class="command-group-title">切換</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital use &lt;name&gt;</span><span class="cmd-desc">Activate in current shell</span></div>
-        <div class="command-item"><span class="cmd">orbital deactivate</span><span class="cmd-desc">Deactivate current environment</span></div>
-        <div class="command-item"><span class="cmd">orbital current</span><span class="cmd-desc">Print active environment</span></div>
-        <div class="command-item"><span class="cmd">orbital which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
+        <div class="command-item"><span class="cmd">orbital use &lt;name&gt;</span><span class="cmd-desc">在當前 shell 啟用環境</span></div>
+        <div class="command-item"><span class="cmd">orbital deactivate</span><span class="cmd-desc">停用目前的環境</span></div>
+        <div class="command-item"><span class="cmd">orbital current</span><span class="cmd-desc">顯示目前啟用的環境</span></div>
+        <div class="command-item"><span class="cmd">orbital which &lt;tool&gt;</span><span class="cmd-desc">顯示工具設定目錄路徑</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Configuration</div>
+      <div class="command-group-title">設定</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">Manage tools interactively</span></div>
-        <div class="command-item"><span class="cmd">orbital set env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orbital unset env &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">互動式管理工具</span></div>
+        <div class="command-item"><span class="cmd">orbital set env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
+        <div class="command-item"><span class="cmd">orbital unset env &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Shell integration</div>
+      <div class="command-group-title">Shell 整合</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">Install shell integration</span></div>
-        <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
+        <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
+        <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
       </div>
     </div>
   </div>
@@ -525,9 +525,9 @@
 <!-- Footer -->
 <footer>
   <p>
-    Released under the <a href="https://github.com/OffskyLab/orbital/blob/main/LICENSE">Apache 2.0 License</a> &nbsp;·&nbsp;
+    以 <a href="https://github.com/OffskyLab/orbital/blob/main/LICENSE">Apache 2.0</a> 授權釋出 &nbsp;·&nbsp;
     <a href="https://github.com/OffskyLab/orbital">GitHub</a> &nbsp;·&nbsp;
-    <a href="https://github.com/OffskyLab/orbital/releases">Releases</a>
+    <a href="https://github.com/OffskyLab/orbital/releases">版本紀錄</a>
   </p>
 </footer>
 
@@ -535,15 +535,15 @@
 function copyCode(id) {
   const block = document.getElementById(id);
   const text = block.textContent
-    .replace(/^Copy/, '')
+    .replace(/^複製/, '')
     .replace(/^\$\s*/gm, '')
     .trim();
   navigator.clipboard.writeText(text).then(() => {
     const btn = block.querySelector('.copy-btn');
-    btn.textContent = 'Copied!';
+    btn.textContent = '已複製！';
     btn.classList.add('copied');
     setTimeout(() => {
-      btn.textContent = 'Copy';
+      btn.textContent = '複製';
       btn.classList.remove('copied');
     }, 1500);
   });
