@@ -1,5 +1,9 @@
 # orbital
 
+<p align="center">
+  <img src="assets/icon-1024x1024.png" alt="orbital" width="128" />
+</p>
+
 Per-shell environment manager for AI CLI tools — isolate accounts for Claude Code, Codex CLI, and Gemini CLI across work and personal contexts.
 
 ## The Problem
