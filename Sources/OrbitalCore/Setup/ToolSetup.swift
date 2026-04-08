@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public struct ToolSetup {
 
@@ -82,23 +83,16 @@ public struct ToolSetup {
         print("(credentials will be stored in: \(configDir.path))")
         fflush(stdout)
 
-        var env = ProcessInfo.processInfo.environment
-        env[tool.envVarName] = configDir.path
+        // Use system() so the shell inherits the terminal properly —
+        // Process() can cause claude/codex to think they're non-interactive.
+        let envPrefix = "\(tool.envVarName)=\"\(configDir.path)\""
+        let shellCmd = "\(envPrefix) \(cmd.joined(separator: " "))"
+        let exitCode = system(shellCmd)
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = cmd
-        process.environment = env
-        process.standardInput = FileHandle.standardInput
-        process.standardOutput = FileHandle.standardOutput
-        process.standardError = FileHandle.standardError
-        try process.run()
-        process.waitUntilExit()
-
-        if process.terminationStatus == 0 {
+        if exitCode == 0 {
             print("✓ \(tool.rawValue) login complete")
         } else {
-            print("⚠ \(tool.rawValue) login exited with code \(process.terminationStatus)")
+            print("⚠ \(tool.rawValue) login exited with code \(exitCode)")
             print("  You can retry later: \(cmd.joined(separator: " "))")
         }
     }
