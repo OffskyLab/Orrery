@@ -24,6 +24,11 @@ public struct CreateCommand: ParsableCommand {
     public func run() throws {
         let store = EnvironmentStore.default
 
+        // Check for duplicate name before showing wizard
+        if (try? store.load(named: name)) != nil {
+            throw ValidationError("Environment '\(name)' already exists. Use a different name or 'orbital delete \(name)' first.")
+        }
+
         // Resolve tools from --tool flags
         let flaggedTools = try tool.map { raw -> Tool in
             guard let t = Tool(rawValue: raw) else {
@@ -81,10 +86,6 @@ public struct CreateCommand: ParsableCommand {
         tools: [Tool] = [],
         store: EnvironmentStore
     ) throws {
-        if (try? store.load(named: name)) != nil {
-            throw ValidationError("Environment '\(name)' already exists. Use a different name or 'orbital delete \(name)' first.")
-        }
-
         var env = OrbitalEnvironment(name: name, description: description)
 
         if let source {
