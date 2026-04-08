@@ -35,7 +35,7 @@ case "$ARCH" in
   *)             error "Unsupported architecture: $ARCH" ;;
 esac
 
-ASSET_NAME="orbital-${os}-${arch}"
+ASSET_NAME="orbital-${os}-${arch}.tar.gz"
 DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
 
 info "Detected: ${OS} ${ARCH}"
@@ -52,8 +52,8 @@ info "Downloading pre-built binary..."
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-if curl -fsSL -o "$TMP_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>/dev/null; then
-  chmod +x "$TMP_DIR/$BINARY_NAME"
+if curl -fsSL -o "$TMP_DIR/$ASSET_NAME" "$DOWNLOAD_URL" 2>/dev/null; then
+  tar -xzf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
   $USE_SUDO cp "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
   $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
   info "Installed pre-built binary to $INSTALL_DIR/$BINARY_NAME"

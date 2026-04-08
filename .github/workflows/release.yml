@@ -17,12 +17,14 @@ jobs:
         run: swift build -c release
       - name: Package
         run: |
-          cp .build/release/orbital orbital-darwin-arm64
-          chmod +x orbital-darwin-arm64
+          mkdir -p dist
+          cp .build/release/orbital dist/orbital
+          chmod +x dist/orbital
+          tar -czf orbital-darwin-arm64.tar.gz -C dist orbital
       - uses: actions/upload-artifact@v4
         with:
           name: orbital-darwin-arm64
-          path: orbital-darwin-arm64
+          path: orbital-darwin-arm64.tar.gz
 
   build-linux-x86_64:
     runs-on: ubuntu-latest
@@ -33,12 +35,14 @@ jobs:
         run: swift build -c release
       - name: Package
         run: |
-          cp .build/release/orbital orbital-linux-x86_64
-          chmod +x orbital-linux-x86_64
+          mkdir -p dist
+          cp .build/release/orbital dist/orbital
+          chmod +x dist/orbital
+          tar -czf orbital-linux-x86_64.tar.gz -C dist orbital
       - uses: actions/upload-artifact@v4
         with:
           name: orbital-linux-x86_64
-          path: orbital-linux-x86_64
+          path: orbital-linux-x86_64.tar.gz
 
   build-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -49,12 +53,14 @@ jobs:
         run: swift build -c release
       - name: Package
         run: |
-          cp .build/release/orbital orbital-linux-arm64
-          chmod +x orbital-linux-arm64
+          mkdir -p dist
+          cp .build/release/orbital dist/orbital
+          chmod +x dist/orbital
+          tar -czf orbital-linux-arm64.tar.gz -C dist orbital
       - uses: actions/upload-artifact@v4
         with:
           name: orbital-linux-arm64
-          path: orbital-linux-arm64
+          path: orbital-linux-arm64.tar.gz
 
   release:
     needs: [build-macos-arm64, build-linux-x86_64, build-linux-arm64]
@@ -73,6 +79,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$tag" \
             --generate-notes \
-            artifacts/orbital-darwin-arm64/orbital-darwin-arm64 \
-            artifacts/orbital-linux-x86_64/orbital-linux-x86_64 \
-            artifacts/orbital-linux-arm64/orbital-linux-arm64
+            artifacts/orbital-darwin-arm64/orbital-darwin-arm64.tar.gz \
+            artifacts/orbital-linux-x86_64/orbital-linux-x86_64.tar.gz \
+            artifacts/orbital-linux-arm64/orbital-linux-arm64.tar.gz
