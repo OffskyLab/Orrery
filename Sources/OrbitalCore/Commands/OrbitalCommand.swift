@@ -8,8 +8,10 @@ public struct OrbitalCommand: ParsableCommand {
         subcommands: [
             SetupCommand.self,
             InitCommand.self,
+            UseCommand.self,
             CreateCommand.self,
             DeleteCommand.self,
+            RenameCommand.self,
             ListCommand.self,
             InfoCommand.self,
             SetEnvCommand.self,
