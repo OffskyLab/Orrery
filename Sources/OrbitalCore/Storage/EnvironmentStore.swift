@@ -124,6 +124,13 @@ public struct EnvironmentStore: Sendable {
         }
     }
 
+    /// Ensures shared session symlinks exist for a tool in the given environment.
+    /// Called lazily on `orbital use` to migrate existing environments.
+    public func ensureSharedSessionLinks(tool: Tool, environment envName: String) throws {
+        let toolDir = toolConfigDir(tool: tool, environment: envName)
+        try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
+    }
+
     /// Creates symlinks from the tool's session subdirectories to a shared location.
     /// Shared path: `~/.orbital/shared/<tool>/<subdir>/`
     private func linkSharedSessionDirs(tool: Tool, toolDir: URL) throws {

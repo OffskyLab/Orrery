@@ -22,6 +22,13 @@ public struct ExportCommand: ParsableCommand {
         env.lastUsed = Date()
         try store.save(env)
 
+        // Ensure shared session symlinks are in place for existing environments
+        if !env.isolateSessions {
+            for tool in env.tools {
+                try store.ensureSharedSessionLinks(tool: tool, environment: name)
+            }
+        }
+
         var lines: [String] = []
         for tool in env.tools {
             let dir = store.toolConfigDir(tool: tool, environment: name).path

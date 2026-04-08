@@ -7,9 +7,15 @@ public enum AppLocale: Sendable {
     public static let current: AppLocale = detect()
 
     private static func detect() -> AppLocale {
-        // Check LC_ALL, LC_MESSAGES, LANG in priority order
         let env = ProcessInfo.processInfo.environment
-        let raw = env["LC_ALL"] ?? env["LC_MESSAGES"] ?? env["LANG"] ?? "en_US.UTF-8"
+
+        // Check LC_ALL, LC_MESSAGES, LANG in priority order (skip empty strings)
+        let raw: String
+        if let v = env["LC_ALL"], !v.isEmpty { raw = v }
+        else if let v = env["LC_MESSAGES"], !v.isEmpty { raw = v }
+        else if let v = env["LANG"], !v.isEmpty { raw = v }
+        else { raw = "en_US.UTF-8" }
+
         if raw.hasPrefix("zh_TW") || raw.hasPrefix("zh_Hant") {
             return .zhHant
         }
