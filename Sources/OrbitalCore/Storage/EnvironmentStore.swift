@@ -128,6 +128,11 @@ public struct EnvironmentStore: Sendable {
         try save(env)
     }
 
+    public func envDir(for envName: String) throws -> URL {
+        let id = try resolveID(for: envName)
+        return envURL(id: id)
+    }
+
     public func toolConfigDir(tool: Tool, environment envName: String) -> URL {
         // We need the UUID for the env — if not found, fall back gracefully
         let id = (try? resolveID(for: envName)) ?? envName

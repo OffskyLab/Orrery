@@ -19,7 +19,11 @@ public struct InfoCommand: ParsableCommand {
         df.dateStyle = .medium
         df.timeStyle = .medium
 
+        let path = try store.envDir(for: name).path
+
         print("Name:        \(env.name)")
+        print("ID:          \(env.id)")
+        print("Path:        \(path)")
         print("Description: \(env.description.isEmpty ? "(none)" : env.description)")
         print("Created:     \(df.string(from: env.createdAt))")
         print("Last Used:   \(df.string(from: env.lastUsed))")
