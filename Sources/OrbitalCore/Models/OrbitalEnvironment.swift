@@ -1,6 +1,7 @@
 import Foundation
 
 public struct OrbitalEnvironment: Codable, Sendable {
+    public var id: String
     public var name: String
     public var description: String
     public var createdAt: Date
@@ -9,6 +10,7 @@ public struct OrbitalEnvironment: Codable, Sendable {
     public var env: [String: String]
 
     public init(
+        id: String = UUID().uuidString,
         name: String,
         description: String = "",
         createdAt: Date = Date(),
@@ -16,6 +18,7 @@ public struct OrbitalEnvironment: Codable, Sendable {
         tools: [Tool] = [],
         env: [String: String] = [:]
     ) {
+        self.id = id
         self.name = name
         self.description = description
         self.createdAt = createdAt
