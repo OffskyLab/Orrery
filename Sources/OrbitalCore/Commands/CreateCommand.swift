@@ -19,6 +19,9 @@ public struct CreateCommand: ParsableCommand {
     @Option(name: .long, help: "Add a tool (claude, codex, gemini). Repeatable: --tool claude --tool codex")
     public var tool: [String] = []
 
+    @Flag(name: .long, help: "Isolate sessions per environment instead of sharing them across environments (default: shared)")
+    public var isolateSessions: Bool = false
+
     public init() {}
 
     public func run() throws {
@@ -50,10 +53,21 @@ public struct CreateCommand: ParsableCommand {
             tools = Self.runWizard()
         }
 
-        try Self.createEnvironment(name: name, description: description, cloneFrom: clone, tools: tools, store: store)
+        // Determine session isolation (only prompt in interactive wizard mode)
+        let shouldIsolate: Bool
+        if isolateSessions {
+            shouldIsolate = true
+        } else if flaggedTools.isEmpty && clone == nil {
+            shouldIsolate = Self.askSessionIsolation()
+        } else {
+            shouldIsolate = false
+        }
+
+        try Self.createEnvironment(name: name, description: description, cloneFrom: clone, tools: tools, isolateSessions: shouldIsolate, store: store)
         print("Created environment: \(name)")
         if let clone { print("Cloned tools and env vars from: \(clone)") }
         if !tools.isEmpty { print("Tools: \(tools.map(\.rawValue).joined(separator: ", "))") }
+        print("Sessions: \(shouldIsolate ? "isolated" : "shared")")
 
         // Setup each tool (install check + auth)
         for t in tools {
@@ -79,14 +93,26 @@ public struct CreateCommand: ParsableCommand {
         return indices.map { Tool.allCases[$0] }
     }
 
+    static func askSessionIsolation() -> Bool {
+        print("Share sessions across environments? (allows resuming conversations after switching accounts)")
+        print("  [Y] Yes, share sessions (default)")
+        print("  [n] No, isolate sessions per environment")
+        print("", terminator: "> ")
+        guard let input = readLine()?.trimmingCharacters(in: .whitespaces).lowercased() else {
+            return false
+        }
+        return input == "n" || input == "no"
+    }
+
     public static func createEnvironment(
         name: String,
         description: String,
         cloneFrom source: String?,
         tools: [Tool] = [],
+        isolateSessions: Bool = false,
         store: EnvironmentStore
     ) throws {
-        var env = OrbitalEnvironment(name: name, description: description)
+        var env = OrbitalEnvironment(name: name, description: description, isolateSessions: isolateSessions)
 
         if let source {
             let sourceEnv = try store.load(named: source)
@@ -96,7 +122,7 @@ public struct CreateCommand: ParsableCommand {
 
         try store.save(env)
 
-        // Add each tool (creates config subdirectory)
+        // Add each tool (creates config subdirectory + session symlinks if shared)
         for t in tools {
             try store.addTool(t, to: name)
         }

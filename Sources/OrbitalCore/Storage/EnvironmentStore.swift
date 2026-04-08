@@ -25,6 +25,7 @@ public struct EnvironmentStore: Sendable {
 
     private var envsURL: URL { homeURL.appendingPathComponent("envs") }
     private var currentURL: URL { homeURL.appendingPathComponent("current") }
+    private var sharedURL: URL { homeURL.appendingPathComponent("shared") }
 
     // Directory for an environment, keyed by UUID
     private func envURL(id: String) -> URL {
@@ -112,9 +113,46 @@ public struct EnvironmentStore: Sendable {
         var env = try load(named: envName)
         let toolDir = toolConfigDir(tool: tool, environment: envName)
         try FileManager.default.createDirectory(at: toolDir, withIntermediateDirectories: true)
+
+        if !env.isolateSessions {
+            try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
+        }
+
         if !env.tools.contains(tool) {
             env.tools.append(tool)
             try save(env)
+        }
+    }
+
+    /// Creates symlinks from the tool's session subdirectories to a shared location.
+    /// Shared path: `~/.orbital/shared/<tool>/<subdir>/`
+    private func linkSharedSessionDirs(tool: Tool, toolDir: URL) throws {
+        let fm = FileManager.default
+        for subdir in tool.sessionSubdirectories {
+            let sharedDir = sharedURL.appendingPathComponent(tool.subdirectory)
+                .appendingPathComponent(subdir)
+            try fm.createDirectory(at: sharedDir, withIntermediateDirectories: true)
+
+            let linkPath = toolDir.appendingPathComponent(subdir)
+            // Skip if already a symlink pointing to the correct target
+            if let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath.path),
+               dest == sharedDir.path {
+                continue
+            }
+            // If a real directory already exists, move its contents to shared first
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: linkPath.path, isDirectory: &isDir), isDir.boolValue {
+                let contents = try fm.contentsOfDirectory(atPath: linkPath.path)
+                for item in contents {
+                    let src = linkPath.appendingPathComponent(item)
+                    let dst = sharedDir.appendingPathComponent(item)
+                    if !fm.fileExists(atPath: dst.path) {
+                        try fm.moveItem(at: src, to: dst)
+                    }
+                }
+                try fm.removeItem(at: linkPath)
+            }
+            try fm.createSymbolicLink(at: linkPath, withDestinationURL: sharedDir)
         }
     }
 

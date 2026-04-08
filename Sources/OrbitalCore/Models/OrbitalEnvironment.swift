@@ -8,6 +8,7 @@ public struct OrbitalEnvironment: Codable, Sendable {
     public var lastUsed: Date
     public var tools: [Tool]
     public var env: [String: String]
+    public var isolateSessions: Bool
 
     public init(
         id: String = UUID().uuidString,
@@ -16,7 +17,8 @@ public struct OrbitalEnvironment: Codable, Sendable {
         createdAt: Date = Date(),
         lastUsed: Date = Date(),
         tools: [Tool] = [],
-        env: [String: String] = [:]
+        env: [String: String] = [:],
+        isolateSessions: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -25,5 +27,23 @@ public struct OrbitalEnvironment: Codable, Sendable {
         self.lastUsed = lastUsed
         self.tools = tools
         self.env = env
+        self.isolateSessions = isolateSessions
+    }
+
+    // Custom decoding for backward compatibility with existing env.json files
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        description = try container.decode(String.self, forKey: .description)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        lastUsed = try container.decode(Date.self, forKey: .lastUsed)
+        tools = try container.decode([Tool].self, forKey: .tools)
+        env = try container.decode([String: String].self, forKey: .env)
+        isolateSessions = try container.decodeIfPresent(Bool.self, forKey: .isolateSessions) ?? false
     }
 }

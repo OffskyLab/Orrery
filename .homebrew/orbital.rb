@@ -1,10 +1,10 @@
 class Orbital < Formula
   desc "AI CLI environment manager for Claude Code, Codex, and Gemini CLI"
   homepage "https://github.com/OffskyLab/orbital"
-  url "https://github.com/OffskyLab/orbital/archive/refs/tags/v0.1.0.tar.gz"
+  url "https://github.com/OffskyLab/orbital/archive/refs/tags/v0.1.3.tar.gz"
   # sha256 updated on each release — run: brew fetch --build-from-source orbital
   sha256 "PLACEHOLDER"
-  license "MIT"
+  license "Apache-2.0"
   head "https://github.com/OffskyLab/orbital.git", branch: "main"
 
   depends_on xcode: ["15.0", :build]
@@ -15,18 +15,22 @@ class Orbital < Formula
     bin.install ".build/release/orbital"
   end
 
+  def post_install
+    # Write shell integration to rc file (bash/zsh auto-detected).
+    # This only adds the eval line if not already present.
+    system "#{bin}/orbital", "setup"
+  end
+
   def caveats
     <<~EOS
-      Add orbital shell integration to your ~/.zshrc by running:
-        orbital setup
+      Shell integration has been added to your rc file automatically.
+      To activate in your current shell, run:
 
-      Or manually:
-        echo 'eval "$(orbital init)"' >> ~/.zshrc
-        source ~/.zshrc
+        eval "$(orbital setup)"
     EOS
   end
 
   test do
-    assert_match "0.1.0", shell_output("#{bin}/orbital --version")
+    assert_match "0.1.3", shell_output("#{bin}/orbital --version")
   end
 end

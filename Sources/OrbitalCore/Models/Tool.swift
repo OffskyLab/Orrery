@@ -32,4 +32,14 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
     }
 
     public var supportsSetup: Bool { authCommand != nil }
+
+    /// Subdirectories within the tool's config dir that hold session data.
+    /// These are symlinked to a shared location when `isolateSessions` is false.
+    public var sessionSubdirectories: [String] {
+        switch self {
+        case .claude: return ["projects", "sessions", "session-env"]
+        case .codex:  return []
+        case .gemini: return []
+        }
+    }
 }
