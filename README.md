@@ -33,13 +33,15 @@ Orbital manages named environments stored under `~/.orbital/envs/`. Each environ
 
 ### Install script (recommended)
 
+Downloads a pre-built binary for your platform. No Swift required.
+
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/OffskyLab/orbital/main/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/OffskyLab/Orbital/main/install.sh)"
 ```
 
-Builds from source and installs to `/usr/local/bin`. Requires Swift (Xcode or Xcode Command Line Tools).
+Supports macOS (arm64, x86_64) and Linux (x86_64, arm64). Falls back to building from source if a pre-built binary is not available.
 
-### Homebrew
+### Homebrew (macOS)
 
 ```bash
 brew install OffskyLab/orbital/orbital
@@ -47,9 +49,11 @@ brew install OffskyLab/orbital/orbital
 
 ### Build from source
 
+Requires Swift 6.0+.
+
 ```bash
-git clone https://github.com/OffskyLab/orbital.git
-cd orbital
+git clone https://github.com/OffskyLab/Orbital.git
+cd Orbital
 swift build -c release
 cp .build/release/orbital /usr/local/bin/orbital
 ```

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="https://github.com/OffskyLab/orbital.git"
+REPO="OffskyLab/Orbital"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="orbital"
 
@@ -16,53 +16,68 @@ warn()    { echo -e "${YELLOW}Warning:${NC} $1"; }
 error()   { echo -e "${RED}Error:${NC} $1"; exit 1; }
 
 echo ""
-echo "  orbital — AI CLI environment manager"
+echo "  Orbital — AI CLI environment manager"
 echo ""
 
-# macOS only
-if [[ "$(uname)" != "Darwin" ]]; then
-  error "orbital requires macOS."
-fi
+# Detect OS
+OS="$(uname -s)"
+case "$OS" in
+  Darwin) os="darwin" ;;
+  Linux)  os="linux" ;;
+  *)      error "Unsupported OS: $OS" ;;
+esac
 
-# Check Swift
-if ! command -v swift &>/dev/null; then
-  error "Swift not found. Install Xcode or the Xcode Command Line Tools:\n  xcode-select --install"
-fi
+# Detect arch
+ARCH="$(uname -m)"
+case "$ARCH" in
+  arm64|aarch64) arch="arm64" ;;
+  x86_64)        arch="x86_64" ;;
+  *)             error "Unsupported architecture: $ARCH" ;;
+esac
 
-SWIFT_VERSION=$(swift --version 2>&1 | head -1)
-info "Found: $SWIFT_VERSION"
+ASSET_NAME="orbital-${os}-${arch}"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
+
+info "Detected: ${OS} ${ARCH}"
 
 # Check install dir is writable
+USE_SUDO=""
 if [[ ! -w "$INSTALL_DIR" ]]; then
   warn "$INSTALL_DIR is not writable. Will use sudo."
-  USE_SUDO=1
+  USE_SUDO="sudo"
 fi
 
-# Clone to temp dir
+# Try downloading pre-built binary
+info "Downloading pre-built binary..."
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-info "Cloning orbital..."
-git clone --depth 1 "$REPO" "$TMP_DIR/orbital" --quiet
-
-# Build
-info "Building (this may take a minute)..."
-cd "$TMP_DIR/orbital"
-swift build -c release --quiet 2>&1
-
-BUILT_BINARY="$TMP_DIR/orbital/.build/release/$BINARY_NAME"
-if [[ ! -f "$BUILT_BINARY" ]]; then
-  error "Build failed — binary not found."
-fi
-
-# Install
-info "Installing to $INSTALL_DIR/$BINARY_NAME..."
-if [[ "$USE_SUDO" == "1" ]]; then
-  sudo cp "$BUILT_BINARY" "$INSTALL_DIR/$BINARY_NAME"
-  sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+if curl -fsSL -o "$TMP_DIR/$BINARY_NAME" "$DOWNLOAD_URL" 2>/dev/null; then
+  chmod +x "$TMP_DIR/$BINARY_NAME"
+  $USE_SUDO cp "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+  $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
+  info "Installed pre-built binary to $INSTALL_DIR/$BINARY_NAME"
 else
-  cp "$BUILT_BINARY" "$INSTALL_DIR/$BINARY_NAME"
-  chmod +x "$INSTALL_DIR/$BINARY_NAME"
+  # Fallback: build from source if Swift is available
+  warn "Pre-built binary not available for ${os}-${arch}."
+
+  if ! command -v swift &>/dev/null; then
+    error "Swift not found. Install Swift to build from source:\n  https://www.swift.org/install/"
+  fi
+
+  info "Building from source (this may take a minute)..."
+  git clone --depth 1 "https://github.com/${REPO}.git" "$TMP_DIR/orbital" --quiet
+  cd "$TMP_DIR/orbital"
+  swift build -c release --quiet 2>&1
+
+  BUILT_BINARY="$TMP_DIR/orbital/.build/release/$BINARY_NAME"
+  if [[ ! -f "$BUILT_BINARY" ]]; then
+    error "Build failed — binary not found."
+  fi
+
+  $USE_SUDO cp "$BUILT_BINARY" "$INSTALL_DIR/$BINARY_NAME"
+  $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
+  info "Installed from source to $INSTALL_DIR/$BINARY_NAME"
 fi
 
 # Verify
@@ -71,14 +86,12 @@ if ! command -v orbital &>/dev/null; then
   warn "Add to your shell profile: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
+VERSION=$(orbital --version 2>/dev/null || echo "installed")
+
 echo ""
-info "orbital $(orbital --version 2>/dev/null || echo 'installed') successfully!"
+info "Orbital ${VERSION} successfully!"
 echo ""
-echo "  Next step — add shell integration:"
+echo "  Next step — activate shell integration:"
 echo ""
-echo "    orbital setup"
-echo ""
-echo "  Or manually add to ~/.zshrc:"
-echo ""
-echo '    eval "$(orbital init)"'
+echo '    eval "$(orbital setup)"'
 echo ""
