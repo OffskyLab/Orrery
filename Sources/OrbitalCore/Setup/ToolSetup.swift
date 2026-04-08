@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public struct ToolSetup {
 
@@ -82,13 +83,15 @@ public struct ToolSetup {
         print("(credentials will be stored in: \(configDir.path))")
         fflush(stdout)
 
-        var env = ProcessInfo.processInfo.environment
-        env[tool.envVarName] = configDir.path
+        // Set env var in current process so child inherits the full environment naturally.
+        // Replacing process.environment entirely can strip vars claude/codex depend on.
+        setenv(tool.envVarName, configDir.path, 1)
+        defer { unsetenv(tool.envVarName) }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = cmd
-        process.environment = env
+        // No process.environment override — child inherits everything
         process.standardInput = FileHandle.standardInput
         process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError
