@@ -7,19 +7,27 @@ public struct InfoCommand: ParsableCommand {
         abstract: "Show details of an orbital environment"
     )
 
-    @Argument(help: "Environment name")
-    public var name: String
+    @Argument(help: "Environment name (defaults to active environment)")
+    public var name: String?
 
     public init() {}
 
     public func run() throws {
         let store = EnvironmentStore.default
-        let env = try store.load(named: name)
+        let resolvedName: String
+        if let name {
+            resolvedName = name
+        } else if let active = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"] {
+            resolvedName = active
+        } else {
+            throw ValidationError("No active environment. Specify a name or run 'orbital use <name>' first.")
+        }
+        let env = try store.load(named: resolvedName)
         let df = DateFormatter()
         df.dateStyle = .medium
         df.timeStyle = .medium
 
-        let path = try store.envDir(for: name).path
+        let path = try store.envDir(for: resolvedName).path
 
         print("Name:        \(env.name)")
         print("ID:          \(env.id)")
