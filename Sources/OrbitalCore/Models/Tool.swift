@@ -22,16 +22,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Interactive auth command to run after installation, nil if not supported
-    public var authCommand: [String]? {
-        switch self {
-        case .claude: return ["claude", "auth", "login"]
-        case .codex:  return ["codex", "login"]
-        case .gemini: return ["gemini", "login"]
-        }
-    }
-
-    public var supportsSetup: Bool { authCommand != nil }
+    public var supportsSetup: Bool { installCommand != nil }
 
     /// Subdirectories within the tool's config dir that hold session data.
     /// These are symlinked to a shared location when `isolateSessions` is false.

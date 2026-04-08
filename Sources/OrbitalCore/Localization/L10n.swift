@@ -367,11 +367,6 @@ public enum L10n {
         public static func skipping(_ tool: String) -> String {
             isChinese ? "跳過 \(tool) 設定。\n" : "Skipping \(tool) setup.\n"
         }
-        public static func loginInstructions(_ tool: String, _ envName: String, _ cmd: String) -> String {
-            isChinese
-                ? "\n要登入 \(tool)，請執行：\n  orbital use \(envName)\n  \(cmd)"
-                : "\nTo log in to \(tool), run:\n  orbital use \(envName)\n  \(cmd)"
-        }
         public static func installing(_ tool: String, _ cmd: String) -> String {
             isChinese
                 ? "正在安裝 \(tool)（\(cmd)）...\n"
@@ -379,22 +374,6 @@ public enum L10n {
         }
         public static func installed(_ tool: String) -> String {
             isChinese ? "\u{2713} \(tool) 已安裝" : "\u{2713} \(tool) installed"
-        }
-        public static func running(_ cmd: String) -> String {
-            isChinese ? "執行中：\(cmd)" : "Running: \(cmd)"
-        }
-        public static func credentialsPath(_ path: String) -> String {
-            isChinese
-                ? "（憑證將儲存於：\(path)）"
-                : "(credentials will be stored in: \(path))"
-        }
-        public static func loginComplete(_ tool: String) -> String {
-            isChinese ? "\u{2713} \(tool) 登入完成" : "\u{2713} \(tool) login complete"
-        }
-        public static func loginFailed(_ tool: String, _ code: Int32, _ cmd: String) -> String {
-            isChinese
-                ? "\u{26A0} \(tool) 登入結束，代碼 \(code)\n  可稍後重試：\(cmd)"
-                : "\u{26A0} \(tool) login exited with code \(code)\n  You can retry later: \(cmd)"
         }
     }
 }

@@ -12,14 +12,12 @@ public struct ToolSetup {
         case authFailed(String)
     }
 
-    /// Run the full setup flow for a tool: check install → offer install → offer auth.
-    /// Credentials are stored in configDir (the orbital env's tool subdirectory).
+    /// Run the full setup flow for a tool: check install → offer install.
     public static func setup(_ tool: Tool, configDir: URL, envName: String) throws {
         guard tool.supportsSetup else { return }
 
         print("")
 
-        // ── 1. Check & install ──────────────────────────────────────────
         if !isInstalled(tool) {
             print(L10n.ToolSetup.notInstalled(tool.rawValue))
             print(L10n.ToolSetup.installNow, terminator: "")
@@ -30,11 +28,6 @@ public struct ToolSetup {
                 return
             }
             try install(tool)
-        }
-
-        // ── 2. Print login instructions ─────────────────────────────────
-        if let cmd = tool.authCommand {
-            print(L10n.ToolSetup.loginInstructions(tool.rawValue, envName, cmd.joined(separator: " ")))
         }
     }
 
@@ -70,35 +63,6 @@ public struct ToolSetup {
             throw SetupError.installFailed(tool.rawValue)
         }
         print(L10n.ToolSetup.installed(tool.rawValue))
-    }
-
-    static func authenticate(_ tool: Tool, configDir: URL) throws {
-        guard let cmd = tool.authCommand else { return }
-
-        print(L10n.ToolSetup.running(cmd.joined(separator: " ")))
-        print(L10n.ToolSetup.credentialsPath(configDir.path))
-        fflush(stdout)
-
-        // Set env var in current process so child inherits the full environment naturally.
-        // Replacing process.environment entirely can strip vars claude/codex depend on.
-        setenv(tool.envVarName, configDir.path, 1)
-        defer { unsetenv(tool.envVarName) }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = cmd
-        // No process.environment override — child inherits everything
-        process.standardInput = FileHandle.standardInput
-        process.standardOutput = FileHandle.standardOutput
-        process.standardError = FileHandle.standardError
-        try process.run()
-        process.waitUntilExit()
-
-        if process.terminationStatus == 0 {
-            print(L10n.ToolSetup.loginComplete(tool.rawValue))
-        } else {
-            print(L10n.ToolSetup.loginFailed(tool.rawValue, process.terminationStatus, cmd.joined(separator: " ")))
-        }
     }
 
     // MARK: - Terminal helpers
