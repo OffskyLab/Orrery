@@ -5,6 +5,7 @@ public struct AddToolCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "add",
         abstract: "Add a tool to an environment",
+        shouldDisplay: false,
         subcommands: [ToolSubcommand.self]
     )
 

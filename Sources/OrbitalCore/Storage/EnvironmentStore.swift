@@ -113,4 +113,25 @@ public struct EnvironmentStore: Sendable {
     public func toolConfigDir(tool: Tool, environment: String) -> URL {
         envURL(name: environment).appendingPathComponent(tool.subdirectory)
     }
+
+    public func rename(from oldName: String, to newName: String) throws {
+        let oldURL = envURL(name: oldName)
+        let newURL = envURL(name: newName)
+
+        guard FileManager.default.fileExists(atPath: oldURL.path) else {
+            throw Error.environmentNotFound(oldName)
+        }
+
+        try FileManager.default.moveItem(at: oldURL, to: newURL)
+
+        // Update name field inside env.json
+        var env = try load(named: newName)
+        env.name = newName
+        try save(env)
+
+        // Update current pointer if it was pointing to the old name
+        if let currentName = try current(), currentName == oldName {
+            try setCurrent(newName)
+        }
+    }
 }
