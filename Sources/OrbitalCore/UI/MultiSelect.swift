@@ -8,17 +8,19 @@ import Glibc
 public struct MultiSelect: Sendable {
     public let title: String
     public let options: [String]
+    private let preSelected: IndexSet
 
-    public init(title: String, options: [String]) {
+    public init(title: String, options: [String], selected: IndexSet = IndexSet()) {
         self.title = title
         self.options = options
+        self.preSelected = selected
     }
 
     /// Run interactive multi-select. Returns indices of selected options.
     public func run() -> IndexSet {
-        guard isatty(STDIN_FILENO) != 0 else { return IndexSet() }
+        guard isatty(STDIN_FILENO) != 0 else { return preSelected }
 
-        var selected = IndexSet()
+        var selected = preSelected
         var cursor = 0
 
         var oldTermios = termios()
@@ -44,7 +46,7 @@ public struct MultiSelect: Sendable {
             case .ctrlC:
                 clearLines(options.count)
                 showCursor()
-                return IndexSet()
+                return preSelected
             case .other:
                 break
             }
