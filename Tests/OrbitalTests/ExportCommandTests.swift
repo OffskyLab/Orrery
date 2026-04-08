@@ -44,4 +44,20 @@ struct ExportCommandTests {
         #expect(lines.contains("unset CLAUDE_CONFIG_DIR"))
         #expect(lines.contains("unset ANTHROPIC_API_KEY"))
     }
+
+    @Test("export updates lastUsed timestamp")
+    func updatesLastUsed() throws {
+        let before = Date()
+        let env = OrbitalEnvironment(name: "work", tools: [])
+        try store.save(env)
+
+        // Add delay to ensure time passes between creating and exporting
+        // ISO8601 encoding uses second precision, so we need at least 1 second difference
+        Thread.sleep(forTimeInterval: 1.0)
+
+        _ = try ExportCommand.exportLines(for: "work", store: store)
+
+        let loaded = try store.load(named: "work")
+        #expect(loaded.lastUsed >= before)
+    }
 }

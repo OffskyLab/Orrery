@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 
 public struct ExportCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -16,18 +17,18 @@ public struct ExportCommand: ParsableCommand {
     }
 
     public static func exportLines(for name: String, store: EnvironmentStore) throws -> [String] {
-        let env = try store.load(named: name)
-        var lines: [String] = []
+        var env = try store.load(named: name)
+        env.lastUsed = Date()
+        try store.save(env)
 
+        var lines: [String] = []
         for tool in env.tools {
             let dir = store.toolConfigDir(tool: tool, environment: name).path
             lines.append("export \(tool.envVarName)=\(dir)")
         }
-
         for (key, value) in env.env.sorted(by: { $0.key < $1.key }) {
             lines.append("export \(key)=\(value)")
         }
-
         return lines
     }
 }
