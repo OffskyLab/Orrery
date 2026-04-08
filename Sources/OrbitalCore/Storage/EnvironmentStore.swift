@@ -12,7 +12,6 @@ public struct EnvironmentStore: Sendable {
         self.homeURL = homeURL
     }
 
-    /// Default store reading ORBITAL_HOME env var, falling back to ~/.orbital
     public static var `default`: EnvironmentStore {
         let home: URL
         if let custom = ProcessInfo.processInfo.environment["ORBITAL_HOME"] {
@@ -27,30 +26,48 @@ public struct EnvironmentStore: Sendable {
     private var envsURL: URL { homeURL.appendingPathComponent("envs") }
     private var currentURL: URL { homeURL.appendingPathComponent("current") }
 
-    private func envURL(name: String) -> URL {
-        envsURL.appendingPathComponent(name)
+    // Directory for an environment, keyed by UUID
+    private func envURL(id: String) -> URL {
+        envsURL.appendingPathComponent(id)
     }
 
-    private func envJSONURL(name: String) -> URL {
-        envURL(name: name).appendingPathComponent("env.json")
+    private func envJSONURL(id: String) -> URL {
+        envURL(id: id).appendingPathComponent("env.json")
+    }
+
+    // Scan all UUID dirs and find the one whose env.json has the given name
+    private func resolveID(for name: String) throws -> String {
+        guard FileManager.default.fileExists(atPath: envsURL.path) else {
+            throw Error.environmentNotFound(name)
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let dirs = try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
+        for dir in dirs {
+            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("env.json")
+            guard FileManager.default.fileExists(atPath: jsonURL.path) else { continue }
+            if let data = try? Data(contentsOf: jsonURL),
+               let env = try? decoder.decode(OrbitalEnvironment.self, from: data),
+               env.name == name {
+                return dir
+            }
+        }
+        throw Error.environmentNotFound(name)
     }
 
     public func save(_ environment: OrbitalEnvironment) throws {
-        let dir = envURL(name: environment.name)
+        let dir = envURL(id: environment.id)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(environment)
-        try data.write(to: envJSONURL(name: environment.name))
+        try data.write(to: envJSONURL(id: environment.id))
     }
 
     public func load(named name: String) throws -> OrbitalEnvironment {
-        let url = envJSONURL(name: name)
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            throw Error.environmentNotFound(name)
-        }
-        let data = try Data(contentsOf: url)
+        let id = try resolveID(for: name)
+        let data = try Data(contentsOf: envJSONURL(id: id))
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(OrbitalEnvironment.self, from: data)
@@ -58,21 +75,21 @@ public struct EnvironmentStore: Sendable {
 
     public func listNames() throws -> [String] {
         guard FileManager.default.fileExists(atPath: envsURL.path) else { return [] }
-        return try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
-            .filter { name in
-                var isDir: ObjCBool = false
-                let path = envsURL.appendingPathComponent(name).path
-                FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
-                return isDir.boolValue
-            }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let dirs = try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
+        return dirs.compactMap { dir -> String? in
+            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("env.json")
+            guard let data = try? Data(contentsOf: jsonURL),
+                  let env = try? decoder.decode(OrbitalEnvironment.self, from: data)
+            else { return nil }
+            return env.name
+        }
     }
 
     public func delete(named name: String) throws {
-        let dir = envURL(name: name)
-        guard FileManager.default.fileExists(atPath: dir.path) else {
-            throw Error.environmentNotFound(name)
-        }
-        try FileManager.default.removeItem(at: dir)
+        let id = try resolveID(for: name)
+        try FileManager.default.removeItem(at: envURL(id: id))
     }
 
     public func setCurrent(_ name: String?) throws {
@@ -86,7 +103,8 @@ public struct EnvironmentStore: Sendable {
 
     public func current() throws -> String? {
         guard FileManager.default.fileExists(atPath: currentURL.path) else { return nil }
-        let content = try String(contentsOf: currentURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        let content = try String(contentsOf: currentURL, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         return content.isEmpty ? nil : content
     }
 
@@ -110,26 +128,17 @@ public struct EnvironmentStore: Sendable {
         try save(env)
     }
 
-    public func toolConfigDir(tool: Tool, environment: String) -> URL {
-        envURL(name: environment).appendingPathComponent(tool.subdirectory)
+    public func toolConfigDir(tool: Tool, environment envName: String) -> URL {
+        // We need the UUID for the env — if not found, fall back gracefully
+        let id = (try? resolveID(for: envName)) ?? envName
+        return envURL(id: id).appendingPathComponent(tool.subdirectory)
     }
 
     public func rename(from oldName: String, to newName: String) throws {
-        let oldURL = envURL(name: oldName)
-        let newURL = envURL(name: newName)
-
-        guard FileManager.default.fileExists(atPath: oldURL.path) else {
-            throw Error.environmentNotFound(oldName)
-        }
-
-        try FileManager.default.moveItem(at: oldURL, to: newURL)
-
-        // Update name field inside env.json
-        var env = try load(named: newName)
+        var env = try load(named: oldName)
         env.name = newName
         try save(env)
 
-        // Update current pointer if it was pointing to the old name
         if let currentName = try current(), currentName == oldName {
             try setCurrent(newName)
         }

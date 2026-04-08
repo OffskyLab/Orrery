@@ -18,8 +18,6 @@ struct EnvironmentStoreTests {
     func createEnvironment() throws {
         let env = OrbitalEnvironment(name: "work", description: "Work")
         try store.save(env)
-        let envDir = tmpDir.appendingPathComponent("envs/work")
-        #expect(FileManager.default.fileExists(atPath: envDir.path))
         let loaded = try store.load(named: "work")
         #expect(loaded.name == "work")
         #expect(loaded.description == "Work")
@@ -64,7 +62,7 @@ struct EnvironmentStoreTests {
     func createToolDirectory() throws {
         try store.save(OrbitalEnvironment(name: "work"))
         try store.addTool(.claude, to: "work")
-        let toolDir = tmpDir.appendingPathComponent("envs/work/claude")
+        let toolDir = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(FileManager.default.fileExists(atPath: toolDir.path))
     }
 
@@ -73,6 +71,8 @@ struct EnvironmentStoreTests {
         try store.save(OrbitalEnvironment(name: "work"))
         let path = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(path.lastPathComponent == "claude")
-        #expect(path.deletingLastPathComponent().lastPathComponent == "work")
+        // Parent is a UUID dir, not the env name — just verify it's under envsURL
+        let envsURL = tmpDir.appendingPathComponent("envs")
+        #expect(path.path.hasPrefix(envsURL.path))
     }
 }
