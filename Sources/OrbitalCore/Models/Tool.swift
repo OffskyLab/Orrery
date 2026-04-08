@@ -18,7 +18,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         switch self {
         case .claude: return ["npm", "install", "-g", "@anthropic-ai/claude-code"]
         case .codex:  return ["npm", "install", "-g", "@openai/codex"]
-        case .gemini: return nil
+        case .gemini: return ["npm", "install", "-g", "@google/gemini-cli"]
         }
     }
 
@@ -27,7 +27,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         switch self {
         case .claude: return ["claude", "auth", "login"]
         case .codex:  return ["codex", "login"]
-        case .gemini: return nil
+        case .gemini: return ["gemini", "login"]
         }
     }
 
