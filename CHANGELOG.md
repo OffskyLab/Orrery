@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.3
+
+- **Memory fragment log** — each `orbital_memory_write` now produces an append-only fragment file in `fragments/` alongside `ORBITAL_MEMORY.md`, keyed by UUID + peer name. Prepares for future P2P sync with conflict-free replication.
+
+## v0.3.2
+
+- **`/orbital:resume` slash command** — resume session by index from `orbital sessions`
+- Slash commands renamed to `/orbital:delegate` and `/orbital:sessions`
+- GitHub Pages badge updated
+
+## v0.3.1
+
+- **`orbital memory export`** — export shared project memory to file
+- Improved MCP memory tool descriptions with usage scenarios and guidance
+
 ## v0.3.0
 
 - **Shared memory across AI tools** — `orbital_memory_read` / `orbital_memory_write` MCP tools let Claude, Codex, and Gemini share the same project memory (`ORBITAL_MEMORY.md`)
