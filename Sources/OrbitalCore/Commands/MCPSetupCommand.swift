@@ -23,61 +23,34 @@ public struct MCPSetupCommand: ParsableCommand {
             let fm = FileManager.default
             let cwd = fm.currentDirectoryPath
 
-            // 1. Write MCP server config to .claude/settings.json
-            try Self.installMCPConfig(projectDir: cwd)
+            // 1. Register MCP server via claude CLI
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["claude", "mcp", "add", "--scope", "project", "orbital", "--", "orbital", "mcp-server"]
+            process.standardInput = FileHandle.standardInput
+            process.standardOutput = FileHandle.standardOutput
+            process.standardError = FileHandle.standardError
+
+            // Strip Claude Code IPC variables so `claude mcp add` runs as a
+            // plain CLI command instead of entering IPC mode (which would hang).
+            var env = ProcessInfo.processInfo.environment
+            env.removeValue(forKey: "CLAUDECODE")
+            env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
+            env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+            process.environment = env
+
+            try process.run()
+            process.waitUntilExit()
+
+            // Exit code 1 means the server already exists — treat as success.
+            guard process.terminationStatus == 0 || process.terminationStatus == 1 else {
+                throw ExitCode(process.terminationStatus)
+            }
 
             // 2. Install slash commands
             try Self.installSlashCommands(projectDir: cwd)
 
             print(L10n.MCPSetup.success)
-        }
-
-        static func installMCPConfig(projectDir: String) throws {
-            let fm = FileManager.default
-            let claudeDir = URL(fileURLWithPath: projectDir).appendingPathComponent(".claude")
-            try fm.createDirectory(at: claudeDir, withIntermediateDirectories: true)
-
-            let settingsFile = claudeDir.appendingPathComponent("settings.json")
-
-            // Read existing settings or start fresh
-            var settings: [String: Any] = [:]
-            if fm.fileExists(atPath: settingsFile.path),
-               let data = try? Data(contentsOf: settingsFile),
-               let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                settings = existing
-            }
-
-            // Find orbital binary path
-            let orbitalPath = Self.findOrbitalPath() ?? "orbital"
-
-            // Add/update mcpServers.orbital
-            var mcpServers = settings["mcpServers"] as? [String: Any] ?? [:]
-            mcpServers["orbital"] = [
-                "type": "stdio",
-                "command": orbitalPath,
-                "args": ["mcp-server"]
-            ]
-            settings["mcpServers"] = mcpServers
-
-            let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: settingsFile)
-
-            FileHandle.standardError.write(Data(L10n.MCPSetup.wroteSettings(settingsFile.path).utf8))
-        }
-
-        static func findOrbitalPath() -> String? {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-            process.arguments = ["orbital"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = FileHandle.nullDevice
-            try? process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return output?.isEmpty == false ? output : nil
         }
 
         static func installSlashCommands(projectDir: String) throws {
