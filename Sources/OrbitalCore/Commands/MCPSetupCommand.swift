@@ -71,7 +71,7 @@ public struct MCPSetupCommand: ParsableCommand {
                 .map { "- \($0)" }
                 .joined(separator: "\n")
 
-            let delegateMd = commandsDir.appendingPathComponent("delegate.md")
+            let delegateMd = commandsDir.appendingPathComponent("orbital:delegate.md")
             let delegateContent = """
             # Delegate task to another account
 
@@ -82,7 +82,7 @@ public struct MCPSetupCommand: ParsableCommand {
 
             Usage: Specify which environment to use and describe the task.
 
-            Example: /delegate Use the "work" environment to review the recent changes for security issues.
+            Example: /orbital:delegate Use the "work" environment to review the recent changes for security issues.
 
             When this command is invoked, run:
             ```
@@ -94,7 +94,7 @@ public struct MCPSetupCommand: ParsableCommand {
             """
             try delegateContent.write(to: delegateMd, atomically: true, encoding: .utf8)
 
-            let sessionsMd = commandsDir.appendingPathComponent("sessions.md")
+            let sessionsMd = commandsDir.appendingPathComponent("orbital:sessions.md")
             let sessionsContent = """
             # List AI sessions
 

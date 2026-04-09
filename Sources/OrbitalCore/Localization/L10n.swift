@@ -519,8 +519,8 @@ public enum L10n {
         }
         public static var success: String {
             isChinese
-                ? "Orbital MCP server 與 slash commands 已設定完成。重新啟動 Claude Code 即可使用 /delegate 和 /sessions。"
-                : "Orbital MCP server and slash commands installed. Restart Claude Code to use /delegate and /sessions."
+                ? "Orbital MCP server 與 slash commands 已設定完成。重新啟動 AI tool 即可使用 /orbital:delegate 和 /orbital:sessions。"
+                : "Orbital MCP server and slash commands installed. Restart your AI tool to use /orbital:delegate and /orbital:sessions."
         }
         public static func wroteSettings(_ path: String) -> String {
             isChinese
