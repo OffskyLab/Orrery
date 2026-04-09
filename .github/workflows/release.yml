@@ -53,6 +53,12 @@ jobs:
           Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
+          cat > deb/DEBIAN/postinst <<'POSTINST'
+          #!/bin/sh
+          orbital setup 2>/dev/null || true
+          POSTINST
+          sed -i 's/^          //' deb/DEBIAN/postinst
+          chmod 755 deb/DEBIAN/postinst
           dpkg-deb --build deb orbital_${tag}_amd64.deb
       - uses: actions/upload-artifact@v4
         with:
@@ -88,6 +94,12 @@ jobs:
           Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
+          cat > deb/DEBIAN/postinst <<'POSTINST'
+          #!/bin/sh
+          orbital setup 2>/dev/null || true
+          POSTINST
+          sed -i 's/^          //' deb/DEBIAN/postinst
+          chmod 755 deb/DEBIAN/postinst
           dpkg-deb --build deb orbital_${tag}_arm64.deb
       - uses: actions/upload-artifact@v4
         with:

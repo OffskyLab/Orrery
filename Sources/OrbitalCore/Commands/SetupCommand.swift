@@ -15,9 +15,15 @@ public struct SetupCommand: ParsableCommand {
     public func run() throws {
         let resolved = try Self.resolveShell(explicit: shell)
         let rcFile = Self.rcFile(for: resolved)
-        Self.installShellIntegration(to: rcFile)
+        let activateFile = Self.activateFile()
 
-        // stdout: shell function for immediate eval in current shell
+        // 1. Generate activate.sh
+        Self.writeActivateScript(to: activateFile)
+
+        // 2. Add source line to rc file
+        Self.installShellIntegration(to: rcFile, activatePath: activateFile.path)
+
+        // 3. stdout: shell function for immediate use (e.g. eval "$(orbital setup)")
         print(ShellFunctionGenerator.generate())
     }
 
@@ -46,17 +52,58 @@ public struct SetupCommand: ParsableCommand {
         }
     }
 
-    static func installShellIntegration(to url: URL) {
-        let initLine = #"eval "$(orbital setup)""#
+    static func activateFile() -> URL {
+        let home: URL
+        if let custom = ProcessInfo.processInfo.environment["ORBITAL_HOME"] {
+            home = URL(fileURLWithPath: custom)
+        } else {
+            home = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".orbital")
+        }
+        return home.appendingPathComponent("activate.sh")
+    }
+
+    static func writeActivateScript(to url: URL) {
+        let content = ShellFunctionGenerator.generate()
+        let fm = FileManager.default
+        let dir = url.deletingLastPathComponent()
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+            FileHandle.standardError.write(Data(L10n.Setup.wroteActivate(url.path).utf8))
+        } catch {
+            FileHandle.standardError.write(Data(L10n.Setup.failedToWrite(url.path, error.localizedDescription).utf8))
+        }
+    }
+
+    static func installShellIntegration(to url: URL, activatePath: String) {
+        let sourceLine = "source \"\(activatePath)\""
+        let oldEvalLine = #"eval "$(orbital setup)""#
         var existing = ""
         if FileManager.default.fileExists(atPath: url.path) {
             existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         }
-        guard !existing.contains(initLine) else {
+
+        // Already has the source line
+        if existing.contains(sourceLine) {
             FileHandle.standardError.write(Data(L10n.Setup.alreadyPresent(url.path).utf8))
             return
         }
-        let appended = existing + "\n# orbital shell integration\n\(initLine)\n"
+
+        // Migrate old eval line to source line
+        if existing.contains(oldEvalLine) {
+            let migrated = existing.replacingOccurrences(of: oldEvalLine, with: sourceLine)
+            do {
+                try migrated.write(to: url, atomically: true, encoding: .utf8)
+                FileHandle.standardError.write(Data(L10n.Setup.migratedRc(url.path).utf8))
+            } catch {
+                FileHandle.standardError.write(Data(L10n.Setup.failedToWrite(url.path, error.localizedDescription).utf8))
+            }
+            return
+        }
+
+        // Fresh install
+        let appended = existing + "\n# orbital shell integration\n\(sourceLine)\n"
         do {
             try appended.write(to: url, atomically: true, encoding: .utf8)
             FileHandle.standardError.write(Data(L10n.Setup.addedTo(url.path).utf8))

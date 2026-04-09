@@ -358,6 +358,16 @@ public enum L10n {
                 ? "orbital: 寫入 \(path) 失敗：\(error)\n"
                 : "orbital: failed to write \(path): \(error)\n"
         }
+        public static func wroteActivate(_ path: String) -> String {
+            isChinese
+                ? "orbital: 已產生 \(path)\n"
+                : "orbital: wrote \(path)\n"
+        }
+        public static func migratedRc(_ path: String) -> String {
+            isChinese
+                ? "orbital: 已將 \(path) 中的 eval 改為 source\n"
+                : "orbital: migrated \(path) from eval to source\n"
+        }
     }
 
     // MARK: - InitCommand
