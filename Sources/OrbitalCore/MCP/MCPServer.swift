@@ -117,7 +117,7 @@ public struct MCPServer {
             ],
             [
                 "name": "orbital_memory_read",
-                "description": "Read the shared Orbital memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orbital environments. Use this to recall project decisions, architecture notes, conventions, or anything previously saved. Always read before writing to avoid overwriting existing knowledge.",
+                "description": "Read the shared Orbital memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orbital environments. Use this to recall project decisions, architecture notes, conventions, or anything previously saved. Always read before writing to avoid overwriting existing knowledge. If pending sync fragments are present, consolidate them into the memory and write back with append=false to complete integration.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [String: Any](),
@@ -293,10 +293,38 @@ public struct MCPServer {
         }
     }
 
+    /// Remove all fragment files after consolidation.
+    private static func cleanupFragments() {
+        let dir = fragmentsDirectory()
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return }
+        for file in files where file.hasSuffix(".md") {
+            try? fm.removeItem(at: dir.appendingPathComponent(file))
+        }
+    }
+
     private static func readMemory() -> [String: Any] {
         let file = sharedMemoryFile()
-        guard FileManager.default.fileExists(atPath: file.path),
-              let content = try? String(contentsOf: file, encoding: .utf8) else {
+        var content = ""
+        if FileManager.default.fileExists(atPath: file.path),
+           let existing = try? String(contentsOf: file, encoding: .utf8) {
+            content = existing
+        }
+
+        // Check for pending fragments from other peers
+        let fragments = pendingFragments()
+        if !fragments.isEmpty {
+            content += "\n\n---\n## Pending Memory Fragments (from sync)\n"
+            content += "The following fragments were synced from other machines and need to be integrated.\n"
+            content += "Please consolidate them into the memory above, then write back with append=false.\n"
+            content += "After integration, the fragment files will be cleaned up automatically.\n\n"
+            for fragment in fragments {
+                content += "### \(fragment.filename)\n"
+                content += fragment.content + "\n\n"
+            }
+        }
+
+        if content.isEmpty {
             return [
                 "content": [
                     ["type": "text", "text": "(no shared memory yet)"]
@@ -304,12 +332,34 @@ public struct MCPServer {
                 "isError": false
             ]
         }
+
         return [
             "content": [
                 ["type": "text", "text": content]
             ],
             "isError": false
         ]
+    }
+
+    private struct Fragment {
+        let filename: String
+        let content: String
+    }
+
+    private static func pendingFragments() -> [Fragment] {
+        let dir = fragmentsDirectory()
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: dir.path) else { return [] }
+        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return [] }
+
+        return files
+            .filter { $0.hasSuffix(".md") }
+            .sorted()
+            .compactMap { filename -> Fragment? in
+                let path = dir.appendingPathComponent(filename)
+                guard let content = try? String(contentsOf: path, encoding: .utf8) else { return nil }
+                return Fragment(filename: filename, content: content)
+            }
     }
 
     private static func writeMemory(content: String, append: Bool) -> [String: Any] {
@@ -324,6 +374,8 @@ public struct MCPServer {
                 try (existing + "\n" + content).write(to: file, atomically: true, encoding: .utf8)
             } else {
                 try content.write(to: file, atomically: true, encoding: .utf8)
+                // Overwrite means consolidation — clean up integrated fragments
+                cleanupFragments()
             }
 
             writeFragment(content: content, action: append ? "append" : "overwrite")
