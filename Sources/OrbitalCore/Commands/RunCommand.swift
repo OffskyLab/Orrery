@@ -58,13 +58,15 @@ public struct RunCommand: ParsableCommand {
         }
         process.environment = processEnv
 
-        process.standardInput = FileHandle.standardInput
-        process.standardOutput = FileHandle.standardOutput
-        process.standardError = FileHandle.standardError
+        // Use execvp to replace this process — inherits full TTY for interactive tools
+        for (key, value) in processEnv {
+            setenv(key, value, 1)
+        }
+        let argv = command.map { strdup($0) } + [nil]
+        execvp(command[0], argv)
 
-        try process.run()
-        process.waitUntilExit()
-
-        throw ExitCode(process.terminationStatus)
+        // If execvp returns, it failed
+        perror("execvp")
+        throw ExitCode.failure
     }
 }
