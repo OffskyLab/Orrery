@@ -111,6 +111,24 @@ public struct MCPSetupCommand: ParsableCommand {
             ```
             """
             try sessionsContent.write(to: sessionsMd, atomically: true, encoding: .utf8)
+
+            let resumeMd = commandsDir.appendingPathComponent("orbital:resume.md")
+            let resumeContent = """
+            # Resume a session by index
+
+            Resume an AI tool session using its index number from `orbital sessions`.
+
+            Usage: Specify the session index to resume. Additional flags are passed through to the AI tool.
+
+            Example: /orbital:resume 1
+            Example: /orbital:resume 2 --dangerously-skip-permissions
+
+            When this command is invoked, run:
+            ```
+            orbital resume $ARGUMENTS
+            ```
+            """
+            try resumeContent.write(to: resumeMd, atomically: true, encoding: .utf8)
         }
     }
 }
