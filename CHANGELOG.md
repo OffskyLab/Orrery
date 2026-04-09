@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.1
+
+- **Fix: `orbital run` supports interactive tools** — uses `execvp` to inherit full TTY, fixing `orbital run claude` / `orbital run codex` hanging
+- **Fix: Strip Claude IPC env vars** in `run` and `delegate` commands to prevent child processes from hanging
+- **Fix: Gemini MCP setup** — updated `gemini mcp add` to new CLI format
+- **P2P Sync section** added to README and GitHub Pages (EN + 中文)
+- **Fix: scroll-padding-top** for sticky nav on GitHub Pages
+
 ## v1.0.0
 
 - **P2P sync** — `orbital sync` delegates to orbital-sync daemon for real-time memory sync across machines
