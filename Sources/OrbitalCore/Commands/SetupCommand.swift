@@ -23,8 +23,6 @@ public struct SetupCommand: ParsableCommand {
         // 2. Add source line to rc file
         Self.installShellIntegration(to: rcFile, activatePath: activateFile.path)
 
-        // 3. stdout: shell function for immediate use (e.g. eval "$(orbital setup)")
-        print(ShellFunctionGenerator.generate())
     }
 
     static func resolveShell(explicit: String?) throws -> String {
