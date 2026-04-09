@@ -23,34 +23,38 @@ public struct MCPSetupCommand: ParsableCommand {
             let fm = FileManager.default
             let cwd = fm.currentDirectoryPath
 
-            // 1. Register MCP server via claude CLI
+            // 1. Register MCP server with each installed tool
+            Self.registerMCP(tool: "claude", args: ["claude", "mcp", "add", "--scope", "project", "orbital", "--", "orbital", "mcp-server"])
+            Self.registerMCP(tool: "codex", args: ["codex", "mcp", "add", "orbital", "--", "orbital", "mcp-server"])
+            Self.registerMCP(tool: "gemini", args: ["gemini", "mcp", "add", "orbital", "--", "orbital", "mcp-server"])
+
+            // 2. Install slash commands
+            try Self.installSlashCommands(projectDir: cwd)
+
+            print(L10n.MCPSetup.success)
+        }
+
+        static func registerMCP(tool: String, args: [String]) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = ["claude", "mcp", "add", "--scope", "project", "orbital", "--", "orbital", "mcp-server"]
+            process.arguments = args
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = FileHandle.standardOutput
             process.standardError = FileHandle.standardError
 
-            // Strip Claude Code IPC variables so `claude mcp add` runs as a
-            // plain CLI command instead of entering IPC mode (which would hang).
+            // Strip IPC variables to prevent hanging inside AI tool sessions
             var env = ProcessInfo.processInfo.environment
             env.removeValue(forKey: "CLAUDECODE")
             env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
             env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
             process.environment = env
 
-            try process.run()
-            process.waitUntilExit()
-
-            // Exit code 1 means the server already exists — treat as success.
-            guard process.terminationStatus == 0 || process.terminationStatus == 1 else {
-                throw ExitCode(process.terminationStatus)
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                // Tool not installed — skip silently
             }
-
-            // 2. Install slash commands
-            try Self.installSlashCommands(projectDir: cwd)
-
-            print(L10n.MCPSetup.success)
         }
 
         static func installSlashCommands(projectDir: String) throws {

@@ -115,6 +115,34 @@ public struct MCPServer {
                     "additionalProperties": false
                 ]
             ],
+            [
+                "name": "orbital_memory_read",
+                "description": "Read the shared Orbital memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orbital environments.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [String: Any](),
+                    "additionalProperties": false
+                ]
+            ],
+            [
+                "name": "orbital_memory_write",
+                "description": "Write or append to the shared Orbital memory for the current project. Use markdown format. This memory is shared across all AI tools and environments.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "content": [
+                            "type": "string",
+                            "description": "Markdown content to write to shared memory"
+                        ],
+                        "append": [
+                            "type": "boolean",
+                            "description": "If true, append to existing memory. If false, overwrite. Default: true"
+                        ]
+                    ],
+                    "required": ["content"],
+                    "additionalProperties": false
+                ]
+            ],
         ]
     }
 
@@ -148,6 +176,16 @@ public struct MCPServer {
 
         case "orbital_current":
             return execCommand(["orbital", "current"])
+
+        case "orbital_memory_read":
+            return readMemory()
+
+        case "orbital_memory_write":
+            guard let content = arguments["content"] as? String else {
+                return toolError("Missing required parameter: content")
+            }
+            let append = arguments["append"] as? Bool ?? true
+            return writeMemory(content: content, append: append)
 
         default:
             return toolError("Unknown tool: \(name)")
@@ -194,6 +232,69 @@ public struct MCPServer {
             ],
             "isError": false
         ]
+    }
+
+    // MARK: - Shared memory
+
+    private static func sharedMemoryFile() -> URL {
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let home: URL
+        if let custom = ProcessInfo.processInfo.environment["ORBITAL_HOME"] {
+            home = URL(fileURLWithPath: custom)
+        } else {
+            home = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".orbital")
+        }
+        return home
+            .appendingPathComponent("shared")
+            .appendingPathComponent("memory")
+            .appendingPathComponent(projectKey)
+            .appendingPathComponent("ORBITAL_MEMORY.md")
+    }
+
+    private static func readMemory() -> [String: Any] {
+        let file = sharedMemoryFile()
+        guard FileManager.default.fileExists(atPath: file.path),
+              let content = try? String(contentsOf: file, encoding: .utf8) else {
+            return [
+                "content": [
+                    ["type": "text", "text": "(no shared memory yet)"]
+                ],
+                "isError": false
+            ]
+        }
+        return [
+            "content": [
+                ["type": "text", "text": content]
+            ],
+            "isError": false
+        ]
+    }
+
+    private static func writeMemory(content: String, append: Bool) -> [String: Any] {
+        let file = sharedMemoryFile()
+        let fm = FileManager.default
+        let dir = file.deletingLastPathComponent()
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+
+            if append && fm.fileExists(atPath: file.path) {
+                let existing = try String(contentsOf: file, encoding: .utf8)
+                try (existing + "\n" + content).write(to: file, atomically: true, encoding: .utf8)
+            } else {
+                try content.write(to: file, atomically: true, encoding: .utf8)
+            }
+
+            return [
+                "content": [
+                    ["type": "text", "text": "Memory updated: \(file.path)"]
+                ],
+                "isError": false
+            ]
+        } catch {
+            return toolError("Failed to write memory: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - JSON-RPC helpers
