@@ -380,6 +380,26 @@ public enum L10n {
         }
     }
 
+    // MARK: - DelegateCommand
+
+    public enum Delegate {
+        public static var abstract: String {
+            isChinese
+                ? "委派任務給指定環境的 AI 工具"
+                : "Delegate a task to an AI tool in a specific environment"
+        }
+        public static var envHelp: String {
+            isChinese
+                ? "環境名稱（預設為目前啟用的環境）"
+                : "Environment name (defaults to active environment)"
+        }
+        public static var promptHelp: String {
+            isChinese
+                ? "要委派的任務描述"
+                : "Task prompt to delegate"
+        }
+    }
+
     // MARK: - RunCommand
 
     public enum Run {
