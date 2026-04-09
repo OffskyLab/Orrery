@@ -425,32 +425,46 @@
     footer a:hover { color: var(--text); }
 
     /* ── Fork me ribbon ── */
-    .github-ribbon {
+    .github-ribbon-wrap {
       position: fixed;
-      top: 36px;
+      top: 0;
+      right: 0;
+      width: 130px;
+      height: 130px;
+      overflow: hidden;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .github-ribbon {
+      position: absolute;
+      top: 28px;
       right: -38px;
+      width: 160px;
       transform: rotate(45deg);
       background: #c0392b;
       color: #fff;
-      font-size: .68rem;
+      font-size: .65rem;
       font-weight: 700;
       letter-spacing: .07em;
       text-transform: uppercase;
       text-decoration: none;
-      padding: 7px 58px;
-      z-index: 200;
-      box-shadow: 0 2px 8px rgba(0,0,0,.45);
-      white-space: nowrap;
+      text-align: center;
+      padding: 7px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,.4);
       transition: background .15s;
+      pointer-events: all;
+      display: block;
     }
     .github-ribbon:hover { background: #a93226; text-decoration: none; }
-    @media (max-width: 640px) { .github-ribbon { display: none; } }
+    @media (max-width: 640px) { .github-ribbon-wrap { display: none; } }
   </style>
 </head>
 <body>
 
 <!-- Fork me ribbon -->
-<a href="https://github.com/OffskyLab/Orbital" class="github-ribbon">Fork me on GitHub</a>
+<div class="github-ribbon-wrap">
+  <a href="https://github.com/OffskyLab/Orbital" class="github-ribbon">Fork me on GitHub</a>
+</div>
 
 <!-- Nav -->
 <nav>
