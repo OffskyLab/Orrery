@@ -16,6 +16,9 @@ public struct DeleteCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
+        if name == ReservedEnvironment.defaultName {
+            throw ValidationError(L10n.Delete.reservedName)
+        }
         if !force {
             print(L10n.Delete.confirm(name), terminator: "")
             let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces)

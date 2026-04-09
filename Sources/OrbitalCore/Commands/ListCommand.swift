@@ -23,16 +23,22 @@ public struct ListCommand: ParsableCommand {
 
     public static func environmentRows(activeEnv: String?, store: EnvironmentStore) throws -> [String] {
         let names = try store.listNames().sorted()
-        return try names.map { name in
+        let defaultName = ReservedEnvironment.defaultName
+        let defaultActive = activeEnv == defaultName || activeEnv == nil ? "*" : " "
+        var rows = ["\(defaultActive) \(defaultName.padding(toLength: 12, withPad: " ", startingAt: 0))(system default)"]
+
+        let df = DateFormatter()
+        df.dateStyle = .short
+        df.timeStyle = .short
+
+        for name in names {
             let env = try store.load(named: name)
             let active = name == activeEnv ? "*" : " "
             let tools = env.tools.map(\.rawValue).joined(separator: ", ")
             let toolsCol = tools.isEmpty ? "(none)" : tools
-            let df = DateFormatter()
-            df.dateStyle = .short
-            df.timeStyle = .short
             let lastUsed = df.string(from: env.lastUsed)
-            return "\(active) \(name.padding(toLength: 12, withPad: " ", startingAt: 0))\(toolsCol.padding(toLength: 24, withPad: " ", startingAt: 0))\(lastUsed)"
+            rows.append("\(active) \(name.padding(toLength: 12, withPad: " ", startingAt: 0))\(toolsCol.padding(toLength: 24, withPad: " ", startingAt: 0))\(lastUsed)")
         }
+        return rows
     }
 }

@@ -1,5 +1,9 @@
 import Foundation
 
+public enum ReservedEnvironment {
+    public static let defaultName = "default"
+}
+
 public struct OrbitalEnvironment: Codable, Sendable {
     public var id: String
     public var name: String

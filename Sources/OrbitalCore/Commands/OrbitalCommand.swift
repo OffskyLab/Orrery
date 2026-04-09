@@ -22,6 +22,7 @@ public struct OrbitalCommand: ParsableCommand {
             SessionsCommand.self,
             ExportCommand.self,
             UnexportCommand.self,
+            SetCurrentCommand.self,
         ]
     )
     public init() {}

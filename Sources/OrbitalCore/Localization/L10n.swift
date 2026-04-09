@@ -45,6 +45,11 @@ public enum L10n {
                 ? "環境 '\(name)' 已存在。請使用其他名稱或先執行 'orbital delete \(name)'。"
                 : "Environment '\(name)' already exists. Use a different name or 'orbital delete \(name)' first."
         }
+        public static var reservedName: String {
+            isChinese
+                ? "'default' 是保留的環境名稱，無法使用。"
+                : "'default' is a reserved environment name."
+        }
         public static func unknownTool(_ raw: String) -> String {
             let valid = Tool.allCases.map(\.rawValue).joined(separator: ", ")
             return isChinese
@@ -117,6 +122,11 @@ public enum L10n {
         public static func deleted(_ name: String) -> String {
             isChinese ? "已刪除環境：\(name)" : "Deleted environment: \(name)"
         }
+        public static var reservedName: String {
+            isChinese
+                ? "'default' 是保留的環境，無法刪除。"
+                : "'default' is a reserved environment and cannot be deleted."
+        }
     }
 
     // MARK: - CurrentCommand
@@ -184,6 +194,11 @@ public enum L10n {
         }
         public static var newNameHelp: String {
             isChinese ? "新的環境名稱" : "New environment name"
+        }
+        public static var reservedName: String {
+            isChinese
+                ? "'default' 是保留的環境名稱，無法重新命名。"
+                : "'default' is a reserved environment and cannot be renamed."
         }
         public static func renamed(_ old: String, _ new: String) -> String {
             isChinese

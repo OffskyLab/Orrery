@@ -27,6 +27,10 @@ public struct CreateCommand: ParsableCommand {
     public func run() throws {
         let store = EnvironmentStore.default
 
+        if name == ReservedEnvironment.defaultName {
+            throw ValidationError(L10n.Create.reservedName)
+        }
+
         // Check for duplicate name before showing wizard
         if (try? store.load(named: name)) != nil {
             throw ValidationError(L10n.Create.alreadyExists(name))

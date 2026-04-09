@@ -14,22 +14,24 @@ public struct ShellFunctionGenerator {
                 return 1
               fi
               # Unexport previous env vars if switching
-              if [ -n "${ORBITAL_ACTIVE_ENV:-}" ]; then
+              if [ -n "${ORBITAL_ACTIVE_ENV:-}" ] && [ "$ORBITAL_ACTIVE_ENV" != "default" ]; then
                 eval "$(command orbital _unexport "$ORBITAL_ACTIVE_ENV" 2>/dev/null || true)"
               fi
-              local exports
-              exports=$(command orbital _export "$2") || { echo "orbital: environment '$2' not found" >&2; return 1; }
-              eval "$exports"
-              export ORBITAL_ACTIVE_ENV="$2"
-              echo "Switched to environment: $2"
+              if [ "$2" = "default" ]; then
+                unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR
+                export ORBITAL_ACTIVE_ENV="default"
+                command orbital _set-current default 2>/dev/null || true
+                echo "Switched to environment: default"
+              else
+                local exports
+                exports=$(command orbital _export "$2") || { echo "orbital: environment '$2' not found" >&2; return 1; }
+                eval "$exports"
+                export ORBITAL_ACTIVE_ENV="$2"
+                echo "Switched to environment: $2"
+              fi
               ;;
             deactivate)
-              if [ -n "${ORBITAL_ACTIVE_ENV:-}" ]; then
-                eval "$(command orbital _unexport "$ORBITAL_ACTIVE_ENV" 2>/dev/null || true)"
-                unset ORBITAL_ACTIVE_ENV
-              fi
-              unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR
-              echo "Deactivated orbital environment"
+              orbital use default
               ;;
             *)
               command orbital "$@"
