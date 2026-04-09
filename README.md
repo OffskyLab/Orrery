@@ -70,10 +70,11 @@ cp .build/release/orbital /usr/local/bin/orbital
 Run once after installation:
 
 ```bash
-eval "$(orbital setup)"
+orbital setup
+source ~/.orbital/activate.sh
 ```
 
-This writes `eval "$(orbital setup)"` to your shell rc file (`~/.zshrc` or `~/.bashrc`, auto-detected) and activates it in the current shell immediately.
+`orbital setup` generates `~/.orbital/activate.sh` and adds `source` to your shell rc file (`~/.zshrc` or `~/.bashrc`, auto-detected). New shells will activate automatically.
 
 ## Quick Start
 
@@ -135,7 +136,7 @@ The interactive wizard also asks about session sharing when creating an environm
 
 ### Switching
 
-> Requires shell integration (`eval "$(orbital setup)"`)
+> Requires shell integration (`orbital setup`)
 
 | Command | Description |
 |---|---|

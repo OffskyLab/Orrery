@@ -538,7 +538,7 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>安裝 Shell 整合</h4>
-        <p>執行一次 <code>eval "$(orbital setup)"</code>。會自動將 shell function 寫入 rc 檔（<code>~/.zshrc</code> 或 <code>~/.bashrc</code>，自動偵測）並立即生效。</p>
+        <p>執行一次 <code>orbital setup</code>。會產生 <code>~/.orbital/activate.sh</code> 並寫入 rc 檔。再執行 <code>source ~/.orbital/activate.sh</code> 即可在當前 shell 生效。</p>
       </div>
     </div>
     <div class="step">

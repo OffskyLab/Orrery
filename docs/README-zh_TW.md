@@ -66,10 +66,11 @@ cp .build/release/orbital /usr/local/bin/orbital
 安裝後執行一次：
 
 ```bash
-eval "$(orbital setup)"
+orbital setup
+source ~/.orbital/activate.sh
 ```
 
-這會將 `eval "$(orbital setup)"` 寫入你的 shell rc 檔（`~/.zshrc` 或 `~/.bashrc`，自動偵測），並在當前 shell 立即生效。
+`orbital setup` 會產生 `~/.orbital/activate.sh` 並寫入 rc 檔（`~/.zshrc` 或 `~/.bashrc`，自動偵測）。新開的 shell 會自動載入。
 
 ## 快速開始
 
@@ -113,7 +114,7 @@ orbital deactivate
 
 ### 切換
 
-> 需要 shell 整合（`eval "$(orbital setup)"`）
+> 需要 shell 整合（`orbital setup`）
 
 | 指令 | 說明 |
 |---|---|
