@@ -202,7 +202,7 @@ This registers Orbital as an MCP server and installs `/delegate` and `/sessions`
 
 ## P2P Memory Sync
 
-Sync project memory across machines and teammates in real time, powered by [orbital-sync](https://github.com/OffskyLab/orbital-sync) and the [NMT protocol](https://github.com/OffskyLab/swift-nmtp).
+Sync project memory across machines and teammates in real time, powered by [orbital-sync](https://github.com/OffskyLab/orbital-sync).
 
 ### Desktop + Laptop
 
