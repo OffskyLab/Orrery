@@ -200,6 +200,65 @@ This registers Orbital as an MCP server and installs `/delegate` and `/sessions`
 | `orbital setup` | Install shell integration into shell rc file (idempotent) |
 | `orbital init` | Print the shell integration script (for manual setup) |
 
+## P2P Memory Sync
+
+Sync project memory across machines and teammates in real time, powered by [orbital-sync](https://github.com/OffskyLab/orbital-sync) and the [NMT protocol](https://github.com/OffskyLab/swift-nmtp).
+
+### Desktop + Laptop
+
+Same person, two machines on the same network:
+
+```bash
+# Desktop
+orbital sync daemon --port 9527
+
+# Laptop (auto-discovers via Bonjour)
+orbital sync daemon --port 9528
+```
+
+### Team Collaboration
+
+```bash
+# Create team and generate invite
+orbital sync team create my-team
+orbital sync team invite --port 9527
+# → share the invite code with teammates
+
+# Teammate joins
+orbital sync team join <code>
+orbital sync daemon --port 9528
+```
+
+### Cross-Network (Rendezvous)
+
+```bash
+# Run rendezvous on a VPS
+orbital sync rendezvous --port 9600
+
+# Each peer
+orbital sync daemon --port 9527 --rendezvous rv.example.com:9600
+```
+
+### Encrypted (mTLS)
+
+```bash
+orbital sync daemon --port 9527 \
+  --tls-ca ca.pem --tls-cert node.pem --tls-key node-key.pem
+```
+
+Only project memory is synced — sessions stay local. New teammates get all existing memory on first connect. Memory changes are tracked as conflict-free fragments and consolidated by the AI agent at session start.
+
+| Command | Description |
+|---|---|
+| `orbital sync daemon` | Start the sync daemon |
+| `orbital sync status` | Show daemon and peer status |
+| `orbital sync pair <host:port>` | Pair with a remote peer |
+| `orbital sync team create <name>` | Create a new team |
+| `orbital sync team invite` | Generate an invite code |
+| `orbital sync team join <code>` | Join a team |
+| `orbital sync team info` | Show team and known peers |
+| `orbital sync rendezvous` | Run a rendezvous server |
+
 ## Storage
 
 Environments are stored under `$ORBITAL_HOME` (default: `~/.orbital`):

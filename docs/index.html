@@ -440,6 +440,7 @@
     <li class="nav-collapsible"><a href="#commands">Commands</a></li>
     <li class="nav-collapsible"><a href="#install">Install</a></li>
     <li class="nav-collapsible"><a href="#mcp">AI Tools</a></li>
+    <li class="nav-collapsible"><a href="#sync">Sync</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -457,6 +458,7 @@
   <li><a href="#commands" onclick="closeMenu()">Commands</a></li>
   <li><a href="#install" onclick="closeMenu()">Install</a></li>
   <li><a href="#mcp" onclick="closeMenu()">MCP</a></li>
+  <li><a href="#sync" onclick="closeMenu()">Sync</a></li>
   <li><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" onclick="closeMenu()">Changelog</a></li>
 </ul>
 
@@ -709,6 +711,73 @@
   </div>
 </section>
 
+<!-- Sync -->
+<section class="section" id="sync">
+  <h2 class="section-title">P2P Memory Sync</h2>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto 2rem">
+    Keep project memory in sync across machines and teammates — in real time, over your own protocol.
+    Built on <a href="https://github.com/OffskyLab/swift-nmtp" style="color:var(--accent)">NMT</a> (Nebula Matter Transfer), a custom binary protocol designed for low-latency P2P communication.
+  </p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f310;</span>
+      <h3>Desktop + Laptop</h3>
+      <p>Same person, two machines. Start the daemon on each — Bonjour finds them automatically on the same network.</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span style="color:var(--muted)"># Desktop</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9527<br/><br/>
+        <span style="color:var(--muted)"># Laptop (auto-discovers via Bonjour)</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9528
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f465;</span>
+      <h3>Team Collaboration</h3>
+      <p>Create a team, share an invite code. When teammates join and start the daemon, everyone's memory stays in sync.</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span class="prompt">$ </span>orbital sync team create my-team<br/>
+        <span class="prompt">$ </span>orbital sync team invite --port 9527<br/>
+        <span style="color:var(--muted)"># → share the invite code</span><br/><br/>
+        <span style="color:var(--muted)"># Teammate joins:</span><br/>
+        <span class="prompt">$ </span>orbital sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9528
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f512;</span>
+      <h3>Encrypted (mTLS)</h3>
+      <p>For sensitive environments. Both peers must present certificates signed by the same CA — unauthorized peers are rejected at handshake.</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        &nbsp;&nbsp;--tls-ca ca.pem \<br/>
+        &nbsp;&nbsp;--tls-cert node.pem \<br/>
+        &nbsp;&nbsp;--tls-key node-key.pem
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f30d;</span>
+      <h3>Cross-Network</h3>
+      <p>Different offices, different networks. A lightweight rendezvous server coordinates peer discovery — data flows directly between peers.</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span style="color:var(--muted)"># On a VPS:</span><br/>
+        <span class="prompt">$ </span>orbital sync rendezvous --port 9600<br/><br/>
+        <span style="color:var(--muted)"># Each peer:</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        &nbsp;&nbsp;--rendezvous rv.example.com:9600
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:640px;margin:2.5rem auto 0;text-align:center">
+    <p style="color:var(--muted);font-size:.9rem">
+      Only project memory is synced — sessions stay local (they're machine-specific).
+      New teammates get all existing memory on first connect via manifest reconcile.
+      Memory changes are tracked as conflict-free fragments and consolidated by the AI agent at session start.
+    </p>
+  </div>
+</section>
+
 <!-- Commands -->
 <section class="commands-section" id="commands">
   <h2 class="section-title">Commands</h2>
@@ -747,6 +816,18 @@
         <div class="command-item"><span class="cmd">orbital sessions --claude</span><span class="cmd-desc">Claude sessions only</span></div>
         <div class="command-item"><span class="cmd">orbital sessions --codex</span><span class="cmd-desc">Codex sessions only</span></div>
         <div class="command-item"><span class="cmd">orbital sessions --gemini</span><span class="cmd-desc">Gemini sessions only</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Sync</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orbital sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
+        <div class="command-item"><span class="cmd">orbital sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
+        <div class="command-item"><span class="cmd">orbital sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
+        <div class="command-item"><span class="cmd">orbital sync team create</span><span class="cmd-desc">Create a new team</span></div>
+        <div class="command-item"><span class="cmd">orbital sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
+        <div class="command-item"><span class="cmd">orbital sync team join</span><span class="cmd-desc">Join a team</span></div>
+        <div class="command-item"><span class="cmd">orbital sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
       </div>
     </div>
     <div class="command-group">

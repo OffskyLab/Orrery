@@ -440,6 +440,7 @@
     <li class="nav-collapsible"><a href="#commands">指令</a></li>
     <li class="nav-collapsible"><a href="#install">安裝</a></li>
     <li class="nav-collapsible"><a href="#mcp">AI 工具</a></li>
+    <li class="nav-collapsible"><a href="#sync">同步</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">更新日誌</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -457,6 +458,7 @@
   <li><a href="#commands" onclick="closeMenu()">指令</a></li>
   <li><a href="#install" onclick="closeMenu()">安裝</a></li>
   <li><a href="#mcp" onclick="closeMenu()">MCP</a></li>
+  <li><a href="#sync" onclick="closeMenu()">同步</a></li>
   <li><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" onclick="closeMenu()">更新日誌</a></li>
 </ul>
 
@@ -706,6 +708,70 @@
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Sync -->
+<section class="section" id="sync">
+  <h2 class="section-title">P2P 記憶同步</h2>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto 2rem">
+    跨機器、跨團隊即時同步專案記憶。基於 <a href="https://github.com/OffskyLab/swift-nmtp" style="color:var(--accent)">NMT</a>（Nebula Matter Transfer）自訂二進位協定，專為低延遲 P2P 通訊設計。
+  </p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f310;</span>
+      <h3>桌機 + 筆電</h3>
+      <p>同一人、兩台電腦。在同一網路下啟動 daemon，Bonjour 自動發現彼此。</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span style="color:var(--muted)"># 桌機</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9527<br/><br/>
+        <span style="color:var(--muted)"># 筆電（Bonjour 自動發現）</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9528
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f465;</span>
+      <h3>團隊協作</h3>
+      <p>建立團隊、分享邀請碼。隊友加入後啟動 daemon，所有人的記憶即時同步。</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span class="prompt">$ </span>orbital sync team create my-team<br/>
+        <span class="prompt">$ </span>orbital sync team invite --port 9527<br/>
+        <span style="color:var(--muted)"># → 分享邀請碼</span><br/><br/>
+        <span style="color:var(--muted)"># 隊友加入：</span><br/>
+        <span class="prompt">$ </span>orbital sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9528
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f512;</span>
+      <h3>加密傳輸（mTLS）</h3>
+      <p>敏感環境適用。雙方必須出示同一 CA 簽發的憑證，未授權的節點在握手階段即被拒絕。</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        &nbsp;&nbsp;--tls-ca ca.pem \<br/>
+        &nbsp;&nbsp;--tls-cert node.pem \<br/>
+        &nbsp;&nbsp;--tls-key node-key.pem
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f30d;</span>
+      <h3>跨網段</h3>
+      <p>不同辦公室、不同網路。輕量的 rendezvous server 負責節點發現，資料直接在節點間傳輸。</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span style="color:var(--muted)"># VPS 上：</span><br/>
+        <span class="prompt">$ </span>orbital sync rendezvous --port 9600<br/><br/>
+        <span style="color:var(--muted)"># 各節點：</span><br/>
+        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        &nbsp;&nbsp;--rendezvous rv.example.com:9600
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:640px;margin:2.5rem auto 0;text-align:center">
+    <p style="color:var(--muted);font-size:.9rem">
+      僅同步專案記憶 — session 留在本機（因為它綁定機器路徑）。新成員首次連線時透過 manifest reconcile 取得所有現有記憶。記憶變更以無衝突的 fragment 追蹤，由 AI agent 在 session 啟動時整合。
+    </p>
   </div>
 </section>
 
