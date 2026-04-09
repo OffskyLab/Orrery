@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.0
+
+- **P2P sync** — `orbital sync` delegates to orbital-sync daemon for real-time memory sync across machines
+- **Memory fragment integration** — `orbital_memory_read` detects pending sync fragments and prompts agent to consolidate
+- **Fragment cleanup** — overwrite mode (`append=false`) automatically cleans up integrated fragments
+- **CLAUDE.md** — development guidelines added
+- orbital-sync bundled as dependency via Homebrew/APT
+
 ## v0.3.3
 
 - **Memory fragment log** — each `orbital_memory_write` now produces an append-only fragment file in `fragments/` alongside `ORBITAL_MEMORY.md`, keyed by UUID + peer name. Prepares for future P2P sync with conflict-free replication.
