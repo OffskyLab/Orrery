@@ -27,7 +27,7 @@ public struct MCPSetupCommand: ParsableCommand {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
             process.arguments = ["claude", "mcp", "add", "--scope", "project", "orbital", "--", "orbital", "mcp-server"]
-            process.standardInput = FileHandle.standardInput
+            process.standardInput = FileHandle.nullDevice
             process.standardOutput = FileHandle.standardOutput
             process.standardError = FileHandle.standardError
 
