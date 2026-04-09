@@ -50,7 +50,7 @@ public struct MCPSetupCommand: ParsableCommand {
             // 2. Install slash commands
             try Self.installSlashCommands(projectDir: cwd)
 
-            print(L10n.MCPSetup.success)
+            FileHandle.standardError.write(Data("\(L10n.MCPSetup.success)\n".utf8))
         }
 
         static func installSlashCommands(projectDir: String) throws {
