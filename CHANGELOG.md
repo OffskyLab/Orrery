@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.10.0
+## v0.2.0
 
 - Built-in `default` environment — `orbital use default` returns to system config
 - `orbital deactivate` now aliases to `orbital use default`
