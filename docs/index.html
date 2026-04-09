@@ -439,7 +439,7 @@
     <li class="nav-collapsible"><a href="#use-cases">Use Cases</a></li>
     <li class="nav-collapsible"><a href="#commands">Commands</a></li>
     <li class="nav-collapsible"><a href="#install">Install</a></li>
-    <li class="nav-collapsible"><a href="#mcp">MCP</a></li>
+    <li class="nav-collapsible"><a href="#mcp">Claude Code</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -609,6 +609,98 @@
   </div>
 </section>
 
+<!-- Claude Code Integration -->
+<section class="how-section" id="mcp">
+  <h2 class="section-title">Claude Code Integration</h2>
+  <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
+    Orbital integrates directly into Claude Code via <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> and slash commands. Delegate tasks to other accounts, list sessions, and resume conversations — all without leaving your session.
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>One-time setup</h4>
+        <p>Run this in your project directory. Orbital registers itself as an MCP server and installs slash commands.</p>
+        <div class="code-block" style="margin-top:.5rem">
+          <button class="copy-btn" data-cmd="orbital mcp setup">Copy</button>
+          <span class="prompt">$ </span>orbital mcp setup
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Slash commands</h4>
+        <p>After setup, use these directly in Claude Code:</p>
+        <div style="margin-top:.75rem;display:grid;gap:.75rem">
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/delegate</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">Delegate a task to another account</span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">/delegate</span> Use the "work" account to review this PR for security issues
+            </div>
+          </div>
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/sessions</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">List sessions and resume by index</span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">/sessions</span><br/>
+              <span style="color:var(--muted)">then:</span> orbital resume 1
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Or just ask naturally</h4>
+        <p>Claude understands your environments through MCP tools. You can say things like:</p>
+        <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">"Review this PR using my work account"</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">"Which account am I on?"</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">"Show me recent sessions and resume the last one"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Available MCP tools</h4>
+        <p>Claude Code gets these tools automatically:</p>
+        <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
+            <span style="color:var(--muted);font-size:.85rem">Run a task under a different account</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_list</code>
+            <span style="color:var(--muted);font-size:.85rem">List all environments</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_sessions</code>
+            <span style="color:var(--muted);font-size:.85rem">List sessions for the current project</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_current</code>
+            <span style="color:var(--muted);font-size:.85rem">Get the active environment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Commands -->
 <section class="commands-section" id="commands">
   <h2 class="section-title">Commands</h2>
@@ -654,62 +746,6 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">Install shell integration</span></div>
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- MCP Integration -->
-<section class="how-section" id="mcp">
-  <h2 class="section-title">Let Claude talk to your other accounts</h2>
-  <p style="text-align:center;color:var(--muted);max-width:560px;margin:0 auto 2rem">
-    Once set up, you can ask Claude to hand off tasks to a different account — right from your current session. No switching shells, no copy-pasting credentials.
-  </p>
-
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <h4>Set it up once</h4>
-        <p>Run this in your project directory. Orbital registers itself with Claude Code and installs slash commands.</p>
-        <div class="code-block" style="margin-top:.5rem">
-          <button class="copy-btn" data-cmd="orbital mcp setup">Copy</button>
-          <span class="prompt">$ </span>orbital mcp setup
-        </div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <h4>Just ask</h4>
-        <p>Claude understands your environments. You can say things like:</p>
-        <div style="margin-top:.75rem;display:grid;gap:.5rem">
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">"Review this PR using my work account"</span>
-          </div>
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">"Run a security audit with the client-a environment"</span>
-          </div>
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">"Which account am I on? Show me recent sessions."</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <h4>Claude handles the rest</h4>
-        <p>It picks the right account, runs the task, and brings the result back — all without leaving your session.</p>
-        <div class="code-block" style="margin-top:.5rem;font-size:.85rem">
-          <span style="color:var(--muted)">You:</span> Review this PR with my work account<br/><br/>
-          <span style="color:var(--muted)">Claude:</span> Sure — handing this off to your work environment now.<br/>
-          <span style="color:var(--accent2)">... running under work account ...</span><br/>
-          <span style="color:var(--muted)">Claude:</span> Here's what the work account found: …
-        </div>
       </div>
     </div>
   </div>
