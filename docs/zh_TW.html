@@ -439,7 +439,7 @@
     <li class="nav-collapsible"><a href="#use-cases">情境</a></li>
     <li class="nav-collapsible"><a href="#commands">指令</a></li>
     <li class="nav-collapsible"><a href="#install">安裝</a></li>
-    <li class="nav-collapsible"><a href="#mcp">MCP</a></li>
+    <li class="nav-collapsible"><a href="#mcp">Claude Code</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">更新日誌</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -609,6 +609,98 @@
   </div>
 </section>
 
+<!-- Claude Code Integration -->
+<section class="how-section" id="mcp">
+  <h2 class="section-title">Claude Code 整合</h2>
+  <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
+    Orbital 透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> 和 slash commands 直接整合到 Claude Code。委派任務給其他帳號、列出 session、接續對話——全程不離開你的工作環境。
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>設定一次就好</h4>
+        <p>在專案目錄下執行。Orbital 會註冊為 MCP server 並安裝 slash commands。</p>
+        <div class="code-block" style="margin-top:.5rem">
+          <button class="copy-btn" data-cmd="orbital mcp setup" data-label="複製" data-copied="已複製！">複製</button>
+          <span class="prompt">$ </span>orbital mcp setup
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Slash commands</h4>
+        <p>設定完成後，在 Claude Code 裡直接使用：</p>
+        <div style="margin-top:.75rem;display:grid;gap:.75rem">
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/delegate</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">委派任務給其他帳號</span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">/delegate</span> 用工作帳號 review 這個 PR 的安全問題
+            </div>
+          </div>
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/sessions</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">列出 session 並用 index 接續</span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">/sessions</span><br/>
+              <span style="color:var(--muted)">接著：</span> orbital resume 1
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>或直接用自然語言</h4>
+        <p>Claude 透過 MCP tools 認識你的所有環境。你可以這樣說：</p>
+        <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「用工作帳號 review 這個 PR」</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「我現在是哪個帳號？」</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「列出最近的 session，幫我接續上一個」</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>MCP 工具一覽</h4>
+        <p>Claude Code 自動取得以下工具：</p>
+        <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
+            <span style="color:var(--muted);font-size:.85rem">用其他帳號執行任務</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_list</code>
+            <span style="color:var(--muted);font-size:.85rem">列出所有環境</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_sessions</code>
+            <span style="color:var(--muted);font-size:.85rem">列出當前專案的 session</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_current</code>
+            <span style="color:var(--muted);font-size:.85rem">查看目前啟用的環境</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Commands -->
 <section class="commands-section" id="commands">
   <h2 class="section-title">指令一覽</h2>
@@ -654,62 +746,6 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- MCP Integration -->
-<section class="how-section" id="mcp">
-  <h2 class="section-title">讓 Claude 幫你跨帳號工作</h2>
-  <p style="text-align:center;color:var(--muted);max-width:560px;margin:0 auto 2rem">
-    設定完成後，你可以直接告訴 Claude 把任務交給另一個帳號處理——不用切換 shell，不用重新登入，就在同一個對話裡完成。
-  </p>
-
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <h4>執行一次就好</h4>
-        <p>在專案目錄下執行。Orbital 會自動和 Claude Code 串接，並安裝好 slash commands。</p>
-        <div class="code-block" style="margin-top:.5rem">
-          <button class="copy-btn" data-cmd="orbital mcp setup" data-label="複製" data-copied="已複製！">複製</button>
-          <span class="prompt">$ </span>orbital mcp setup
-        </div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <h4>直接跟 Claude 說</h4>
-        <p>Claude 認識你的所有環境。你可以這樣說：</p>
-        <div style="margin-top:.75rem;display:grid;gap:.5rem">
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">「用工作帳號 review 這個 PR」</span>
-          </div>
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">「請 client-a 環境幫我跑一次安全審查」</span>
-          </div>
-          <div style="display:flex;gap:.75rem;align-items:flex-start">
-            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
-            <span style="color:var(--muted);font-size:.85rem">「我現在是哪個帳號？列出最近的 session」</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <h4>Claude 搞定剩下的事</h4>
-        <p>它會切換到指定帳號、執行任務、把結果帶回來——全程不離開你的對話。</p>
-        <div class="code-block" style="margin-top:.5rem;font-size:.85rem">
-          <span style="color:var(--muted)">你：</span>用工作帳號 review 這個 PR<br/><br/>
-          <span style="color:var(--muted)">Claude：</span>好，我現在交給你的工作環境處理。<br/>
-          <span style="color:var(--accent2)">... 以工作帳號執行中 ...</span><br/>
-          <span style="color:var(--muted)">Claude：</span>工作帳號的結果如下：…
-        </div>
       </div>
     </div>
   </div>
