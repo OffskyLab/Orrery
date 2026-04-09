@@ -423,9 +423,33 @@
 
     footer a { color: var(--muted); }
     footer a:hover { color: var(--text); }
+
+    /* ── Fork me ribbon ── */
+    .github-ribbon {
+      position: fixed;
+      top: 36px;
+      right: -38px;
+      transform: rotate(45deg);
+      background: #c0392b;
+      color: #fff;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 7px 58px;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,.45);
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .github-ribbon:hover { background: #a93226; text-decoration: none; }
   </style>
 </head>
 <body>
+
+<!-- Fork me ribbon -->
+<a href="https://github.com/OffskyLab/Orbital" class="github-ribbon">Fork me on GitHub</a>
 
 <!-- Nav -->
 <nav>
@@ -440,7 +464,6 @@
     <li class="nav-collapsible"><a href="#install">Install</a></li>
     <li class="nav-collapsible"><a href="#mcp">MCP</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
-    <li><a href="https://github.com/OffskyLab/Orbital">GitHub</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
         <option value="index.html" selected>English</option>
