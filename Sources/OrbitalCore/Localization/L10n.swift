@@ -440,6 +440,16 @@ public enum L10n {
         }
     }
 
+    // MARK: - MCPServerCommand
+
+    public enum MCPServerCmd {
+        public static var abstract: String {
+            isChinese
+                ? "啟動 MCP server（供 Claude Code 等工具整合）"
+                : "Start MCP server (for Claude Code integration)"
+        }
+    }
+
     // MARK: - ExportCommand / UnexportCommand
 
     public enum Export {
