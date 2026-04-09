@@ -90,6 +90,9 @@ public enum L10n {
         public static var cloneNone: String {
             isChinese ? "不複製（全新環境）" : "Don't clone (fresh environment)"
         }
+        public static func cloneFrom(_ name: String) -> String {
+            isChinese ? "從 \(name) 複製" : "Clone from \(name)"
+        }
         public static var sessionSharePrompt: String {
             isChinese
                 ? "Session 共享設定（↑↓ 移動，Enter 確認）："
