@@ -20,10 +20,11 @@ struct ListCommandTests {
         try store.save(env)
 
         let rows = try ListCommand.environmentRows(activeEnv: nil, store: store)
-        #expect(rows.count == 1)
-        #expect(rows[0].contains("work"))
-        #expect(rows[0].contains("claude"))
-        #expect(rows[0].contains("codex"))
+        // default is always included as the first row
+        #expect(rows.count == 2)
+        let workRow = rows.first { $0.contains("work") }!
+        #expect(workRow.contains("claude"))
+        #expect(workRow.contains("codex"))
     }
 
     @Test("marks active environment")
