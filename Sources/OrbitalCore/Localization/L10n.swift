@@ -380,6 +380,31 @@ public enum L10n {
         }
     }
 
+    // MARK: - RunCommand
+
+    public enum Run {
+        public static var abstract: String {
+            isChinese
+                ? "在指定環境中執行指令"
+                : "Run a command in a specific environment"
+        }
+        public static var envHelp: String {
+            isChinese
+                ? "環境名稱（預設為目前啟用的環境）"
+                : "Environment name (defaults to active environment)"
+        }
+        public static var commandHelp: String {
+            isChinese
+                ? "要執行的指令及參數"
+                : "Command and arguments to run"
+        }
+        public static var noCommand: String {
+            isChinese
+                ? "請指定要執行的指令。例如：orbital run -e work claude --resume <id>"
+                : "No command specified. Example: orbital run -e work claude --resume <id>"
+        }
+    }
+
     // MARK: - SessionsCommand
 
     public enum Sessions {
