@@ -46,7 +46,7 @@ public struct ShellFunctionGenerator {
             local env_name
             env_name=$(cat "$current_file" 2>/dev/null)
             if [ -n "$env_name" ]; then
-              orbital use "$env_name" 2>/dev/null || true
+              orbital use "$env_name" >/dev/null 2>&1 || true
             fi
           fi
         }
