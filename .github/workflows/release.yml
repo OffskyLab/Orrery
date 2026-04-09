@@ -50,6 +50,7 @@ jobs:
           Version: ${tag}
           Architecture: amd64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
+          Depends: orbital-sync
           Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
@@ -91,6 +92,7 @@ jobs:
           Version: ${tag}
           Architecture: arm64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
+          Depends: orbital-sync
           Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
