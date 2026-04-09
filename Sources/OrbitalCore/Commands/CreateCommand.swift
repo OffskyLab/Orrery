@@ -112,7 +112,7 @@ public struct CreateCommand: ParsableCommand {
         var sources: [String?] = [nil]
 
         // Add "default" option (clone from system config)
-        options.append(L10n.Create.cloneFrom(defaultName))
+        options.append(L10n.Create.cloneFrom("\(defaultName) - \(L10n.Create.defaultDescription)"))
         sources.append(defaultName)
 
         // Add existing environments

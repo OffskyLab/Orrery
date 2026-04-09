@@ -93,6 +93,9 @@ public enum L10n {
         public static func cloneFrom(_ name: String) -> String {
             isChinese ? "從 \(name) 複製" : "Clone from \(name)"
         }
+        public static var defaultDescription: String {
+            isChinese ? "原始環境" : "System default"
+        }
         public static var sessionSharePrompt: String {
             isChinese
                 ? "Session 共享設定（↑↓ 移動，Enter 確認）："

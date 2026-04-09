@@ -25,7 +25,7 @@ public struct ListCommand: ParsableCommand {
         let names = try store.listNames().sorted()
         let defaultName = ReservedEnvironment.defaultName
         let defaultActive = activeEnv == defaultName || activeEnv == nil ? "*" : " "
-        var rows = ["\(defaultActive) \(defaultName.padding(toLength: 12, withPad: " ", startingAt: 0))(system default)"]
+        var rows = ["\(defaultActive) \(defaultName.padding(toLength: 12, withPad: " ", startingAt: 0))\(L10n.Create.defaultDescription)"]
 
         let df = DateFormatter()
         df.dateStyle = .short
