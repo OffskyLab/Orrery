@@ -26,7 +26,7 @@ public struct MCPSetupCommand: ParsableCommand {
             // 1. Register MCP server with each installed tool
             Self.registerMCP(tool: "claude", args: ["claude", "mcp", "add", "--scope", "project", "orbital", "--", "orbital", "mcp-server"])
             Self.registerMCP(tool: "codex", args: ["codex", "mcp", "add", "orbital", "--", "orbital", "mcp-server"])
-            Self.registerMCP(tool: "gemini", args: ["gemini", "mcp", "add", "orbital", "--", "orbital", "mcp-server"])
+            Self.registerMCP(tool: "gemini", args: ["gemini", "mcp", "add", "orbital", "orbital mcp-server"])
 
             // 2. Install slash commands
             try Self.installSlashCommands(projectDir: cwd)
