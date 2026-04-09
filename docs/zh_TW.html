@@ -661,17 +661,17 @@
 
 <!-- MCP Integration -->
 <section class="how-section" id="mcp">
-  <h2 class="section-title">MCP 整合</h2>
-  <p style="text-align:center;color:var(--muted);max-width:580px;margin:0 auto 2rem">
-    透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">Model Context Protocol</a> 將 Orbital 連接到 Claude Code 作為原生工具。不需要 HTTP，不需要 API key — 純 stdin/stdout 溝通。
+  <h2 class="section-title">讓 Claude 幫你跨帳號工作</h2>
+  <p style="text-align:center;color:var(--muted);max-width:560px;margin:0 auto 2rem">
+    設定完成後，你可以直接告訴 Claude 把任務交給另一個帳號處理——不用切換 shell，不用重新登入，就在同一個對話裡完成。
   </p>
 
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <h4>註冊 MCP server</h4>
-        <p>在終端機執行一次：</p>
+        <h4>執行一次就好</h4>
+        <p>在專案目錄下執行。Orbital 會自動和 Claude Code 串接，並安裝好 slash commands。</p>
         <div class="code-block" style="margin-top:.5rem">
           <button class="copy-btn" data-cmd="orbital mcp setup" data-label="複製" data-copied="已複製！">複製</button>
           <span class="prompt">$ </span>orbital mcp setup
@@ -681,24 +681,20 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <h4>在 Claude Code 中使用</h4>
-        <p>Claude Code 會自動取得以下工具：</p>
+        <h4>直接跟 Claude 說</h4>
+        <p>Claude 認識你的所有環境。你可以這樣說：</p>
         <div style="margin-top:.75rem;display:grid;gap:.5rem">
-          <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
-            <span style="color:var(--muted);font-size:.85rem">委派任務給其他帳號的 AI 工具</span>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「用工作帳號 review 這個 PR」</span>
           </div>
-          <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_list</code>
-            <span style="color:var(--muted);font-size:.85rem">列出所有環境</span>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「請 client-a 環境幫我跑一次安全審查」</span>
           </div>
-          <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_sessions</code>
-            <span style="color:var(--muted);font-size:.85rem">列出當前專案的 session</span>
-          </div>
-          <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_current</code>
-            <span style="color:var(--muted);font-size:.85rem">查看目前啟用的環境</span>
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="color:var(--accent);font-size:.85rem;flex-shrink:0">→</span>
+            <span style="color:var(--muted);font-size:.85rem">「我現在是哪個帳號？列出最近的 session」</span>
           </div>
         </div>
       </div>
@@ -706,12 +702,13 @@
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <h4>跨帳號委派任務</h4>
-        <p>讓 Claude 使用另一個帳號作為子代理：</p>
+        <h4>Claude 搞定剩下的事</h4>
+        <p>它會切換到指定帳號、執行任務、把結果帶回來——全程不離開你的對話。</p>
         <div class="code-block" style="margin-top:.5rem;font-size:.85rem">
-          <span style="color:var(--muted)">你：</span>用 orbital_delegate 請我的工作帳號 review 這個 PR<br/><br/>
-          <span style="color:var(--muted)">Claude：</span>我會委派給你的工作環境...<br/>
-          <span style="color:var(--accent2)">[呼叫 orbital_delegate，environment="work"]</span>
+          <span style="color:var(--muted)">你：</span>用工作帳號 review 這個 PR<br/><br/>
+          <span style="color:var(--muted)">Claude：</span>好，我現在交給你的工作環境處理。<br/>
+          <span style="color:var(--accent2)">... 以工作帳號執行中 ...</span><br/>
+          <span style="color:var(--muted)">Claude：</span>工作帳號的結果如下：…
         </div>
       </div>
     </div>
