@@ -474,6 +474,36 @@ public enum L10n {
         }
     }
 
+    // MARK: - MemoryCommand
+
+    public enum Memory {
+        public static var abstract: String {
+            isChinese
+                ? "管理共享專案記憶"
+                : "Manage shared project memory"
+        }
+        public static var exportAbstract: String {
+            isChinese
+                ? "匯出當前專案的共享記憶"
+                : "Export shared memory for the current project"
+        }
+        public static var outputHelp: String {
+            isChinese
+                ? "輸出檔案路徑（預設：ORBITAL_MEMORY.md）"
+                : "Output file path (default: ORBITAL_MEMORY.md)"
+        }
+        public static var noMemory: String {
+            isChinese
+                ? "此專案沒有共享記憶。"
+                : "No shared memory for this project."
+        }
+        public static func exported(_ path: String) -> String {
+            isChinese
+                ? "已匯出至 \(path)"
+                : "Exported to \(path)"
+        }
+    }
+
     // MARK: - MCPSetupCommand
 
     public enum MCPSetup {
