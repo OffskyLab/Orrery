@@ -47,6 +47,10 @@ public struct DelegateCommand: ParsableCommand {
         for (key, value) in envVars {
             processEnv[key] = value
         }
+        // Strip IPC variables to prevent child claude from hanging
+        processEnv.removeValue(forKey: "CLAUDECODE")
+        processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
+        processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
         if let envName, envName == ReservedEnvironment.defaultName {
             for t in Tool.allCases {
                 processEnv.removeValue(forKey: t.envVarName)
