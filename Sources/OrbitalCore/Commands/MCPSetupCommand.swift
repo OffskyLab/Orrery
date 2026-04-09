@@ -28,10 +28,19 @@ public struct MCPSetupCommand: ParsableCommand {
             process.standardOutput = FileHandle.standardOutput
             process.standardError = FileHandle.standardError
 
+            // Strip Claude Code IPC variables so `claude mcp add` runs as a
+            // plain CLI command instead of entering IPC mode (which would hang).
+            var env = ProcessInfo.processInfo.environment
+            env.removeValue(forKey: "CLAUDECODE")
+            env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
+            env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+            process.environment = env
+
             try process.run()
             process.waitUntilExit()
 
-            guard process.terminationStatus == 0 else {
+            // Exit code 1 means the server already exists — treat as success.
+            guard process.terminationStatus == 0 || process.terminationStatus == 1 else {
                 throw ExitCode(process.terminationStatus)
             }
 

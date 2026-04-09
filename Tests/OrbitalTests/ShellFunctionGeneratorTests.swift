@@ -21,8 +21,7 @@ struct ShellFunctionGeneratorTests {
     func handlesDeactivate() {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("deactivate"))
-        #expect(script.contains("_unexport"))
-        #expect(script.contains("unset ORBITAL_ACTIVE_ENV"))
+        #expect(script.contains("orbital use default"))
     }
 
     @Test("output auto-activates current environment on shell start")

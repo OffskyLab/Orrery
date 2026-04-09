@@ -32,7 +32,7 @@ struct ConfigCommandTests {
 
     @Test("add tool creates subdirectory and updates env.json")
     func addTool() throws {
-        try AddToolCommand.addTool(.claude, to: "work", store: store)
+        try store.addTool(.claude, to: "work")
         let env = try store.load(named: "work")
         #expect(env.tools.contains(.claude))
         let toolDir = store.toolConfigDir(tool: .claude, environment: "work")
@@ -41,8 +41,8 @@ struct ConfigCommandTests {
 
     @Test("remove tool removes subdirectory and updates env.json")
     func removeTool() throws {
-        try AddToolCommand.addTool(.claude, to: "work", store: store)
-        try RemoveToolCommand.removeTool(.claude, from: "work", store: store)
+        try store.addTool(.claude, to: "work")
+        try store.removeTool(.claude, from: "work")
         let env = try store.load(named: "work")
         #expect(!env.tools.contains(.claude))
     }
