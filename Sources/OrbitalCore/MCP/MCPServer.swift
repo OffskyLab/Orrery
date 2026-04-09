@@ -117,7 +117,7 @@ public struct MCPServer {
             ],
             [
                 "name": "orbital_memory_read",
-                "description": "Read the shared Orbital memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orbital environments.",
+                "description": "Read the shared Orbital memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orbital environments. Use this to recall project decisions, architecture notes, conventions, or anything previously saved. Always read before writing to avoid overwriting existing knowledge.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [String: Any](),
@@ -126,7 +126,7 @@ public struct MCPServer {
             ],
             [
                 "name": "orbital_memory_write",
-                "description": "Write or append to the shared Orbital memory for the current project. Use markdown format. This memory is shared across all AI tools and environments.",
+                "description": "Write or append to the shared Orbital memory for the current project. Use markdown format. This memory persists across sessions and is shared across all AI tools (Claude, Codex, Gemini) and environments. Use this to save: project decisions (e.g. 'we chose PostgreSQL 16'), architecture notes, coding conventions, deployment info, or anything the team should remember. Default is append mode — set append=false only to rewrite the entire memory.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [
