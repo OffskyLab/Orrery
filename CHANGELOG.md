@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.2.8
+
+- **MCP server** — `orbital mcp-server` exposes tools via Model Context Protocol (stdin/stdout JSON-RPC)
+- **`orbital mcp setup`** — one command registers MCP server + installs `/delegate` and `/sessions` slash commands
+- **`orbital delegate`** — delegate tasks to AI tools in other environments (`--claude`/`--codex`/`--gemini`)
+- **`orbital resume`** — resume sessions by index from `orbital sessions`, with passthrough args (e.g. `--dangerously-skip-permissions`)
+- **`orbital run`** — run any command in a specific environment (`orbital run -e work claude --resume <id>`)
+- **`activate.sh`** — `orbital setup` generates `~/.orbital/activate.sh`, rc file uses `source` instead of `eval`
+- Shell init silenced for Powerlevel10k instant prompt compatibility
+- Linux static linking (`--static-swift-stdlib`) — no runtime dependencies
+- Linux built on Ubuntu 22.04 (jammy) for glibc 2.35 compatibility
+- APT repo i386 empty Packages to prevent 404 on multiarch systems
+- `.deb` postinst runs `orbital setup` automatically
+- Localized `--claude`/`--codex`/`--gemini` flag help strings
+- `install.sh --main` flag to build from latest main branch
+
 ## v0.2.0
 
 - Built-in `default` environment — `orbital use default` returns to system config
