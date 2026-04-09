@@ -439,7 +439,7 @@
     <li class="nav-collapsible"><a href="#use-cases">Use Cases</a></li>
     <li class="nav-collapsible"><a href="#commands">Commands</a></li>
     <li class="nav-collapsible"><a href="#install">Install</a></li>
-    <li class="nav-collapsible"><a href="#mcp">Claude Code</a></li>
+    <li class="nav-collapsible"><a href="#mcp">AI Tools</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -463,7 +463,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orbital" />
-  <div class="badge">v0.2.8</div>
+  <div class="badge">v0.3.0</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -611,9 +611,9 @@
 
 <!-- Claude Code Integration -->
 <section class="how-section" id="mcp">
-  <h2 class="section-title">Claude Code Integration</h2>
+  <h2 class="section-title">AI Tool Integration</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
-    Orbital integrates directly into Claude Code via <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> and slash commands. Delegate tasks to other accounts, list sessions, and resume conversations — all without leaving your session.
+    Orbital integrates with Claude Code, Codex CLI, and Gemini CLI via <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a>. Delegate tasks across accounts, share memory between tools, and manage sessions — all from one place.
   </p>
 
   <div class="steps">
@@ -676,9 +676,17 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <h4>Available MCP tools</h4>
-        <p>Claude Code gets these tools automatically:</p>
+        <h4>MCP tools &amp; shared memory</h4>
+        <p>All AI tools get these tools automatically. Knowledge saved by one tool is accessible from any other.</p>
         <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_read</code>
+            <span style="color:var(--muted);font-size:.85rem">Read shared project memory</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_write</code>
+            <span style="color:var(--muted);font-size:.85rem">Write to shared project memory</span>
+          </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
             <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
             <span style="color:var(--muted);font-size:.85rem">Run a task under a different account</span>

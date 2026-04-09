@@ -439,7 +439,7 @@
     <li class="nav-collapsible"><a href="#use-cases">情境</a></li>
     <li class="nav-collapsible"><a href="#commands">指令</a></li>
     <li class="nav-collapsible"><a href="#install">安裝</a></li>
-    <li class="nav-collapsible"><a href="#mcp">Claude Code</a></li>
+    <li class="nav-collapsible"><a href="#mcp">AI 工具</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">更新日誌</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -463,7 +463,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orbital" />
-  <div class="badge">v0.2.8</div>
+  <div class="badge">v0.3.0</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -611,9 +611,9 @@
 
 <!-- Claude Code Integration -->
 <section class="how-section" id="mcp">
-  <h2 class="section-title">Claude Code 整合</h2>
+  <h2 class="section-title">AI 工具整合</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
-    Orbital 透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> 和 slash commands 直接整合到 Claude Code。委派任務給其他帳號、列出 session、接續對話——全程不離開你的工作環境。
+    Orbital 透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> 整合 Claude Code、Codex CLI 和 Gemini CLI。跨帳號委派任務、工具間共享記憶、管理 session——全在一個地方。
   </p>
 
   <div class="steps">
@@ -676,9 +676,17 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <h4>MCP 工具一覽</h4>
-        <p>Claude Code 自動取得以下工具：</p>
+        <h4>MCP 工具與共享記憶</h4>
+        <p>所有 AI 工具自動取得以下工具。任一工具儲存的知識，其他工具都能存取。</p>
         <div style="margin-top:.75rem;display:grid;gap:.5rem">
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_read</code>
+            <span style="color:var(--muted);font-size:.85rem">讀取共享專案記憶</span>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:baseline">
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_write</code>
+            <span style="color:var(--muted);font-size:.85rem">寫入共享專案記憶</span>
+          </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
             <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
             <span style="color:var(--muted);font-size:.85rem">用其他帳號執行任務</span>

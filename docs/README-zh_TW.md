@@ -142,6 +142,35 @@ orbital deactivate
 | `orbital sessions --codex` | 只顯示 OpenAI Codex session |
 | `orbital sessions --gemini` | 只顯示 Google Gemini session |
 
+### 跨工具
+
+| 指令 | 說明 |
+|---|---|
+| `orbital run -e <name> <command>` | 在指定環境中執行指令 |
+| `orbital delegate -e <name> "prompt"` | 委派任務給其他環境的 AI 工具 |
+| `orbital resume <index>` | 用 index 接續 session（搭配 `orbital sessions`） |
+
+### AI 工具整合（MCP）
+
+Orbital 透過 [MCP](https://modelcontextprotocol.io/) 整合 Claude Code、Codex CLI 和 Gemini CLI。
+
+```bash
+orbital mcp setup
+```
+
+一行指令註冊 MCP server 並安裝 `/delegate` 和 `/sessions` slash commands。可用的 MCP 工具：
+
+| 工具 | 說明 |
+|---|---|
+| `orbital_delegate` | 委派任務給其他帳號的 AI 工具 |
+| `orbital_list` | 列出所有環境 |
+| `orbital_sessions` | 列出當前專案的 session |
+| `orbital_current` | 查看目前啟用的環境 |
+| `orbital_memory_read` | 讀取共享專案記憶 |
+| `orbital_memory_write` | 寫入共享專案記憶 |
+
+**共享記憶**：所有 AI 工具讀寫同一份 `ORBITAL_MEMORY.md`。Claude 儲存的知識，Codex 和 Gemini 也能存取，反之亦然。
+
 ### Shell 整合
 
 | 指令 | 說明 |

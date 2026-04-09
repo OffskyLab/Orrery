@@ -164,6 +164,35 @@ The interactive wizard also asks about session sharing when creating an environm
 | `orbital sessions --codex` | Show only OpenAI Codex sessions |
 | `orbital sessions --gemini` | Show only Google Gemini sessions |
 
+### Cross-tool
+
+| Command | Description |
+|---|---|
+| `orbital run -e <name> <command>` | Run a command in a specific environment |
+| `orbital delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
+| `orbital resume <index>` | Resume a session by index (from `orbital sessions`) |
+
+### AI Tool Integration (MCP)
+
+Orbital integrates with Claude Code, Codex CLI, and Gemini CLI via [MCP](https://modelcontextprotocol.io/).
+
+```bash
+orbital mcp setup
+```
+
+This registers Orbital as an MCP server and installs `/delegate` and `/sessions` slash commands. Available MCP tools:
+
+| Tool | Description |
+|---|---|
+| `orbital_delegate` | Delegate a task to another account's AI tool |
+| `orbital_list` | List all environments |
+| `orbital_sessions` | List sessions for the current project |
+| `orbital_current` | Get the active environment |
+| `orbital_memory_read` | Read shared project memory |
+| `orbital_memory_write` | Write to shared project memory |
+
+**Shared memory**: All AI tools read and write to the same `ORBITAL_MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
+
 ### Shell integration
 
 | Command | Description |

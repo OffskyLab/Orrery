@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0
+
+- **Shared memory across AI tools** — `orbital_memory_read` / `orbital_memory_write` MCP tools let Claude, Codex, and Gemini share the same project memory (`ORBITAL_MEMORY.md`)
+- **`orbital mcp setup` registers with all tools** — automatically registers MCP server with Claude Code, Codex CLI, and Gemini CLI (skips uninstalled ones)
+- AI tool integration section on GitHub Pages (renamed from "Claude Code Integration" to cover all tools)
+
 ## v0.2.8
 
 - **MCP server** — `orbital mcp-server` exposes tools via Model Context Protocol (stdin/stdout JSON-RPC)
