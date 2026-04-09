@@ -236,7 +236,7 @@ public struct MCPServer {
 
     // MARK: - Shared memory
 
-    private static func sharedMemoryFile() -> URL {
+    private static func sharedMemoryDirectory() -> URL {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
         let home: URL
@@ -250,7 +250,47 @@ public struct MCPServer {
             .appendingPathComponent("shared")
             .appendingPathComponent("memory")
             .appendingPathComponent(projectKey)
-            .appendingPathComponent("ORBITAL_MEMORY.md")
+    }
+
+    private static func sharedMemoryFile() -> URL {
+        sharedMemoryDirectory().appendingPathComponent("ORBITAL_MEMORY.md")
+    }
+
+    private static func fragmentsDirectory() -> URL {
+        sharedMemoryDirectory().appendingPathComponent("fragments")
+    }
+
+    private static func peerName() -> String {
+        ProcessInfo.processInfo.hostName
+            .replacingOccurrences(of: ".local", with: "")
+    }
+
+    private static func writeFragment(content: String, action: String) {
+        let dir = fragmentsDirectory()
+        let fm = FileManager.default
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let peer = peerName()
+        let id = UUID().uuidString.prefix(8).lowercased()
+        let filename = "f-\(id)-\(peer).md"
+
+        let body = """
+        ---
+        id: f-\(id)
+        peer: \(peer)
+        timestamp: \(timestamp)
+        action: \(action)
+        ---
+
+        \(content)
+        """
+
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            try body.write(to: dir.appendingPathComponent(filename),
+                           atomically: true, encoding: .utf8)
+        } catch {
+            log("Failed to write fragment: \(error.localizedDescription)")
+        }
     }
 
     private static func readMemory() -> [String: Any] {
@@ -285,6 +325,8 @@ public struct MCPServer {
             } else {
                 try content.write(to: file, atomically: true, encoding: .utf8)
             }
+
+            writeFragment(content: content, action: append ? "append" : "overwrite")
 
             return [
                 "content": [
@@ -339,6 +381,6 @@ public struct MCPServer {
 
     private static func currentVersion() -> String {
         // Read from OrbitalCommand would create a circular dep, just hardcode sync point
-        "0.3.2"
+        "0.3.3"
     }
 }
