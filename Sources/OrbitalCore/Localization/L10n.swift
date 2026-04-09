@@ -380,6 +380,26 @@ public enum L10n {
         }
     }
 
+    // MARK: - ResumeCommand
+
+    public enum Resume {
+        public static var abstract: String {
+            isChinese
+                ? "用 index 接續 AI tool session"
+                : "Resume an AI tool session by index"
+        }
+        public static var noIndex: String {
+            isChinese
+                ? "請指定 session index。用 orbital sessions 查看列表。"
+                : "Please specify a session index. Run orbital sessions to see the list."
+        }
+        public static func indexOutOfRange(_ index: Int, _ count: Int) -> String {
+            isChinese
+                ? "Index \(index) 超出範圍（共 \(count) 個 session）。"
+                : "Index \(index) out of range (\(count) sessions available)."
+        }
+    }
+
     // MARK: - DelegateCommand
 
     public enum Delegate {

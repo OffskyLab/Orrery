@@ -20,6 +20,7 @@ public struct OrbitalCommand: ParsableCommand {
             CurrentCommand.self,
             WhichCommand.self,
             RunCommand.self,
+            ResumeCommand.self,
             DelegateCommand.self,
             SessionsCommand.self,
             MCPSetupCommand.self,

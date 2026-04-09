@@ -64,14 +64,14 @@ public struct SessionsCommand: ParsableCommand {
 
     // MARK: - Per-tool session discovery
 
-    struct SessionEntry {
-        let id: String
-        let firstMessage: String
-        let lastTime: Date?
-        let userCount: Int
+    public struct SessionEntry {
+        public let id: String
+        public let firstMessage: String
+        public let lastTime: Date?
+        public let userCount: Int
     }
 
-    static func findSessions(tool: Tool, cwd: String, store: EnvironmentStore) -> [SessionEntry] {
+    public static func findSessions(tool: Tool, cwd: String, store: EnvironmentStore) -> [SessionEntry] {
         switch tool {
         case .claude: return findClaudeSessions(cwd: cwd, store: store)
         case .codex:  return findCodexSessions(store: store)
