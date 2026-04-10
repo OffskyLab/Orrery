@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.4
+
+- **Per-environment memory isolation** — `orbital memory isolate` / `orbital memory share` with fragment-based migration; `orbital create` wizard includes memory sharing step (default: isolated)
+- **Interactive auth login in `orbital create`** — after selecting tools, prompts to log in to each tool via `execvp` for proper TTY
+- **Fix: `orbital create` auth login TTY** — correct `execvp` argv construction, login now works correctly
+- **Fix: Strip `ANTHROPIC_API_KEY` in `run` and `delegate`** — inherited API key no longer leaks into non-default environments
+
 ## v1.0.2
 
 - **Fix: Strip `ANTHROPIC_API_KEY` in `run` and `delegate`** — inherited API key from shell no longer leaks into non-default environments, ensuring each environment's own credentials are used
