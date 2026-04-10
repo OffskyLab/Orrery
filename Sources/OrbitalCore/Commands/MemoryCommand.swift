@@ -5,11 +5,99 @@ public struct MemoryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "memory",
         abstract: L10n.Memory.abstract,
-        subcommands: [ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self],
-        defaultSubcommand: ExportSubcommand.self
+        subcommands: [InfoSubcommand.self, ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self]
     )
 
     public init() {}
+
+    public func run() throws {
+        let store = EnvironmentStore.default
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let envName = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+        let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+
+        let isIsolated: Bool
+        if let envName, envName != ReservedEnvironment.defaultName,
+           let env = try? store.load(named: envName) {
+            isIsolated = env.isolateMemory
+        } else {
+            isIsolated = false
+        }
+
+        // Show current status
+        print(L10n.Memory.statusMode(isIsolated))
+        print(L10n.Memory.statusPath(memoryFile.path))
+        print("")
+
+        // Build action menu based on current state
+        var options: [String] = [L10n.Memory.actionInfo, L10n.Memory.actionExport]
+        var canToggle = false
+        if let envName, envName != ReservedEnvironment.defaultName {
+            options.append(isIsolated ? L10n.Memory.actionShare : L10n.Memory.actionIsolate)
+            canToggle = true
+        }
+
+        let selector = SingleSelect(title: L10n.Memory.settingsPrompt, options: options, selected: 0)
+        let choice = selector.run()
+
+        switch choice {
+        case 0:
+            var info = InfoSubcommand()
+            try info.run()
+        case 1:
+            var export = ExportSubcommand()
+            try export.run()
+        case 2 where canToggle:
+            if isIsolated {
+                var share = ShareSubcommand()
+                try share.run()
+            } else {
+                var isolate = IsolateSubcommand()
+                try isolate.run()
+            }
+        default:
+            break
+        }
+    }
+
+    // MARK: - Info
+
+    public struct InfoSubcommand: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "info",
+            abstract: L10n.Memory.infoAbstract
+        )
+
+        @Option(name: .shortAndLong, help: "Environment name (defaults to ORBITAL_ACTIVE_ENV)")
+        public var environment: String?
+
+        public init() {}
+
+        public func run() throws {
+            let store = EnvironmentStore.default
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+            let envName = environment ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+            let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+
+            let isIsolated: Bool
+            if let envName, envName != ReservedEnvironment.defaultName,
+               let env = try? store.load(named: envName) {
+                isIsolated = env.isolateMemory
+            } else {
+                isIsolated = false
+            }
+
+            let fm = FileManager.default
+            let exists = fm.fileExists(atPath: memoryFile.path)
+            let size = (try? fm.attributesOfItem(atPath: memoryFile.path)[.size] as? Int) ?? 0
+
+            print(L10n.Memory.statusMode(isIsolated))
+            print(L10n.Memory.statusPath(memoryFile.path))
+            print(L10n.Memory.statusExists(exists, size))
+        }
+    }
 
     // MARK: - Export
 
@@ -63,6 +151,9 @@ public struct MemoryCommand: ParsableCommand {
             guard let envName else {
                 throw ValidationError(L10n.Memory.noActiveEnv)
             }
+            guard envName != ReservedEnvironment.defaultName else {
+                throw ValidationError(L10n.Memory.defaultNotSupported)
+            }
 
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
@@ -82,6 +173,15 @@ public struct MemoryCommand: ParsableCommand {
             print("")
 
             let choice = askMigrationChoiceToIsolated()
+            if choice == 1 {
+                FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                guard confirm == "y" || confirm == "yes" else {
+                    print(L10n.Memory.aborted)
+                    return
+                }
+            }
+
             try applyMigration(merge: choice == 0, from: sharedFile, toDir: isolatedDir)
 
             env.isolateMemory = true
@@ -109,6 +209,9 @@ public struct MemoryCommand: ParsableCommand {
             guard let envName else {
                 throw ValidationError(L10n.Memory.noActiveEnv)
             }
+            guard envName != ReservedEnvironment.defaultName else {
+                throw ValidationError(L10n.Memory.defaultNotSupported)
+            }
 
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
@@ -128,6 +231,15 @@ public struct MemoryCommand: ParsableCommand {
             print("")
 
             let choice = askMigrationChoiceToShared()
+            if choice == 1 {
+                FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                guard confirm == "y" || confirm == "yes" else {
+                    print(L10n.Memory.aborted)
+                    return
+                }
+            }
+
             try applyMigration(merge: choice == 0, from: isolatedFile, toDir: sharedDir)
 
             env.isolateMemory = false

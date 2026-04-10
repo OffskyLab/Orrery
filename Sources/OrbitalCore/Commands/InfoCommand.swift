@@ -22,6 +22,10 @@ public struct InfoCommand: ParsableCommand {
         } else {
             throw ValidationError(L10n.Info.noActive)
         }
+        guard resolvedName != ReservedEnvironment.defaultName else {
+            print(L10n.Info.defaultInfo)
+            return
+        }
         let env = try store.load(named: resolvedName)
         let df = DateFormatter()
         df.dateStyle = .medium
@@ -30,6 +34,10 @@ public struct InfoCommand: ParsableCommand {
         let path = try store.envDir(for: resolvedName).path
         let none = L10n.Info.none
 
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let memoryFile = store.memoryFile(projectKey: projectKey, envName: resolvedName)
+
         print("\(L10n.Info.labelName)\(env.name)")
         print("\(L10n.Info.labelID)\(env.id)")
         print("\(L10n.Info.labelPath)\(path)")
@@ -37,6 +45,11 @@ public struct InfoCommand: ParsableCommand {
         print("\(L10n.Info.labelCreated)\(df.string(from: env.createdAt))")
         print("\(L10n.Info.labelLastUsed)\(df.string(from: env.lastUsed))")
         print("\(L10n.Info.labelTools)\(env.tools.isEmpty ? none : env.tools.map(\.rawValue).joined(separator: ", "))")
+        let memoryMode = env.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
+        print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
+        print("\(L10n.Info.labelMemoryPath)\(memoryFile.path)")
+        let sessionMode = env.isolateSessions ? L10n.Info.modeIsolated : L10n.Info.modeShared
+        print("\(L10n.Info.labelSessionMode)\(sessionMode)")
         if env.env.isEmpty {
             print("\(L10n.Info.labelEnvVars)\(none)")
         } else {

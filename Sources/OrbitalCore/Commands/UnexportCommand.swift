@@ -17,6 +17,7 @@ public struct UnexportCommand: ParsableCommand {
     }
 
     public static func unexportLines(for name: String, store: EnvironmentStore) throws -> [String] {
+        guard name != ReservedEnvironment.defaultName else { return [] }
         let env = try store.load(named: name)
         var lines: [String] = []
 

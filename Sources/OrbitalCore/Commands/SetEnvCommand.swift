@@ -20,6 +20,9 @@ public struct SetEnvCommand: ParsableCommand {
             guard let envName = environment ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.EnvVar.noActive)
             }
+            guard envName != ReservedEnvironment.defaultName else {
+                throw ValidationError(L10n.EnvVar.defaultNotSupported)
+            }
             let store = EnvironmentStore.default
             try SetEnvCommand.setEnvVar(key: key, value: value, environmentName: envName, store: store)
             print(L10n.EnvVar.set(key, envName))

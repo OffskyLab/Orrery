@@ -18,6 +18,9 @@ public struct UnsetEnvCommand: ParsableCommand {
             guard let envName = environment ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.EnvVar.noActive)
             }
+            guard envName != ReservedEnvironment.defaultName else {
+                throw ValidationError(L10n.EnvVar.defaultNotSupported)
+            }
             let store = EnvironmentStore.default
             try UnsetEnvCommand.unsetEnvVar(key: key, environmentName: envName, store: store)
             print(L10n.EnvVar.unset(key, envName))

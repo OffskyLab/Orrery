@@ -17,6 +17,10 @@ public struct ToolsCommand: ParsableCommand {
             throw ValidationError(L10n.Tools.noActive)
         }
 
+        guard envName != ReservedEnvironment.defaultName else {
+            throw ValidationError(L10n.Tools.defaultNotSupported)
+        }
+
         let store = EnvironmentStore.default
         let env = try store.load(named: envName)
         let allTools = Tool.allCases
@@ -52,6 +56,11 @@ public struct ToolsCommand: ParsableCommand {
 
         if toAdd.isEmpty && toRemove.isEmpty {
             print(L10n.Tools.noChanges)
+        }
+
+        // Offer login for newly added tools (execvp — must be last step)
+        if !toAdd.isEmpty {
+            ToolSetup.execLoginIfNeeded(tools: Array(toAdd), store: store, envName: envName)
         }
     }
 }
