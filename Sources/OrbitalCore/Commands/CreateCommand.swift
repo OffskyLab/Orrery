@@ -137,8 +137,9 @@ public struct CreateCommand: ParsableCommand {
         for (key, value) in env { setenv(key, value, 1) }
 
         let shellCmd = loginCommands.joined(separator: "; ")
-        let argv = (["/bin/sh", "-c", shellCmd] as [String]).map { strdup($0) } + [nil]
-        execvp("/bin/sh", UnsafeMutablePointer(mutating: argv))
+        let shellArgs: [String] = ["/bin/sh", "-c", shellCmd]
+        let argv = shellArgs.map { strdup($0) } + [nil]
+        execvp(shellArgs[0], argv)
         perror("execvp")
         throw ExitCode.failure
     }
