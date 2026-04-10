@@ -5,11 +5,13 @@ public struct MemoryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "memory",
         abstract: L10n.Memory.abstract,
-        subcommands: [ExportSubcommand.self],
+        subcommands: [ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self],
         defaultSubcommand: ExportSubcommand.self
     )
 
     public init() {}
+
+    // MARK: - Export
 
     public struct ExportSubcommand: ParsableCommand {
         public static let configuration = CommandConfiguration(
@@ -23,34 +25,174 @@ public struct MemoryCommand: ParsableCommand {
         public init() {}
 
         public func run() throws {
-            let fm = FileManager.default
-            let projectKey = fm.currentDirectoryPath
+            let store = EnvironmentStore.default
+            let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
+            let envName = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+            let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
 
-            let home: URL
-            if let custom = ProcessInfo.processInfo.environment["ORBITAL_HOME"] {
-                home = URL(fileURLWithPath: custom)
-            } else {
-                home = fm.homeDirectoryForCurrentUser.appendingPathComponent(".orbital")
-            }
-
-            let memoryFile = home
-                .appendingPathComponent("shared")
-                .appendingPathComponent("memory")
-                .appendingPathComponent(projectKey)
-                .appendingPathComponent("ORBITAL_MEMORY.md")
-
-            guard fm.fileExists(atPath: memoryFile.path) else {
+            guard FileManager.default.fileExists(atPath: memoryFile.path) else {
                 print(L10n.Memory.noMemory)
                 return
             }
 
             let content = try String(contentsOf: memoryFile, encoding: .utf8)
-
             let outputPath = output ?? "ORBITAL_MEMORY.md"
             let outputURL = URL(fileURLWithPath: outputPath)
             try content.write(to: outputURL, atomically: true, encoding: .utf8)
             print(L10n.Memory.exported(outputURL.path))
         }
     }
+
+    // MARK: - Isolate
+
+    public struct IsolateSubcommand: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "isolate",
+            abstract: L10n.Memory.isolateAbstract
+        )
+
+        @Option(name: .shortAndLong, help: "Environment name (defaults to ORBITAL_ACTIVE_ENV)")
+        public var environment: String?
+
+        public init() {}
+
+        public func run() throws {
+            let envName = environment
+                ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+            guard let envName else {
+                throw ValidationError(L10n.Memory.noActiveEnv)
+            }
+
+            let store = EnvironmentStore.default
+            var env = try store.load(named: envName)
+
+            guard !env.isolateMemory else {
+                print(L10n.Memory.alreadyIsolated)
+                return
+            }
+
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+            let sharedFile = store.memoryFile(projectKey: projectKey, envName: nil)
+            let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+            let isolatedFile = isolatedDir.appendingPathComponent("ORBITAL_MEMORY.md")
+
+            print(L10n.Memory.migrationWarning(sharedFile.path, isolatedFile.path))
+            print("")
+
+            let choice = askMigrationChoiceToIsolated()
+            try applyMigration(merge: choice == 0, from: sharedFile, toDir: isolatedDir)
+
+            env.isolateMemory = true
+            try store.save(env)
+            print(L10n.Memory.migrationDone(envName, true))
+        }
+    }
+
+    // MARK: - Share
+
+    public struct ShareSubcommand: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "share",
+            abstract: L10n.Memory.shareAbstract
+        )
+
+        @Option(name: .shortAndLong, help: "Environment name (defaults to ORBITAL_ACTIVE_ENV)")
+        public var environment: String?
+
+        public init() {}
+
+        public func run() throws {
+            let envName = environment
+                ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+            guard let envName else {
+                throw ValidationError(L10n.Memory.noActiveEnv)
+            }
+
+            let store = EnvironmentStore.default
+            var env = try store.load(named: envName)
+
+            guard env.isolateMemory else {
+                print(L10n.Memory.alreadyShared)
+                return
+            }
+
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+            let isolatedFile = store.memoryFile(projectKey: projectKey, envName: envName)
+            let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+            let sharedFile = sharedDir.appendingPathComponent("ORBITAL_MEMORY.md")
+
+            print(L10n.Memory.migrationWarning(isolatedFile.path, sharedFile.path))
+            print("")
+
+            let choice = askMigrationChoiceToShared()
+            try applyMigration(merge: choice == 0, from: isolatedFile, toDir: sharedDir)
+
+            env.isolateMemory = false
+            try store.save(env)
+            print(L10n.Memory.migrationDone(envName, false))
+        }
+    }
+}
+
+// MARK: - Migration helpers
+
+private func askMigrationChoiceToShared() -> Int {
+    let selector = SingleSelect(
+        title: L10n.Memory.migrationPrompt,
+        options: [
+            L10n.Memory.migrationMergeToShared,
+            L10n.Memory.migrationDiscardToShared,
+        ],
+        selected: 0
+    )
+    return selector.run()
+}
+
+private func askMigrationChoiceToIsolated() -> Int {
+    let selector = SingleSelect(
+        title: L10n.Memory.migrationPrompt,
+        options: [
+            L10n.Memory.migrationMergeToIsolated,
+            L10n.Memory.migrationDiscardToIsolated,
+        ],
+        selected: 0
+    )
+    return selector.run()
+}
+
+private func applyMigration(merge: Bool, from sourceFile: URL, toDir destDir: URL) throws {
+    guard merge else { return }
+
+    let fm = FileManager.default
+    guard fm.fileExists(atPath: sourceFile.path),
+          let content = try? String(contentsOf: sourceFile, encoding: .utf8) else {
+        return
+    }
+
+    let fragmentsDir = destDir.appendingPathComponent("fragments")
+    try fm.createDirectory(at: fragmentsDir, withIntermediateDirectories: true)
+
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let peer = ProcessInfo.processInfo.hostName
+        .replacingOccurrences(of: ".local", with: "")
+    let id = String(UUID().uuidString.prefix(8).lowercased())
+    let filename = "f-\(id)-\(peer).md"
+
+    let fragment = """
+    ---
+    id: f-\(id)
+    peer: \(peer)
+    timestamp: \(timestamp)
+    action: migrate
+    ---
+
+    \(content)
+    """
+    try fragment.write(
+        to: fragmentsDir.appendingPathComponent(filename),
+        atomically: true, encoding: .utf8
+    )
 }

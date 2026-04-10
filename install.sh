@@ -101,6 +101,10 @@ fi
 
 VERSION=$(orbital --version 2>/dev/null || echo "installed")
 
+# Fire-and-forget install ping (anonymous, no personal data)
+curl -fsS "https://orbital-stats.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev/ping?os=${os}&arch=${arch}" \
+  --max-time 3 --silent --output /dev/null &
+
 echo ""
 info "Orbital ${VERSION} successfully!"
 echo ""

@@ -22,6 +22,9 @@ public struct CreateCommand: ParsableCommand {
     @Flag(name: .long, help: ArgumentHelp(L10n.Create.isolateSessionsHelp))
     public var isolateSessions: Bool = false
 
+    @Flag(name: .long, help: ArgumentHelp(L10n.Create.isolateMemoryHelp))
+    public var isolateMemory: Bool = false
+
     public init() {}
 
     public func run() throws {
@@ -68,18 +71,27 @@ public struct CreateCommand: ParsableCommand {
             shouldIsolate = Self.askSessionIsolation()
         }
 
+        let shouldIsolateMemory: Bool
+        if isolateMemory {
+            shouldIsolateMemory = true
+        } else {
+            shouldIsolateMemory = Self.askMemoryIsolation()
+        }
+
         try Self.createEnvironment(
             name: name,
             description: description,
             cloneFrom: cloneSource,
             tools: tools,
             isolateSessions: shouldIsolate,
+            isolateMemory: shouldIsolateMemory,
             store: store
         )
         print(L10n.Create.created(name))
         if let cloneSource { print(L10n.Create.cloned(cloneSource)) }
         if !tools.isEmpty { print(L10n.Create.tools(tools.map(\.rawValue).joined(separator: ", "))) }
         print(L10n.Create.sessions(shouldIsolate))
+        print(L10n.Create.memory(shouldIsolateMemory))
 
         // Setup each tool (install check + auth)
         for t in tools {
@@ -138,6 +150,18 @@ public struct CreateCommand: ParsableCommand {
         return sources[idx]
     }
 
+    static func askMemoryIsolation() -> Bool {
+        let selector = SingleSelect(
+            title: L10n.Create.memorySharePrompt,
+            options: [
+                L10n.Create.memoryShareYes,
+                L10n.Create.memoryShareNo,
+            ],
+            selected: 1
+        )
+        return selector.run() == 1
+    }
+
     static func askSessionIsolation() -> Bool {
         let selector = SingleSelect(
             title: L10n.Create.sessionSharePrompt,
@@ -158,9 +182,10 @@ public struct CreateCommand: ParsableCommand {
         cloneFrom source: String?,
         tools: [Tool] = [],
         isolateSessions: Bool = false,
+        isolateMemory: Bool = false,
         store: EnvironmentStore
     ) throws {
-        var env = OrbitalEnvironment(name: name, description: description, isolateSessions: isolateSessions)
+        var env = OrbitalEnvironment(name: name, description: description, isolateSessions: isolateSessions, isolateMemory: isolateMemory)
 
         if let source, source != ReservedEnvironment.defaultName {
             let sourceEnv = try store.load(named: source)

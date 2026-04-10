@@ -13,6 +13,7 @@ public struct OrbitalEnvironment: Codable, Sendable {
     public var tools: [Tool]
     public var env: [String: String]
     public var isolateSessions: Bool
+    public var isolateMemory: Bool
 
     public init(
         id: String = UUID().uuidString,
@@ -22,7 +23,8 @@ public struct OrbitalEnvironment: Codable, Sendable {
         lastUsed: Date = Date(),
         tools: [Tool] = [],
         env: [String: String] = [:],
-        isolateSessions: Bool = false
+        isolateSessions: Bool = false,
+        isolateMemory: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -32,11 +34,12 @@ public struct OrbitalEnvironment: Codable, Sendable {
         self.tools = tools
         self.env = env
         self.isolateSessions = isolateSessions
+        self.isolateMemory = isolateMemory
     }
 
     // Custom decoding for backward compatibility with existing env.json files
     enum CodingKeys: String, CodingKey {
-        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions
+        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions, isolateMemory
     }
 
     public init(from decoder: Decoder) throws {
@@ -49,5 +52,6 @@ public struct OrbitalEnvironment: Codable, Sendable {
         tools = try container.decode([Tool].self, forKey: .tools)
         env = try container.decode([String: String].self, forKey: .env)
         isolateSessions = try container.decodeIfPresent(Bool.self, forKey: .isolateSessions) ?? false
+        isolateMemory = try container.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
     }
 }

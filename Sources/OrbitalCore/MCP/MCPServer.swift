@@ -239,21 +239,17 @@ public struct MCPServer {
     private static func sharedMemoryDirectory() -> URL {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
-        let home: URL
-        if let custom = ProcessInfo.processInfo.environment["ORBITAL_HOME"] {
-            home = URL(fileURLWithPath: custom)
-        } else {
-            home = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".orbital")
-        }
-        return home
-            .appendingPathComponent("shared")
-            .appendingPathComponent("memory")
-            .appendingPathComponent(projectKey)
+        let envName = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+        let store = EnvironmentStore.default
+        return store.memoryFile(projectKey: projectKey, envName: envName)
+            .deletingLastPathComponent()
     }
 
     private static func sharedMemoryFile() -> URL {
-        sharedMemoryDirectory().appendingPathComponent("ORBITAL_MEMORY.md")
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let envName = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+        return EnvironmentStore.default.memoryFile(projectKey: projectKey, envName: envName)
     }
 
     private static func fragmentsDirectory() -> URL {

@@ -111,6 +111,31 @@ public enum L10n {
                 ? "隔離 session（各環境完全獨立）"
                 : "Isolate sessions (fully independent per environment)"
         }
+        public static var isolateMemoryHelp: String {
+            isChinese
+                ? "隔離此環境的 MEMORY（預設為共享）"
+                : "Isolate memory for this environment instead of sharing it (default: shared)"
+        }
+        public static var memorySharePrompt: String {
+            isChinese
+                ? "Memory 共享設定（↑↓ 移動，Enter 確認）："
+                : "Memory sharing (↑↓ move, enter confirm):"
+        }
+        public static var memoryShareYes: String {
+            isChinese
+                ? "共享 memory（所有環境共用同一份記憶）"
+                : "Share memory (all environments use the same memory)"
+        }
+        public static var memoryShareNo: String {
+            isChinese
+                ? "隔離 memory（此環境獨立的記憶）"
+                : "Isolate memory (this environment has its own memory)"
+        }
+        public static func memory(_ isolated: Bool) -> String {
+            isChinese
+                ? "Memory：\(isolated ? "隔離" : "共享")"
+                : "Memory: \(isolated ? "isolated" : "shared")"
+        }
     }
 
     // MARK: - DeleteCommand
@@ -501,6 +526,62 @@ public enum L10n {
             isChinese
                 ? "已匯出至 \(path)"
                 : "Exported to \(path)"
+        }
+        public static var isolateAbstract: String {
+            isChinese
+                ? "將此環境的 memory 切換為獨立模式"
+                : "Switch this environment to isolated memory"
+        }
+        public static var shareAbstract: String {
+            isChinese
+                ? "將此環境的 memory 切換為共享模式"
+                : "Switch this environment to shared memory"
+        }
+        public static var noActiveEnv: String {
+            isChinese
+                ? "沒有啟用的環境。請先執行 'orbital use <name>'，或使用 -e <name>。"
+                : "No active environment. Run 'orbital use <name>' first, or use -e <name>."
+        }
+        public static var alreadyIsolated: String {
+            isChinese ? "此環境的 memory 已經是隔離模式。" : "Memory is already isolated for this environment."
+        }
+        public static var alreadyShared: String {
+            isChinese ? "此環境的 memory 已經是共享模式。" : "Memory is already shared for this environment."
+        }
+        public static func migrationWarning(_ from: String, _ to: String) -> String {
+            isChinese
+                ? "⚠️  此操作將變更 memory 的儲存路徑。\n    原本路徑：\(from)\n    新的路徑：\(to)"
+                : "⚠️  This will change where memory is stored.\n    Current: \(from)\n    New:     \(to)"
+        }
+        public static var migrationPrompt: String {
+            isChinese
+                ? "如何處理現有的 memory？（↑↓ 移動，Enter 確認）："
+                : "How would you like to handle existing memory? (↑↓ move, enter confirm):"
+        }
+        public static var migrationMergeToShared: String {
+            isChinese
+                ? "融合兩者（將隔離記憶收錄進共享記憶）"
+                : "Merge both (bring isolated memory into shared)"
+        }
+        public static var migrationDiscardToShared: String {
+            isChinese
+                ? "捨棄當前的記憶（只使用共享記憶）⚠️ 無法復原"
+                : "Discard current memory (use shared memory only) ⚠️ irreversible"
+        }
+        public static var migrationMergeToIsolated: String {
+            isChinese
+                ? "複製共享記憶（作為隔離記憶的起點）"
+                : "Copy shared memory (use as starting point for isolated memory)"
+        }
+        public static var migrationDiscardToIsolated: String {
+            isChinese
+                ? "從空白開始（不帶入共享記憶）"
+                : "Start fresh (do not import shared memory)"
+        }
+        public static func migrationDone(_ envName: String, _ isolated: Bool) -> String {
+            isChinese
+                ? "已將環境 '\(envName)' 的 memory 切換為\(isolated ? "隔離" : "共享")模式。"
+                : "Memory for '\(envName)' switched to \(isolated ? "isolated" : "shared") mode."
         }
     }
 

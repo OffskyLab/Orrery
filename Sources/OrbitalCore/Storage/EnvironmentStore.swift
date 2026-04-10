@@ -189,6 +189,33 @@ public struct EnvironmentStore: Sendable {
         return envURL(id: id).appendingPathComponent(tool.subdirectory)
     }
 
+    // MARK: - Memory path helpers
+
+    /// Shared memory dir for a project: `~/.orbital/shared/memory/{projectKey}/`
+    public func sharedMemoryDir(projectKey: String) -> URL {
+        homeURL
+            .appendingPathComponent("shared")
+            .appendingPathComponent("memory")
+            .appendingPathComponent(projectKey)
+    }
+
+    /// Isolated memory dir for a specific env: `~/.orbital/shared/memory/{projectKey}/{envName}/`
+    public func isolatedMemoryDir(projectKey: String, envName: String) -> URL {
+        sharedMemoryDir(projectKey: projectKey).appendingPathComponent(envName)
+    }
+
+    /// Returns the correct ORBITAL_MEMORY.md URL for the given env (nil = default/shared).
+    public func memoryFile(projectKey: String, envName: String?) -> URL {
+        let dir: URL
+        if let envName, envName != ReservedEnvironment.defaultName,
+           let env = try? load(named: envName), env.isolateMemory {
+            dir = isolatedMemoryDir(projectKey: projectKey, envName: envName)
+        } else {
+            dir = sharedMemoryDir(projectKey: projectKey)
+        }
+        return dir.appendingPathComponent("ORBITAL_MEMORY.md")
+    }
+
     public func rename(from oldName: String, to newName: String) throws {
         var env = try load(named: oldName)
         env.name = newName
