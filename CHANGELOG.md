@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.2
+
+- **Fix: Strip `ANTHROPIC_API_KEY` in `run` and `delegate`** — inherited API key from shell no longer leaks into non-default environments, ensuring each environment's own credentials are used
+
 ## v1.0.1
 
 - **Fix: `orbital run` supports interactive tools** — uses `execvp` to inherit full TTY, fixing `orbital run claude` / `orbital run codex` hanging
