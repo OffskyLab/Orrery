@@ -43,6 +43,10 @@ public struct RunCommand: ParsableCommand {
 
         // Inherit current environment + overlay orbital env vars
         var processEnv = ProcessInfo.processInfo.environment
+        // Strip inherited API key so the environment's own credentials take effect
+        if let envName, envName != ReservedEnvironment.defaultName {
+            processEnv.removeValue(forKey: "ANTHROPIC_API_KEY")
+        }
         for (key, value) in envVars {
             processEnv[key] = value
         }
