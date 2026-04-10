@@ -64,7 +64,7 @@ public struct DelegateCommand: ParsableCommand {
         let command: [String]
         switch tool {
         case .claude: command = ["claude", "-p", prompt, "--allowedTools", "Bash"]
-        case .codex:  command = ["codex", "-q", prompt]
+        case .codex:  command = ["codex", "exec", prompt]
         case .gemini: command = ["gemini", "-p", prompt]
         }
 
