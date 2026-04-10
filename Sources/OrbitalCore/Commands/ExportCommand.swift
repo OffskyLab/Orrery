@@ -18,6 +18,7 @@ public struct ExportCommand: ParsableCommand {
     }
 
     public static func exportLines(for name: String, store: EnvironmentStore) throws -> [String] {
+        guard name != ReservedEnvironment.defaultName else { return [] }
         var env = try store.load(named: name)
         env.lastUsed = Date()
         try store.save(env)

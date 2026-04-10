@@ -201,7 +201,17 @@ public enum L10n {
         public static var labelLastUsed: String { isChinese ? "上次使用：   " : "Last Used:   " }
         public static var labelTools: String { isChinese ? "工具：       " : "Tools:       " }
         public static var labelEnvVars: String { isChinese ? "環境變數：   " : "Env Vars:    " }
+        public static var labelMemoryMode: String { isChinese ? "Memory 模式：" : "Memory:      " }
+        public static var labelMemoryPath: String { isChinese ? "Memory 路徑：" : "Memory Path: " }
+        public static var labelSessionMode: String { isChinese ? "Session 模式：" : "Sessions:    " }
+        public static var modeIsolated: String { isChinese ? "獨立" : "isolated" }
+        public static var modeShared: String { isChinese ? "共享" : "shared" }
         public static var none: String { isChinese ? "（無）" : "(none)" }
+        public static var defaultInfo: String {
+            isChinese
+                ? "名稱：       default\n描述：       原始系統環境（不支援工具或環境變數設定）"
+                : "Name:        default\nDescription: System default environment (tools and env vars not configurable)"
+        }
     }
 
     // MARK: - ListCommand
@@ -270,6 +280,11 @@ public enum L10n {
                 ? "已在環境 '\(envName)' 中設定 \(key)"
                 : "Set \(key) in environment '\(envName)'"
         }
+        public static var defaultNotSupported: String {
+            isChinese
+                ? "'default' 是原始環境，不支援環境變數設定。"
+                : "'default' is the system environment and does not support env var configuration."
+        }
         public static func unset(_ key: String, _ envName: String) -> String {
             isChinese
                 ? "已從環境 '\(envName)' 中移除 \(key)"
@@ -308,6 +323,11 @@ public enum L10n {
         }
         public static var noChanges: String {
             isChinese ? "沒有變更。" : "No changes."
+        }
+        public static var defaultNotSupported: String {
+            isChinese
+                ? "'default' 是原始環境，不支援工具設定。請先執行 'orbital create <name>' 建立環境。"
+                : "'default' is the system environment and does not support tool configuration. Run 'orbital create <name>' to create an environment."
         }
     }
 
@@ -507,6 +527,46 @@ public enum L10n {
                 ? "管理共享專案記憶"
                 : "Manage shared project memory"
         }
+        public static var settingsPrompt: String {
+            isChinese
+                ? "Memory 設定（↑↓ 移動，Enter 確認）："
+                : "Memory settings (↑↓ move, enter confirm):"
+        }
+        public static func statusMode(_ isolated: Bool) -> String {
+            isChinese
+                ? "模式：\(isolated ? "隔離" : "共享")"
+                : "Mode:  \(isolated ? "isolated" : "shared")"
+        }
+        public static func statusPath(_ path: String) -> String {
+            isChinese ? "路徑：\(path)" : "Path:  \(path)"
+        }
+        public static func statusExists(_ exists: Bool, _ size: Int) -> String {
+            if !exists { return isChinese ? "檔案：（尚無記憶）" : "File:  (no memory yet)" }
+            return isChinese ? "檔案：存在（\(size) bytes）" : "File:  exists (\(size) bytes)"
+        }
+        public static var actionInfo: String {
+            isChinese ? "查看記憶狀況" : "View memory info"
+        }
+        public static var actionExport: String {
+            isChinese ? "匯出記憶" : "Export memory"
+        }
+        public static var actionIsolate: String {
+            isChinese ? "切換為隔離模式" : "Switch to isolated mode"
+        }
+        public static var actionShare: String {
+            isChinese ? "切換為共享模式" : "Switch to shared mode"
+        }
+        public static var discardConfirm: String {
+            isChinese
+                ? "⚠️  確定要捨棄這份記憶？此操作無法復原。[y/N] "
+                : "⚠️  Discard this memory? This cannot be undone. [y/N] "
+        }
+        public static var aborted: String {
+            isChinese ? "已取消。" : "Aborted."
+        }
+        public static var infoAbstract: String {
+            isChinese ? "顯示目前的記憶狀況與路徑" : "Show current memory status and path"
+        }
         public static var exportAbstract: String {
             isChinese
                 ? "匯出當前專案的共享記憶"
@@ -544,6 +604,11 @@ public enum L10n {
         }
         public static var alreadyIsolated: String {
             isChinese ? "此環境的 memory 已經是隔離模式。" : "Memory is already isolated for this environment."
+        }
+        public static var defaultNotSupported: String {
+            isChinese
+                ? "'default' 是原始環境，不支援 memory 模式切換。"
+                : "'default' is the system environment and does not support memory isolation settings."
         }
         public static var alreadyShared: String {
             isChinese ? "此環境的 memory 已經是共享模式。" : "Memory is already shared for this environment."
