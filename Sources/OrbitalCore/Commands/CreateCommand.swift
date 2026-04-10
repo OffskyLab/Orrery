@@ -1,6 +1,10 @@
 import ArgumentParser
 import Foundation
 
+private extension String {
+    var shellEscaped: String { "'\(replacingOccurrences(of: "'", with: "'\\''"))'" }
+}
+
 public struct CreateCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "create",
@@ -93,7 +97,7 @@ public struct CreateCommand: ParsableCommand {
         print(L10n.Create.sessions(shouldIsolate))
         print(L10n.Create.memory(shouldIsolateMemory))
 
-        // Setup each tool (install check + auth)
+        // Setup each tool (install check)
         for t in tools {
             let configDir = store.toolConfigDir(tool: t, environment: name)
             try ToolSetup.setup(t, configDir: configDir, envName: name)
@@ -105,6 +109,38 @@ public struct CreateCommand: ParsableCommand {
             try store.setCurrent(name)
             print(L10n.Create.firstEnvCreated(name))
         }
+
+        // Ask about login for each tool, then execvp into shell at the end
+        var loginCommands: [String] = []
+        for t in tools {
+            guard let authCmd = t.authLoginCommand else { continue }
+            print("")
+            FileHandle.standardOutput.write(Data(L10n.ToolSetup.loginNow(t.rawValue).utf8))
+            let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+            guard input.isEmpty || input == "y" || input == "yes" else {
+                print(L10n.ToolSetup.skippingLogin(t.rawValue))
+                continue
+            }
+            let configDir = store.toolConfigDir(tool: t, environment: name)
+            let cmd = authCmd.joined(separator: " ")
+            loginCommands.append("\(t.envVarName)=\(configDir.path.shellEscaped) \(cmd)")
+        }
+
+        guard !loginCommands.isEmpty else { return }
+
+        // Strip IPC vars to prevent claude from hanging when launched from Claude Code
+        var env = ProcessInfo.processInfo.environment
+        env.removeValue(forKey: "CLAUDECODE")
+        env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
+        env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+        env.removeValue(forKey: "ANTHROPIC_API_KEY")
+        for (key, value) in env { setenv(key, value, 1) }
+
+        let shellCmd = loginCommands.joined(separator: "; ")
+        let argv = (["/bin/sh", "-c", shellCmd] as [String]).map { strdup($0) } + [nil]
+        execvp("/bin/sh", UnsafeMutablePointer(mutating: argv))
+        perror("execvp")
+        throw ExitCode.failure
     }
 
     // MARK: - Wizard steps
