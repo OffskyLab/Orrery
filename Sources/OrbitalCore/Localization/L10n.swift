@@ -259,6 +259,9 @@ public enum L10n {
     // MARK: - SetEnvCommand / UnsetEnvCommand
 
     public enum EnvVar {
+        public static var abstract: String {
+            isChinese ? "管理環境的設定值" : "Manage configuration values in an environment"
+        }
         public static var setAbstract: String {
             isChinese ? "設定環境中的設定值" : "Set configuration values in an environment"
         }
