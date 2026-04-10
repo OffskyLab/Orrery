@@ -103,7 +103,7 @@ public enum L10n {
         }
         public static var sessionShareYes: String {
             isChinese
-                ? "共享 session（切換帳號後可接續對話）"
+                ? "共享 session（切換環境後可接續對話）"
                 : "Share sessions (resume conversations after switching)"
         }
         public static var sessionShareNo: String {
@@ -653,6 +653,12 @@ public enum L10n {
         }
         public static func installed(_ tool: String) -> String {
             isChinese ? "\u{2713} \(tool) 已安裝" : "\u{2713} \(tool) installed"
+        }
+        public static func loginNow(_ tool: String) -> String {
+            isChinese ? "要現在登入 \(tool) 嗎？[Y/n] " : "Log in to \(tool) now? [Y/n] "
+        }
+        public static func skippingLogin(_ tool: String) -> String {
+            isChinese ? "跳過 \(tool) 登入。\n" : "Skipping \(tool) login.\n"
         }
     }
 }

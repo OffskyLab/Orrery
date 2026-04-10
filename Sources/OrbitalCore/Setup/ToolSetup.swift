@@ -6,7 +6,7 @@ public struct ToolSetup {
         case installFailed(String)
     }
 
-    /// Run the full setup flow for a tool: check install → offer install.
+    /// Run the full setup flow for a tool: check install → offer install → offer auth login.
     public static func setup(_ tool: Tool, configDir: URL, envName: String) throws {
         guard tool.supportsSetup else { return }
 
@@ -22,6 +22,15 @@ public struct ToolSetup {
             }
             try install(tool)
         }
+
+        guard tool.authLoginCommand != nil else { return }
+        FileHandle.standardOutput.write(Data(L10n.ToolSetup.loginNow(tool.rawValue).utf8))
+        let loginInput = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+        if loginInput.isEmpty || loginInput == "y" || loginInput == "yes" {
+            try login(tool, configDir: configDir)
+        } else {
+            print(L10n.ToolSetup.skippingLogin(tool.rawValue))
+        }
     }
 
     // MARK: - Internal
@@ -35,6 +44,24 @@ public struct ToolSetup {
         try? process.run()
         process.waitUntilExit()
         return process.terminationStatus == 0
+    }
+
+    static func login(_ tool: Tool, configDir: URL) throws {
+        guard let cmd = tool.authLoginCommand else { return }
+
+        var processEnv = ProcessInfo.processInfo.environment
+        processEnv[tool.envVarName] = configDir.path
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = cmd
+        process.environment = processEnv
+        process.standardInput = FileHandle.standardInput
+        process.standardOutput = FileHandle.standardOutput
+        process.standardError = FileHandle.standardError
+
+        try process.run()
+        process.waitUntilExit()
     }
 
     static func install(_ tool: Tool) throws {
