@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.5
+
+- **`orbital env set/unset`** — moved from `orbital set env` / `orbital unset env` to `orbital env set` / `orbital env unset`
+- **`orbital info`** — now displays memory path, memory mode (isolated/shared), and session mode (isolated/shared)
+- **`orbital memory` redesign** — interactive settings menu with `info`, `export`, `isolate`, `share` subcommands; discard migration requires explicit confirmation
+- **Fix: `orbital tools`** — guard against default environment; prompts auth login for newly added tools
+- **Fix: `orbital delegate` with Codex** — use `codex exec` for non-interactive mode
+- **Fix: default environment** — `orbital set env`, `orbital unset env`, `orbital export`, `orbital unexport` no longer crash on default environment
+
 ## v1.0.4
 
 - **Per-environment memory isolation** — `orbital memory isolate` / `orbital memory share` with fragment-based migration; `orbital create` wizard includes memory sharing step (default: isolated)
