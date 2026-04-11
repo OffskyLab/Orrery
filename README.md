@@ -101,6 +101,19 @@ claude --resume           # pick up right where you left off
 orbital deactivate
 ```
 
+## The `origin` Environment
+
+`origin` is Orbital's reserved name for your unmodified system environment. It cannot be deleted, renamed, or configured with tools or environment variables.
+
+Switching to `origin` exits Orbital management — all Orbital variables are cleared and tools fall back to their system-wide config, exactly as if Orbital weren't installed:
+
+```bash
+orbital use origin     # exit Orbital, return to system config
+orbital deactivate     # same as above
+```
+
+This makes `origin` a clean escape hatch: run a command under your default system credentials without affecting any Orbital environment.
+
 ## Session Sharing
 
 By default, session data (conversation history, project context) is shared across all environments. This means:
