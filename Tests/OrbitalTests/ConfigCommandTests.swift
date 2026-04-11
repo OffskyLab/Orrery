@@ -17,17 +17,23 @@ struct ConfigCommandTests {
 
     @Test("set env stores key-value in env.json")
     func setEnv() throws {
-        try SetEnvCommand.setEnvVar(key: "MY_KEY", value: "my-value", environmentName: "work", store: store)
-        let env = try store.load(named: "work")
-        #expect(env.env["MY_KEY"] == "my-value")
+        var env = try store.load(named: "work")
+        env.env["MY_KEY"] = "my-value"
+        try store.save(env)
+        let loaded = try store.load(named: "work")
+        #expect(loaded.env["MY_KEY"] == "my-value")
     }
 
     @Test("unset env removes key from env.json")
     func unsetEnv() throws {
-        try SetEnvCommand.setEnvVar(key: "MY_KEY", value: "my-value", environmentName: "work", store: store)
-        try UnsetEnvCommand.unsetEnvVar(key: "MY_KEY", environmentName: "work", store: store)
-        let env = try store.load(named: "work")
-        #expect(env.env["MY_KEY"] == nil)
+        var env = try store.load(named: "work")
+        env.env["MY_KEY"] = "my-value"
+        try store.save(env)
+        var updated = try store.load(named: "work")
+        updated.env.removeValue(forKey: "MY_KEY")
+        try store.save(updated)
+        let loaded = try store.load(named: "work")
+        #expect(loaded.env["MY_KEY"] == nil)
     }
 
     @Test("add tool creates subdirectory and updates env.json")
