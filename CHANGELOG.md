@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.0
+
+- **Memory external storage** — `orbital memory storage <path>` redirects `ORBITAL_MEMORY.md` and fragments to any directory (e.g. Obsidian vault); prompts to copy existing memory when new path is empty; `--reset` to revert
+- **Update check at shell startup** — `activate.sh` checks for new releases in background (at most once per day) and shows a notice at the next shell open; runs `orbital update` to upgrade
+
 ## v1.0.7
 
 - **`orbital update`** — new command to self-update: uses `brew upgrade orbital` on macOS, `apt-get install --only-upgrade orbital` on Linux

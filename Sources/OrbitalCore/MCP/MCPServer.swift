@@ -429,6 +429,6 @@ public struct MCPServer {
 
     private static func currentVersion() -> String {
         // Read from OrbitalCommand would create a circular dep, just hardcode sync point
-        "1.0.7"
+        "1.1.0"
     }
 }
