@@ -242,6 +242,14 @@ public struct EnvironmentStore: Sendable {
             return  // real file exists — don't replace
         }
         try? fm.createSymbolicLink(at: symlinkURL, withDestinationURL: target)
+
+        // Ensure target file exists so the symlink is never dangling.
+        // Claude's auto-memory follows symlinks — a missing target = invisible file.
+        if !fm.fileExists(atPath: target.path) {
+            try? fm.createDirectory(at: target.deletingLastPathComponent(),
+                                    withIntermediateDirectories: true)
+            try? "".write(to: target, atomically: true, encoding: .utf8)
+        }
     }
 
     public func rename(from oldName: String, to newName: String) throws {
