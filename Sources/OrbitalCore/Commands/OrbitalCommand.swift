@@ -6,6 +6,7 @@ public struct OrbitalCommand: ParsableCommand {
         abstract: L10n.Orbital.abstract,
         version: "1.0.6",
         subcommands: [
+            UpdateCommand.self,
             SetupCommand.self,
             InitCommand.self,
             UseCommand.self,

@@ -4,17 +4,19 @@ import Foundation
 public struct SyncCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "sync",
-        abstract: "P2P real-time sync (delegates to orbital-sync)",
+        abstract: "[experimental] P2P real-time memory sync (delegates to orbital-sync)",
         discussion: """
+        ⚠️  This feature is experimental and may change in future versions.
+
         Forwards all arguments to the orbital-sync binary.
 
         Examples:
           orbital sync daemon --port 9527
           orbital sync pair 192.168.1.10:9527
           orbital sync status
-          orbital sync team create my-team
-          orbital sync team invite
-          orbital sync team join <code>
+          orbital sync team create my-team   [experimental]
+          orbital sync team invite           [experimental]
+          orbital sync team join <code>      [experimental]
         """,
         subcommands: [],
         defaultSubcommand: nil

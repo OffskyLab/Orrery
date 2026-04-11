@@ -423,6 +423,22 @@ public enum L10n {
         }
     }
 
+    // MARK: - UpdateCommand
+
+    public enum Update {
+        public static var abstract: String {
+            isChinese ? "將 orbital 更新至最新版本" : "Update orbital to the latest version"
+        }
+        public static var upgrading: String {
+            isChinese ? "正在更新 orbital…" : "Upgrading orbital…"
+        }
+        public static var unsupportedPlatform: String {
+            isChinese
+                ? "不支援的平台。請手動更新：https://github.com/OffskyLab/Orbital/releases"
+                : "Unsupported platform. Update manually: https://github.com/OffskyLab/Orbital/releases"
+        }
+    }
+
     // MARK: - InitCommand
 
     public enum Init {
