@@ -29,6 +29,7 @@ public struct OrbitalCommand: ParsableCommand {
             ExportCommand.self,
             UnexportCommand.self,
             SetCurrentCommand.self,
+            CheckUpdateCommand.self,
             SyncCommand.self,
         ]
     )

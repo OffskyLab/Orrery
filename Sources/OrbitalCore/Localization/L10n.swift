@@ -437,6 +437,11 @@ public enum L10n {
                 ? "不支援的平台。請手動更新：https://github.com/OffskyLab/Orbital/releases"
                 : "Unsupported platform. Update manually: https://github.com/OffskyLab/Orbital/releases"
         }
+        public static func notice(current: String, latest: String) -> String {
+            isChinese
+                ? "orbital: 有新版本可用 \(current) → v\(latest)  執行: orbital update"
+                : "orbital: update available \(current) → v\(latest)  run: orbital update"
+        }
     }
 
     // MARK: - InitCommand

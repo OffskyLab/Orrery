@@ -50,7 +50,31 @@ public struct ShellFunctionGenerator {
             fi
           fi
         }
+
+        _orbital_check_update() {
+          local orbital_home="${ORBITAL_HOME:-$HOME/.orbital}"
+          local notice_file="$orbital_home/.update-notice"
+          local ts_file="$orbital_home/.update-ts"
+
+          # Show notice from previous background check
+          [ -f "$notice_file" ] && cat "$notice_file"
+
+          # Re-check at most once per day
+          local now
+          now=$(date +%s 2>/dev/null) || return
+          local last=0
+          [ -f "$ts_file" ] && last=$(cat "$ts_file" 2>/dev/null || echo 0)
+          [ $((now - last)) -lt 86400 ] && return
+
+          # Kick off background check — result visible at next shell start
+          (
+            echo "$now" > "$ts_file"
+            command orbital _check-update > "$notice_file" 2>/dev/null || rm -f "$notice_file"
+          ) &
+        }
+
         _orbital_init
+        _orbital_check_update
         """
     }
 }
