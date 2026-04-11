@@ -1,5 +1,8 @@
 import ArgumentParser
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public struct CheckUpdateCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
