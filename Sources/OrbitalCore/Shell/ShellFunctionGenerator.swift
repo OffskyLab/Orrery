@@ -6,6 +6,22 @@ public struct ShellFunctionGenerator {
         # Supports: bash (~/.bashrc) and zsh (~/.zshrc)
 
         orbital() {
+          local _orbital_home="${ORBITAL_HOME:-$HOME/.orbital}"
+          local _notice_file="$_orbital_home/.update-notice"
+          local _ts_file="$_orbital_home/.update-ts"
+
+          # Show update notice on every command until orbital update clears it
+          [ -f "$_notice_file" ] && printf '\\033[1;33m%s\\033[0m\\n' "$(cat "$_notice_file")"
+
+          # Background version check — at most once every 4 hours
+          local _now
+          _now=$(date +%s 2>/dev/null) || true
+          local _last=0
+          [ -f "$_ts_file" ] && _last=$(cat "$_ts_file" 2>/dev/null || echo 0)
+          if [ $((_now - _last)) -ge 14400 ]; then
+            (echo "$_now" > "$_ts_file"; command orbital _check-update > "$_notice_file" 2>/dev/null || rm -f "$_notice_file") &
+          fi
+
           local cmd="${1:-}"
           case "$cmd" in
             use)
@@ -62,30 +78,7 @@ public struct ShellFunctionGenerator {
           command orbital _link-memory 2>/dev/null || true
         }
 
-        _orbital_check_update() {
-          local orbital_home="${ORBITAL_HOME:-$HOME/.orbital}"
-          local notice_file="$orbital_home/.update-notice"
-          local ts_file="$orbital_home/.update-ts"
-
-          # Show notice from previous background check
-          [ -f "$notice_file" ] && cat "$notice_file"
-
-          # Re-check at most once per day
-          local now
-          now=$(date +%s 2>/dev/null) || return
-          local last=0
-          [ -f "$ts_file" ] && last=$(cat "$ts_file" 2>/dev/null || echo 0)
-          [ $((now - last)) -lt 86400 ] && return
-
-          # Kick off background check — result visible at next shell start
-          (
-            echo "$now" > "$ts_file"
-            command orbital _check-update > "$notice_file" 2>/dev/null || rm -f "$notice_file"
-          ) &
-        }
-
         _orbital_init
-        _orbital_check_update
         """
     }
 }

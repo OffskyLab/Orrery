@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.4
+
+- **Update notification redesign** — notice now shows on every `orbital` command (in yellow) until `orbital update` clears it; version check runs in background at most once every 4 hours triggered by command invocation, not shell startup; eliminates Powerlevel10k instant prompt conflict
+
 ## v1.1.3
 
 - **Fix: `orbital use <env>` not persisting** — new shell always restored to origin instead of the last used environment; `_set-current` is now called after every successful `orbital use`
