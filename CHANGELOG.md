@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.7
+
+- **`orbital update`** — new command to self-update: uses `brew upgrade orbital` on macOS, `apt-get install --only-upgrade orbital` on Linux
+- **`orbital sync` marked experimental** — abstract and discussion now indicate experimental status; `team` subcommands also labeled
+
 ## v1.0.6
 
 - **Rename `default` → `origin`** — the reserved system environment is now called `origin`; `orbital use origin` / `orbital deactivate` return to unmanaged system config
