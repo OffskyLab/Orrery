@@ -206,6 +206,19 @@ This registers Orbital as an MCP server and installs `/delegate` and `/sessions`
 
 **Shared memory**: All AI tools read and write to the same `ORBITAL_MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
 
+**External memory storage**: By default memory is stored under `~/.orbital`. You can redirect it to any directory — such as an Obsidian vault — with `orbital memory storage <path>`. When the new path is empty, Orbital offers to copy your existing memory there:
+
+```bash
+orbital memory storage ~/Documents/my-wiki/orbital
+# New path has no memory yet. Copy current memory there?
+# ▶ Copy memory to new path
+#   No, start fresh
+
+orbital memory storage --reset   # revert to ~/.orbital
+```
+
+Fragments and AI consolidation work the same way regardless of where memory is stored.
+
 ### Shell integration
 
 | Command | Description |
