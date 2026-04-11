@@ -412,6 +412,46 @@
       border-radius: 4px;
     }
 
+    /* ── Origin callout ── */
+    .origin-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    .origin-callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+    }
+
+    .origin-callout h3 {
+      margin: 0 0 .75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .origin-callout p {
+      margin: 0 0 .6rem;
+      font-size: .875rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .origin-callout p:last-child { margin-bottom: 0; }
+
+    .origin-callout code {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .8rem;
+      color: var(--accent2);
+      background: var(--code-bg);
+      padding: .1rem .35rem;
+      border-radius: 4px;
+    }
+
     /* ── Footer ── */
     footer {
       border-top: 1px solid var(--border);
@@ -441,6 +481,7 @@
     <li class="nav-collapsible"><a href="#install">安裝</a></li>
     <li class="nav-collapsible"><a href="#mcp">AI 工具</a></li>
     <li class="nav-collapsible"><a href="#sync">同步</a></li>
+    <li class="nav-collapsible"><a href="#origin">Origin</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">更新日誌</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -802,8 +843,8 @@
       <div class="command-group-title">設定</div>
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">互動式管理工具</span></div>
-        <div class="command-item"><span class="cmd">orbital set env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
-        <div class="command-item"><span class="cmd">orbital unset env &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
+        <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
+        <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -822,6 +863,29 @@
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Origin -->
+<section class="origin-section" id="origin">
+  <h2 class="section-title"><code style="font-size:1.1rem;color:var(--accent2)">origin</code> 環境</h2>
+  <div class="origin-callout">
+    <h3>不只是另一個環境 — 這是系統的原始狀態</h3>
+    <p>
+      <code>origin</code> 是 Orbital 的保留名稱，代表未經任何修改的系統原始環境。
+      執行 <code>orbital use origin</code>（或 <code>orbital deactivate</code>）後，
+      Orbital 會清除所有隔離設定，讓工具回到系統全域設定，
+      就像 Orbital 從未安裝過一樣。
+    </p>
+    <p>
+      與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
+      也不支援工具設定或環境變數。它沒有任何隔離、也沒有獨立的 memory 或 session —
+      它就是進入 Orbital 之前的狀態。
+    </p>
+    <p>
+      這讓 <code>origin</code> 成為一個乾淨的退出點：
+      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orbital 環境。
+    </p>
   </div>
 </section>
 

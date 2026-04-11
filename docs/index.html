@@ -412,6 +412,46 @@
       border-radius: 4px;
     }
 
+    /* ── Origin callout ── */
+    .origin-section {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    .origin-callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+    }
+
+    .origin-callout h3 {
+      margin: 0 0 .75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .origin-callout p {
+      margin: 0 0 .6rem;
+      font-size: .875rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .origin-callout p:last-child { margin-bottom: 0; }
+
+    .origin-callout code {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .8rem;
+      color: var(--accent2);
+      background: var(--code-bg);
+      padding: .1rem .35rem;
+      border-radius: 4px;
+    }
+
     /* ── Footer ── */
     footer {
       border-top: 1px solid var(--border);
@@ -441,6 +481,7 @@
     <li class="nav-collapsible"><a href="#install">Install</a></li>
     <li class="nav-collapsible"><a href="#mcp">AI Tools</a></li>
     <li class="nav-collapsible"><a href="#sync">Sync</a></li>
+    <li class="nav-collapsible"><a href="#origin">Origin</a></li>
     <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
@@ -804,8 +845,8 @@
       <div class="command-group-title">Configuration</div>
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">Manage tools interactively</span></div>
-        <div class="command-item"><span class="cmd">orbital set env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orbital unset env &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -836,6 +877,30 @@
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Origin -->
+<section class="origin-section" id="origin">
+  <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> Environment</h2>
+  <div class="origin-callout">
+    <h3>Not just another environment — a system passthrough</h3>
+    <p>
+      <code>origin</code> is Orbital's reserved name for your unmodified system environment.
+      Switching to it with <code>orbital use origin</code> (or <code>orbital deactivate</code>)
+      doesn't load any isolated config — it unsets all Orbital variables and lets your tools
+      fall back to their system-wide settings, exactly as if Orbital weren't installed.
+    </p>
+    <p>
+      Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
+      with tools and environment variables. It has no isolation, no per-project memory, and no
+      session separation — it's simply the state before Orbital.
+    </p>
+    <p>
+      This makes <code>origin</code> useful as a clean escape hatch: run a quick command
+      under your default system credentials without switching accounts or polluting any
+      Orbital environment.
+    </p>
   </div>
 </section>
 

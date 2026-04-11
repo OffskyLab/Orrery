@@ -47,8 +47,8 @@ public enum L10n {
         }
         public static var reservedName: String {
             isChinese
-                ? "'default' 是保留的環境名稱，無法使用。"
-                : "'default' is a reserved environment name."
+                ? "'origin' 是保留的環境名稱，無法使用。"
+                : "'origin' is a reserved environment name."
         }
         public static func unknownTool(_ raw: String) -> String {
             let valid = Tool.allCases.map(\.rawValue).joined(separator: ", ")
@@ -94,7 +94,7 @@ public enum L10n {
             isChinese ? "從 \(name) 複製" : "Clone from \(name)"
         }
         public static var defaultDescription: String {
-            isChinese ? "原始環境" : "System default"
+            isChinese ? "原始系統環境（離開 Orbital）" : "System origin (exit Orbital)"
         }
         public static var sessionSharePrompt: String {
             isChinese
@@ -163,8 +163,8 @@ public enum L10n {
         }
         public static var reservedName: String {
             isChinese
-                ? "'default' 是保留的環境，無法刪除。"
-                : "'default' is a reserved environment and cannot be deleted."
+                ? "'origin' 是保留的環境，無法刪除。"
+                : "'origin' is a reserved environment and cannot be deleted."
         }
     }
 
@@ -209,8 +209,8 @@ public enum L10n {
         public static var none: String { isChinese ? "（無）" : "(none)" }
         public static var defaultInfo: String {
             isChinese
-                ? "名稱：       default\n描述：       原始系統環境（不支援工具或環境變數設定）"
-                : "Name:        default\nDescription: System default environment (tools and env vars not configurable)"
+                ? "名稱：       origin\n描述：       原始系統環境。切換到 'origin' 等同於離開 Orbital — 工具使用系統全域設定，不套用任何隔離或環境變數。"
+                : "Name:        origin\nDescription: Your system origin environment. Switching to 'origin' exits Orbital — tools fall back to system-wide config, with no isolation or per-environment variables applied."
         }
     }
 
@@ -246,8 +246,8 @@ public enum L10n {
         }
         public static var reservedName: String {
             isChinese
-                ? "'default' 是保留的環境名稱，無法重新命名。"
-                : "'default' is a reserved environment and cannot be renamed."
+                ? "'origin' 是保留的環境名稱，無法重新命名。"
+                : "'origin' is a reserved environment and cannot be renamed."
         }
         public static func renamed(_ old: String, _ new: String) -> String {
             isChinese
@@ -285,8 +285,8 @@ public enum L10n {
         }
         public static var defaultNotSupported: String {
             isChinese
-                ? "'default' 是原始環境，不支援環境變數設定。"
-                : "'default' is the system environment and does not support env var configuration."
+                ? "'origin' 是原始系統環境，不支援環境變數設定。"
+                : "'origin' is the system origin environment and does not support env var configuration."
         }
         public static func unset(_ key: String, _ envName: String) -> String {
             isChinese
@@ -329,8 +329,8 @@ public enum L10n {
         }
         public static var defaultNotSupported: String {
             isChinese
-                ? "'default' 是原始環境，不支援工具設定。請先執行 'orbital create <name>' 建立環境。"
-                : "'default' is the system environment and does not support tool configuration. Run 'orbital create <name>' to create an environment."
+                ? "'origin' 是原始系統環境，不支援工具設定。請先執行 'orbital create <name>' 建立環境。"
+                : "'origin' is the system origin environment and does not support tool configuration. Run 'orbital create <name>' to create an environment."
         }
     }
 
@@ -610,8 +610,8 @@ public enum L10n {
         }
         public static var defaultNotSupported: String {
             isChinese
-                ? "'default' 是原始環境，不支援 memory 模式切換。"
-                : "'default' is the system environment and does not support memory isolation settings."
+                ? "'origin' 是原始系統環境，不支援 memory 模式切換。"
+                : "'origin' is the system origin environment and does not support memory isolation settings."
         }
         public static var alreadyShared: String {
             isChinese ? "此環境的 memory 已經是共享模式。" : "Memory is already shared for this environment."
