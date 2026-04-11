@@ -12,14 +12,6 @@ public struct UpdateCommand: ParsableCommand {
     public func run() throws {
         print(L10n.Update.upgrading)
 
-        // Clear stale update notice and cooldown so the next shell open
-        // reflects the freshly installed version instead of the old notice.
-        let orbitalHome = ProcessInfo.processInfo.environment["ORBITAL_HOME"]
-            ?? (FileManager.default.homeDirectoryForCurrentUser.path + "/.orbital")
-        let base = URL(fileURLWithPath: orbitalHome)
-        try? FileManager.default.removeItem(at: base.appendingPathComponent(".update-notice"))
-        try? FileManager.default.removeItem(at: base.appendingPathComponent(".update-ts"))
-
         #if os(macOS)
         let command = ["brew", "upgrade", "orbital"]
         #elseif os(Linux)
