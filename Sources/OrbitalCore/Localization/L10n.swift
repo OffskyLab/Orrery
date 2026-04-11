@@ -672,6 +672,41 @@ public enum L10n {
                 ? "已將環境 '\(envName)' 的 memory 切換為\(isolated ? "隔離" : "共享")模式。"
                 : "Memory for '\(envName)' switched to \(isolated ? "isolated" : "shared") mode."
         }
+
+        // MARK: Storage
+        public static var storageAbstract: String {
+            isChinese
+                ? "設定 memory 的儲存路徑（預設為 ~/.orbital）"
+                : "Set the memory storage path (default: ~/.orbital)"
+        }
+        public static var storagePathHelp: String {
+            isChinese
+                ? "儲存路徑。省略則顯示目前設定；使用 --reset 還原預設值。"
+                : "Storage path. Omit to show current setting; use --reset to restore default."
+        }
+        public static var storageResetHelp: String {
+            isChinese ? "還原為預設儲存路徑（~/.orbital）" : "Reset to default storage path (~/.orbital)"
+        }
+        public static var actionStorage: String {
+            isChinese ? "設定儲存路徑" : "Set storage path"
+        }
+        public static func storageStatus(_ path: String?) -> String {
+            if let path {
+                return isChinese ? "儲存路徑：\(path)（自訂）" : "Storage: \(path) (custom)"
+            }
+            return isChinese ? "儲存路徑：預設（~/.orbital）" : "Storage: default (~/.orbital)"
+        }
+        public static func storageSet(_ path: String) -> String {
+            isChinese ? "已設定 memory 儲存路徑：\(path)" : "Memory storage set to: \(path)"
+        }
+        public static var storageReset: String {
+            isChinese ? "已還原為預設儲存路徑（~/.orbital）。" : "Memory storage reset to default (~/.orbital)."
+        }
+        public static func storageNotDirectory(_ path: String) -> String {
+            isChinese
+                ? "路徑 '\(path)' 已存在但不是目錄。"
+                : "Path '\(path)' exists but is not a directory."
+        }
     }
 
     // MARK: - MCPSetupCommand

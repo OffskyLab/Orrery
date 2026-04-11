@@ -5,7 +5,7 @@ public struct MemoryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "memory",
         abstract: L10n.Memory.abstract,
-        subcommands: [InfoSubcommand.self, ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self]
+        subcommands: [InfoSubcommand.self, ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self, StorageSubcommand.self]
     )
 
     public init() {}
@@ -18,24 +18,31 @@ public struct MemoryCommand: ParsableCommand {
         let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
 
         let isIsolated: Bool
+        let storagePath: String?
         if let envName, envName != ReservedEnvironment.defaultName,
            let env = try? store.load(named: envName) {
             isIsolated = env.isolateMemory
+            storagePath = env.memoryStoragePath
         } else {
             isIsolated = false
+            storagePath = nil
         }
 
         // Show current status
         print(L10n.Memory.statusMode(isIsolated))
         print(L10n.Memory.statusPath(memoryFile.path))
+        print(L10n.Memory.storageStatus(storagePath))
         print("")
 
         // Build action menu based on current state
         var options: [String] = [L10n.Memory.actionInfo, L10n.Memory.actionExport]
         var canToggle = false
+        var canStorage = false
         if let envName, envName != ReservedEnvironment.defaultName {
             options.append(isIsolated ? L10n.Memory.actionShare : L10n.Memory.actionIsolate)
+            options.append(L10n.Memory.actionStorage)
             canToggle = true
+            canStorage = true
         }
 
         let selector = SingleSelect(title: L10n.Memory.settingsPrompt, options: options, selected: 0)
@@ -56,6 +63,9 @@ public struct MemoryCommand: ParsableCommand {
                 var isolate = IsolateSubcommand()
                 try isolate.run()
             }
+        case 3 where canStorage:
+            var storage = StorageSubcommand()
+            try storage.run()
         default:
             break
         }
@@ -245,6 +255,67 @@ public struct MemoryCommand: ParsableCommand {
             env.isolateMemory = false
             try store.save(env)
             print(L10n.Memory.migrationDone(envName, false))
+        }
+    }
+
+    // MARK: - Storage
+
+    public struct StorageSubcommand: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "storage",
+            abstract: L10n.Memory.storageAbstract
+        )
+
+        @Argument(help: ArgumentHelp(L10n.Memory.storagePathHelp))
+        public var path: String?
+
+        @Flag(name: .long, help: ArgumentHelp(L10n.Memory.storageResetHelp))
+        public var reset: Bool = false
+
+        @Option(name: .shortAndLong, help: "Environment name (defaults to ORBITAL_ACTIVE_ENV)")
+        public var environment: String?
+
+        public init() {}
+
+        public func run() throws {
+            let envName = environment
+                ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+            guard let envName else {
+                throw ValidationError(L10n.Memory.noActiveEnv)
+            }
+            guard envName != ReservedEnvironment.defaultName else {
+                throw ValidationError(L10n.Memory.defaultNotSupported)
+            }
+
+            let store = EnvironmentStore.default
+            var env = try store.load(named: envName)
+
+            if reset {
+                env.memoryStoragePath = nil
+                try store.save(env)
+                print(L10n.Memory.storageReset)
+                return
+            }
+
+            guard let path else {
+                print(L10n.Memory.storageStatus(env.memoryStoragePath))
+                return
+            }
+
+            let expanded = (path as NSString).expandingTildeInPath
+            let fm = FileManager.default
+            var isDir: ObjCBool = false
+            let exists = fm.fileExists(atPath: expanded, isDirectory: &isDir)
+            if exists && !isDir.boolValue {
+                throw ValidationError(L10n.Memory.storageNotDirectory(expanded))
+            }
+            if !exists {
+                try fm.createDirectory(atPath: expanded, withIntermediateDirectories: true, attributes: nil)
+            }
+
+            env.memoryStoragePath = expanded
+            try store.save(env)
+            print(L10n.Memory.storageSet(expanded))
         }
     }
 }

@@ -14,6 +14,9 @@ public struct OrbitalEnvironment: Codable, Sendable {
     public var env: [String: String]
     public var isolateSessions: Bool
     public var isolateMemory: Bool
+    /// Custom storage root for memory. When set, ORBITAL_MEMORY.md and fragments/ live here
+    /// instead of the default ~/.orbital path. Useful for external wikis (e.g. Obsidian).
+    public var memoryStoragePath: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -24,7 +27,8 @@ public struct OrbitalEnvironment: Codable, Sendable {
         tools: [Tool] = [],
         env: [String: String] = [:],
         isolateSessions: Bool = false,
-        isolateMemory: Bool = true
+        isolateMemory: Bool = true,
+        memoryStoragePath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -35,11 +39,12 @@ public struct OrbitalEnvironment: Codable, Sendable {
         self.env = env
         self.isolateSessions = isolateSessions
         self.isolateMemory = isolateMemory
+        self.memoryStoragePath = memoryStoragePath
     }
 
     // Custom decoding for backward compatibility with existing env.json files
     enum CodingKeys: String, CodingKey {
-        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions, isolateMemory
+        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions, isolateMemory, memoryStoragePath
     }
 
     public init(from decoder: Decoder) throws {
@@ -53,5 +58,6 @@ public struct OrbitalEnvironment: Codable, Sendable {
         env = try container.decode([String: String].self, forKey: .env)
         isolateSessions = try container.decodeIfPresent(Bool.self, forKey: .isolateSessions) ?? false
         isolateMemory = try container.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
+        memoryStoragePath = try container.decodeIfPresent(String.self, forKey: .memoryStoragePath)
     }
 }

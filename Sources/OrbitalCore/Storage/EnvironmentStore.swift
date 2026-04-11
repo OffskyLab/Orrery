@@ -205,15 +205,21 @@ public struct EnvironmentStore: Sendable {
     }
 
     /// Returns the correct ORBITAL_MEMORY.md URL for the given env (nil = default/shared).
+    /// Priority: custom memoryStoragePath > isolateMemory > shared default.
     public func memoryFile(projectKey: String, envName: String?) -> URL {
-        let dir: URL
         if let envName, envName != ReservedEnvironment.defaultName,
-           let env = try? load(named: envName), env.isolateMemory {
-            dir = isolatedMemoryDir(projectKey: projectKey, envName: envName)
-        } else {
-            dir = sharedMemoryDir(projectKey: projectKey)
+           let env = try? load(named: envName) {
+            if let storagePath = env.memoryStoragePath {
+                return URL(fileURLWithPath: storagePath)
+                    .appendingPathComponent("ORBITAL_MEMORY.md")
+            }
+            if env.isolateMemory {
+                return isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                    .appendingPathComponent("ORBITAL_MEMORY.md")
+            }
         }
-        return dir.appendingPathComponent("ORBITAL_MEMORY.md")
+        return sharedMemoryDir(projectKey: projectKey)
+            .appendingPathComponent("ORBITAL_MEMORY.md")
     }
 
     public func rename(from oldName: String, to newName: String) throws {
