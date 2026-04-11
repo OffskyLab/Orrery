@@ -21,7 +21,7 @@ public struct ShellFunctionGenerator {
                 unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR
                 export ORBITAL_ACTIVE_ENV="origin"
                 command orbital _set-current origin 2>/dev/null || true
-                echo "Switched to environment: origin"
+                echo "\(L10n.Use.switchedToOrigin)"
               else
                 local exports
                 exports=$(command orbital _export "$2") || { echo "orbital: environment '$2' not found" >&2; return 1; }

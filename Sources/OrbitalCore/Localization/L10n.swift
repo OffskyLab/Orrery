@@ -94,7 +94,7 @@ public enum L10n {
             isChinese ? "從 \(name) 複製" : "Clone from \(name)"
         }
         public static var defaultDescription: String {
-            isChinese ? "原始系統環境（離開 Orbital）" : "System origin (exit Orbital)"
+            isChinese ? "原始系統環境（離開 Orbital 管理機制）" : "System origin (exit Orbital management)"
         }
         public static var sessionSharePrompt: String {
             isChinese
@@ -347,6 +347,11 @@ public enum L10n {
             isChinese
                 ? "error: 'orbital use' 需要 shell 整合。\n請執行 'orbital setup' 安裝後，重新啟動終端機。\n"
                 : "error: 'orbital use' requires shell integration.\nRun 'orbital setup' to install it, then restart your terminal.\n"
+        }
+        public static var switchedToOrigin: String {
+            isChinese
+                ? "已回到原始環境，如需回到 Orbital 管理環境，請再次使用 orbital use <name> 即可。"
+                : "Returned to the origin environment. To re-enter an Orbital environment, run: orbital use <name>"
         }
     }
 
