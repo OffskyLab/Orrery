@@ -42,9 +42,17 @@ public struct ShellFunctionGenerator {
         _orbital_init() {
           local orbital_home="${ORBITAL_HOME:-$HOME/.orbital}"
           local current_file="$orbital_home/current"
+          # Migrate pre-1.1.0: "default" was renamed to "origin"
+          if [ "${ORBITAL_ACTIVE_ENV:-}" = "default" ]; then
+            export ORBITAL_ACTIVE_ENV="origin"
+          fi
           if [ -f "$current_file" ]; then
             local env_name
             env_name=$(cat "$current_file" 2>/dev/null)
+            if [ "$env_name" = "default" ]; then
+              env_name="origin"
+              echo "origin" > "$current_file" 2>/dev/null || true
+            fi
             if [ -n "$env_name" ]; then
               orbital use "$env_name" >/dev/null 2>&1 || true
             fi
