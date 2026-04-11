@@ -584,6 +584,7 @@
       <div class="step-body">
         <h4>安裝 Shell 整合</h4>
         <p>執行一次 <code>orbital setup</code>。會產生 <code>~/.orbital/activate.sh</code> 並寫入 rc 檔。再執行 <code>source ~/.orbital/activate.sh</code> 即可在當前 shell 生效。</p>
+        <p style="margin-top:.5rem"><code>activate.sh</code> 也會在背景每天檢查是否有新版本，並在下次開啟 shell 時顯示通知。</p>
       </div>
     </div>
     <div class="step">
@@ -884,6 +885,7 @@
         <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">互動式管理工具</span></div>
         <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
         <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
+        <div class="command-item"><span class="cmd">orbital memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -900,6 +902,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
+        <div class="command-item"><span class="cmd">orbital update</span><span class="cmd-desc">透過 Homebrew / apt 自動更新</span></div>
       </div>
     </div>
   </div>

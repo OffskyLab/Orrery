@@ -584,6 +584,7 @@
       <div class="step-body">
         <h4>Install shell integration</h4>
         <p>Run <code>orbital setup</code> once. It generates <code>~/.orbital/activate.sh</code> and adds it to your rc file. Then <code>source ~/.orbital/activate.sh</code> to activate in the current shell.</p>
+        <p style="margin-top:.5rem"><code>activate.sh</code> also checks for new Orbital releases in the background (once per day) and shows a notice at your next shell open.</p>
       </div>
     </div>
     <div class="step">
@@ -887,6 +888,7 @@
         <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">Manage tools interactively</span></div>
         <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
         <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orbital memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -915,6 +917,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">Install shell integration</span></div>
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
+        <div class="command-item"><span class="cmd">orbital update</span><span class="cmd-desc">Self-update via Homebrew / apt</span></div>
       </div>
     </div>
   </div>
