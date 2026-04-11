@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.6
+
+- **Rename `default` → `origin`** — the reserved system environment is now called `origin`; `orbital use origin` / `orbital deactivate` return to unmanaged system config
+- **Switch-to-origin message** — informative locale-aware message when switching to `origin` instead of plain "Switched to environment"
+- **GitHub Pages** — new `origin` section explaining its special role; nav link added; `orbital env set/unset` corrected in commands grid
+
 ## v1.0.5
 
 - **`orbital env set/unset`** — moved from `orbital set env` / `orbital unset env` to `orbital env set` / `orbital env unset`
