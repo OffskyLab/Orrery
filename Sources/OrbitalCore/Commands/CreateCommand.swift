@@ -205,6 +205,15 @@ public struct CreateCommand: ParsableCommand {
             try store.addTool(t, to: name)
         }
 
+        // Link ORBITAL_MEMORY.md into Claude's auto-memory dir for the current project
+        let toolsPresent = tools.isEmpty && source != nil ? env.tools : tools
+        if toolsPresent.contains(.claude) {
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+            let claudeConfigDir = store.toolConfigDir(tool: .claude, environment: name)
+            store.linkOrbitalMemory(projectKey: projectKey, envName: name, claudeConfigDir: claudeConfigDir)
+        }
+
         // Clone config files from source
         if let source {
             let fm = FileManager.default

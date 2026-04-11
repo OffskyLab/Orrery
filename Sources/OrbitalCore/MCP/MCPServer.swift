@@ -299,7 +299,24 @@ public struct MCPServer {
         }
     }
 
+    /// Ensure ORBITAL_MEMORY.md is symlinked into Claude's auto-memory directory
+    /// so Claude picks it up automatically at session start without any CLAUDE.md setup.
+    private static func ensureClaudeSymlink() {
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let envName = ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"]
+        let claudeConfigDirPath = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
+            ?? (FileManager.default.homeDirectoryForCurrentUser.path + "/.claude")
+        let claudeConfigDir = URL(fileURLWithPath: claudeConfigDirPath)
+        EnvironmentStore.default.linkOrbitalMemory(
+            projectKey: projectKey,
+            envName: envName ?? ReservedEnvironment.defaultName,
+            claudeConfigDir: claudeConfigDir
+        )
+    }
+
     private static func readMemory() -> [String: Any] {
+        ensureClaudeSymlink()
         let file = sharedMemoryFile()
         var content = ""
         if FileManager.default.fileExists(atPath: file.path),
@@ -359,6 +376,7 @@ public struct MCPServer {
     }
 
     private static func writeMemory(content: String, append: Bool) -> [String: Any] {
+        ensureClaudeSymlink()
         let file = sharedMemoryFile()
         let fm = FileManager.default
         let dir = file.deletingLastPathComponent()

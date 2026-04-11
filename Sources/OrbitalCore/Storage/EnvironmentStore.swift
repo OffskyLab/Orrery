@@ -222,6 +222,28 @@ public struct EnvironmentStore: Sendable {
             .appendingPathComponent("ORBITAL_MEMORY.md")
     }
 
+    /// Symlink ORBITAL_MEMORY.md into the given Claude config dir's auto-memory folder
+    /// so Claude picks it up automatically at session start.
+    /// `claudeConfigDir` is either toolConfigDir(.claude, env) or CLAUDE_CONFIG_DIR env var.
+    public func linkOrbitalMemory(projectKey: String, envName: String, claudeConfigDir: URL) {
+        let target = memoryFile(projectKey: projectKey, envName: envName)
+        let memoryDir = claudeConfigDir
+            .appendingPathComponent("projects")
+            .appendingPathComponent(projectKey)
+            .appendingPathComponent("memory")
+        let symlinkURL = memoryDir.appendingPathComponent("ORBITAL_MEMORY.md")
+        let fm = FileManager.default
+        try? fm.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        let existing = try? fm.destinationOfSymbolicLink(atPath: symlinkURL.path)
+        if existing == target.path { return }
+        if existing != nil {
+            try? fm.removeItem(at: symlinkURL)
+        } else if fm.fileExists(atPath: symlinkURL.path) {
+            return  // real file exists — don't replace
+        }
+        try? fm.createSymbolicLink(at: symlinkURL, withDestinationURL: target)
+    }
+
     public func rename(from oldName: String, to newName: String) throws {
         var env = try load(named: oldName)
         env.name = newName
