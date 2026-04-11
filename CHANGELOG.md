@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.1
+
+- **`ORBITAL_MEMORY.md` auto-loaded by Claude** — on `orbital create` (with Claude tool) and on first MCP memory access, a symlink is created inside Claude's auto-memory directory so Claude picks up shared memory automatically at session start
+- **Fix: `orbital update` runs `brew update` first** — prevents Homebrew tap cache from reporting an old version as already installed
+- **Fix: `orbital list` after upgrade** — migrates `ORBITAL_ACTIVE_ENV="default"` and `current` file to `"origin"` on first shell start after upgrading from pre-1.1.0
+
 ## v1.1.0
 
 - **Memory external storage** — `orbital memory storage <path>` redirects `ORBITAL_MEMORY.md` and fragments to any directory (e.g. Obsidian vault); prompts to copy existing memory when new path is empty; `--reset` to revert
