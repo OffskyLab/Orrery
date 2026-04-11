@@ -57,6 +57,8 @@ public struct ShellFunctionGenerator {
               orbital use "$env_name" >/dev/null 2>&1 || true
             fi
           fi
+          # Ensure ORBITAL_MEMORY.md is linked into Claude's auto-memory dir
+          command orbital _link-memory 2>/dev/null || true
         }
 
         _orbital_check_update() {
