@@ -707,6 +707,20 @@ public enum L10n {
                 ? "路徑 '\(path)' 已存在但不是目錄。"
                 : "Path '\(path)' exists but is not a directory."
         }
+        public static var storageCopyPrompt: String {
+            isChinese
+                ? "新路徑目前沒有記憶，是否要將目前的記憶複製過去？"
+                : "New path has no memory yet. Copy current memory there?"
+        }
+        public static var storageCopyYes: String {
+            isChinese ? "複製過去" : "Copy memory to new path"
+        }
+        public static var storageCopyNo: String {
+            isChinese ? "不複製（從空白開始）" : "No, start fresh"
+        }
+        public static var storageCopied: String {
+            isChinese ? "已複製記憶到新路徑。" : "Memory copied to new path."
+        }
     }
 
     // MARK: - MCPSetupCommand

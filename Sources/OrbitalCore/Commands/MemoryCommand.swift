@@ -313,6 +313,29 @@ public struct MemoryCommand: ParsableCommand {
                 try fm.createDirectory(atPath: expanded, withIntermediateDirectories: true, attributes: nil)
             }
 
+            // Check if new path has no memory yet, but current location does
+            let newMemoryFile = URL(fileURLWithPath: expanded).appendingPathComponent("ORBITAL_MEMORY.md")
+            let newIsEmpty = !fm.fileExists(atPath: newMemoryFile.path)
+
+            if newIsEmpty {
+                let projectKey = FileManager.default.currentDirectoryPath
+                    .replacingOccurrences(of: "/", with: "-")
+                let currentMemoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+                let currentExists = fm.fileExists(atPath: currentMemoryFile.path)
+
+                if currentExists {
+                    let selector = SingleSelect(
+                        title: L10n.Memory.storageCopyPrompt,
+                        options: [L10n.Memory.storageCopyYes, L10n.Memory.storageCopyNo],
+                        selected: 0
+                    )
+                    if selector.run() == 0 {
+                        try fm.copyItem(at: currentMemoryFile, to: newMemoryFile)
+                        print(L10n.Memory.storageCopied)
+                    }
+                }
+            }
+
             env.memoryStoragePath = expanded
             try store.save(env)
             print(L10n.Memory.storageSet(expanded))
