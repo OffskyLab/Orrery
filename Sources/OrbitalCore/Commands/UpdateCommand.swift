@@ -13,7 +13,7 @@ public struct UpdateCommand: ParsableCommand {
         print(L10n.Update.upgrading)
 
         #if os(macOS)
-        let command = ["brew", "upgrade", "orbital"]
+        let command = ["/bin/sh", "-c", "brew update && brew upgrade orbital"]
         #elseif os(Linux)
         let command = ["sudo", "apt-get", "install", "--only-upgrade", "-y", "orbital"]
         #else
