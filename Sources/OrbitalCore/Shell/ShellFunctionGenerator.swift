@@ -27,6 +27,7 @@ public struct ShellFunctionGenerator {
                 exports=$(command orbital _export "$2") || { echo "orbital: environment '$2' not found" >&2; return 1; }
                 eval "$exports"
                 export ORBITAL_ACTIVE_ENV="$2"
+                command orbital _set-current "$2" 2>/dev/null || true
                 echo "Switched to environment: $2"
               fi
               ;;

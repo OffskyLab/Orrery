@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.3
+
+- **Fix: `orbital use <env>` not persisting** — new shell always restored to origin instead of the last used environment; `_set-current` is now called after every successful `orbital use`
+
 ## v1.1.2
 
 - **Memory directory symlink** — Claude's auto-memory directory for each project is now symlinked directly to the orbital shared memory location; all memories Claude writes automatically land in the shared (and syncable) location without requiring any CLAUDE.md instructions
