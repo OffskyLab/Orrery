@@ -610,6 +610,30 @@
   </div>
 </section>
 
+<!-- Origin -->
+<section class="origin-section" id="origin">
+  <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> Environment</h2>
+  <div class="origin-callout">
+    <h3>Not just another environment — a system passthrough</h3>
+    <p>
+      <code>origin</code> is Orbital's reserved name for your unmodified system environment.
+      Switching to it with <code>orbital use origin</code> (or <code>orbital deactivate</code>)
+      doesn't load any isolated config — it unsets all Orbital variables and lets your tools
+      fall back to their system-wide settings, exactly as if Orbital weren't installed.
+    </p>
+    <p>
+      Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
+      with tools and environment variables. It has no isolation, no per-project memory, and no
+      session separation — it's simply the state before Orbital.
+    </p>
+    <p>
+      This makes <code>origin</code> useful as a clean escape hatch: run a quick command
+      under your default system credentials without switching accounts or polluting any
+      Orbital environment.
+    </p>
+  </div>
+</section>
+
 <!-- Use Cases -->
 <section class="section" id="use-cases">
   <h2 class="section-title">Use Cases</h2>
@@ -877,30 +901,6 @@
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Origin -->
-<section class="origin-section" id="origin">
-  <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> Environment</h2>
-  <div class="origin-callout">
-    <h3>Not just another environment — a system passthrough</h3>
-    <p>
-      <code>origin</code> is Orbital's reserved name for your unmodified system environment.
-      Switching to it with <code>orbital use origin</code> (or <code>orbital deactivate</code>)
-      doesn't load any isolated config — it unsets all Orbital variables and lets your tools
-      fall back to their system-wide settings, exactly as if Orbital weren't installed.
-    </p>
-    <p>
-      Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
-      with tools and environment variables. It has no isolation, no per-project memory, and no
-      session separation — it's simply the state before Orbital.
-    </p>
-    <p>
-      This makes <code>origin</code> useful as a clean escape hatch: run a quick command
-      under your default system credentials without switching accounts or polluting any
-      Orbital environment.
-    </p>
   </div>
 </section>
 

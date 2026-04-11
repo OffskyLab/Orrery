@@ -610,6 +610,29 @@
   </div>
 </section>
 
+<!-- Origin -->
+<section class="origin-section" id="origin">
+  <h2 class="section-title"><code style="font-size:1.1rem;color:var(--accent2)">origin</code> 環境</h2>
+  <div class="origin-callout">
+    <h3>不只是另一個環境 — 這是系統的原始狀態</h3>
+    <p>
+      <code>origin</code> 是 Orbital 的保留名稱，代表未經任何修改的系統原始環境。
+      執行 <code>orbital use origin</code>（或 <code>orbital deactivate</code>）後，
+      Orbital 會清除所有隔離設定，讓工具回到系統全域設定，
+      就像 Orbital 從未安裝過一樣。
+    </p>
+    <p>
+      與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
+      也不支援工具設定或環境變數。它沒有任何隔離、也沒有獨立的 memory 或 session —
+      它就是進入 Orbital 之前的狀態。
+    </p>
+    <p>
+      這讓 <code>origin</code> 成為一個乾淨的退出點：
+      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orbital 環境。
+    </p>
+  </div>
+</section>
+
 <!-- Use Cases -->
 <section class="section" id="use-cases">
   <h2 class="section-title">應用情境</h2>
@@ -863,29 +886,6 @@
         <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Origin -->
-<section class="origin-section" id="origin">
-  <h2 class="section-title"><code style="font-size:1.1rem;color:var(--accent2)">origin</code> 環境</h2>
-  <div class="origin-callout">
-    <h3>不只是另一個環境 — 這是系統的原始狀態</h3>
-    <p>
-      <code>origin</code> 是 Orbital 的保留名稱，代表未經任何修改的系統原始環境。
-      執行 <code>orbital use origin</code>（或 <code>orbital deactivate</code>）後，
-      Orbital 會清除所有隔離設定，讓工具回到系統全域設定，
-      就像 Orbital 從未安裝過一樣。
-    </p>
-    <p>
-      與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
-      也不支援工具設定或環境變數。它沒有任何隔離、也沒有獨立的 memory 或 session —
-      它就是進入 Orbital 之前的狀態。
-    </p>
-    <p>
-      這讓 <code>origin</code> 成為一個乾淨的退出點：
-      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orbital 環境。
-    </p>
   </div>
 </section>
 
