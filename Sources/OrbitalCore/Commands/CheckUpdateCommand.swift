@@ -1,8 +1,5 @@
 import ArgumentParser
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 public struct CheckUpdateCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -25,24 +22,23 @@ public struct CheckUpdateCommand: ParsableCommand {
     }
 
     private static func fetchLatestVersion() -> String? {
-        guard let url = URL(string: "https://api.github.com/repos/OffskyLab/Orbital/releases/latest") else { return nil }
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: String?
-
-        var request = URLRequest(url: url, timeoutInterval: 5)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("orbital-cli", forHTTPHeaderField: "User-Agent")
-
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            defer { semaphore.signal() }
-            guard let data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tag = json["tag_name"] as? String else { return }
-            result = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-        }.resume()
-
-        semaphore.wait()
-        return result
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [
+            "curl", "-sf", "--max-time", "5",
+            "-H", "Accept: application/vnd.github+json",
+            "-H", "User-Agent: orbital-cli",
+            "https://api.github.com/repos/OffskyLab/Orbital/releases/latest"
+        ]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = json["tag_name"] as? String else { return nil }
+        return tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
     }
 }
