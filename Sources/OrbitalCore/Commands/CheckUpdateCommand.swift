@@ -18,7 +18,7 @@ public struct CheckUpdateCommand: ParsableCommand {
     }
 
     private static func currentVersion() -> String {
-        "1.1.0"
+        OrbitalCommand.configuration.version
     }
 
     private static func fetchLatestVersion() -> String? {

@@ -222,34 +222,51 @@ public struct EnvironmentStore: Sendable {
             .appendingPathComponent("ORBITAL_MEMORY.md")
     }
 
-    /// Symlink ORBITAL_MEMORY.md into the given Claude config dir's auto-memory folder
-    /// so Claude picks it up automatically at session start.
+    /// Symlink Claude's memory directory for the given project to the orbital shared memory dir.
+    /// This makes ALL of Claude's auto-memory writes land in the orbital shared location,
+    /// which orbital-sync can then replicate across machines.
     /// `claudeConfigDir` is either toolConfigDir(.claude, env) or CLAUDE_CONFIG_DIR env var.
     public func linkOrbitalMemory(projectKey: String, envName: String, claudeConfigDir: URL) {
-        let target = memoryFile(projectKey: projectKey, envName: envName)
-        let memoryDir = claudeConfigDir
+        let targetDir = memoryFile(projectKey: projectKey, envName: envName)
+            .deletingLastPathComponent()
+        let memoryDirURL = claudeConfigDir
             .appendingPathComponent("projects")
             .appendingPathComponent(projectKey)
             .appendingPathComponent("memory")
-        let symlinkURL = memoryDir.appendingPathComponent("ORBITAL_MEMORY.md")
         let fm = FileManager.default
-        try? fm.createDirectory(at: memoryDir, withIntermediateDirectories: true)
-        let existing = try? fm.destinationOfSymbolicLink(atPath: symlinkURL.path)
-        if existing == target.path { return }
-        if existing != nil {
-            try? fm.removeItem(at: symlinkURL)
-        } else if fm.fileExists(atPath: symlinkURL.path) {
-            return  // real file exists — don't replace
-        }
-        try? fm.createSymbolicLink(at: symlinkURL, withDestinationURL: target)
 
-        // Ensure target file exists so the symlink is never dangling.
-        // Claude's auto-memory follows symlinks — a missing target = invisible file.
-        if !fm.fileExists(atPath: target.path) {
-            try? fm.createDirectory(at: target.deletingLastPathComponent(),
-                                    withIntermediateDirectories: true)
-            try? "".write(to: target, atomically: true, encoding: .utf8)
+        // Ensure orbital target directory exists
+        try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
+
+        // Already correctly symlinked — nothing to do
+        if let existing = try? fm.destinationOfSymbolicLink(atPath: memoryDirURL.path),
+           existing == targetDir.path {
+            return
         }
+
+        // Existing symlink pointing elsewhere — remove it
+        if let _ = try? fm.destinationOfSymbolicLink(atPath: memoryDirURL.path) {
+            try? fm.removeItem(at: memoryDirURL)
+        } else {
+            // Real directory — migrate contents into orbital dir, then remove
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: memoryDirURL.path, isDirectory: &isDir), isDir.boolValue {
+                let contents = (try? fm.contentsOfDirectory(atPath: memoryDirURL.path)) ?? []
+                for item in contents {
+                    let src = memoryDirURL.appendingPathComponent(item)
+                    let dst = targetDir.appendingPathComponent(item)
+                    if !fm.fileExists(atPath: dst.path) {
+                        try? fm.moveItem(at: src, to: dst)
+                    }
+                }
+                try? fm.removeItem(at: memoryDirURL)
+            }
+        }
+
+        // Ensure parent directory exists
+        try? fm.createDirectory(at: memoryDirURL.deletingLastPathComponent(),
+                                withIntermediateDirectories: true)
+        try? fm.createSymbolicLink(at: memoryDirURL, withDestinationURL: targetDir)
     }
 
     public func rename(from oldName: String, to newName: String) throws {

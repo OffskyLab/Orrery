@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.2
+
+- **Memory directory symlink** — Claude's auto-memory directory for each project is now symlinked directly to the orbital shared memory location; all memories Claude writes automatically land in the shared (and syncable) location without requiring any CLAUDE.md instructions
+- **Fix: `_check-update` version** — now reads from `OrbitalCommand.configuration.version` instead of a separate hardcoded string, eliminating version drift
+
 ## v1.1.1
 
 - **`ORBITAL_MEMORY.md` auto-loaded by Claude** — on `orbital create` (with Claude tool) and on first MCP memory access, a symlink is created inside Claude's auto-memory directory so Claude picks up shared memory automatically at session start
