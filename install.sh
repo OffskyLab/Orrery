@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-REPO="OffskyLab/Orbital"
+REPO="OffskyLab/Orrery"
 INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="orbital"
+BINARY_NAME="orrery"
 BUILD_FROM_SOURCE=false
 
 # Parse flags
@@ -24,7 +24,7 @@ warn()    { echo -e "${YELLOW}Warning:${NC} $1"; }
 error()   { echo -e "${RED}Error:${NC} $1"; exit 1; }
 
 echo ""
-echo "  Orbital — AI CLI environment manager"
+echo "  Orrery — AI CLI environment manager"
 echo ""
 
 # Detect OS
@@ -61,11 +61,11 @@ build_from_source() {
   fi
 
   info "Building from source (main branch)..."
-  git clone --depth 1 "https://github.com/${REPO}.git" "$TMP_DIR/orbital" --quiet
-  cd "$TMP_DIR/orbital"
+  git clone --depth 1 "https://github.com/${REPO}.git" "$TMP_DIR/orrery" --quiet
+  cd "$TMP_DIR/orrery"
   swift build -c release --quiet 2>&1
 
-  BUILT_BINARY="$TMP_DIR/orbital/.build/release/$BINARY_NAME"
+  BUILT_BINARY="$TMP_DIR/orrery/.build/release/$BINARY_NAME"
   if [[ ! -f "$BUILT_BINARY" ]]; then
     error "Build failed — binary not found."
   fi
@@ -78,7 +78,7 @@ build_from_source() {
 if [[ "$BUILD_FROM_SOURCE" == "true" ]]; then
   build_from_source
 else
-  ASSET_NAME="orbital-${os}-${arch}.tar.gz"
+  ASSET_NAME="orrery-${os}-${arch}.tar.gz"
   DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
 
   info "Downloading pre-built binary..."
@@ -94,21 +94,21 @@ else
 fi
 
 # Verify
-if ! command -v orbital &>/dev/null; then
-  warn "orbital installed to $INSTALL_DIR but it's not in your PATH."
+if ! command -v orrery &>/dev/null; then
+  warn "orrery installed to $INSTALL_DIR but it's not in your PATH."
   warn "Add to your shell profile: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-VERSION=$(orbital --version 2>/dev/null || echo "installed")
+VERSION=$(orrery --version 2>/dev/null || echo "installed")
 
 # Fire-and-forget install ping (anonymous, no personal data)
-curl -fsS "https://orbital-stats.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev/ping?os=${os}&arch=${arch}" \
+curl -fsS "https://orrery-stats.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev/ping?os=${os}&arch=${arch}" \
   --max-time 3 --silent --output /dev/null &
 
 echo ""
-info "Orbital ${VERSION} successfully!"
+info "Orrery ${VERSION} successfully!"
 echo ""
 echo "  Next step — activate shell integration:"
 echo ""
-echo "    orbital setup && source ~/.orbital/activate.sh"
+echo "    orrery setup && source ~/.orrery/activate.sh"
 echo ""

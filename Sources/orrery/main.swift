@@ -1,0 +1,2 @@
+import OrreryCore
+OrreryCommand.main()

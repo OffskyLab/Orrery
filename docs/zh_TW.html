@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orbital — AI CLI 環境管理工具</title>
+  <title>Orrery — AI CLI 環境管理工具</title>
   <meta name="description" content="Per-shell 環境管理工具，為 AI CLI 工具隔離帳號。切換帳號同時保留對話連續性。" />
   <link rel="icon" href="icon.png" />
   <style>
@@ -542,8 +542,8 @@
 <!-- Nav -->
 <nav>
   <a class="nav-logo" href="#">
-    <img src="icon.png" alt="Orbital" />
-    Orbital
+    <img src="icon.png" alt="Orrery" />
+    Orrery
   </a>
   <ul class="nav-links">
     <li class="nav-collapsible"><a href="#features">功能</a></li>
@@ -576,13 +576,13 @@
 
 <!-- Hero -->
 <section class="hero">
-  <img class="hero-logo" src="icon.png" alt="Orbital" />
+  <img class="hero-logo" src="icon.png" alt="Orrery" />
   <div class="badge">v1.1.6</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
     <a class="btn btn-primary" href="#install">開始使用</a>
-    <a class="btn btn-secondary" href="https://github.com/OffskyLab/Orbital">GitHub</a>
+    <a class="btn btn-secondary" href="https://github.com/OffskyLab/Orrery">GitHub</a>
   </div>
 </section>
 
@@ -590,22 +590,22 @@
 <div class="install-block" id="install">
   <div class="install-label">透過 Homebrew 安裝</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd="brew install OffskyLab/orbital/orbital" data-label="複製" data-copied="已複製！">複製</button>
-    <span class="prompt">$ </span>brew install OffskyLab/orbital/orbital
+    <button class="copy-btn" data-cmd="brew install OffskyLab/orrery/orrery" data-label="複製" data-copied="已複製！">複製</button>
+    <span class="prompt">$ </span>brew install OffskyLab/orrery/orrery
   </div>
   <div style="height:.75rem"></div>
   <div class="install-label">或透過 APT 安裝（Ubuntu / Debian）</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orbital.list && sudo apt update && sudo apt install orbital' data-label="複製" data-copied="已複製！">複製</button>
+    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery' data-label="複製" data-copied="已複製！">複製</button>
     <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orbital.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orbital
+    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
+    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
   </div>
   <div style="height:.75rem"></div>
   <div class="install-label">啟用 Shell 整合</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd='source ~/.orbital/activate.sh' data-label="複製" data-copied="已複製！">複製</button>
-    <span class="prompt">$ </span>source ~/.orbital/activate.sh
+    <button class="copy-btn" data-cmd='source ~/.orrery/activate.sh' data-label="複製" data-copied="已複製！">複製</button>
+    <span class="prompt">$ </span>source ~/.orrery/activate.sh
   </div>
 </div>
 
@@ -626,7 +626,7 @@
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
       <h3>Per-shell 生效</h3>
-      <p><code>orbital use work</code> 只在當前 shell 設定環境變數。其他終端機視窗維持各自的環境，互不影響。</p>
+      <p><code>orrery use work</code> 只在當前 shell 設定環境變數。其他終端機視窗維持各自的環境，互不影響。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">✦</span>
@@ -636,7 +636,7 @@
     <div class="feature-card">
       <span class="feature-icon">🔑</span>
       <h3>自訂環境變數</h3>
-      <p>每個環境可儲存 API 金鑰等變數，<code>orbital use</code> 切換時自動匯出。</p>
+      <p>每個環境可儲存 API 金鑰等變數，<code>orrery use</code> 切換時自動匯出。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
@@ -654,7 +654,7 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>安裝 Shell 整合</h4>
-        <p>執行一次 <code>orbital setup</code>。會產生 <code>~/.orbital/activate.sh</code> 並寫入 rc 檔。再執行 <code>source ~/.orbital/activate.sh</code> 即可在當前 shell 生效。</p>
+        <p>執行一次 <code>orrery setup</code>。會產生 <code>~/.orrery/activate.sh</code> 並寫入 rc 檔。再執行 <code>source ~/.orrery/activate.sh</code> 即可在當前 shell 生效。</p>
         <p style="margin-top:.5rem"><code>activate.sh</code> 也會在背景每天檢查是否有新版本，並在下次開啟 shell 時顯示通知。</p>
       </div>
     </div>
@@ -662,14 +662,14 @@
       <div class="step-num">2</div>
       <div class="step-body">
         <h4>建立環境</h4>
-        <p>執行 <code>orbital create work</code>。互動式精靈讓你選擇工具並設定 session 共享。環境存放在 <code>~/.orbital/envs/</code>。</p>
+        <p>執行 <code>orrery create work</code>。互動式精靈讓你選擇工具並設定 session 共享。環境存放在 <code>~/.orrery/envs/</code>。</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>一行指令切換</h4>
-        <p><code>orbital use work</code> 將正確的設定目錄與自訂環境變數匯出到當前 session。對話歷史在切換後完整保留。</p>
+        <p><code>orrery use work</code> 將正確的設定目錄與自訂環境變數匯出到當前 session。對話歷史在切換後完整保留。</p>
       </div>
     </div>
     <div class="step">
@@ -688,19 +688,19 @@
   <div class="origin-callout">
     <h3>不只是另一個環境 — 這是系統的原始狀態</h3>
     <p>
-      <code>origin</code> 是 Orbital 的保留名稱，代表未經任何修改的系統原始環境。
-      執行 <code>orbital use origin</code>（或 <code>orbital deactivate</code>）後，
-      Orbital 會清除所有隔離設定，讓工具回到系統全域設定，
-      就像 Orbital 從未安裝過一樣。
+      <code>origin</code> 是 Orrery 的保留名稱，代表未經任何修改的系統原始環境。
+      執行 <code>orrery use origin</code>（或 <code>orrery deactivate</code>）後，
+      Orrery 會清除所有隔離設定，讓工具回到系統全域設定，
+      就像 Orrery 從未安裝過一樣。
     </p>
     <p>
       與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
       也不支援工具設定或環境變數。它沒有任何隔離、也沒有獨立的 memory 或 session —
-      它就是進入 Orbital 之前的狀態。
+      它就是進入 Orrery 之前的狀態。
     </p>
     <p>
       這讓 <code>origin</code> 成為一個乾淨的退出點：
-      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orbital 環境。
+      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orrery 環境。
     </p>
   </div>
 </section>
@@ -714,9 +714,9 @@
       <h3>工作 / 個人帳號</h3>
       <p>公司用 Claude Team plan，自己有 Pro 訂閱。不用反覆登入登出，一行指令切換。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span style="color:var(--muted)"># → 使用公司 Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orbital use personal<br/>
+        <span class="prompt">$ </span>orrery use personal<br/>
         <span style="color:var(--muted)"># → 使用個人 Pro plan</span>
       </div>
     </div>
@@ -725,9 +725,9 @@
       <h3>多客戶 / 多專案</h3>
       <p>接案者或顧問同時服務多個客戶，各自有不同的 API key 和憑證。一行指令切換情境。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital create client-a --tool claude<br/>
-        <span class="prompt">$ </span>orbital create client-b --tool claude<br/>
-        <span class="prompt">$ </span>orbital use client-a
+        <span class="prompt">$ </span>orrery create client-a --tool claude<br/>
+        <span class="prompt">$ </span>orrery create client-b --tool claude<br/>
+        <span class="prompt">$ </span>orrery use client-a
       </div>
     </div>
     <div class="feature-card">
@@ -735,11 +735,11 @@
       <h3>切換帳號不中斷對話</h3>
       <p>用工作帳號跟 Claude 對話到一半？切到個人帳號處理事情，再切回來 — session 還在原地等你。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... 工作中 ...</span><br/><br/>
-        <span class="prompt">$ </span>orbital use personal<br/>
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use personal<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → 接續上次的對話</span>
       </div>
@@ -751,7 +751,7 @@
 <section class="how-section" id="mcp">
   <h2 class="section-title">AI 工具整合</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
-    Orbital 透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> 整合 Claude Code、Codex CLI 和 Gemini CLI。跨帳號委派任務、工具間共享記憶、管理 session——全在一個地方。
+    Orrery 透過 <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a> 整合 Claude Code、Codex CLI 和 Gemini CLI。跨帳號委派任務、工具間共享記憶、管理 session——全在一個地方。
   </p>
 
   <div class="steps">
@@ -759,10 +759,10 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>設定一次就好</h4>
-        <p>在專案目錄下執行。Orbital 會註冊為 MCP server 並安裝 slash commands。</p>
+        <p>在專案目錄下執行。Orrery 會註冊為 MCP server 並安裝 slash commands。</p>
         <div class="code-block" style="margin-top:.5rem">
-          <button class="copy-btn" data-cmd="orbital mcp setup" data-label="複製" data-copied="已複製！">複製</button>
-          <span class="prompt">$ </span>orbital mcp setup
+          <button class="copy-btn" data-cmd="orrery mcp setup" data-label="複製" data-copied="已複製！">複製</button>
+          <span class="prompt">$ </span>orrery mcp setup
         </div>
       </div>
     </div>
@@ -773,18 +773,18 @@
         <p>設定完成後，在 Claude Code 裡直接使用：</p>
         <div style="margin-top:.75rem;display:grid;gap:.75rem">
           <div>
-            <code style="color:var(--accent2);font-size:.9rem">/orbital:delegate</code>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:delegate</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">委派任務給其他帳號</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">/orbital:delegate</span> 用工作帳號 review 這個 PR 的安全問題
+              <span style="color:var(--muted)">/orrery:delegate</span> 用工作帳號 review 這個 PR 的安全問題
             </div>
           </div>
           <div>
-            <code style="color:var(--accent2);font-size:.9rem">/orbital:sessions</code>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:sessions</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">列出 session 並用 index 接續</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">/orbital:sessions</span><br/>
-              <span style="color:var(--muted)">接著：</span> orbital resume 1
+              <span style="color:var(--muted)">/orrery:sessions</span><br/>
+              <span style="color:var(--muted)">接著：</span> orrery resume 1
             </div>
           </div>
         </div>
@@ -818,27 +818,27 @@
         <p>所有 AI 工具自動取得以下工具。任一工具儲存的知識，其他工具都能存取。</p>
         <div style="margin-top:.75rem;display:grid;gap:.5rem">
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_read</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_memory_read</code>
             <span style="color:var(--muted);font-size:.85rem">讀取共享專案記憶</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_write</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_memory_write</code>
             <span style="color:var(--muted);font-size:.85rem">寫入共享專案記憶</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_delegate</code>
             <span style="color:var(--muted);font-size:.85rem">用其他帳號執行任務</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_list</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_list</code>
             <span style="color:var(--muted);font-size:.85rem">列出所有環境</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_sessions</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_sessions</code>
             <span style="color:var(--muted);font-size:.85rem">列出當前專案的 session</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_current</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_current</code>
             <span style="color:var(--muted);font-size:.85rem">查看目前啟用的環境</span>
           </div>
         </div>
@@ -848,10 +848,10 @@
       <div class="step-num">5</div>
       <div class="step-body">
         <h4>外部記憶儲存</h4>
-        <p>Memory 預設儲存在 <code>~/.orbital</code>。你可以將它重新導向到任何目錄，包括 <strong>Obsidian</strong> 等 wiki 系統，讓 AI 記憶和你的筆記放在一起。</p>
+        <p>Memory 預設儲存在 <code>~/.orrery</code>。你可以將它重新導向到任何目錄，包括 <strong>Obsidian</strong> 等 wiki 系統，讓 AI 記憶和你的筆記放在一起。</p>
         <div style="margin-top:.75rem">
           <div class="code-block" style="font-size:.82rem">
-            <span class="prompt">$ </span>orbital memory storage ~/Documents/my-wiki/orbital<br/>
+            <span class="prompt">$ </span>orrery memory storage ~/Documents/my-wiki/orrery<br/>
             <span style="color:var(--muted)">新路徑目前沒有記憶，是否要將目前的記憶複製過去？</span><br/>
             <span style="color:var(--muted)">▶ 複製過去</span><br/>
             <span style="color:var(--muted)">  不複製（從空白開始）</span>
@@ -877,9 +877,9 @@
       <p>同一人、兩台電腦。在同一網路下啟動 daemon，Bonjour 自動發現彼此。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># 桌機</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9527<br/><br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527<br/><br/>
         <span style="color:var(--muted)"># 筆電（Bonjour 自動發現）</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -887,12 +887,12 @@
       <h3>團隊協作</h3>
       <p>建立團隊、分享邀請碼。隊友加入後啟動 daemon，所有人的記憶即時同步。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital sync team create my-team<br/>
-        <span class="prompt">$ </span>orbital sync team invite --port 9527<br/>
+        <span class="prompt">$ </span>orrery sync team create my-team<br/>
+        <span class="prompt">$ </span>orrery sync team invite --port 9527<br/>
         <span style="color:var(--muted)"># → 分享邀請碼</span><br/><br/>
         <span style="color:var(--muted)"># 隊友加入：</span><br/>
-        <span class="prompt">$ </span>orbital sync team join &lt;code&gt;<br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -900,7 +900,7 @@
       <h3>加密傳輸（mTLS）</h3>
       <p>敏感環境適用。雙方必須出示同一 CA 簽發的憑證，未授權的節點在握手階段即被拒絕。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--tls-ca ca.pem \<br/>
         &nbsp;&nbsp;--tls-cert node.pem \<br/>
         &nbsp;&nbsp;--tls-key node-key.pem
@@ -912,9 +912,9 @@
       <p>不同辦公室、不同網路。輕量的 rendezvous server 負責節點發現，資料直接在節點間傳輸。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># VPS 上：</span><br/>
-        <span class="prompt">$ </span>orbital sync rendezvous --port 9600<br/><br/>
+        <span class="prompt">$ </span>orrery sync rendezvous --port 9600<br/><br/>
         <span style="color:var(--muted)"># 各節點：</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--rendezvous rv.example.com:9600
       </div>
     </div>
@@ -934,47 +934,47 @@
     <div class="command-group">
       <div class="command-group-title">環境管理</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital create &lt;name&gt;</span><span class="cmd-desc">建立新環境</span></div>
-        <div class="command-item"><span class="cmd">orbital delete &lt;name&gt;</span><span class="cmd-desc">刪除環境</span></div>
-        <div class="command-item"><span class="cmd">orbital rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名環境</span></div>
-        <div class="command-item"><span class="cmd">orbital list</span><span class="cmd-desc">列出所有環境</span></div>
-        <div class="command-item"><span class="cmd">orbital info [name]</span><span class="cmd-desc">顯示環境詳細資訊</span></div>
+        <div class="command-item"><span class="cmd">orrery create &lt;name&gt;</span><span class="cmd-desc">建立新環境</span></div>
+        <div class="command-item"><span class="cmd">orrery delete &lt;name&gt;</span><span class="cmd-desc">刪除環境</span></div>
+        <div class="command-item"><span class="cmd">orrery rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名環境</span></div>
+        <div class="command-item"><span class="cmd">orrery list</span><span class="cmd-desc">列出所有環境</span></div>
+        <div class="command-item"><span class="cmd">orrery info [name]</span><span class="cmd-desc">顯示環境詳細資訊</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">切換</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital use &lt;name&gt;</span><span class="cmd-desc">在當前 shell 啟用環境</span></div>
-        <div class="command-item"><span class="cmd">orbital deactivate</span><span class="cmd-desc">停用目前的環境</span></div>
-        <div class="command-item"><span class="cmd">orbital current</span><span class="cmd-desc">顯示目前啟用的環境</span></div>
-        <div class="command-item"><span class="cmd">orbital which &lt;tool&gt;</span><span class="cmd-desc">顯示工具設定目錄路徑</span></div>
+        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">在當前 shell 啟用環境</span></div>
+        <div class="command-item"><span class="cmd">orrery deactivate</span><span class="cmd-desc">停用目前的環境</span></div>
+        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">顯示目前啟用的環境</span></div>
+        <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">顯示工具設定目錄路徑</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">設定</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital tools add [-e &lt;name&gt;]</span><span class="cmd-desc">加入工具（wizard）</span></div>
-        <div class="command-item"><span class="cmd">orbital tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">移除工具</span></div>
-        <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
-        <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
-        <div class="command-item"><span class="cmd">orbital memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
+        <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">加入工具（wizard）</span></div>
+        <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">移除工具</span></div>
+        <div class="command-item"><span class="cmd">orrery env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
+        <div class="command-item"><span class="cmd">orrery env unset &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
+        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Session 管理</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital sessions</span><span class="cmd-desc">列出當前專案所有 session</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --claude</span><span class="cmd-desc">只看 Claude</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --codex</span><span class="cmd-desc">只看 Codex</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --gemini</span><span class="cmd-desc">只看 Gemini</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions</span><span class="cmd-desc">列出當前專案所有 session</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --claude</span><span class="cmd-desc">只看 Claude</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --codex</span><span class="cmd-desc">只看 Codex</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --gemini</span><span class="cmd-desc">只看 Gemini</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Shell 整合</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
-        <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">輸出 shell function</span></div>
-        <div class="command-item"><span class="cmd">orbital update</span><span class="cmd-desc">透過 Homebrew / apt 自動更新</span></div>
+        <div class="command-item"><span class="cmd">orrery setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
+        <div class="command-item"><span class="cmd">orrery init</span><span class="cmd-desc">輸出 shell function</span></div>
+        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">透過 Homebrew / apt 自動更新</span></div>
       </div>
     </div>
   </div>
@@ -985,7 +985,7 @@
   <h2 class="section-title">版本歷程</h2>
   <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2.5rem">
     版本說明 — 完整技術細節在
-    <a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>。
+    <a href="https://github.com/OffskyLab/Orrery/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>。
   </p>
   <div class="changelog">
 
@@ -996,7 +996,7 @@
         <h3>換帳號不用再放棄已經調好的設定</h3>
       </div>
       <p class="changelog-body">以前想把一個 env 複製出來、換個帳號用會遇到兩難：重新登入麻煩，但整份複製又會連「哪個帳號」都被覆蓋掉，連帶 theme、plugin、已經看過的提示全都一起變了。這版我們把「要用哪個帳號登入」和「要複製誰的設定」拆成兩個獨立的步驟 — 你可以從 A 拿帳號、從 B 拿偏好，<code>.claude.json</code> 會自動幫你合併：身份從登入來源來，其他偏好從 clone 來源來，per-account 快取清掉讓 Claude 自己重抓。</p>
-      <p class="changelog-body">同時每個 tool 都有自己的 login + clone 流程，建立環境時一個一個問「新增並設定？」，不再一口氣把三個工具綁在一起。<code>orbital tools</code> 也拆成 <code>tools add</code> / <code>tools remove</code>；session 共享/隔離改成 per-tool，「Claude 共享、Codex 隔離」這種組合終於行得通；<code>orbital list</code> 跟 <code>orbital info</code> 也會直接顯示每個 tool 登入的 email 和方案。</p>
+      <p class="changelog-body">同時每個 tool 都有自己的 login + clone 流程，建立環境時一個一個問「新增並設定？」，不再一口氣把三個工具綁在一起。<code>orrery tools</code> 也拆成 <code>tools add</code> / <code>tools remove</code>；session 共享/隔離改成 per-tool，「Claude 共享、Codex 隔離」這種組合終於行得通；<code>orrery list</code> 跟 <code>orrery info</code> 也會直接顯示每個 tool 登入的 email 和方案。</p>
     </article>
 
     <article class="changelog-entry">
@@ -1004,7 +1004,7 @@
         <span class="changelog-ver">v1.1.5</span>
         <h3>Wizard 選完會自己清乾淨</h3>
       </div>
-      <p class="changelog-body">為什麼要動 wizard 的顯示？因為之前每選完一步，那整塊選單都還留在畫面上，跑完全部步驟後 scrollback 滿滿都是中間過程，真正重要的摘要反而被埋住。這版每步選完自動清掉，只留最終結果；create 完後也會直接問你要不要立刻切過去，省得再手動跑一次 <code>orbital use</code>。順手也拿掉了早就不能用的 <code>claude auth login</code> 步驟 — 它根本不認 <code>CLAUDE_CONFIG_DIR</code>，留著只會誤導。</p>
+      <p class="changelog-body">為什麼要動 wizard 的顯示？因為之前每選完一步，那整塊選單都還留在畫面上，跑完全部步驟後 scrollback 滿滿都是中間過程，真正重要的摘要反而被埋住。這版每步選完自動清掉，只留最終結果；create 完後也會直接問你要不要立刻切過去，省得再手動跑一次 <code>orrery use</code>。順手也拿掉了早就不能用的 <code>claude auth login</code> 步驟 — 它根本不認 <code>CLAUDE_CONFIG_DIR</code>，留著只會誤導。</p>
     </article>
 
     <article class="changelog-entry">
@@ -1012,15 +1012,15 @@
         <span class="changelog-ver">v1.1.4</span>
         <h3>版本檢查不再卡 shell 啟動</h3>
       </div>
-      <p class="changelog-body">用 Powerlevel10k instant prompt 的朋友反應 shell 一啟動 prompt 就會被 orbital 的版本檢查打斷，原因是我們在 shell init 階段同步做了這件事。這版改成「你下次跑 orbital 指令時順便在背景查一下」，最多 4 小時一次。發現新版時會用黃色訊息出現在每次 orbital 指令前，直到你執行 <code>orbital update</code> 才會消失。</p>
+      <p class="changelog-body">用 Powerlevel10k instant prompt 的朋友反應 shell 一啟動 prompt 就會被 orrery 的版本檢查打斷，原因是我們在 shell init 階段同步做了這件事。這版改成「你下次跑 orrery 指令時順便在背景查一下」，最多 4 小時一次。發現新版時會用黃色訊息出現在每次 orrery 指令前，直到你執行 <code>orrery update</code> 才會消失。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.3</span>
-        <h3><code>orbital use</code> 跨 shell 會記得住</h3>
+        <h3><code>orrery use</code> 跨 shell 會記得住</h3>
       </div>
-      <p class="changelog-body">為什麼要修這個？因為以前在一個 terminal 切到 work，打開另一個 terminal 卻發現自己又回到了 origin — 其實是 <code>orbital use</code> 切完之後沒把結果寫進 current pointer，新開的 shell 根本讀不到。這版每次 use 成功都會正確寫入，新開的 shell 就會自動回到你上次使用的環境。</p>
+      <p class="changelog-body">為什麼要修這個？因為以前在一個 terminal 切到 work，打開另一個 terminal 卻發現自己又回到了 origin — 其實是 <code>orrery use</code> 切完之後沒把結果寫進 current pointer，新開的 shell 根本讀不到。這版每次 use 成功都會正確寫入，新開的 shell 就會自動回到你上次使用的環境。</p>
     </article>
 
     <article class="changelog-entry">
@@ -1028,15 +1028,15 @@
         <span class="changelog-ver">v1.1.2</span>
         <h3>Memory 不用再在 CLAUDE.md 手動寫指示</h3>
       </div>
-      <p class="changelog-body">以前想讓 Claude 讀 orbital 的共享記憶，你得自己去 CLAUDE.md 裡加一段「請去某某路徑讀」的指示，Claude 才會理你 — 很違反「預設就 work」的精神。這版每個專案的 Claude auto-memory 資料夾會自動 symlink 到 orbital 的共享記憶，什麼設定都不用寫，Claude 自己就會讀到；跨 env、跨機器都是同一份。</p>
+      <p class="changelog-body">以前想讓 Claude 讀 orrery 的共享記憶，你得自己去 CLAUDE.md 裡加一段「請去某某路徑讀」的指示，Claude 才會理你 — 很違反「預設就 work」的精神。這版每個專案的 Claude auto-memory 資料夾會自動 symlink 到 orrery 的共享記憶，什麼設定都不用寫，Claude 自己就會讀到；跨 env、跨機器都是同一份。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.1</span>
-        <h3><code>ORBITAL_MEMORY.md</code> 自動掛到 Claude</h3>
+        <h3><code>ORRERY_MEMORY.md</code> 自動掛到 Claude</h3>
       </div>
-      <p class="changelog-body">切 env 之後 Claude 看不到之前存的記憶，因為各 env 的 Claude auto-memory 資料夾本來就是獨立的。這版在 <code>orbital create</code> 如果有選 Claude tool，就會自動在那個資料夾裡放一個 symlink 指向 orbital 的共享記憶，這樣跨 env 也能看到同一份。同時也修了 <code>orbital update</code> 的 Homebrew 快取問題 — 現在會先跑一次 <code>brew update</code> 再 upgrade。</p>
+      <p class="changelog-body">切 env 之後 Claude 看不到之前存的記憶，因為各 env 的 Claude auto-memory 資料夾本來就是獨立的。這版在 <code>orrery create</code> 如果有選 Claude tool，就會自動在那個資料夾裡放一個 symlink 指向 orrery 的共享記憶，這樣跨 env 也能看到同一份。同時也修了 <code>orrery update</code> 的 Homebrew 快取問題 — 現在會先跑一次 <code>brew update</code> 再 upgrade。</p>
     </article>
 
     <article class="changelog-entry">
@@ -1044,7 +1044,7 @@
         <span class="changelog-ver">v1.1.0</span>
         <h3><code>default</code> 改名為 <code>origin</code></h3>
       </div>
-      <p class="changelog-body">為什麼要改名？因為 <code>default</code> 語意太模糊了：它指的是「orbital 的預設環境」還是「沒被 orbital 動過的系統原狀」？久了連自己都會分不清。改成 <code>origin</code> 一目了然 — 就是「原點」，你還沒進 orbital 之前的那個狀態。既有環境跟設定檔都會自動遷移，不用手動處理。</p>
+      <p class="changelog-body">為什麼要改名？因為 <code>default</code> 語意太模糊了：它指的是「orrery 的預設環境」還是「沒被 orrery 動過的系統原狀」？久了連自己都會分不清。改成 <code>origin</code> 一目了然 — 就是「原點」，你還沒進 orrery 之前的那個狀態。既有環境跟設定檔都會自動遷移，不用手動處理。</p>
     </article>
 
   </div>
@@ -1053,9 +1053,9 @@
 <!-- Footer -->
 <footer>
   <p>
-    以 <a href="https://github.com/OffskyLab/Orbital/blob/main/LICENSE">Apache 2.0</a> 授權釋出 &nbsp;·&nbsp;
-    <a href="https://github.com/OffskyLab/Orbital">GitHub</a> &nbsp;·&nbsp;
-    <a href="https://github.com/OffskyLab/Orbital/releases">版本紀錄</a>
+    以 <a href="https://github.com/OffskyLab/Orrery/blob/main/LICENSE">Apache 2.0</a> 授權釋出 &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/Orrery">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/Orrery/releases">版本紀錄</a>
   </p>
 </footer>
 

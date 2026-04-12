@@ -1,14 +1,14 @@
-# Orbital
+# Orrery
 
 <p align="center">
-  <img src="assets/icon-1024x1024.png" alt="Orbital" width="256" height="256" />
+  <img src="assets/icon-1024x1024.png" alt="Orrery" width="256" height="256" />
 </p>
 
 [繁體中文](docs/README-zh_TW.md)
 
 Per-shell environment manager for AI CLI tools — isolate accounts for Claude Code, Codex CLI, and Gemini CLI across work and personal contexts, **while keeping your conversations continuous across account switches**.
 
-> **Note:** The CLI command is lowercase `orbital`. The product name is capitalized as **Orbital**.
+> **Note:** The CLI command is lowercase `orrery`. The product name is capitalized as **Orrery**.
 
 ## The Problem
 
@@ -16,13 +16,13 @@ AI CLI tools like Claude Code, Codex, and Gemini store their config (API keys, a
 
 Worse, switching accounts usually means **losing your conversation history**. You're mid-task with Claude, switch to a different account, and your session is gone — you have to start over and re-explain all the context.
 
-## How Orbital Solves This
+## How Orrery Solves This
 
-Orbital manages named environments stored under `~/.orbital/envs/`. Each environment has its own isolated auth credentials, while **session data is shared by default** — so you can switch accounts and pick up exactly where you left off.
+Orrery manages named environments stored under `~/.orrery/envs/`. Each environment has its own isolated auth credentials, while **session data is shared by default** — so you can switch accounts and pick up exactly where you left off.
 
 - **Auth isolation**: each environment gets its own config directory per tool, so credentials never leak between accounts
-- **Session sharing**: conversation history, project context, and session data are symlinked to a shared location (`~/.orbital/shared/`), so `claude --resume` works seamlessly after switching environments
-- **Per-shell activation**: `orbital use work` only affects the current terminal — other windows keep their own environment
+- **Session sharing**: conversation history, project context, and session data are symlinked to a shared location (`~/.orrery/shared/`), so `claude --resume` works seamlessly after switching environments
+- **Per-shell activation**: `orrery use work` only affects the current terminal — other windows keep their own environment
 
 ## Requirements
 
@@ -36,7 +36,7 @@ Orbital manages named environments stored under `~/.orbital/envs/`. Each environ
 Downloads a pre-built binary for your platform. No Swift required.
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/OffskyLab/Orbital/main/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/OffskyLab/Orrery/main/install.sh)"
 ```
 
 Supports macOS (arm64, x86_64) and Linux (x86_64, arm64). Falls back to building from source if a pre-built binary is not available.
@@ -44,14 +44,14 @@ Supports macOS (arm64, x86_64) and Linux (x86_64, arm64). Falls back to building
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew install OffskyLab/orbital/orbital
+brew install OffskyLab/orrery/orrery
 ```
 
 ### APT (Ubuntu / Debian)
 
 ```bash
-echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orbital.list
-sudo apt update && sudo apt install orbital
+echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
+sudo apt update && sudo apt install orrery
 ```
 
 ### Build from source
@@ -59,10 +59,10 @@ sudo apt update && sudo apt install orbital
 Requires Swift 6.0+.
 
 ```bash
-git clone https://github.com/OffskyLab/Orbital.git
-cd Orbital
+git clone https://github.com/OffskyLab/Orrery.git
+cd Orrery
 swift build -c release
-cp .build/release/orbital /usr/local/bin/orbital
+cp .build/release/orrery /usr/local/bin/orrery
 ```
 
 ### Shell integration
@@ -70,49 +70,49 @@ cp .build/release/orbital /usr/local/bin/orbital
 Run once after installation:
 
 ```bash
-orbital setup
-source ~/.orbital/activate.sh
+orrery setup
+source ~/.orrery/activate.sh
 ```
 
-`orbital setup` generates `~/.orbital/activate.sh` and adds `source` to your shell rc file (`~/.zshrc` or `~/.bashrc`, auto-detected). New shells will activate automatically.
+`orrery setup` generates `~/.orrery/activate.sh` and adds `source` to your shell rc file (`~/.zshrc` or `~/.bashrc`, auto-detected). New shells will activate automatically.
 
 ## Quick Start
 
 ```bash
 # Create environments (sessions are shared by default)
-orbital create work --description "Work account"
-orbital create personal --description "Personal account"
+orrery create work --description "Work account"
+orrery create personal --description "Personal account"
 
 # Add / remove tools interactively (each invocation handles one tool via a wizard)
-orbital tools add -e work
-orbital tools remove -e work
+orrery tools add -e work
+orrery tools remove -e work
 
 # Store credentials
-orbital set env ANTHROPIC_API_KEY sk-ant-work123 -e work
-orbital set env ANTHROPIC_API_KEY sk-ant-personal456 -e personal
+orrery set env ANTHROPIC_API_KEY sk-ant-work123 -e work
+orrery set env ANTHROPIC_API_KEY sk-ant-personal456 -e personal
 
 # Switch environments — your session history carries over
-orbital use work
+orrery use work
 claude                    # start a conversation
-orbital use personal
+orrery use personal
 claude --resume           # pick up right where you left off
 
-# Deactivate (clear all Orbital env vars)
-orbital deactivate
+# Deactivate (clear all Orrery env vars)
+orrery deactivate
 ```
 
 ## The `origin` Environment
 
-`origin` is Orbital's reserved name for your unmodified system environment. It cannot be deleted, renamed, or configured with tools or environment variables.
+`origin` is Orrery's reserved name for your unmodified system environment. It cannot be deleted, renamed, or configured with tools or environment variables.
 
-Switching to `origin` exits Orbital management — all Orbital variables are cleared and tools fall back to their system-wide config, exactly as if Orbital weren't installed:
+Switching to `origin` exits Orrery management — all Orrery variables are cleared and tools fall back to their system-wide config, exactly as if Orrery weren't installed:
 
 ```bash
-orbital use origin     # exit Orbital, return to system config
-orbital deactivate     # same as above
+orrery use origin     # exit Orrery, return to system config
+orrery deactivate     # same as above
 ```
 
-This makes `origin` a clean escape hatch: run a command under your default system credentials without affecting any Orbital environment.
+This makes `origin` a clean escape hatch: run a command under your default system credentials without affecting any Orrery environment.
 
 ## Session Sharing
 
@@ -122,12 +122,12 @@ By default, session data (conversation history, project context) is shared acros
 - Use `claude --resume` after switching → continues the exact same session
 - Each environment still has its own **isolated auth credentials**
 
-Session sharing works by symlinking tool-specific session directories (`projects/`, `sessions/`, `session-env/`) to a shared location under `~/.orbital/shared/`.
+Session sharing works by symlinking tool-specific session directories (`projects/`, `sessions/`, `session-env/`) to a shared location under `~/.orrery/shared/`.
 
 If you need fully isolated sessions (e.g., for compliance reasons), you can opt out per environment:
 
 ```bash
-orbital create secure-env --isolate-sessions
+orrery create secure-env --isolate-sessions
 ```
 
 The interactive wizard also asks about session sharing when creating an environment.
@@ -138,84 +138,84 @@ The interactive wizard also asks about session sharing when creating an environm
 
 | Command | Description |
 |---|---|
-| `orbital create <name>` | Create a new environment (sessions shared by default) |
-| `orbital create <name> --clone <source>` | Clone tools and env vars from an existing environment |
-| `orbital create <name> --isolate-sessions` | Create with fully isolated sessions |
-| `orbital delete <name>` | Delete an environment (prompts for confirmation) |
-| `orbital delete <name> --force` | Delete without confirmation |
-| `orbital rename <old> <new>` | Rename an environment |
-| `orbital list` | List all environments (`*` marks the active one) |
-| `orbital info [name]` | Show full details of an environment (defaults to active) |
+| `orrery create <name>` | Create a new environment (sessions shared by default) |
+| `orrery create <name> --clone <source>` | Clone tools and env vars from an existing environment |
+| `orrery create <name> --isolate-sessions` | Create with fully isolated sessions |
+| `orrery delete <name>` | Delete an environment (prompts for confirmation) |
+| `orrery delete <name> --force` | Delete without confirmation |
+| `orrery rename <old> <new>` | Rename an environment |
+| `orrery list` | List all environments (`*` marks the active one) |
+| `orrery info [name]` | Show full details of an environment (defaults to active) |
 
 ### Switching
 
-> Requires shell integration (`orbital setup`)
+> Requires shell integration (`orrery setup`)
 
 | Command | Description |
 |---|---|
-| `orbital use <name>` | Activate an environment in the current shell |
-| `orbital deactivate` | Deactivate the current environment |
-| `orbital current` | Print the name of the active environment |
+| `orrery use <name>` | Activate an environment in the current shell |
+| `orrery deactivate` | Deactivate the current environment |
+| `orrery current` | Print the name of the active environment |
 
 ### Configuration
 
 | Command | Description |
 |---|---|
-| `orbital tools add [-e <name>]` | Add a tool via wizard (login copy + settings clone) |
-| `orbital tools remove [-e <name>]` | Remove a tool from the environment |
-| `orbital set env <KEY> <VALUE> -e <name>` | Set an environment variable |
-| `orbital unset env <KEY> -e <name>` | Remove an environment variable |
-| `orbital which <tool>` | Print the config dir path for a tool in the active environment |
+| `orrery tools add [-e <name>]` | Add a tool via wizard (login copy + settings clone) |
+| `orrery tools remove [-e <name>]` | Remove a tool from the environment |
+| `orrery set env <KEY> <VALUE> -e <name>` | Set an environment variable |
+| `orrery unset env <KEY> -e <name>` | Remove an environment variable |
+| `orrery which <tool>` | Print the config dir path for a tool in the active environment |
 
-> If an environment is active (`orbital use <name>`), the `-e` flag can be omitted.
+> If an environment is active (`orrery use <name>`), the `-e` flag can be omitted.
 
 ### Sessions
 
 | Command | Description |
 |---|---|
-| `orbital sessions` | List all AI tool sessions for the current project |
-| `orbital sessions --claude` | Show only Anthropic Claude sessions |
-| `orbital sessions --codex` | Show only OpenAI Codex sessions |
-| `orbital sessions --gemini` | Show only Google Gemini sessions |
+| `orrery sessions` | List all AI tool sessions for the current project |
+| `orrery sessions --claude` | Show only Anthropic Claude sessions |
+| `orrery sessions --codex` | Show only OpenAI Codex sessions |
+| `orrery sessions --gemini` | Show only Google Gemini sessions |
 
 ### Cross-tool
 
 | Command | Description |
 |---|---|
-| `orbital run -e <name> <command>` | Run a command in a specific environment |
-| `orbital delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
-| `orbital resume <index>` | Resume a session by index (from `orbital sessions`) |
+| `orrery run -e <name> <command>` | Run a command in a specific environment |
+| `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
+| `orrery resume <index>` | Resume a session by index (from `orrery sessions`) |
 
 ### AI Tool Integration (MCP)
 
-Orbital integrates with Claude Code, Codex CLI, and Gemini CLI via [MCP](https://modelcontextprotocol.io/).
+Orrery integrates with Claude Code, Codex CLI, and Gemini CLI via [MCP](https://modelcontextprotocol.io/).
 
 ```bash
-orbital mcp setup
+orrery mcp setup
 ```
 
-This registers Orbital as an MCP server and installs `/delegate` and `/sessions` slash commands. Available MCP tools:
+This registers Orrery as an MCP server and installs `/delegate` and `/sessions` slash commands. Available MCP tools:
 
 | Tool | Description |
 |---|---|
-| `orbital_delegate` | Delegate a task to another account's AI tool |
-| `orbital_list` | List all environments |
-| `orbital_sessions` | List sessions for the current project |
-| `orbital_current` | Get the active environment |
-| `orbital_memory_read` | Read shared project memory |
-| `orbital_memory_write` | Write to shared project memory |
+| `orrery_delegate` | Delegate a task to another account's AI tool |
+| `orrery_list` | List all environments |
+| `orrery_sessions` | List sessions for the current project |
+| `orrery_current` | Get the active environment |
+| `orrery_memory_read` | Read shared project memory |
+| `orrery_memory_write` | Write to shared project memory |
 
-**Shared memory**: All AI tools read and write to the same `ORBITAL_MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
+**Shared memory**: All AI tools read and write to the same `ORRERY_MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
 
-**External memory storage**: By default memory is stored under `~/.orbital`. You can redirect it to any directory — such as an Obsidian vault — with `orbital memory storage <path>`. When the new path is empty, Orbital offers to copy your existing memory there:
+**External memory storage**: By default memory is stored under `~/.orrery`. You can redirect it to any directory — such as an Obsidian vault — with `orrery memory storage <path>`. When the new path is empty, Orrery offers to copy your existing memory there:
 
 ```bash
-orbital memory storage ~/Documents/my-wiki/orbital
+orrery memory storage ~/Documents/my-wiki/orrery
 # New path has no memory yet. Copy current memory there?
 # ▶ Copy memory to new path
 #   No, start fresh
 
-orbital memory storage --reset   # revert to ~/.orbital
+orrery memory storage --reset   # revert to ~/.orrery
 ```
 
 Fragments and AI consolidation work the same way regardless of where memory is stored.
@@ -224,12 +224,12 @@ Fragments and AI consolidation work the same way regardless of where memory is s
 
 | Command | Description |
 |---|---|
-| `orbital setup` | Install shell integration into shell rc file (idempotent) |
-| `orbital init` | Print the shell integration script (for manual setup) |
+| `orrery setup` | Install shell integration into shell rc file (idempotent) |
+| `orrery init` | Print the shell integration script (for manual setup) |
 
 ## P2P Memory Sync
 
-Sync project memory across machines and teammates in real time, powered by [orbital-sync](https://github.com/OffskyLab/orbital-sync).
+Sync project memory across machines and teammates in real time, powered by [orrery-sync](https://github.com/OffskyLab/orrery-sync).
 
 ### Desktop + Laptop
 
@@ -237,39 +237,39 @@ Same person, two machines on the same network:
 
 ```bash
 # Desktop
-orbital sync daemon --port 9527
+orrery sync daemon --port 9527
 
 # Laptop (auto-discovers via Bonjour)
-orbital sync daemon --port 9528
+orrery sync daemon --port 9528
 ```
 
 ### Team Collaboration
 
 ```bash
 # Create team and generate invite
-orbital sync team create my-team
-orbital sync team invite --port 9527
+orrery sync team create my-team
+orrery sync team invite --port 9527
 # → share the invite code with teammates
 
 # Teammate joins
-orbital sync team join <code>
-orbital sync daemon --port 9528
+orrery sync team join <code>
+orrery sync daemon --port 9528
 ```
 
 ### Cross-Network (Rendezvous)
 
 ```bash
 # Run rendezvous on a VPS
-orbital sync rendezvous --port 9600
+orrery sync rendezvous --port 9600
 
 # Each peer
-orbital sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 ### Encrypted (mTLS)
 
 ```bash
-orbital sync daemon --port 9527 \
+orrery sync daemon --port 9527 \
   --tls-ca ca.pem --tls-cert node.pem --tls-key node-key.pem
 ```
 
@@ -277,21 +277,21 @@ Only project memory is synced — sessions stay local. New teammates get all exi
 
 | Command | Description |
 |---|---|
-| `orbital sync daemon` | Start the sync daemon |
-| `orbital sync status` | Show daemon and peer status |
-| `orbital sync pair <host:port>` | Pair with a remote peer |
-| `orbital sync team create <name>` | Create a new team |
-| `orbital sync team invite` | Generate an invite code |
-| `orbital sync team join <code>` | Join a team |
-| `orbital sync team info` | Show team and known peers |
-| `orbital sync rendezvous` | Run a rendezvous server |
+| `orrery sync daemon` | Start the sync daemon |
+| `orrery sync status` | Show daemon and peer status |
+| `orrery sync pair <host:port>` | Pair with a remote peer |
+| `orrery sync team create <name>` | Create a new team |
+| `orrery sync team invite` | Generate an invite code |
+| `orrery sync team join <code>` | Join a team |
+| `orrery sync team info` | Show team and known peers |
+| `orrery sync rendezvous` | Run a rendezvous server |
 
 ## Storage
 
-Environments are stored under `$ORBITAL_HOME` (default: `~/.orbital`):
+Environments are stored under `$ORRERY_HOME` (default: `~/.orrery`):
 
 ```
-~/.orbital/
+~/.orrery/
   current                # name of the last activated environment
   shared/                # shared session data across environments
     claude/
@@ -303,17 +303,17 @@ Environments are stored under `$ORBITAL_HOME` (default: `~/.orbital`):
       env.json           # metadata: tools, env vars, timestamps
       claude/            # CLAUDE_CONFIG_DIR points here
         .claude.json     # auth credentials (isolated per env)
-        projects/  -> ~/.orbital/shared/claude/projects   (symlink)
-        sessions/  -> ~/.orbital/shared/claude/sessions   (symlink)
+        projects/  -> ~/.orrery/shared/claude/projects   (symlink)
+        sessions/  -> ~/.orrery/shared/claude/sessions   (symlink)
       codex/             # CODEX_CONFIG_DIR points here
     <UUID>/
       env.json
       claude/
 ```
 
-Set `ORBITAL_HOME` to use a custom location.
+Set `ORRERY_HOME` to use a custom location.
 
-## Environment Variables Set by `orbital use`
+## Environment Variables Set by `orrery use`
 
 | Tool | Variable |
 |---|---|
@@ -321,11 +321,11 @@ Set `ORBITAL_HOME` to use a custom location.
 | `codex` | `CODEX_CONFIG_DIR` |
 | `gemini` | `GEMINI_CONFIG_DIR` |
 
-Custom env vars set with `orbital set env` are also exported on `orbital use`.
+Custom env vars set with `orrery set env` are also exported on `orrery use`.
 
 ## Localization
 
-Orbital auto-detects your system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`) and displays messages in Traditional Chinese (`zh_TW`) or English.
+Orrery auto-detects your system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`) and displays messages in Traditional Chinese (`zh_TW`) or English.
 
 ## License
 
