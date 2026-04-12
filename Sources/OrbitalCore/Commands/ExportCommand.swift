@@ -24,10 +24,9 @@ public struct ExportCommand: ParsableCommand {
         try store.save(env)
 
         // Ensure shared session symlinks are in place for existing environments
-        if !env.isolateSessions {
-            for tool in env.tools {
-                try store.ensureSharedSessionLinks(tool: tool, environment: name)
-            }
+        // (per-tool: only the tools whose sessions aren't isolated)
+        for tool in env.tools where !env.isolateSessions(for: tool) {
+            try store.ensureSharedSessionLinks(tool: tool, environment: name)
         }
 
         var lines: [String] = []

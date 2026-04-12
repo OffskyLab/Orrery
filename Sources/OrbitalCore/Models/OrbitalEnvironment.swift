@@ -12,7 +12,9 @@ public struct OrbitalEnvironment: Codable, Sendable {
     public var lastUsed: Date
     public var tools: [Tool]
     public var env: [String: String]
-    public var isolateSessions: Bool
+    /// Tools in this env whose sessions are isolated (not symlinked to shared).
+    /// Tools NOT in this set share sessions across envs (the default).
+    public var isolatedSessionTools: Set<Tool>
     public var isolateMemory: Bool
     /// Custom storage root for memory. When set, ORBITAL_MEMORY.md and fragments/ live here
     /// instead of the default ~/.orbital path. Useful for external wikis (e.g. Obsidian).
@@ -26,7 +28,7 @@ public struct OrbitalEnvironment: Codable, Sendable {
         lastUsed: Date = Date(),
         tools: [Tool] = [],
         env: [String: String] = [:],
-        isolateSessions: Bool = false,
+        isolatedSessionTools: Set<Tool> = [],
         isolateMemory: Bool = true,
         memoryStoragePath: String? = nil
     ) {
@@ -37,27 +39,59 @@ public struct OrbitalEnvironment: Codable, Sendable {
         self.lastUsed = lastUsed
         self.tools = tools
         self.env = env
-        self.isolateSessions = isolateSessions
+        self.isolatedSessionTools = isolatedSessionTools
         self.isolateMemory = isolateMemory
         self.memoryStoragePath = memoryStoragePath
     }
 
-    // Custom decoding for backward compatibility with existing env.json files
+    /// Whether sessions for `tool` are isolated in this env.
+    public func isolateSessions(for tool: Tool) -> Bool {
+        isolatedSessionTools.contains(tool)
+    }
+
+    // MARK: - Codable
+
     enum CodingKeys: String, CodingKey {
-        case id, name, description, createdAt, lastUsed, tools, env, isolateSessions, isolateMemory, memoryStoragePath
+        case id, name, description, createdAt, lastUsed, tools, env
+        case isolatedSessionTools
+        case isolateSessions  // legacy — decode only
+        case isolateMemory, memoryStoragePath
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        description = try container.decode(String.self, forKey: .description)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-        lastUsed = try container.decode(Date.self, forKey: .lastUsed)
-        tools = try container.decode([Tool].self, forKey: .tools)
-        env = try container.decode([String: String].self, forKey: .env)
-        isolateSessions = try container.decodeIfPresent(Bool.self, forKey: .isolateSessions) ?? false
-        isolateMemory = try container.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
-        memoryStoragePath = try container.decodeIfPresent(String.self, forKey: .memoryStoragePath)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        description = try c.decode(String.self, forKey: .description)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        lastUsed = try c.decode(Date.self, forKey: .lastUsed)
+        tools = try c.decode([Tool].self, forKey: .tools)
+        env = try c.decode([String: String].self, forKey: .env)
+
+        if let newField = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) {
+            isolatedSessionTools = newField
+        } else if (try c.decodeIfPresent(Bool.self, forKey: .isolateSessions)) == true {
+            // Legacy: old `isolateSessions: true` → isolate all current tools.
+            isolatedSessionTools = Set(tools)
+        } else {
+            isolatedSessionTools = []
+        }
+
+        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
+        memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(description, forKey: .description)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastUsed, forKey: .lastUsed)
+        try c.encode(tools, forKey: .tools)
+        try c.encode(env, forKey: .env)
+        try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
+        try c.encode(isolateMemory, forKey: .isolateMemory)
+        try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
     }
 }

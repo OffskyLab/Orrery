@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.1.6
+
+- **Per-tool setup flow** — new `ToolFlow` protocol with `ClaudeFlow`/`CodexFlow`/`GeminiFlow`; each tool owns its own login copy and settings clone logic
+- **Create wizard rewritten** — yes/no per tool (claude → codex → gemini), each "yes" runs a per-tool sub-wizard (login copy → clone settings → sessions → memory for claude)
+- **Copy login state** — new wizard step copies credentials + `.claude.json` from origin or another env; Claude uses Keychain (SHA256-hashed service name) + `.claude.json`; Codex uses `auth.json`; Gemini uses `oauth_creds.json`
+- **`.claude.json` identity/prefs split** — when login source and clone source are both picked, preferences (theme, dismissed dialogs, projects, usage counters) follow clone; identity keys (`oauthAccount`, `userID`, `anonymousId`, `hasCompletedOnboarding`, `lastOnboardingVersion`) overlay from login; per-account caches (`cachedGrowthBookFeatures`, `cachedStatsigGates`) are stripped so Claude refreshes them
+- **Per-tool session isolation** — `OrbitalEnvironment.isolateSessions: Bool` (env-wide) split into `isolatedSessionTools: Set<Tool>` (per-tool); backward-compat decoder migrates old env.json on load
+- **`tools` subcommand split** — `orbital tools add` (wizard lists un-added tools) and `orbital tools remove` (wizard lists added tools) replace the previous free-form multi-select
+- **Login account info in `list` and `info`** — each tool shown as `claude(email, plan)`, `codex(email, plan)`, `gemini(email)` when logged in
+- **Login wizard** — options deduplicated by account (email), shows `查詢登入狀況中…` while querying; fast-path email lookup skips Keychain subprocess calls for already-seen accounts
+- **Fix: merge preserves existing identity** — if the login source has a partial `.claude.json` (e.g. missing `hasCompletedOnboarding`), merge no longer strips those keys from the target; it only overlays keys that exist in the source
+- **`--tool` flag is single-value** — multi-tool non-interactive create was removed; multi-tool envs go through the wizard or through `tools add`
+
 ## v1.1.5
 
 - **Wizard cleanup** — create wizard prompts and options are fully cleared after each step, leaving only the final summary visible
