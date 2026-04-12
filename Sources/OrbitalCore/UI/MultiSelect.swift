@@ -46,7 +46,7 @@ public struct MultiSelect: Sendable {
             case .enter:
                 break loop
             case .ctrlC:
-                clearLines(options.count)
+                clearLines(options.count + 1)
                 write("\u{1B}[?25h") // show cursor
                 return preSelected
             case .other:
@@ -56,7 +56,7 @@ public struct MultiSelect: Sendable {
             render(cursor: cursor, selected: selected)
         }
 
-        clearLines(options.count)
+        clearLines(options.count + 1)
         write("\u{1B}[?25h") // show cursor
         return selected
     }

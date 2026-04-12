@@ -47,7 +47,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
     /// Interactive auth login command, nil if not applicable (e.g. API key-based tools).
     public var authLoginCommand: [String]? {
         switch self {
-        case .claude: return ["claude", "auth", "login"]
+        case .claude: return nil
         case .codex:  return ["codex", "login"]
         case .gemini: return nil
         }

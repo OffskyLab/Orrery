@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.5
+
+- **Wizard cleanup** — create wizard prompts and options are fully cleared after each step, leaving only the final summary visible
+- **Post-create switch prompt** — after `orbital create`, asks whether to switch to the new environment immediately
+- **Remove Claude auth login step** — `claude auth login` does not respect `CLAUDE_CONFIG_DIR`; removed from create flow — Claude prompts for login naturally on first interactive run
+- **Fix: update check empty notice** — background version check no longer creates empty notice files when already up to date
+
 ## v1.1.4
 
 - **Update notification redesign** — notice now shows on every `orbital` command (in yellow) until `orbital update` clears it; version check runs in background at most once every 4 hours triggered by command invocation, not shell startup; eliminates Powerlevel10k instant prompt conflict

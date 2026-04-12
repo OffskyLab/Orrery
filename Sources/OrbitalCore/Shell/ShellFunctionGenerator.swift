@@ -19,7 +19,7 @@ public struct ShellFunctionGenerator {
           local _last=0
           [ -f "$_ts_file" ] && _last=$(cat "$_ts_file" 2>/dev/null || echo 0)
           if [ $((_now - _last)) -ge 14400 ]; then
-            (echo "$_now" > "$_ts_file"; command orbital _check-update > "$_notice_file" 2>/dev/null || rm -f "$_notice_file") &
+            (echo "$_now" > "$_ts_file"; _r=$(command orbital _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file") &
           fi
 
           local cmd="${1:-}"
@@ -49,6 +49,27 @@ public struct ShellFunctionGenerator {
               ;;
             deactivate)
               orbital use origin
+              ;;
+            create)
+              command orbital "$@"
+              if [ $? -eq 0 ]; then
+                local _env_name="" _skip=0
+                for _arg in "${@:2}"; do
+                  if [ $_skip -eq 1 ]; then _skip=0; continue; fi
+                  case "$_arg" in
+                    --description|--clone|--tool) _skip=1 ;;
+                    --*) ;;
+                    *) _env_name="$_arg"; break ;;
+                  esac
+                done
+                if [ -n "$_env_name" ]; then
+                  printf "切換到環境 '%s'？[Y/n] " "$_env_name"
+                  read -r _ans </dev/tty
+                  case "${_ans:-Y}" in
+                    [Yy]*|"") orbital use "$_env_name" ;;
+                  esac
+                fi
+              fi
               ;;
             *)
               command orbital "$@"

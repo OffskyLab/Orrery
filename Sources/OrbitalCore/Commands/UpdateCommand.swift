@@ -13,9 +13,9 @@ public struct UpdateCommand: ParsableCommand {
         print(L10n.Update.upgrading)
 
         #if os(macOS)
-        let command = ["/bin/sh", "-c", "brew update && brew upgrade orbital && rm -f \"${ORBITAL_HOME:-$HOME/.orbital}/.update-notice\""]
+        let command = ["/bin/sh", "-c", "brew update && brew upgrade orbital && rm -f \"${ORBITAL_HOME:-$HOME/.orbital}/.update-notice\" && date +%s > \"${ORBITAL_HOME:-$HOME/.orbital}/.update-ts\""]
         #elseif os(Linux)
-        let command = ["/bin/sh", "-c", "sudo apt-get install --only-upgrade -y orbital && rm -f \"${ORBITAL_HOME:-$HOME/.orbital}/.update-notice\""]
+        let command = ["/bin/sh", "-c", "sudo apt-get install --only-upgrade -y orbital && rm -f \"${ORBITAL_HOME:-$HOME/.orbital}/.update-notice\" && date +%s > \"${ORBITAL_HOME:-$HOME/.orbital}/.update-ts\""]
         #else
         print(L10n.Update.unsupportedPlatform)
         throw ExitCode.failure

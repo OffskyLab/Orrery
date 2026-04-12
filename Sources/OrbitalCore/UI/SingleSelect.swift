@@ -42,7 +42,7 @@ public struct SingleSelect: Sendable {
             case .space, .enter:
                 break loop
             case .ctrlC:
-                clearLines(options.count)
+                clearLines(options.count + 1)
                 write("\u{1B}[?25h")
                 return preSelected
             case .other:
@@ -52,7 +52,7 @@ public struct SingleSelect: Sendable {
             render(cursor: cursor)
         }
 
-        clearLines(options.count)
+        clearLines(options.count + 1)
         write("\u{1B}[?25h")
         return cursor
     }
