@@ -84,8 +84,8 @@ public enum L10n {
         }
         public static var clonePrompt: String {
             isChinese
-                ? "要從現有環境複製設定嗎？（↑↓ 移動，Enter 確認）："
-                : "Clone config from an existing environment? (↑↓ move, enter confirm):"
+                ? "要從現有環境複製設定嗎？（plugin、skill、設定檔；↑↓ 移動，Enter 確認）："
+                : "Clone config from an existing environment? (plugins, skills, settings; ↑↓ move, enter confirm):"
         }
         public static var cloneNone: String {
             isChinese ? "不複製（全新環境）" : "Don't clone (fresh environment)"
@@ -94,7 +94,35 @@ public enum L10n {
             isChinese ? "從 \(name) 複製" : "Clone from \(name)"
         }
         public static var defaultDescription: String {
-            isChinese ? "原始系統環境（離開 Orbital 管理機制）" : "System origin (exit Orbital management)"
+            isChinese ? "原始系統環境" : "System origin"
+        }
+        public static var copyLoginHelp: String {
+            isChinese
+                ? "從現有環境複製 Claude 登入狀態"
+                : "Copy Claude login state from an existing environment"
+        }
+        public static var copyLoginPrompt: String {
+            isChinese
+                ? "複製登入狀態（↑↓ 移動，Enter 確認）："
+                : "Copy login state (↑↓ move, enter confirm):"
+        }
+        public static var copyLoginIndependent: String {
+            isChinese
+                ? "獨立環境 — 我自己後續登入"
+                : "Independent — I'll log in later"
+        }
+        public static func copyLoginFrom(_ label: String) -> String {
+            isChinese ? "從 \(label) 複製" : "Copy from \(label)"
+        }
+        public static func copyLoginCopied(_ source: String) -> String {
+            isChinese
+                ? "已從 \(source) 複製 Claude 登入狀態"
+                : "Copied Claude login state from: \(source)"
+        }
+        public static func copyLoginFailed(_ source: String) -> String {
+            isChinese
+                ? "無法從 \(source) 複製登入狀態（Keychain 中無對應 entry）"
+                : "Could not copy login state from \(source) (no matching Keychain entry)"
         }
         public static var sessionSharePrompt: String {
             isChinese
