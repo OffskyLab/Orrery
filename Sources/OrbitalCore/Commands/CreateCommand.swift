@@ -17,6 +17,9 @@ public struct CreateCommand: ParsableCommand {
     @Option(name: .long, help: ArgumentHelp(L10n.Create.cloneHelp))
     public var clone: String?
 
+    @Option(name: .long, help: ArgumentHelp(L10n.Create.copyLoginHelp))
+    public var copyLoginFrom: String?
+
     @Option(name: .long, help: ArgumentHelp(L10n.Create.toolHelp))
     public var tool: [String] = []
 
@@ -79,6 +82,16 @@ public struct CreateCommand: ParsableCommand {
             shouldIsolateMemory = Self.askMemoryIsolation()
         }
 
+        // Ask about copying Claude login state (only when claude is one of the tools)
+        let loginSource: String?
+        if let copyLoginFrom {
+            loginSource = copyLoginFrom
+        } else if tools.contains(.claude) {
+            loginSource = Self.askLoginCopySource(store: store)
+        } else {
+            loginSource = nil
+        }
+
         try Self.createEnvironment(
             name: name,
             description: description,
@@ -98,6 +111,20 @@ public struct CreateCommand: ParsableCommand {
         for t in tools {
             let configDir = store.toolConfigDir(tool: t, environment: name)
             try ToolSetup.setup(t, configDir: configDir, envName: name)
+        }
+
+        // Copy Claude Keychain credential if requested (must run after createEnvironment
+        // so the new env's config dir path is stable).
+        if tools.contains(.claude), let loginSource {
+            let dstDir = store.toolConfigDir(tool: .claude, environment: name).path
+            let srcDir: String? = loginSource == ReservedEnvironment.defaultName
+                ? nil  // origin: Claude Code stores credential under unset-CLAUDE_CONFIG_DIR service name
+                : store.toolConfigDir(tool: .claude, environment: loginSource).path
+            if ClaudeKeychain.copyCredential(from: srcDir, to: dstDir) {
+                print(L10n.Create.copyLoginCopied(loginSource))
+            } else {
+                print(L10n.Create.copyLoginFailed(loginSource))
+            }
         }
 
         // Auto-activate if this is the first environment
@@ -147,6 +174,33 @@ public struct CreateCommand: ParsableCommand {
 
         let selector = SingleSelect(
             title: L10n.Create.clonePrompt,
+            options: options,
+            selected: 0
+        )
+        let idx = selector.run()
+        return sources[idx]
+    }
+
+    static func askLoginCopySource(store: EnvironmentStore) -> String? {
+        let defaultName = ReservedEnvironment.defaultName
+        var options = [L10n.Create.copyLoginIndependent]
+        var sources: [String?] = [nil]
+
+        options.append(L10n.Create.copyLoginFrom("\(defaultName) - \(L10n.Create.defaultDescription)"))
+        sources.append(defaultName)
+
+        if let names = try? store.listNames() {
+            for name in names.sorted() {
+                if let env = try? store.load(named: name) {
+                    let label = env.description.isEmpty ? name : "\(name) - \(env.description)"
+                    options.append(L10n.Create.copyLoginFrom(label))
+                    sources.append(name)
+                }
+            }
+        }
+
+        let selector = SingleSelect(
+            title: L10n.Create.copyLoginPrompt,
             options: options,
             selected: 0
         )
