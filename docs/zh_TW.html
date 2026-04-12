@@ -993,51 +993,42 @@
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.6</span>
         <span class="changelog-new">最新</span>
-        <h3>把帳號和偏好分開搬到新環境</h3>
+        <h3>換帳號不用再放棄已經調好的設定</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>接到新客戶想開獨立 env，既不想再跑一次 OAuth 登入，又捨不得放棄已經調好的 theme、plugin、skill、看過的提示。</p>
-      <p class="changelog-body">Create wizard 每個 tool 問一次「新增並設定？」，每個 tool 跑自己的流程。「複製登入狀態」跟「複製設定」是分開的兩步，支援「login 從 A 帳號、設定從 B env 複製」——<code>.claude.json</code> 自動合併：身份欄位（帳號、onboarding 旗標）從 login 來，偏好（theme、專案、dismiss 過的提示）從 clone 來，per-account 快取清掉讓 Claude 重新載入。</p>
-      <ul>
-        <li><code>orbital list</code>、<code>orbital info</code> 顯示每個 tool 的登入 email 與方案</li>
-        <li><code>orbital tools</code> 拆成 <code>tools add</code> / <code>tools remove</code>，意圖明確</li>
-        <li>Session 共享/隔離改為 per-tool — 可同時「Claude 共享 / Codex 隔離」</li>
-      </ul>
+      <p class="changelog-body">以前想把一個 env 複製出來、換個帳號用會遇到兩難：重新登入麻煩，但整份複製又會連「哪個帳號」都被覆蓋掉，連帶 theme、plugin、已經看過的提示全都一起變了。這版我們把「要用哪個帳號登入」和「要複製誰的設定」拆成兩個獨立的步驟 — 你可以從 A 拿帳號、從 B 拿偏好，<code>.claude.json</code> 會自動幫你合併：身份從登入來源來，其他偏好從 clone 來源來，per-account 快取清掉讓 Claude 自己重抓。</p>
+      <p class="changelog-body">同時每個 tool 都有自己的 login + clone 流程，建立環境時一個一個問「新增並設定？」，不再一口氣把三個工具綁在一起。<code>orbital tools</code> 也拆成 <code>tools add</code> / <code>tools remove</code>；session 共享/隔離改成 per-tool，「Claude 共享、Codex 隔離」這種組合終於行得通；<code>orbital list</code> 跟 <code>orbital info</code> 也會直接顯示每個 tool 登入的 email 和方案。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.5</span>
-        <h3>Create wizard 收尾乾淨</h3>
+        <h3>Wizard 選完會自己清乾淨</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>Wizard 選完每一步都留下一整塊選單殘留，scrollback 很亂。</p>
-      <p class="changelog-body">每個 wizard 步驟選完自動清掉，只留下最終摘要。Create 完成後會問要不要立刻切過去。同時移除已失效的 <code>claude auth login</code> 步驟（它不認 <code>CLAUDE_CONFIG_DIR</code>）。</p>
+      <p class="changelog-body">為什麼要動 wizard 的顯示？因為之前每選完一步，那整塊選單都還留在畫面上，跑完全部步驟後 scrollback 滿滿都是中間過程，真正重要的摘要反而被埋住。這版每步選完自動清掉，只留最終結果；create 完後也會直接問你要不要立刻切過去，省得再手動跑一次 <code>orbital use</code>。順手也拿掉了早就不能用的 <code>claude auth login</code> 步驟 — 它根本不認 <code>CLAUDE_CONFIG_DIR</code>，留著只會誤導。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.4</span>
-        <h3>版本檢查不擋 shell 啟動</h3>
+        <h3>版本檢查不再卡 shell 啟動</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>Powerlevel10k instant prompt 被 orbital 的版本檢查打斷。</p>
-      <p class="changelog-body">版本檢查從 shell 啟動時移到「orbital 指令被呼叫時背景跑」，每 4 小時最多一次。新版通知用黃色顯示到你執行 <code>orbital update</code> 為止。</p>
+      <p class="changelog-body">用 Powerlevel10k instant prompt 的朋友反應 shell 一啟動 prompt 就會被 orbital 的版本檢查打斷，原因是我們在 shell init 階段同步做了這件事。這版改成「你下次跑 orbital 指令時順便在背景查一下」，最多 4 小時一次。發現新版時會用黃色訊息出現在每次 orbital 指令前，直到你執行 <code>orbital update</code> 才會消失。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.3</span>
-        <h3>切換 env 跨 shell 記得住</h3>
+        <h3><code>orbital use</code> 跨 shell 會記得住</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>在 terminal A 切到 work，打開新的 terminal B 卻發現自己又回到 origin。</p>
-      <p class="changelog-body">每次 <code>orbital use</code> 成功切換後寫入 current pointer，新開的 shell 會自動恢復上次使用的環境。</p>
+      <p class="changelog-body">為什麼要修這個？因為以前在一個 terminal 切到 work，打開另一個 terminal 卻發現自己又回到了 origin — 其實是 <code>orbital use</code> 切完之後沒把結果寫進 current pointer，新開的 shell 根本讀不到。這版每次 use 成功都會正確寫入，新開的 shell 就會自動回到你上次使用的環境。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.2</span>
-        <h3>Memory 不用再手動設定 CLAUDE.md</h3>
+        <h3>Memory 不用再在 CLAUDE.md 手動寫指示</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>想讓 Claude 自動讀共享記憶，以前得手動在 CLAUDE.md 裡加一段指示。</p>
-      <p class="changelog-body">每個專案的 Claude auto-memory 資料夾自動 symlink 到 orbital 共享記憶，什麼都不用寫就會被讀到；跨 env、跨機器都是同一份。</p>
+      <p class="changelog-body">以前想讓 Claude 讀 orbital 的共享記憶，你得自己去 CLAUDE.md 裡加一段「請去某某路徑讀」的指示，Claude 才會理你 — 很違反「預設就 work」的精神。這版每個專案的 Claude auto-memory 資料夾會自動 symlink 到 orbital 的共享記憶，什麼設定都不用寫，Claude 自己就會讀到；跨 env、跨機器都是同一份。</p>
     </article>
 
     <article class="changelog-entry">
@@ -1045,17 +1036,15 @@
         <span class="changelog-ver">v1.1.1</span>
         <h3><code>ORBITAL_MEMORY.md</code> 自動掛到 Claude</h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>切 env 後 Claude 看不到上次存的記憶。</p>
-      <p class="changelog-body"><code>orbital create</code> 含 Claude tool 時，自動在 Claude auto-memory 資料夾建立 symlink 指向 orbital 共享記憶。順手修了 <code>orbital update</code> 的 Homebrew 快取問題（先跑 <code>brew update</code>）。</p>
+      <p class="changelog-body">切 env 之後 Claude 看不到之前存的記憶，因為各 env 的 Claude auto-memory 資料夾本來就是獨立的。這版在 <code>orbital create</code> 如果有選 Claude tool，就會自動在那個資料夾裡放一個 symlink 指向 orbital 的共享記憶，這樣跨 env 也能看到同一份。同時也修了 <code>orbital update</code> 的 Homebrew 快取問題 — 現在會先跑一次 <code>brew update</code> 再 upgrade。</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.0</span>
-        <h3><code>default</code> → <code>origin</code>，語意更明確</h3>
+        <h3><code>default</code> 改名為 <code>origin</code></h3>
       </div>
-      <p class="changelog-scenario"><strong>情境：</strong>保留名稱叫 <code>default</code> 分不清是「Orbital 的預設環境」還是「原始系統狀態」。</p>
-      <p class="changelog-body">改名為 <code>origin</code>，意思是「未經 Orbital 修改的系統原狀」。既有環境與設定檔自動遷移，不用手動處理。</p>
+      <p class="changelog-body">為什麼要改名？因為 <code>default</code> 語意太模糊了：它指的是「orbital 的預設環境」還是「沒被 orbital 動過的系統原狀」？久了連自己都會分不清。改成 <code>origin</code> 一目了然 — 就是「原點」，你還沒進 orbital 之前的那個狀態。既有環境跟設定檔都會自動遷移，不用手動處理。</p>
     </article>
 
   </div>
