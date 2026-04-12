@@ -19,6 +19,39 @@ public enum ClaudeKeychain {
         return "Claude Code-credentials-\(hex)"
     }
 
+    /// Look up the Claude account email (from `.claude.json`) and plan (from Keychain credential)
+    /// for a given config dir. Pass `nil` for origin (unset CLAUDE_CONFIG_DIR).
+    public static func accountInfo(for configDir: String?) -> ToolAuth.AccountInfo {
+        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        let plan = findPassword(service: service(for: configDir), account: account)
+            .flatMap { parsePlan(fromCredential: $0) }
+
+        let jsonURL: URL
+        if let configDir {
+            jsonURL = URL(fileURLWithPath: configDir).appendingPathComponent(".claude.json")
+        } else {
+            jsonURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+        }
+        let email = parseEmail(fromClaudeJSON: jsonURL)
+        return ToolAuth.AccountInfo(email: email, plan: plan)
+    }
+
+    private static func parsePlan(fromCredential json: String) -> String? {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = obj["claudeAiOauth"] as? [String: Any]
+        else { return nil }
+        return oauth["subscriptionType"] as? String
+    }
+
+    private static func parseEmail(fromClaudeJSON url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauthAccount = obj["oauthAccount"] as? [String: Any]
+        else { return nil }
+        return oauthAccount["emailAddress"] as? String
+    }
+
     /// Copy the Claude credential from one config dir to another.
     /// Pass `nil` for `srcDir` to copy from the origin (unset CLAUDE_CONFIG_DIR) entry.
     /// Returns true on success.

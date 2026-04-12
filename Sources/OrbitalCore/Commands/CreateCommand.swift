@@ -14,14 +14,14 @@ public struct CreateCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Create.descriptionHelp))
     public var description: String = ""
 
-    @Option(name: .long, help: ArgumentHelp(L10n.Create.cloneHelp))
-    public var clone: String?
+    @Option(name: .long, help: ArgumentHelp(L10n.Create.toolHelp))
+    public var tool: String?
 
     @Option(name: .long, help: ArgumentHelp(L10n.Create.copyLoginHelp))
     public var copyLoginFrom: String?
 
-    @Option(name: .long, help: ArgumentHelp(L10n.Create.toolHelp))
-    public var tool: [String] = []
+    @Option(name: .long, help: ArgumentHelp(L10n.Create.cloneHelp))
+    public var clone: String?
 
     @Flag(name: .long, help: ArgumentHelp(L10n.Create.isolateSessionsHelp))
     public var isolateSessions: Bool = false
@@ -37,97 +37,43 @@ public struct CreateCommand: ParsableCommand {
         if name == ReservedEnvironment.defaultName {
             throw ValidationError(L10n.Create.reservedName)
         }
-
-        // Check for duplicate name before showing wizard
         if (try? store.load(named: name)) != nil {
             throw ValidationError(L10n.Create.alreadyExists(name))
         }
 
-        // Resolve tools from --tool flags
-        let flaggedTools = try tool.map { raw -> Tool in
-            guard let t = Tool(rawValue: raw) else {
-                throw ValidationError(L10n.Create.unknownTool(raw))
+        // Gather per-tool configs: either from CLI flags (single tool, non-interactive)
+        // or from the interactive wizard (yes/no per tool → per-tool sub-wizard).
+        let configs: [ToolSetupRunner.Config]
+        if let toolFlag = tool {
+            guard let t = Tool(rawValue: toolFlag) else {
+                throw ValidationError(L10n.Create.unknownTool(toolFlag))
             }
-            return t
-        }
-
-        // Each wizard step only runs if its corresponding flag wasn't provided
-        let tools: [Tool]
-        if !flaggedTools.isEmpty {
-            tools = flaggedTools
-        } else if clone != nil {
-            tools = []
+            configs = [ToolSetupRunner.Config(
+                tool: t,
+                loginSource: copyLoginFrom,
+                cloneSource: clone,
+                isolateSessions: isolateSessions,
+                isolateMemory: t == .claude ? isolateMemory : nil
+            )]
         } else {
-            tools = Self.runToolWizard()
+            configs = Self.runWizard(store: store)
         }
 
-        let cloneSource: String?
-        if let clone {
-            cloneSource = clone
-        } else {
-            cloneSource = Self.askCloneSource(store: store)
-        }
-
-        let shouldIsolate: Bool
-        if isolateSessions {
-            shouldIsolate = true
-        } else {
-            shouldIsolate = Self.askSessionIsolation()
-        }
-
-        let shouldIsolateMemory: Bool
-        if isolateMemory {
-            shouldIsolateMemory = true
-        } else {
-            shouldIsolateMemory = Self.askMemoryIsolation()
-        }
-
-        // Ask about copying Claude login state (only when claude is one of the tools)
-        let loginSource: String?
-        if let copyLoginFrom {
-            loginSource = copyLoginFrom
-        } else if tools.contains(.claude) {
-            loginSource = Self.askLoginCopySource(store: store)
-        } else {
-            loginSource = nil
-        }
-
-        try Self.createEnvironment(
-            name: name,
-            description: description,
-            cloneFrom: cloneSource,
-            tools: tools,
-            isolateSessions: shouldIsolate,
-            isolateMemory: shouldIsolateMemory,
-            store: store
-        )
+        // Create empty env — per-tool flags populated during apply()
+        let env = OrbitalEnvironment(name: name, description: description)
+        try store.save(env)
         print(L10n.Create.created(name))
-        if let cloneSource { print(L10n.Create.cloned(cloneSource)) }
-        if !tools.isEmpty { print(L10n.Create.tools(tools.map(\.rawValue).joined(separator: ", "))) }
-        print(L10n.Create.sessions(shouldIsolate))
-        print(L10n.Create.memory(shouldIsolateMemory))
 
-        // Setup each tool (install check)
-        for t in tools {
-            let configDir = store.toolConfigDir(tool: t, environment: name)
-            try ToolSetup.setup(t, configDir: configDir, envName: name)
+        // Apply each tool's config (addTool + login copy + clone settings)
+        for config in configs {
+            try ToolSetupRunner.apply(config, to: name, store: store)
         }
 
-        // Copy Claude Keychain credential if requested (must run after createEnvironment
-        // so the new env's config dir path is stable).
-        #if canImport(CryptoKit)
-        if tools.contains(.claude), let loginSource {
-            let dstDir = store.toolConfigDir(tool: .claude, environment: name).path
-            let srcDir: String? = loginSource == ReservedEnvironment.defaultName
-                ? nil  // origin: Claude Code stores credential under unset-CLAUDE_CONFIG_DIR service name
-                : store.toolConfigDir(tool: .claude, environment: loginSource).path
-            if ClaudeKeychain.copyCredential(from: srcDir, to: dstDir) {
-                print(L10n.Create.copyLoginCopied(loginSource))
-            } else {
-                print(L10n.Create.copyLoginFailed(loginSource))
-            }
+        if configs.isEmpty {
+            print(L10n.Create.noToolSelected)
+        } else {
+            print(L10n.Create.tools(configs.map(\.tool.rawValue).joined(separator: ", ")))
         }
-        #endif
 
         // Auto-activate if this is the first environment
         let allNames = try store.listNames()
@@ -136,167 +82,58 @@ public struct CreateCommand: ParsableCommand {
             print(L10n.Create.firstEnvCreated(name))
         }
 
-        // Ask about login for each tool, execvp into shell at the end (must be last step)
-        ToolSetup.execLoginIfNeeded(tools: tools, store: store, envName: name)
-    }
-
-    // MARK: - Wizard steps
-
-    static func runToolWizard() -> [Tool] {
-        let selector = MultiSelect(
-            title: L10n.Create.wizardTitle,
-            options: Tool.allCases.map(\.rawValue)
-        )
-        let indices = selector.run()
-        return indices.map { Tool.allCases[$0] }
-    }
-
-    static func askCloneSource(store: EnvironmentStore) -> String? {
-        let defaultName = ReservedEnvironment.defaultName
-        var options = [L10n.Create.cloneNone]
-        var sources: [String?] = [nil]
-
-        // Add "default" option (clone from system config)
-        options.append(L10n.Create.cloneFrom("\(defaultName) - \(L10n.Create.defaultDescription)"))
-        sources.append(defaultName)
-
-        // Add existing environments
-        if let names = try? store.listNames() {
-            for name in names.sorted() {
-                if let env = try? store.load(named: name) {
-                    let label = env.description.isEmpty ? name : "\(name) - \(env.description)"
-                    options.append(L10n.Create.cloneFrom(label))
-                    sources.append(name)
-                }
-            }
+        // Interactive auth fallback for tools where the user chose "independent" (no login copy)
+        let toolsNeedingLogin = configs.filter { $0.loginSource == nil }.map(\.tool)
+        if !toolsNeedingLogin.isEmpty {
+            ToolSetup.execLoginIfNeeded(tools: toolsNeedingLogin, store: store, envName: name)
         }
-
-        // Skip if no environments to clone from (only "don't clone" and "default")
-        guard options.count > 1 else { return nil }
-
-        let selector = SingleSelect(
-            title: L10n.Create.clonePrompt,
-            options: options,
-            selected: 0
-        )
-        let idx = selector.run()
-        return sources[idx]
     }
 
-    static func askLoginCopySource(store: EnvironmentStore) -> String? {
-        let defaultName = ReservedEnvironment.defaultName
-        var options = [L10n.Create.copyLoginIndependent]
-        var sources: [String?] = [nil]
+    // MARK: - Wizard
 
-        options.append(L10n.Create.copyLoginFrom("\(defaultName) - \(L10n.Create.defaultDescription)"))
-        sources.append(defaultName)
-
-        if let names = try? store.listNames() {
-            for name in names.sorted() {
-                if let env = try? store.load(named: name) {
-                    let label = env.description.isEmpty ? name : "\(name) - \(env.description)"
-                    options.append(L10n.Create.copyLoginFrom(label))
-                    sources.append(name)
-                }
-            }
+    /// Loop through all tools, asking setup/skip and running the per-tool wizard for each "setup".
+    static func runWizard(store: EnvironmentStore) -> [ToolSetupRunner.Config] {
+        var configs: [ToolSetupRunner.Config] = []
+        for tool in Tool.allCases {
+            guard askSetupTool(tool.rawValue, defaultYes: tool == .claude) else { continue }
+            configs.append(ToolSetupRunner.runWizard(for: tool, store: store))
         }
-
-        let selector = SingleSelect(
-            title: L10n.Create.copyLoginPrompt,
-            options: options,
-            selected: 0
-        )
-        let idx = selector.run()
-        return sources[idx]
+        return configs
     }
 
-    static func askMemoryIsolation() -> Bool {
+    static func askSetupTool(_ toolName: String, defaultYes: Bool) -> Bool {
         let selector = SingleSelect(
-            title: L10n.Create.memorySharePrompt,
-            options: [
-                L10n.Create.memoryShareYes,
-                L10n.Create.memoryShareNo,
-            ],
-            selected: 1
+            title: L10n.Create.askSetupTool(toolName),
+            options: [L10n.Create.setupToolYes, L10n.Create.setupToolNo],
+            selected: defaultYes ? 0 : 1
         )
-        return selector.run() == 1
+        return selector.run() == 0
     }
 
-    static func askSessionIsolation() -> Bool {
-        let selector = SingleSelect(
-            title: L10n.Create.sessionSharePrompt,
-            options: [
-                L10n.Create.sessionShareYes,
-                L10n.Create.sessionShareNo,
-            ],
-            selected: 0
-        )
-        return selector.run() == 1
-    }
-
-    // MARK: - Create logic
+    // MARK: - Public helper (used by tests)
 
     public static func createEnvironment(
         name: String,
         description: String,
-        cloneFrom source: String?,
-        tools: [Tool] = [],
+        tool: Tool,
         isolateSessions: Bool = false,
         isolateMemory: Bool = false,
         store: EnvironmentStore
     ) throws {
-        var env = OrbitalEnvironment(name: name, description: description, isolateSessions: isolateSessions, isolateMemory: isolateMemory)
-
-        if let source, source != ReservedEnvironment.defaultName {
-            let sourceEnv = try store.load(named: source)
-            env.tools = sourceEnv.tools
-            env.env = sourceEnv.env
-        }
-
+        let env = OrbitalEnvironment(
+            name: name,
+            description: description,
+            isolatedSessionTools: isolateSessions ? [tool] : [],
+            isolateMemory: isolateMemory
+        )
         try store.save(env)
+        try store.addTool(tool, to: name)
 
-        // Add each tool (creates config subdirectory + session symlinks if shared)
-        let toolsToAdd = tools.isEmpty && source != nil ? env.tools : tools
-        for t in toolsToAdd {
-            try store.addTool(t, to: name)
-        }
-
-        // Link ORBITAL_MEMORY.md into Claude's auto-memory dir for the current project
-        let toolsPresent = tools.isEmpty && source != nil ? env.tools : tools
-        if toolsPresent.contains(.claude) {
+        if tool == .claude {
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
             let claudeConfigDir = store.toolConfigDir(tool: .claude, environment: name)
             store.linkOrbitalMemory(projectKey: projectKey, envName: name, claudeConfigDir: claudeConfigDir)
-        }
-
-        // Clone config files from source
-        if let source {
-            let fm = FileManager.default
-            let isDefault = source == ReservedEnvironment.defaultName
-            let toolsToCopy = isDefault ? Tool.allCases.filter { fm.fileExists(atPath: $0.defaultConfigDir.path) } : env.tools
-
-            for t in toolsToCopy {
-                let srcDir = isDefault ? t.defaultConfigDir : store.toolConfigDir(tool: t, environment: source)
-                let dstDir = store.toolConfigDir(tool: t, environment: name)
-
-                guard fm.fileExists(atPath: srcDir.path) else { continue }
-
-                // If tool wasn't added yet (cloning from default), add it
-                if isDefault {
-                    try store.addTool(t, to: name)
-                }
-
-                // Copy contents (skip session dirs that are symlinked)
-                let contents = (try? fm.contentsOfDirectory(atPath: srcDir.path)) ?? []
-                for item in contents {
-                    let src = srcDir.appendingPathComponent(item)
-                    let dst = dstDir.appendingPathComponent(item)
-                    // Don't overwrite symlinks (session sharing)
-                    if fm.fileExists(atPath: dst.path) { continue }
-                    try? fm.copyItem(at: src, to: dst)
-                }
-            }
         }
     }
 }

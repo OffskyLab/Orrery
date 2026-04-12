@@ -4,63 +4,97 @@ import Foundation
 public struct ToolsCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "tools",
-        abstract: L10n.Tools.abstract
+        abstract: L10n.Tools.abstract,
+        subcommands: [Add.self, Remove.self],
+        defaultSubcommand: Add.self
     )
-
-    @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Tools.envHelp))
-    public var environment: String?
-
     public init() {}
 
-    public func run() throws {
-        guard let envName = environment ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"] else {
-            throw ValidationError(L10n.Tools.noActive)
-        }
+    // MARK: - tools add
 
-        guard envName != ReservedEnvironment.defaultName else {
-            throw ValidationError(L10n.Tools.defaultNotSupported)
-        }
-
-        let store = EnvironmentStore.default
-        let env = try store.load(named: envName)
-        let allTools = Tool.allCases
-
-        // Pre-select currently enabled tools
-        var preSelected = IndexSet()
-        for (i, tool) in allTools.enumerated() {
-            if env.tools.contains(tool) { preSelected.insert(i) }
-        }
-
-        let selector = MultiSelect(
-            title: L10n.Tools.wizardTitle(envName),
-            options: allTools.map(\.rawValue),
-            selected: preSelected
+    public struct Add: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "add",
+            abstract: L10n.Tools.addAbstract
         )
-        let newIndices = selector.run()
-        let newTools = Set(newIndices.map { allTools[$0] })
-        let oldTools = Set(env.tools)
 
-        let toAdd    = newTools.subtracting(oldTools)
-        let toRemove = oldTools.subtracting(newTools)
+        @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Tools.envHelp))
+        public var environment: String?
 
-        for tool in toRemove {
+        public init() {}
+
+        public func run() throws {
+            let store = EnvironmentStore.default
+            let envName = try resolveEnv(environment: environment)
+            _ = try store.load(named: envName)
+
+            let env = try store.load(named: envName)
+            let available = Tool.allCases.filter { !env.tools.contains($0) }
+            guard !available.isEmpty else {
+                print(L10n.Tools.noToolsToAdd(envName))
+                return
+            }
+
+            let selector = SingleSelect(
+                title: L10n.Tools.addWizardTitle(envName),
+                options: available.map(\.rawValue),
+                selected: 0
+            )
+            let tool = available[selector.run()]
+
+            let config = ToolSetupRunner.runWizard(for: tool, store: store)
+            try ToolSetupRunner.apply(config, to: envName, store: store)
+            print(L10n.Tools.added(tool.rawValue))
+
+            // Offer interactive login only if user skipped the copy step.
+            if config.loginSource == nil {
+                ToolSetup.execLoginIfNeeded(tools: [tool], store: store, envName: envName)
+            }
+        }
+    }
+
+    // MARK: - tools remove
+
+    public struct Remove: ParsableCommand {
+        public static let configuration = CommandConfiguration(
+            commandName: "remove",
+            abstract: L10n.Tools.removeAbstract
+        )
+
+        @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Tools.envHelp))
+        public var environment: String?
+
+        public init() {}
+
+        public func run() throws {
+            let store = EnvironmentStore.default
+            let envName = try resolveEnv(environment: environment)
+            let env = try store.load(named: envName)
+
+            guard !env.tools.isEmpty else {
+                print(L10n.Tools.noToolsToRemove(envName))
+                return
+            }
+
+            let selector = SingleSelect(
+                title: L10n.Tools.removeWizardTitle(envName),
+                options: env.tools.map(\.rawValue),
+                selected: 0
+            )
+            let tool = env.tools[selector.run()]
             try store.removeTool(tool, from: envName)
             print(L10n.Tools.removed(tool.rawValue))
         }
-        for tool in toAdd {
-            try store.addTool(tool, to: envName)
-            print(L10n.Tools.added(tool.rawValue))
-            let configDir = store.toolConfigDir(tool: tool, environment: envName)
-            try ToolSetup.setup(tool, configDir: configDir, envName: envName)
-        }
-
-        if toAdd.isEmpty && toRemove.isEmpty {
-            print(L10n.Tools.noChanges)
-        }
-
-        // Offer login for newly added tools (execvp — must be last step)
-        if !toAdd.isEmpty {
-            ToolSetup.execLoginIfNeeded(tools: Array(toAdd), store: store, envName: envName)
-        }
     }
+}
+
+/// Resolve the env name from `--environment` or `ORBITAL_ACTIVE_ENV`. Shared by both subcommands.
+private func resolveEnv(environment: String?) throws -> String {
+    guard let envName = environment ?? ProcessInfo.processInfo.environment["ORBITAL_ACTIVE_ENV"] else {
+        throw ValidationError(L10n.Tools.noActive)
+    }
+    guard envName != ReservedEnvironment.defaultName else {
+        throw ValidationError(L10n.Tools.defaultNotSupported)
+    }
+    return envName
 }

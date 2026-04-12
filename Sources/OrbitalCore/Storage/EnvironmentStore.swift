@@ -119,7 +119,7 @@ public struct EnvironmentStore: Sendable {
         let toolDir = toolConfigDir(tool: tool, environment: envName)
         try FileManager.default.createDirectory(at: toolDir, withIntermediateDirectories: true)
 
-        if !env.isolateSessions {
+        if !env.isolateSessions(for: tool) {
             try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
         }
 

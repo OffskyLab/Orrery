@@ -44,12 +44,31 @@ public struct InfoCommand: ParsableCommand {
         print("\(L10n.Info.labelDescription)\(env.description.isEmpty ? none : env.description)")
         print("\(L10n.Info.labelCreated)\(df.string(from: env.createdAt))")
         print("\(L10n.Info.labelLastUsed)\(df.string(from: env.lastUsed))")
-        print("\(L10n.Info.labelTools)\(env.tools.isEmpty ? none : env.tools.map(\.rawValue).joined(separator: ", "))")
+        // Per-tool login info: "  claude (email, plan)" or "  claude" if not logged in.
+        print("\(L10n.Info.labelTools)")
+        if env.tools.isEmpty {
+            print("  \(none)")
+        } else {
+            for tool in env.tools {
+                let configDir = store.toolConfigDir(tool: tool, environment: resolvedName)
+                let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
+                let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+                print(suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))")
+            }
+        }
         let memoryMode = env.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
         print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
         print("\(L10n.Info.labelMemoryPath)\(memoryFile.path)")
-        let sessionMode = env.isolateSessions ? L10n.Info.modeIsolated : L10n.Info.modeShared
-        print("\(L10n.Info.labelSessionMode)\(sessionMode)")
+        // Per-tool session isolation: list each tool's mode
+        print("\(L10n.Info.labelSessionMode)")
+        if env.tools.isEmpty {
+            print("  \(none)")
+        } else {
+            for tool in env.tools {
+                let mode = env.isolateSessions(for: tool) ? L10n.Info.modeIsolated : L10n.Info.modeShared
+                print("  \(tool.rawValue): \(mode)")
+            }
+        }
         if env.env.isEmpty {
             print("\(L10n.Info.labelEnvVars)\(none)")
         } else {

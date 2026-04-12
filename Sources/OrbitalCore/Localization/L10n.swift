@@ -32,8 +32,8 @@ public enum L10n {
         }
         public static var toolHelp: String {
             isChinese
-                ? "加入工具 (claude, codex, gemini)。可重複使用：--tool claude --tool codex"
-                : "Add a tool (claude, codex, gemini). Repeatable: --tool claude --tool codex"
+                ? "工具 (claude, codex, gemini)"
+                : "Tool (claude, codex, gemini)"
         }
         public static var isolateSessionsHelp: String {
             isChinese
@@ -79,13 +79,13 @@ public enum L10n {
         }
         public static var wizardTitle: String {
             isChinese
-                ? "選擇要加入的工具（↑↓ 移動，空白鍵切換，Enter 確認）："
-                : "Select tools to add (↑↓ move, space toggle, enter confirm):"
+                ? "選擇要使用的工具（↑↓ 移動，Enter 確認）："
+                : "Select a tool (↑↓ move, enter confirm):"
         }
         public static var clonePrompt: String {
             isChinese
-                ? "要從現有環境複製設定嗎？（plugin、skill、設定檔；↑↓ 移動，Enter 確認）："
-                : "Clone config from an existing environment? (plugins, skills, settings; ↑↓ move, enter confirm):"
+                ? "要從現有環境複製設定嗎？（plugin、skill、設定檔；登入狀態已在上一步處理；↑↓ 移動，Enter 確認）："
+                : "Clone config from an existing environment? (plugins/skills/settings — login state handled in previous step; ↑↓ move, enter confirm):"
         }
         public static var cloneNone: String {
             isChinese ? "不複製（全新環境）" : "Don't clone (fresh environment)"
@@ -98,31 +98,63 @@ public enum L10n {
         }
         public static var copyLoginHelp: String {
             isChinese
-                ? "從現有環境複製 Claude 登入狀態"
-                : "Copy Claude login state from an existing environment"
+                ? "從現有環境複製登入狀態"
+                : "Copy login state from an existing environment"
         }
         public static var copyLoginPrompt: String {
             isChinese
                 ? "複製登入狀態（↑↓ 移動，Enter 確認）："
                 : "Copy login state (↑↓ move, enter confirm):"
         }
-        public static var copyLoginIndependent: String {
+        public static func copyLoginPromptFor(_ tool: String) -> String {
             isChinese
-                ? "獨立環境 — 我自己後續登入"
-                : "Independent — I'll log in later"
+                ? "\(tool) — 複製登入狀態（↑↓ 移動,Enter 確認）："
+                : "\(tool) — copy login state (↑↓ move, enter confirm):"
+        }
+        public static var queryingLoginStatus: String {
+            isChinese ? "查詢登入狀況中…" : "Querying login status…"
+        }
+        public static func clonePromptFor(_ tool: String) -> String {
+            isChinese
+                ? "\(tool) — 要從現有環境複製設定嗎？（plugin、skill、設定檔；登入狀態已在上一步處理；↑↓ 移動，Enter 確認）："
+                : "\(tool) — clone config from an existing environment? (plugins/skills/settings — login handled above; ↑↓ move, enter confirm):"
+        }
+        public static func sessionSharePromptFor(_ tool: String) -> String {
+            isChinese
+                ? "\(tool) — Session 共享設定（↑↓ 移動，Enter 確認）："
+                : "\(tool) — session sharing (↑↓ move, enter confirm):"
+        }
+        public static func askSetupTool(_ tool: String) -> String {
+            isChinese
+                ? "是否新增並設定 \(tool)？（↑↓ 移動，Enter 確認）"
+                : "Add and set up \(tool)? (↑↓ move, enter confirm)"
+        }
+        public static var setupToolYes: String {
+            isChinese ? "新增並設定" : "Add and set up"
+        }
+        public static var setupToolNo: String {
+            isChinese ? "跳過" : "Skip"
+        }
+        public static var noToolSelected: String {
+            isChinese
+                ? "未選擇任何工具 — 可用 'orbital tools add <env>' 之後再加入。"
+                : "No tool selected — use 'orbital tools add <env>' to add one later."
+        }
+        public static var copyLoginIndependent: String {
+            isChinese ? "我自己登入" : "I'll log in myself"
         }
         public static func copyLoginFrom(_ label: String) -> String {
             isChinese ? "從 \(label) 複製" : "Copy from \(label)"
         }
         public static func copyLoginCopied(_ source: String) -> String {
             isChinese
-                ? "已從 \(source) 複製 Claude 登入狀態"
-                : "Copied Claude login state from: \(source)"
+                ? "已從 \(source) 複製登入狀態"
+                : "Copied login state from: \(source)"
         }
         public static func copyLoginFailed(_ source: String) -> String {
             isChinese
-                ? "無法從 \(source) 複製登入狀態（Keychain 中無對應 entry）"
-                : "Could not copy login state from \(source) (no matching Keychain entry)"
+                ? "無法從 \(source) 複製登入狀態（來源未登入）"
+                : "Could not copy login state from \(source) (source not logged in)"
         }
         public static var sessionSharePrompt: String {
             isChinese
@@ -328,8 +360,14 @@ public enum L10n {
     public enum Tools {
         public static var abstract: String {
             isChinese
-                ? "管理環境的工具（互動式多選）"
-                : "Manage tools for an environment (interactive multi-select)"
+                ? "管理環境的工具"
+                : "Manage tools for an environment"
+        }
+        public static var addAbstract: String {
+            isChinese ? "加入工具到環境" : "Add a tool to the environment"
+        }
+        public static var removeAbstract: String {
+            isChinese ? "從環境移除工具" : "Remove a tool from the environment"
         }
         public static var envHelp: String {
             isChinese
@@ -341,19 +379,31 @@ public enum L10n {
                 ? "沒有啟用的環境。請先執行 'orbital use <name>'，或使用 -e <name>。"
                 : "No active environment. Run 'orbital use <name>' first, or use -e <name>."
         }
-        public static func wizardTitle(_ envName: String) -> String {
+        public static func addWizardTitle(_ envName: String) -> String {
             isChinese
-                ? "選擇 '\(envName)' 的工具（↑↓ 移動，空白鍵切換，Enter 確認）："
-                : "Select tools for '\(envName)' (↑↓ move, space toggle, enter confirm):"
+                ? "選擇要加入到 '\(envName)' 的工具（↑↓ 移動，Enter 確認）："
+                : "Select a tool to add to '\(envName)' (↑↓ move, enter confirm):"
+        }
+        public static func removeWizardTitle(_ envName: String) -> String {
+            isChinese
+                ? "選擇要從 '\(envName)' 移除的工具（↑↓ 移動，Enter 確認）："
+                : "Select a tool to remove from '\(envName)' (↑↓ move, enter confirm):"
+        }
+        public static func noToolsToAdd(_ envName: String) -> String {
+            isChinese
+                ? "'\(envName)' 已設定所有支援的工具，沒有可加入的項目。"
+                : "'\(envName)' already has all supported tools — nothing to add."
+        }
+        public static func noToolsToRemove(_ envName: String) -> String {
+            isChinese
+                ? "'\(envName)' 尚未設定任何工具。"
+                : "'\(envName)' has no tools configured."
         }
         public static func removed(_ tool: String) -> String {
             isChinese ? "已移除 \(tool)" : "Removed \(tool)"
         }
         public static func added(_ tool: String) -> String {
             isChinese ? "已加入 \(tool)" : "Added \(tool)"
-        }
-        public static var noChanges: String {
-            isChinese ? "沒有變更。" : "No changes."
         }
         public static var defaultNotSupported: String {
             isChinese
