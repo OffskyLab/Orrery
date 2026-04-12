@@ -51,6 +51,9 @@ jobs:
           Architecture: amd64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
           Depends: orrery-sync
+          Provides: orbital
+          Conflicts: orbital
+          Replaces: orbital
           Description: Orrery — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
@@ -93,6 +96,9 @@ jobs:
           Architecture: arm64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
           Depends: orrery-sync
+          Provides: orbital
+          Conflicts: orbital
+          Replaces: orbital
           Description: Orrery — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
