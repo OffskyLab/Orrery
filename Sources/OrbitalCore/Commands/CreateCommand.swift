@@ -115,6 +115,7 @@ public struct CreateCommand: ParsableCommand {
 
         // Copy Claude Keychain credential if requested (must run after createEnvironment
         // so the new env's config dir path is stable).
+        #if canImport(CryptoKit)
         if tools.contains(.claude), let loginSource {
             let dstDir = store.toolConfigDir(tool: .claude, environment: name).path
             let srcDir: String? = loginSource == ReservedEnvironment.defaultName
@@ -126,6 +127,7 @@ public struct CreateCommand: ParsableCommand {
                 print(L10n.Create.copyLoginFailed(loginSource))
             }
         }
+        #endif
 
         // Auto-activate if this is the first environment
         let allNames = try store.listNames()

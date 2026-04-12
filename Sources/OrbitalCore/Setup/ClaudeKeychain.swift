@@ -1,3 +1,4 @@
+#if canImport(CryptoKit)
 import CryptoKit
 import Foundation
 
@@ -57,3 +58,4 @@ public enum ClaudeKeychain {
         return proc.terminationStatus == 0
     }
 }
+#endif
