@@ -13,10 +13,20 @@ diff is the rename.
 - Swift module: `OrbitalCore` → `OrreryCore`
 - Homebrew tap: `OffskyLab/orbital/orbital` → `OffskyLab/orrery/orrery`
 
-**Automatic migration:** On first run, `orrery` detects `~/.orbital/` (with no
-`~/.orrery/` alongside) and moves it in place. It also regenerates
-`activate.sh` with the new env var names and updates `source` lines in your
-shell rc files (`.zshrc`, `.bashrc`, `.bash_profile`, `.profile`).
+**Interactive migration:** on each `orrery` invocation, if `~/.orbital/` still
+has envs or shared data that haven't been migrated (or previously declined),
+`orrery` prompts `[Y/n]` once. Say yes and it moves everything (envs, shared
+sessions/memory, `current`, `sync-config.json`), regenerates `activate.sh`
+with the new env var names, and updates `source` lines in your shell rc
+files. Say no and the declined env IDs are remembered in
+`~/.orrery/.migration-state.json` so we don't re-ask. If new orbital envs
+appear later, the prompt comes back for just those.
+
+**Claude Keychain migration:** the Keychain service name includes
+`SHA256(configDir)`, so renaming the env's config dir would normally
+invalidate the stored token and force you to re-login. Migration copies each
+env's credential from the old-path service name to the new-path one so your
+Claude sessions keep working without re-authenticating.
 
 **Transitional compatibility:** The old `OffskyLab/Orbital` repo remains
 published as a deprecated wrapper — it ships a `orbital` command that
