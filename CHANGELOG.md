@@ -1,5 +1,28 @@
 # Changelog
 
+## v2.0.0
+
+Orbital has been renamed to **Orrery** and forked to `OffskyLab/Orrery`. This
+release continues from Orbital v1.1.6 with no feature changes — the entire
+diff is the rename.
+
+**Breaking:**
+- CLI binary: `orbital` → `orrery`
+- Config directory: `~/.orbital/` → `~/.orrery/`
+- Env vars: `ORBITAL_HOME` → `ORRERY_HOME`, `ORBITAL_ACTIVE_ENV` → `ORRERY_ACTIVE_ENV`, `ORBITAL_MEMORY.md` → `ORRERY_MEMORY.md`
+- Swift module: `OrbitalCore` → `OrreryCore`
+- Homebrew tap: `OffskyLab/orbital/orbital` → `OffskyLab/orrery/orrery`
+
+**Automatic migration:** On first run, `orrery` detects `~/.orbital/` (with no
+`~/.orrery/` alongside) and moves it in place. It also regenerates
+`activate.sh` with the new env var names and updates `source` lines in your
+shell rc files (`.zshrc`, `.bashrc`, `.bash_profile`, `.profile`).
+
+**Transitional compatibility:** The old `OffskyLab/Orbital` repo remains
+published as a deprecated wrapper — it ships a `orbital` command that
+forwards to `orrery` with a deprecation notice so existing shell aliases,
+MCP configs, and scripts keep working.
+
 ## v1.1.6
 
 - **Per-tool setup flow** — new `ToolFlow` protocol with `ClaudeFlow`/`CodexFlow`/`GeminiFlow`; each tool owns its own login copy and settings clone logic

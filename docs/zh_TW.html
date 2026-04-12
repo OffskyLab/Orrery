@@ -577,7 +577,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v1.1.6</div>
+  <div class="badge">v2.0.0</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -991,8 +991,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v1.1.6</span>
+        <span class="changelog-ver">v2.0.0</span>
         <span class="changelog-new">最新</span>
+        <h3>改名為 Orrery</h3>
+      </div>
+      <p class="changelog-body">為什麼要改名？因為 <code>orbital</code> 作為軟體名稱太常見了，搜尋起來常常撞到別的工具。這版改成 <code>orrery</code>（原意是太陽系機械模型）— 主題上更貼近這個專案「維護多個平行設定宇宙」的精神，名稱也夠冷門。</p>
+      <p class="changelog-body">內容沒有任何功能差異，純粹就是改名：CLI binary <code>orbital</code> → <code>orrery</code>、設定目錄 <code>~/.orbital/</code> → <code>~/.orrery/</code>、環境變數 <code>ORBITAL_*</code> → <code>ORRERY_*</code>、Swift module <code>OrbitalCore</code> → <code>OrreryCore</code>、Homebrew tap <code>OffskyLab/orrery/orrery</code>。</p>
+      <p class="changelog-body"><strong>自動搬家：</strong>第一次跑 <code>orrery</code> 時，如果偵測到 <code>~/.orbital/</code>（而且沒有 <code>~/.orrery/</code>），會自動把目錄整個搬過來，順便重新產生 <code>activate.sh</code>、更新 rc 檔的 <code>source</code> 路徑。舊的 Orbital repo 保留一版 deprecated wrapper — 你現有的 <code>orbital</code> 指令、MCP 設定、shell alias 都還會正常運作，只是會印 deprecation 提示。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.6</span>
         <h3>換帳號不用再放棄已經調好的設定</h3>
       </div>
       <p class="changelog-body">以前想把一個 env 複製出來、換個帳號用會遇到兩難：重新登入麻煩，但整份複製又會連「哪個帳號」都被覆蓋掉，連帶 theme、plugin、已經看過的提示全都一起變了。這版我們把「要用哪個帳號登入」和「要複製誰的設定」拆成兩個獨立的步驟 — 你可以從 A 拿帳號、從 B 拿偏好，<code>.claude.json</code> 會自動幫你合併：身份從登入來源來，其他偏好從 clone 來源來，per-account 快取清掉讓 Claude 自己重抓。</p>
