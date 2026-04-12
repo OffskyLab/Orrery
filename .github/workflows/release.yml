@@ -124,20 +124,28 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create release
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          gh release create "$tag" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$tag" \
-            --generate-notes \
-            artifacts/orrery-darwin-arm64/orrery-darwin-arm64.tar.gz \
-            artifacts/orrery-linux-x86_64/orrery-linux-x86_64.tar.gz \
-            artifacts/orrery-linux-x86_64/orrery_*_amd64.deb \
-            artifacts/orrery-linux-arm64/orrery-linux-arm64.tar.gz \
+          assets=(
+            artifacts/orrery-darwin-arm64/orrery-darwin-arm64.tar.gz
+            artifacts/orrery-linux-x86_64/orrery-linux-x86_64.tar.gz
+            artifacts/orrery-linux-x86_64/orrery_*_amd64.deb
+            artifacts/orrery-linux-arm64/orrery-linux-arm64.tar.gz
             artifacts/orrery-linux-arm64/orrery_*_arm64.deb
+          )
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag already exists — uploading assets with --clobber"
+            gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
+          else
+            gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$tag" \
+              --generate-notes \
+              "${assets[@]}"
+          fi
 
   update-apt:
     needs: [release]
