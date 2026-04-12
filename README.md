@@ -83,9 +83,9 @@ source ~/.orbital/activate.sh
 orbital create work --description "Work account"
 orbital create personal --description "Personal account"
 
-# Manage tools for an environment (interactive multi-select)
-orbital tools -e work
-orbital tools -e personal
+# Add / remove tools interactively (each invocation handles one tool via a wizard)
+orbital tools add -e work
+orbital tools remove -e work
 
 # Store credentials
 orbital set env ANTHROPIC_API_KEY sk-ant-work123 -e work
@@ -161,7 +161,8 @@ The interactive wizard also asks about session sharing when creating an environm
 
 | Command | Description |
 |---|---|
-| `orbital tools [-e <name>]` | Manage tools interactively (multi-select) |
+| `orbital tools add [-e <name>]` | Add a tool via wizard (login copy + settings clone) |
+| `orbital tools remove [-e <name>]` | Remove a tool from the environment |
 | `orbital set env <KEY> <VALUE> -e <name>` | Set an environment variable |
 | `orbital unset env <KEY> -e <name>` | Remove an environment variable |
 | `orbital which <tool>` | Print the config dir path for a tool in the active environment |

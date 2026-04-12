@@ -464,6 +464,77 @@
     footer a { color: var(--muted); }
     footer a:hover { color: var(--text); }
 
+    /* ── Changelog ── */
+    .changelog {
+      max-width: 820px;
+      margin: 0 auto;
+      display: grid;
+      gap: 1rem;
+    }
+    .changelog-entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+    }
+    .changelog-head {
+      display: flex;
+      align-items: baseline;
+      gap: .6rem;
+      flex-wrap: wrap;
+      margin-bottom: .7rem;
+    }
+    .changelog-ver {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .82rem;
+      color: var(--accent);
+      background: rgba(124,106,247,.12);
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      letter-spacing: .02em;
+    }
+    .changelog-new {
+      font-size: .65rem;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      padding: .2rem .55rem;
+      border-radius: 999px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .changelog-head h3 {
+      font-size: 1.02rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text);
+      width: 100%;
+    }
+    .changelog-scenario, .changelog-body {
+      font-size: .88rem;
+      color: var(--muted);
+      margin: 0 0 .6rem;
+      line-height: 1.65;
+    }
+    .changelog-scenario strong { color: var(--text); font-weight: 600; }
+    .changelog-entry code {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: .8rem;
+      color: var(--accent2);
+      background: var(--code-bg);
+      padding: .1rem .35rem;
+      border-radius: 4px;
+    }
+    .changelog-entry ul {
+      list-style: disc;
+      padding-left: 1.2rem;
+      font-size: .84rem;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.7;
+    }
+    .changelog-entry ul li { margin-bottom: .2rem; }
+
   </style>
 </head>
 <body>
@@ -482,7 +553,7 @@
     <li class="nav-collapsible"><a href="#mcp">AI Tools</a></li>
     <li class="nav-collapsible"><a href="#sync">Sync</a></li>
     <li class="nav-collapsible"><a href="#origin">Origin</a></li>
-    <li class="nav-collapsible"><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md">Changelog</a></li>
+    <li class="nav-collapsible"><a href="#changelog">Changelog</a></li>
     <li>
       <select class="lang-select" onchange="switchLang(this.value)">
         <option value="index.html" selected>English</option>
@@ -500,7 +571,7 @@
   <li><a href="#install" onclick="closeMenu()">Install</a></li>
   <li><a href="#mcp" onclick="closeMenu()">MCP</a></li>
   <li><a href="#sync" onclick="closeMenu()">Sync</a></li>
-  <li><a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" onclick="closeMenu()">Changelog</a></li>
+  <li><a href="#changelog" onclick="closeMenu()">Changelog</a></li>
 </ul>
 
 <!-- Hero -->
@@ -885,7 +956,8 @@
     <div class="command-group">
       <div class="command-group-title">Configuration</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital tools [-e &lt;name&gt;]</span><span class="cmd-desc">Manage tools interactively</span></div>
+        <div class="command-item"><span class="cmd">orbital tools add [-e &lt;name&gt;]</span><span class="cmd-desc">Add a tool (wizard)</span></div>
+        <div class="command-item"><span class="cmd">orbital tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">Remove a tool</span></div>
         <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
         <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
         <div class="command-item"><span class="cmd">orbital memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
@@ -920,6 +992,87 @@
         <div class="command-item"><span class="cmd">orbital update</span><span class="cmd-desc">Self-update via Homebrew / apt</span></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Changelog -->
+<section class="section" id="changelog">
+  <h2 class="section-title">What changed, by scenario</h2>
+  <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2.5rem">
+    Release notes — full technical details in the
+    <a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>.
+  </p>
+  <div class="changelog">
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.6</span>
+        <span class="changelog-new">latest</span>
+        <h3>Bring accounts and preferences into a new env, separately</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> You're setting up an env for a new client. You don't want to run OAuth again, and you don't want to lose the theme, plugins, skills, and dismissed hints you've already tuned.</p>
+      <p class="changelog-body">The create wizard now asks per-tool ("Add and set up Claude?"), and each "yes" runs that tool's own flow. "Copy login state" and "Clone settings" are two separate steps — you can pull login from one env and settings from another. For Claude, <code>.claude.json</code> is merged: identity keys (oauth account, onboarding flags) follow login; everything else (theme, projects, dismissed dialogs) follows clone; per-account caches are stripped so Claude refetches them.</p>
+      <ul>
+        <li><code>orbital list</code> and <code>orbital info</code> show per-tool login as <code>claude(email, plan)</code></li>
+        <li><code>orbital tools</code> splits into <code>tools add</code> / <code>tools remove</code> — intent is explicit</li>
+        <li>Session isolation is now per-tool — "Claude shared, Codex isolated" is a valid combination</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.5</span>
+        <h3>Create wizard cleans up after itself</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> Your scrollback is filled with leftover menu options from every wizard step.</p>
+      <p class="changelog-body">Each wizard step clears itself when you confirm — only the final summary stays visible. After <code>orbital create</code>, you're asked whether to switch to the new env immediately. The no-op <code>claude auth login</code> step (which doesn't respect <code>CLAUDE_CONFIG_DIR</code>) was removed — Claude prompts naturally on first use.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.4</span>
+        <h3>Update check no longer blocks shell startup</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> Powerlevel10k instant prompt was getting disrupted by orbital's version check every time you opened a shell.</p>
+      <p class="changelog-body">Version checks moved from shell init to a background task that runs when you invoke an orbital command, at most once every 4 hours. When there's a new version, a yellow notice shows on each command until you run <code>orbital update</code>.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.3</span>
+        <h3><code>orbital use</code> now sticks across new shells</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> You switch to <code>work</code> in one terminal. You open a new terminal and find yourself back on <code>origin</code>.</p>
+      <p class="changelog-body">Every successful <code>orbital use</code> writes to the current-env pointer, so new shells restore the last-used env.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.2</span>
+        <h3>Memory just works — no CLAUDE.md setup</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> You wanted Claude to pick up shared memory and had to hand-edit CLAUDE.md to tell it where to look.</p>
+      <p class="changelog-body">Each project's Claude auto-memory directory is symlinked to orbital's shared memory location automatically — no config, no CLAUDE.md instructions. Memories are the same across envs and machines.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.1</span>
+        <h3><code>ORBITAL_MEMORY.md</code> hooks into Claude automatically</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> You switched env and Claude couldn't see the memory you saved earlier.</p>
+      <p class="changelog-body"><code>orbital create</code> (when Claude is selected) now creates a symlink inside Claude's auto-memory directory pointing at orbital's shared memory. Also fixed a Homebrew cache issue in <code>orbital update</code> by running <code>brew update</code> first.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.0</span>
+        <h3><code>default</code> → <code>origin</code> — clearer semantics</h3>
+      </div>
+      <p class="changelog-scenario"><strong>Scenario:</strong> The reserved name <code>default</code> was ambiguous — is it "orbital's default env" or "the unmodified system state"?</p>
+      <p class="changelog-body">Renamed to <code>origin</code>, meaning "the system state before orbital touched anything." Existing envs and config files migrate automatically.</p>
+    </article>
+
   </div>
 </section>
 

@@ -79,9 +79,9 @@ source ~/.orbital/activate.sh
 orbital create work --description "工作帳號"
 orbital create personal --description "個人帳號"
 
-# 管理環境中的工具（互動式多選）
-orbital tools -e work
-orbital tools -e personal
+# 加入 / 移除工具（每次 wizard 處理一個工具）
+orbital tools add -e work
+orbital tools remove -e work
 
 # 儲存憑證
 orbital set env ANTHROPIC_API_KEY sk-ant-work123 -e work
@@ -126,7 +126,8 @@ orbital deactivate
 
 | 指令 | 說明 |
 |---|---|
-| `orbital tools [-e <name>]` | 互動式管理工具（多選） |
+| `orbital tools add [-e <name>]` | 透過 wizard 加入工具（含登入狀態與設定複製） |
+| `orbital tools remove [-e <name>]` | 從環境移除工具 |
 | `orbital set env <KEY> <VALUE> -e <name>` | 設定環境變數 |
 | `orbital unset env <KEY> -e <name>` | 移除環境變數 |
 | `orbital which <tool>` | 顯示目前環境中工具的設定目錄路徑 |
