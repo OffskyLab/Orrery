@@ -997,7 +997,7 @@
 
 <!-- Changelog -->
 <section class="section" id="changelog">
-  <h2 class="section-title">What changed, by scenario</h2>
+  <h2 class="section-title">Release History</h2>
   <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2.5rem">
     Release notes — full technical details in the
     <a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>.
@@ -1008,51 +1008,42 @@
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.6</span>
         <span class="changelog-new">latest</span>
-        <h3>Bring accounts and preferences into a new env, separately</h3>
+        <h3>Change accounts without losing the setup you've tuned</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> You're setting up an env for a new client. You don't want to run OAuth again, and you don't want to lose the theme, plugins, skills, and dismissed hints you've already tuned.</p>
-      <p class="changelog-body">The create wizard now asks per-tool ("Add and set up Claude?"), and each "yes" runs that tool's own flow. "Copy login state" and "Clone settings" are two separate steps — you can pull login from one env and settings from another. For Claude, <code>.claude.json</code> is merged: identity keys (oauth account, onboarding flags) follow login; everything else (theme, projects, dismissed dialogs) follows clone; per-account caches are stripped so Claude refetches them.</p>
-      <ul>
-        <li><code>orbital list</code> and <code>orbital info</code> show per-tool login as <code>claude(email, plan)</code></li>
-        <li><code>orbital tools</code> splits into <code>tools add</code> / <code>tools remove</code> — intent is explicit</li>
-        <li>Session isolation is now per-tool — "Claude shared, Codex isolated" is a valid combination</li>
-      </ul>
+      <p class="changelog-body">Copying an env used to be an awkward tradeoff: either re-login (annoying), or clone everything and watch the account get overwritten along with your theme, plugins, and dismissed hints. This release splits "which account to log in with" and "which env's settings to copy" into two independent steps — you can pull the account from A and everything else from B, and orbital merges <code>.claude.json</code> for you. Identity keys follow the login source; theme, projects, dismissed dialogs follow the clone source; per-account caches are cleared so Claude refreshes them cleanly.</p>
+      <p class="changelog-body">Each tool also has its own login + clone flow now. When you create an env it asks "Add and set up {tool}?" one at a time, instead of bundling all three together. <code>orbital tools</code> splits into <code>tools add</code> and <code>tools remove</code>; session isolation is per-tool, so "Claude shared, Codex isolated" is finally a valid combination; and <code>orbital list</code> / <code>orbital info</code> show each tool's login as email and plan.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.5</span>
-        <h3>Create wizard cleans up after itself</h3>
+        <h3>The create wizard cleans up after itself</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> Your scrollback is filled with leftover menu options from every wizard step.</p>
-      <p class="changelog-body">Each wizard step clears itself when you confirm — only the final summary stays visible. After <code>orbital create</code>, you're asked whether to switch to the new env immediately. The no-op <code>claude auth login</code> step (which doesn't respect <code>CLAUDE_CONFIG_DIR</code>) was removed — Claude prompts naturally on first use.</p>
+      <p class="changelog-body">Every wizard step used to leave its menu onscreen, so by the time you finished, your scrollback was filled with intermediate choices and the actual summary got buried. Now each step clears itself when you confirm, leaving only the final result visible. After <code>orbital create</code>, you're also asked whether to switch to the new env right away — one less command to type. While we were at it, the defunct <code>claude auth login</code> step was removed too: it doesn't respect <code>CLAUDE_CONFIG_DIR</code>, so keeping it around was just misleading.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.4</span>
-        <h3>Update check no longer blocks shell startup</h3>
+        <h3>Version checks no longer stall shell startup</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> Powerlevel10k instant prompt was getting disrupted by orbital's version check every time you opened a shell.</p>
-      <p class="changelog-body">Version checks moved from shell init to a background task that runs when you invoke an orbital command, at most once every 4 hours. When there's a new version, a yellow notice shows on each command until you run <code>orbital update</code>.</p>
+      <p class="changelog-body">Powerlevel10k instant-prompt users kept having the prompt interrupted every time they opened a shell — the culprit was a synchronous version check during shell init. Now it runs in the background when you invoke an orbital command, at most once every 4 hours. When a new version is out, a yellow notice appears on each orbital command until you run <code>orbital update</code>.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.3</span>
-        <h3><code>orbital use</code> now sticks across new shells</h3>
+        <h3><code>orbital use</code> persists across new shells</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> You switch to <code>work</code> in one terminal. You open a new terminal and find yourself back on <code>origin</code>.</p>
-      <p class="changelog-body">Every successful <code>orbital use</code> writes to the current-env pointer, so new shells restore the last-used env.</p>
+      <p class="changelog-body">After running <code>orbital use work</code> in one terminal, opening a fresh terminal used to drop you back to origin. The switch simply wasn't being written to the current-env pointer, so new shells had nothing to restore. Every successful <code>orbital use</code> now writes the pointer, and new shells pick up where you left off.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.2</span>
-        <h3>Memory just works — no CLAUDE.md setup</h3>
+        <h3>Memory just works — no CLAUDE.md tweaks</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> You wanted Claude to pick up shared memory and had to hand-edit CLAUDE.md to tell it where to look.</p>
-      <p class="changelog-body">Each project's Claude auto-memory directory is symlinked to orbital's shared memory location automatically — no config, no CLAUDE.md instructions. Memories are the same across envs and machines.</p>
+      <p class="changelog-body">Getting Claude to read orbital's shared memory used to require hand-editing CLAUDE.md with a "please read memory from this path" instruction — hardly the "just works" experience we wanted. Now each project's Claude auto-memory directory is symlinked to orbital's shared memory automatically. No config, no CLAUDE.md edits — Claude picks it up on its own. Same memory across envs and machines.</p>
     </article>
 
     <article class="changelog-entry">
@@ -1060,17 +1051,15 @@
         <span class="changelog-ver">v1.1.1</span>
         <h3><code>ORBITAL_MEMORY.md</code> hooks into Claude automatically</h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> You switched env and Claude couldn't see the memory you saved earlier.</p>
-      <p class="changelog-body"><code>orbital create</code> (when Claude is selected) now creates a symlink inside Claude's auto-memory directory pointing at orbital's shared memory. Also fixed a Homebrew cache issue in <code>orbital update</code> by running <code>brew update</code> first.</p>
+      <p class="changelog-body">Switching envs meant Claude couldn't see the memory you'd saved earlier, because each env's auto-memory directory is its own. Now <code>orbital create</code> (when Claude is selected) drops a symlink inside that directory pointing to orbital's shared memory, so the same memory shows up across envs. Also fixed a Homebrew cache issue in <code>orbital update</code> — it runs <code>brew update</code> first now.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.0</span>
-        <h3><code>default</code> → <code>origin</code> — clearer semantics</h3>
+        <h3><code>default</code> renamed to <code>origin</code></h3>
       </div>
-      <p class="changelog-scenario"><strong>Scenario:</strong> The reserved name <code>default</code> was ambiguous — is it "orbital's default env" or "the unmodified system state"?</p>
-      <p class="changelog-body">Renamed to <code>origin</code>, meaning "the system state before orbital touched anything." Existing envs and config files migrate automatically.</p>
+      <p class="changelog-body">Why the rename? <code>default</code> was too ambiguous: is it "orbital's default environment" or "the system state before orbital touched anything"? Even I got confused sometimes. <code>origin</code> makes it obvious — it's the starting point, the state you were in before entering orbital. Existing envs and config files migrate automatically.</p>
     </article>
 
   </div>
