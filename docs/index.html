@@ -577,7 +577,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v1.1.6</div>
+  <div class="badge">v2.0.0</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1006,8 +1006,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v1.1.6</span>
+        <span class="changelog-ver">v2.0.0</span>
         <span class="changelog-new">latest</span>
+        <h3>Renamed to Orrery</h3>
+      </div>
+      <p class="changelog-body">Why the rename? <code>orbital</code> is a crowded name in software land — search results constantly collide with unrelated tools. This release renames the project to <code>orrery</code> (the mechanical model of the solar system) — thematically closer to what this tool does (maintaining multiple parallel config universes), and much less common as a software name.</p>
+      <p class="changelog-body">No feature changes — purely a rename: CLI binary <code>orbital</code> → <code>orrery</code>, config dir <code>~/.orbital/</code> → <code>~/.orrery/</code>, env vars <code>ORBITAL_*</code> → <code>ORRERY_*</code>, Swift module <code>OrbitalCore</code> → <code>OrreryCore</code>, Homebrew tap <code>OffskyLab/orrery/orrery</code>.</p>
+      <p class="changelog-body"><strong>Automatic migration:</strong> on first run, <code>orrery</code> detects <code>~/.orbital/</code> (when no <code>~/.orrery/</code> exists) and moves the directory in place, regenerates <code>activate.sh</code>, and updates the <code>source</code> line in your shell rc files. The old Orbital repo stays up as a deprecated wrapper — existing <code>orbital</code> invocations, MCP configs, and shell aliases keep working with a deprecation notice.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v1.1.6</span>
         <h3>Change accounts without losing the setup you've tuned</h3>
       </div>
       <p class="changelog-body">Copying an env used to be an awkward tradeoff: either re-login (annoying), or clone everything and watch the account get overwritten along with your theme, plugins, and dismissed hints. This release splits "which account to log in with" and "which env's settings to copy" into two independent steps — you can pull the account from A and everything else from B, and orrery merges <code>.claude.json</code> for you. Identity keys follow the login source; theme, projects, dismissed dialogs follow the clone source; per-account caches are cleared so Claude refreshes them cleanly.</p>
