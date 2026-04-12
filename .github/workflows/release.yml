@@ -18,13 +18,13 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          cp .build/release/orbital dist/orbital
-          chmod +x dist/orbital
-          tar -czf orbital-darwin-arm64.tar.gz -C dist orbital
+          cp .build/release/orrery dist/orrery
+          chmod +x dist/orrery
+          tar -czf orrery-darwin-arm64.tar.gz -C dist orrery
       - uses: actions/upload-artifact@v4
         with:
-          name: orbital-darwin-arm64
-          path: orbital-darwin-arm64.tar.gz
+          name: orrery-darwin-arm64
+          path: orrery-darwin-arm64.tar.gz
 
   build-linux-x86_64:
     runs-on: ubuntu-latest
@@ -36,37 +36,37 @@ jobs:
       - name: Package tar.gz
         run: |
           mkdir -p dist
-          cp .build/release/orbital dist/orbital
-          chmod +x dist/orbital
-          tar -czf orbital-linux-x86_64.tar.gz -C dist orbital
+          cp .build/release/orrery dist/orrery
+          chmod +x dist/orrery
+          tar -czf orrery-linux-x86_64.tar.gz -C dist orrery
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
-          cp .build/release/orbital deb/usr/local/bin/orbital
-          chmod +x deb/usr/local/bin/orbital
+          cp .build/release/orrery deb/usr/local/bin/orrery
+          chmod +x deb/usr/local/bin/orrery
           cat > deb/DEBIAN/control <<CTRL
-          Package: orbital
+          Package: orrery
           Version: ${tag}
           Architecture: amd64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
-          Depends: orbital-sync
-          Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
+          Depends: orrery-sync
+          Description: Orrery — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
           cat > deb/DEBIAN/postinst <<'POSTINST'
           #!/bin/sh
-          orbital setup 2>/dev/null || true
+          orrery setup 2>/dev/null || true
           POSTINST
           sed -i 's/^          //' deb/DEBIAN/postinst
           chmod 755 deb/DEBIAN/postinst
-          dpkg-deb --build deb orbital_${tag}_amd64.deb
+          dpkg-deb --build deb orrery_${tag}_amd64.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: orbital-linux-x86_64
+          name: orrery-linux-x86_64
           path: |
-            orbital-linux-x86_64.tar.gz
-            orbital_*_amd64.deb
+            orrery-linux-x86_64.tar.gz
+            orrery_*_amd64.deb
 
   build-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -78,37 +78,37 @@ jobs:
       - name: Package tar.gz
         run: |
           mkdir -p dist
-          cp .build/release/orbital dist/orbital
-          chmod +x dist/orbital
-          tar -czf orbital-linux-arm64.tar.gz -C dist orbital
+          cp .build/release/orrery dist/orrery
+          chmod +x dist/orrery
+          tar -czf orrery-linux-arm64.tar.gz -C dist orrery
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
-          cp .build/release/orbital deb/usr/local/bin/orbital
-          chmod +x deb/usr/local/bin/orbital
+          cp .build/release/orrery deb/usr/local/bin/orrery
+          chmod +x deb/usr/local/bin/orrery
           cat > deb/DEBIAN/control <<CTRL
-          Package: orbital
+          Package: orrery
           Version: ${tag}
           Architecture: arm64
           Maintainer: OffskyLab <offskylab@users.noreply.github.com>
-          Depends: orbital-sync
-          Description: Orbital — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
+          Depends: orrery-sync
+          Description: Orrery — AI CLI environment manager for Claude Code, Codex, and Gemini CLI
           CTRL
           sed -i 's/^          //' deb/DEBIAN/control
           cat > deb/DEBIAN/postinst <<'POSTINST'
           #!/bin/sh
-          orbital setup 2>/dev/null || true
+          orrery setup 2>/dev/null || true
           POSTINST
           sed -i 's/^          //' deb/DEBIAN/postinst
           chmod 755 deb/DEBIAN/postinst
-          dpkg-deb --build deb orbital_${tag}_arm64.deb
+          dpkg-deb --build deb orrery_${tag}_arm64.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: orbital-linux-arm64
+          name: orrery-linux-arm64
           path: |
-            orbital-linux-arm64.tar.gz
-            orbital_*_arm64.deb
+            orrery-linux-arm64.tar.gz
+            orrery_*_arm64.deb
 
   release:
     needs: [build-macos-arm64, build-linux-x86_64, build-linux-arm64]
@@ -127,11 +127,11 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$tag" \
             --generate-notes \
-            artifacts/orbital-darwin-arm64/orbital-darwin-arm64.tar.gz \
-            artifacts/orbital-linux-x86_64/orbital-linux-x86_64.tar.gz \
-            artifacts/orbital-linux-x86_64/orbital_*_amd64.deb \
-            artifacts/orbital-linux-arm64/orbital-linux-arm64.tar.gz \
-            artifacts/orbital-linux-arm64/orbital_*_arm64.deb
+            artifacts/orrery-darwin-arm64/orrery-darwin-arm64.tar.gz \
+            artifacts/orrery-linux-x86_64/orrery-linux-x86_64.tar.gz \
+            artifacts/orrery-linux-x86_64/orrery_*_amd64.deb \
+            artifacts/orrery-linux-arm64/orrery-linux-arm64.tar.gz \
+            artifacts/orrery-linux-arm64/orrery_*_arm64.deb
 
   update-apt:
     needs: [release]
@@ -151,8 +151,8 @@ jobs:
       - name: Update APT repo
         run: |
           # Copy deb files to pool
-          cp artifacts/orbital-linux-x86_64/orbital_*_amd64.deb apt-repo/pool/main/o/orbital/
-          cp artifacts/orbital-linux-arm64/orbital_*_arm64.deb apt-repo/pool/main/o/orbital/
+          cp artifacts/orrery-linux-x86_64/orrery_*_amd64.deb apt-repo/pool/main/o/orrery/
+          cp artifacts/orrery-linux-arm64/orrery_*_arm64.deb apt-repo/pool/main/o/orrery/
 
           # Generate Packages files
           cd apt-repo
@@ -168,12 +168,12 @@ jobs:
           cd dists/stable
           cat > Release <<RELEASE
           Origin: OffskyLab
-          Label: Orbital
+          Label: Orrery
           Suite: stable
           Codename: stable
           Architectures: amd64 arm64 i386
           Components: main
-          Description: APT repository for Orbital
+          Description: APT repository for Orrery
           RELEASE
           sed -i 's/^          //' Release
 
@@ -186,5 +186,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || git commit -m "[UPDATE] orbital $(echo ${GITHUB_REF#refs/tags/})"
+          git diff --cached --quiet || git commit -m "[UPDATE] orrery $(echo ${GITHUB_REF#refs/tags/})"
           git push

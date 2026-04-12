@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orbital — AI CLI environment manager</title>
+  <title>Orrery — AI CLI environment manager</title>
   <meta name="description" content="Per-shell environment manager for AI CLI tools. Isolate accounts for Claude Code, Codex, and Gemini CLI — keep your conversations continuous across account switches." />
   <link rel="icon" href="icon.png" />
   <style>
@@ -542,8 +542,8 @@
 <!-- Nav -->
 <nav>
   <a class="nav-logo" href="#">
-    <img src="icon.png" alt="Orbital" />
-    Orbital
+    <img src="icon.png" alt="Orrery" />
+    Orrery
   </a>
   <ul class="nav-links">
     <li class="nav-collapsible"><a href="#features">Features</a></li>
@@ -576,13 +576,13 @@
 
 <!-- Hero -->
 <section class="hero">
-  <img class="hero-logo" src="icon.png" alt="Orbital" />
+  <img class="hero-logo" src="icon.png" alt="Orrery" />
   <div class="badge">v1.1.6</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
     <a class="btn btn-primary" href="#install">Get Started</a>
-    <a class="btn btn-secondary" href="https://github.com/OffskyLab/Orbital">View on GitHub</a>
+    <a class="btn btn-secondary" href="https://github.com/OffskyLab/Orrery">View on GitHub</a>
   </div>
 </section>
 
@@ -590,22 +590,22 @@
 <div class="install-block" id="install">
   <div class="install-label">Install via Homebrew</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd="brew install OffskyLab/orbital/orbital">Copy</button>
-    <span class="prompt">$ </span>brew install OffskyLab/orbital/orbital
+    <button class="copy-btn" data-cmd="brew install OffskyLab/orrery/orrery">Copy</button>
+    <span class="prompt">$ </span>brew install OffskyLab/orrery/orrery
   </div>
   <div style="height:.75rem"></div>
   <div class="install-label">Or via APT (Ubuntu / Debian)</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orbital.list && sudo apt update && sudo apt install orbital'>Copy</button>
+    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery'>Copy</button>
     <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orbital.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orbital
+    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
+    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
   </div>
   <div style="height:.75rem"></div>
   <div class="install-label">Activate shell integration</div>
   <div class="code-block">
-    <button class="copy-btn" data-cmd='source ~/.orbital/activate.sh'>Copy</button>
-    <span class="prompt">$ </span>source ~/.orbital/activate.sh
+    <button class="copy-btn" data-cmd='source ~/.orrery/activate.sh'>Copy</button>
+    <span class="prompt">$ </span>source ~/.orrery/activate.sh
   </div>
 </div>
 
@@ -626,7 +626,7 @@
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
       <h3>Per-shell activation</h3>
-      <p><code>orbital use work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
+      <p><code>orrery use work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">✦</span>
@@ -636,7 +636,7 @@
     <div class="feature-card">
       <span class="feature-icon">🔑</span>
       <h3>Custom env vars</h3>
-      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orbital use</code>.</p>
+      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orrery use</code>.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
@@ -654,22 +654,22 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>Install shell integration</h4>
-        <p>Run <code>orbital setup</code> once. It generates <code>~/.orbital/activate.sh</code> and adds it to your rc file. Then <code>source ~/.orbital/activate.sh</code> to activate in the current shell.</p>
-        <p style="margin-top:.5rem"><code>activate.sh</code> also checks for new Orbital releases in the background (once per day) and shows a notice at your next shell open.</p>
+        <p>Run <code>orrery setup</code> once. It generates <code>~/.orrery/activate.sh</code> and adds it to your rc file. Then <code>source ~/.orrery/activate.sh</code> to activate in the current shell.</p>
+        <p style="margin-top:.5rem"><code>activate.sh</code> also checks for new Orrery releases in the background (once per day) and shows a notice at your next shell open.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
         <h4>Create environments</h4>
-        <p>Run <code>orbital create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orbital/envs/</code>.</p>
+        <p>Run <code>orrery create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orrery/envs/</code>.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>Switch with one command</h4>
-        <p><code>orbital use work</code> exports the right config dirs and custom env vars into your current session. Your conversation history stays intact across switches.</p>
+        <p><code>orrery use work</code> exports the right config dirs and custom env vars into your current session. Your conversation history stays intact across switches.</p>
       </div>
     </div>
     <div class="step">
@@ -688,20 +688,20 @@
   <div class="origin-callout">
     <h3>Not just another environment — a system passthrough</h3>
     <p>
-      <code>origin</code> is Orbital's reserved name for your unmodified system environment.
-      Switching to it with <code>orbital use origin</code> (or <code>orbital deactivate</code>)
-      doesn't load any isolated config — it unsets all Orbital variables and lets your tools
-      fall back to their system-wide settings, exactly as if Orbital weren't installed.
+      <code>origin</code> is Orrery's reserved name for your unmodified system environment.
+      Switching to it with <code>orrery use origin</code> (or <code>orrery deactivate</code>)
+      doesn't load any isolated config — it unsets all Orrery variables and lets your tools
+      fall back to their system-wide settings, exactly as if Orrery weren't installed.
     </p>
     <p>
       Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
       with tools and environment variables. It has no isolation, no per-project memory, and no
-      session separation — it's simply the state before Orbital.
+      session separation — it's simply the state before Orrery.
     </p>
     <p>
       This makes <code>origin</code> useful as a clean escape hatch: run a quick command
       under your default system credentials without switching accounts or polluting any
-      Orbital environment.
+      Orrery environment.
     </p>
   </div>
 </section>
@@ -715,9 +715,9 @@
       <h3>Work / Personal</h3>
       <p>Your company uses a Claude Team plan, and you have a personal Pro subscription. Instead of logging out and back in, just switch environments.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span style="color:var(--muted)"># → uses company Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orbital use personal<br/>
+        <span class="prompt">$ </span>orrery use personal<br/>
         <span style="color:var(--muted)"># → uses personal Pro plan</span>
       </div>
     </div>
@@ -726,9 +726,9 @@
       <h3>Multiple Clients</h3>
       <p>Freelancers and consultants working with different clients — each with their own API keys and credentials. One command to switch context.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital create client-a --tool claude<br/>
-        <span class="prompt">$ </span>orbital create client-b --tool claude<br/>
-        <span class="prompt">$ </span>orbital use client-a
+        <span class="prompt">$ </span>orrery create client-a --tool claude<br/>
+        <span class="prompt">$ </span>orrery create client-b --tool claude<br/>
+        <span class="prompt">$ </span>orrery use client-a
       </div>
     </div>
     <div class="feature-card">
@@ -736,11 +736,11 @@
       <h3>Resume After Switching</h3>
       <p>Mid-conversation with Claude on your work account? Switch to personal, do something, then switch back — your session is still there.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... working on a task ...</span><br/><br/>
-        <span class="prompt">$ </span>orbital use personal<br/>
-        <span class="prompt">$ </span>orbital use work<br/>
+        <span class="prompt">$ </span>orrery use personal<br/>
+        <span class="prompt">$ </span>orrery use work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → picks up exactly where you left off</span>
       </div>
@@ -752,7 +752,7 @@
 <section class="how-section" id="mcp">
   <h2 class="section-title">AI Tool Integration</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
-    Orbital integrates with Claude Code, Codex CLI, and Gemini CLI via <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a>. Delegate tasks across accounts, share memory between tools, and manage sessions — all from one place.
+    Orrery integrates with Claude Code, Codex CLI, and Gemini CLI via <a href="https://modelcontextprotocol.io/" style="color:var(--accent)">MCP</a>. Delegate tasks across accounts, share memory between tools, and manage sessions — all from one place.
   </p>
 
   <div class="steps">
@@ -760,10 +760,10 @@
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>One-time setup</h4>
-        <p>Run this in your project directory. Orbital registers itself as an MCP server and installs slash commands.</p>
+        <p>Run this in your project directory. Orrery registers itself as an MCP server and installs slash commands.</p>
         <div class="code-block" style="margin-top:.5rem">
-          <button class="copy-btn" data-cmd="orbital mcp setup">Copy</button>
-          <span class="prompt">$ </span>orbital mcp setup
+          <button class="copy-btn" data-cmd="orrery mcp setup">Copy</button>
+          <span class="prompt">$ </span>orrery mcp setup
         </div>
       </div>
     </div>
@@ -774,18 +774,18 @@
         <p>After setup, use these directly in Claude Code:</p>
         <div style="margin-top:.75rem;display:grid;gap:.75rem">
           <div>
-            <code style="color:var(--accent2);font-size:.9rem">/orbital:delegate</code>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:delegate</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">Delegate a task to another account</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">/orbital:delegate</span> Use the "work" account to review this PR for security issues
+              <span style="color:var(--muted)">/orrery:delegate</span> Use the "work" account to review this PR for security issues
             </div>
           </div>
           <div>
-            <code style="color:var(--accent2);font-size:.9rem">/orbital:sessions</code>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:sessions</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">List sessions and resume by index</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">/orbital:sessions</span><br/>
-              <span style="color:var(--muted)">then:</span> orbital resume 1
+              <span style="color:var(--muted)">/orrery:sessions</span><br/>
+              <span style="color:var(--muted)">then:</span> orrery resume 1
             </div>
           </div>
         </div>
@@ -819,27 +819,27 @@
         <p>All AI tools get these tools automatically. Knowledge saved by one tool is accessible from any other.</p>
         <div style="margin-top:.75rem;display:grid;gap:.5rem">
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_read</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_memory_read</code>
             <span style="color:var(--muted);font-size:.85rem">Read shared project memory</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_memory_write</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_memory_write</code>
             <span style="color:var(--muted);font-size:.85rem">Write to shared project memory</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_delegate</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_delegate</code>
             <span style="color:var(--muted);font-size:.85rem">Run a task under a different account</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_list</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_list</code>
             <span style="color:var(--muted);font-size:.85rem">List all environments</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_sessions</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_sessions</code>
             <span style="color:var(--muted);font-size:.85rem">List sessions for the current project</span>
           </div>
           <div style="display:flex;gap:.75rem;align-items:baseline">
-            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orbital_current</code>
+            <code style="color:var(--accent2);font-size:.85rem;white-space:nowrap">orrery_current</code>
             <span style="color:var(--muted);font-size:.85rem">Get the active environment</span>
           </div>
         </div>
@@ -849,10 +849,10 @@
       <div class="step-num">5</div>
       <div class="step-body">
         <h4>External memory storage</h4>
-        <p>By default, memory is stored under <code>~/.orbital</code>. You can redirect it to any directory — including an external wiki like <strong>Obsidian</strong> — so your AI memory lives alongside your notes.</p>
+        <p>By default, memory is stored under <code>~/.orrery</code>. You can redirect it to any directory — including an external wiki like <strong>Obsidian</strong> — so your AI memory lives alongside your notes.</p>
         <div style="margin-top:.75rem">
           <div class="code-block" style="font-size:.82rem">
-            <span class="prompt">$ </span>orbital memory storage ~/Documents/my-wiki/orbital<br/>
+            <span class="prompt">$ </span>orrery memory storage ~/Documents/my-wiki/orrery<br/>
             <span style="color:var(--muted)">New path has no memory yet. Copy current memory there?</span><br/>
             <span style="color:var(--muted)">▶ Copy memory to new path</span><br/>
             <span style="color:var(--muted)">  No, start fresh</span>
@@ -878,9 +878,9 @@
       <p>Same person, two machines. Start the daemon on each — Bonjour finds them automatically on the same network.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># Desktop</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9527<br/><br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527<br/><br/>
         <span style="color:var(--muted)"># Laptop (auto-discovers via Bonjour)</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -888,12 +888,12 @@
       <h3>Team Collaboration</h3>
       <p>Create a team, share an invite code. When teammates join and start the daemon, everyone's memory stays in sync.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital sync team create my-team<br/>
-        <span class="prompt">$ </span>orbital sync team invite --port 9527<br/>
+        <span class="prompt">$ </span>orrery sync team create my-team<br/>
+        <span class="prompt">$ </span>orrery sync team invite --port 9527<br/>
         <span style="color:var(--muted)"># → share the invite code</span><br/><br/>
         <span style="color:var(--muted)"># Teammate joins:</span><br/>
-        <span class="prompt">$ </span>orbital sync team join &lt;code&gt;<br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -901,7 +901,7 @@
       <h3>Encrypted (mTLS)</h3>
       <p>For sensitive environments. Both peers must present certificates signed by the same CA — unauthorized peers are rejected at handshake.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--tls-ca ca.pem \<br/>
         &nbsp;&nbsp;--tls-cert node.pem \<br/>
         &nbsp;&nbsp;--tls-key node-key.pem
@@ -913,9 +913,9 @@
       <p>Different offices, different networks. A lightweight rendezvous server coordinates peer discovery — data flows directly between peers.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># On a VPS:</span><br/>
-        <span class="prompt">$ </span>orbital sync rendezvous --port 9600<br/><br/>
+        <span class="prompt">$ </span>orrery sync rendezvous --port 9600<br/><br/>
         <span style="color:var(--muted)"># Each peer:</span><br/>
-        <span class="prompt">$ </span>orbital sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--rendezvous rv.example.com:9600
       </div>
     </div>
@@ -937,59 +937,59 @@
     <div class="command-group">
       <div class="command-group-title">Environments</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital create &lt;name&gt;</span><span class="cmd-desc">Create a new environment</span></div>
-        <div class="command-item"><span class="cmd">orbital delete &lt;name&gt;</span><span class="cmd-desc">Delete an environment</span></div>
-        <div class="command-item"><span class="cmd">orbital rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename an environment</span></div>
-        <div class="command-item"><span class="cmd">orbital list</span><span class="cmd-desc">List all environments</span></div>
-        <div class="command-item"><span class="cmd">orbital info [name]</span><span class="cmd-desc">Show environment details</span></div>
+        <div class="command-item"><span class="cmd">orrery create &lt;name&gt;</span><span class="cmd-desc">Create a new environment</span></div>
+        <div class="command-item"><span class="cmd">orrery delete &lt;name&gt;</span><span class="cmd-desc">Delete an environment</span></div>
+        <div class="command-item"><span class="cmd">orrery rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename an environment</span></div>
+        <div class="command-item"><span class="cmd">orrery list</span><span class="cmd-desc">List all environments</span></div>
+        <div class="command-item"><span class="cmd">orrery info [name]</span><span class="cmd-desc">Show environment details</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Switching</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital use &lt;name&gt;</span><span class="cmd-desc">Activate in current shell</span></div>
-        <div class="command-item"><span class="cmd">orbital deactivate</span><span class="cmd-desc">Deactivate current environment</span></div>
-        <div class="command-item"><span class="cmd">orbital current</span><span class="cmd-desc">Print active environment</span></div>
-        <div class="command-item"><span class="cmd">orbital which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
+        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">Activate in current shell</span></div>
+        <div class="command-item"><span class="cmd">orrery deactivate</span><span class="cmd-desc">Deactivate current environment</span></div>
+        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">Print active environment</span></div>
+        <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Configuration</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital tools add [-e &lt;name&gt;]</span><span class="cmd-desc">Add a tool (wizard)</span></div>
-        <div class="command-item"><span class="cmd">orbital tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">Remove a tool</span></div>
-        <div class="command-item"><span class="cmd">orbital env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orbital env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orbital memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
+        <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">Add a tool (wizard)</span></div>
+        <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">Remove a tool</span></div>
+        <div class="command-item"><span class="cmd">orrery env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orrery env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
+        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Sessions</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital sessions</span><span class="cmd-desc">List all sessions for current project</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --claude</span><span class="cmd-desc">Claude sessions only</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --codex</span><span class="cmd-desc">Codex sessions only</span></div>
-        <div class="command-item"><span class="cmd">orbital sessions --gemini</span><span class="cmd-desc">Gemini sessions only</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions</span><span class="cmd-desc">List all sessions for current project</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --claude</span><span class="cmd-desc">Claude sessions only</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --codex</span><span class="cmd-desc">Codex sessions only</span></div>
+        <div class="command-item"><span class="cmd">orrery sessions --gemini</span><span class="cmd-desc">Gemini sessions only</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Sync</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
-        <div class="command-item"><span class="cmd">orbital sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
-        <div class="command-item"><span class="cmd">orbital sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
-        <div class="command-item"><span class="cmd">orbital sync team create</span><span class="cmd-desc">Create a new team</span></div>
-        <div class="command-item"><span class="cmd">orbital sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
-        <div class="command-item"><span class="cmd">orbital sync team join</span><span class="cmd-desc">Join a team</span></div>
-        <div class="command-item"><span class="cmd">orbital sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
+        <div class="command-item"><span class="cmd">orrery sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
+        <div class="command-item"><span class="cmd">orrery sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
+        <div class="command-item"><span class="cmd">orrery sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team create</span><span class="cmd-desc">Create a new team</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team join</span><span class="cmd-desc">Join a team</span></div>
+        <div class="command-item"><span class="cmd">orrery sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
       </div>
     </div>
     <div class="command-group">
       <div class="command-group-title">Shell integration</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orbital setup</span><span class="cmd-desc">Install shell integration</span></div>
-        <div class="command-item"><span class="cmd">orbital init</span><span class="cmd-desc">Print shell function (eval)</span></div>
-        <div class="command-item"><span class="cmd">orbital update</span><span class="cmd-desc">Self-update via Homebrew / apt</span></div>
+        <div class="command-item"><span class="cmd">orrery setup</span><span class="cmd-desc">Install shell integration</span></div>
+        <div class="command-item"><span class="cmd">orrery init</span><span class="cmd-desc">Print shell function (eval)</span></div>
+        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">Self-update via Homebrew / apt</span></div>
       </div>
     </div>
   </div>
@@ -1000,7 +1000,7 @@
   <h2 class="section-title">Release History</h2>
   <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2.5rem">
     Release notes — full technical details in the
-    <a href="https://github.com/OffskyLab/Orbital/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>.
+    <a href="https://github.com/OffskyLab/Orrery/blob/main/CHANGELOG.md" style="color:var(--accent)">CHANGELOG</a>.
   </p>
   <div class="changelog">
 
@@ -1010,8 +1010,8 @@
         <span class="changelog-new">latest</span>
         <h3>Change accounts without losing the setup you've tuned</h3>
       </div>
-      <p class="changelog-body">Copying an env used to be an awkward tradeoff: either re-login (annoying), or clone everything and watch the account get overwritten along with your theme, plugins, and dismissed hints. This release splits "which account to log in with" and "which env's settings to copy" into two independent steps — you can pull the account from A and everything else from B, and orbital merges <code>.claude.json</code> for you. Identity keys follow the login source; theme, projects, dismissed dialogs follow the clone source; per-account caches are cleared so Claude refreshes them cleanly.</p>
-      <p class="changelog-body">Each tool also has its own login + clone flow now. When you create an env it asks "Add and set up {tool}?" one at a time, instead of bundling all three together. <code>orbital tools</code> splits into <code>tools add</code> and <code>tools remove</code>; session isolation is per-tool, so "Claude shared, Codex isolated" is finally a valid combination; and <code>orbital list</code> / <code>orbital info</code> show each tool's login as email and plan.</p>
+      <p class="changelog-body">Copying an env used to be an awkward tradeoff: either re-login (annoying), or clone everything and watch the account get overwritten along with your theme, plugins, and dismissed hints. This release splits "which account to log in with" and "which env's settings to copy" into two independent steps — you can pull the account from A and everything else from B, and orrery merges <code>.claude.json</code> for you. Identity keys follow the login source; theme, projects, dismissed dialogs follow the clone source; per-account caches are cleared so Claude refreshes them cleanly.</p>
+      <p class="changelog-body">Each tool also has its own login + clone flow now. When you create an env it asks "Add and set up {tool}?" one at a time, instead of bundling all three together. <code>orrery tools</code> splits into <code>tools add</code> and <code>tools remove</code>; session isolation is per-tool, so "Claude shared, Codex isolated" is finally a valid combination; and <code>orrery list</code> / <code>orrery info</code> show each tool's login as email and plan.</p>
     </article>
 
     <article class="changelog-entry">
@@ -1019,7 +1019,7 @@
         <span class="changelog-ver">v1.1.5</span>
         <h3>The create wizard cleans up after itself</h3>
       </div>
-      <p class="changelog-body">Every wizard step used to leave its menu onscreen, so by the time you finished, your scrollback was filled with intermediate choices and the actual summary got buried. Now each step clears itself when you confirm, leaving only the final result visible. After <code>orbital create</code>, you're also asked whether to switch to the new env right away — one less command to type. While we were at it, the defunct <code>claude auth login</code> step was removed too: it doesn't respect <code>CLAUDE_CONFIG_DIR</code>, so keeping it around was just misleading.</p>
+      <p class="changelog-body">Every wizard step used to leave its menu onscreen, so by the time you finished, your scrollback was filled with intermediate choices and the actual summary got buried. Now each step clears itself when you confirm, leaving only the final result visible. After <code>orrery create</code>, you're also asked whether to switch to the new env right away — one less command to type. While we were at it, the defunct <code>claude auth login</code> step was removed too: it doesn't respect <code>CLAUDE_CONFIG_DIR</code>, so keeping it around was just misleading.</p>
     </article>
 
     <article class="changelog-entry">
@@ -1027,15 +1027,15 @@
         <span class="changelog-ver">v1.1.4</span>
         <h3>Version checks no longer stall shell startup</h3>
       </div>
-      <p class="changelog-body">Powerlevel10k instant-prompt users kept having the prompt interrupted every time they opened a shell — the culprit was a synchronous version check during shell init. Now it runs in the background when you invoke an orbital command, at most once every 4 hours. When a new version is out, a yellow notice appears on each orbital command until you run <code>orbital update</code>.</p>
+      <p class="changelog-body">Powerlevel10k instant-prompt users kept having the prompt interrupted every time they opened a shell — the culprit was a synchronous version check during shell init. Now it runs in the background when you invoke an orrery command, at most once every 4 hours. When a new version is out, a yellow notice appears on each orrery command until you run <code>orrery update</code>.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.3</span>
-        <h3><code>orbital use</code> persists across new shells</h3>
+        <h3><code>orrery use</code> persists across new shells</h3>
       </div>
-      <p class="changelog-body">After running <code>orbital use work</code> in one terminal, opening a fresh terminal used to drop you back to origin. The switch simply wasn't being written to the current-env pointer, so new shells had nothing to restore. Every successful <code>orbital use</code> now writes the pointer, and new shells pick up where you left off.</p>
+      <p class="changelog-body">After running <code>orrery use work</code> in one terminal, opening a fresh terminal used to drop you back to origin. The switch simply wasn't being written to the current-env pointer, so new shells had nothing to restore. Every successful <code>orrery use</code> now writes the pointer, and new shells pick up where you left off.</p>
     </article>
 
     <article class="changelog-entry">
@@ -1043,15 +1043,15 @@
         <span class="changelog-ver">v1.1.2</span>
         <h3>Memory just works — no CLAUDE.md tweaks</h3>
       </div>
-      <p class="changelog-body">Getting Claude to read orbital's shared memory used to require hand-editing CLAUDE.md with a "please read memory from this path" instruction — hardly the "just works" experience we wanted. Now each project's Claude auto-memory directory is symlinked to orbital's shared memory automatically. No config, no CLAUDE.md edits — Claude picks it up on its own. Same memory across envs and machines.</p>
+      <p class="changelog-body">Getting Claude to read orrery's shared memory used to require hand-editing CLAUDE.md with a "please read memory from this path" instruction — hardly the "just works" experience we wanted. Now each project's Claude auto-memory directory is symlinked to orrery's shared memory automatically. No config, no CLAUDE.md edits — Claude picks it up on its own. Same memory across envs and machines.</p>
     </article>
 
     <article class="changelog-entry">
       <div class="changelog-head">
         <span class="changelog-ver">v1.1.1</span>
-        <h3><code>ORBITAL_MEMORY.md</code> hooks into Claude automatically</h3>
+        <h3><code>ORRERY_MEMORY.md</code> hooks into Claude automatically</h3>
       </div>
-      <p class="changelog-body">Switching envs meant Claude couldn't see the memory you'd saved earlier, because each env's auto-memory directory is its own. Now <code>orbital create</code> (when Claude is selected) drops a symlink inside that directory pointing to orbital's shared memory, so the same memory shows up across envs. Also fixed a Homebrew cache issue in <code>orbital update</code> — it runs <code>brew update</code> first now.</p>
+      <p class="changelog-body">Switching envs meant Claude couldn't see the memory you'd saved earlier, because each env's auto-memory directory is its own. Now <code>orrery create</code> (when Claude is selected) drops a symlink inside that directory pointing to orrery's shared memory, so the same memory shows up across envs. Also fixed a Homebrew cache issue in <code>orrery update</code> — it runs <code>brew update</code> first now.</p>
     </article>
 
     <article class="changelog-entry">
@@ -1059,7 +1059,7 @@
         <span class="changelog-ver">v1.1.0</span>
         <h3><code>default</code> renamed to <code>origin</code></h3>
       </div>
-      <p class="changelog-body">Why the rename? <code>default</code> was too ambiguous: is it "orbital's default environment" or "the system state before orbital touched anything"? Even I got confused sometimes. <code>origin</code> makes it obvious — it's the starting point, the state you were in before entering orbital. Existing envs and config files migrate automatically.</p>
+      <p class="changelog-body">Why the rename? <code>default</code> was too ambiguous: is it "orrery's default environment" or "the system state before orrery touched anything"? Even I got confused sometimes. <code>origin</code> makes it obvious — it's the starting point, the state you were in before entering orrery. Existing envs and config files migrate automatically.</p>
     </article>
 
   </div>
@@ -1068,9 +1068,9 @@
 <!-- Footer -->
 <footer>
   <p>
-    Released under the <a href="https://github.com/OffskyLab/Orbital/blob/main/LICENSE">Apache 2.0 License</a> &nbsp;·&nbsp;
-    <a href="https://github.com/OffskyLab/Orbital">GitHub</a> &nbsp;·&nbsp;
-    <a href="https://github.com/OffskyLab/Orbital/releases">Releases</a>
+    Released under the <a href="https://github.com/OffskyLab/Orrery/blob/main/LICENSE">Apache 2.0 License</a> &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/Orrery">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://github.com/OffskyLab/Orrery/releases">Releases</a>
   </p>
 </footer>
 

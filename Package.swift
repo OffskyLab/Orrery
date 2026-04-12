@@ -2,32 +2,32 @@
 import PackageDescription
 
 let package = Package(
-    name: "orbital",
+    name: "orrery",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "orbital", targets: ["orbital"]),
-        .library(name: "OrbitalCore", targets: ["OrbitalCore"]),
+        .executable(name: "orrery", targets: ["orrery"]),
+        .library(name: "OrreryCore", targets: ["OrreryCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
     ],
     targets: [
         .executableTarget(
-            name: "orbital",
-            dependencies: ["OrbitalCore"],
-            path: "Sources/orbital"
+            name: "orrery",
+            dependencies: ["OrreryCore"],
+            path: "Sources/orrery"
         ),
         .target(
-            name: "OrbitalCore",
+            name: "OrreryCore",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources/OrbitalCore"
+            path: "Sources/OrreryCore"
         ),
         .testTarget(
-            name: "OrbitalTests",
-            dependencies: ["OrbitalCore"],
-            path: "Tests/OrbitalTests"
+            name: "OrreryTests",
+            dependencies: ["OrreryCore"],
+            path: "Tests/OrreryTests"
         ),
     ]
 )
