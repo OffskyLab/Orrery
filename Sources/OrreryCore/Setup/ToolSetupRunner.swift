@@ -30,12 +30,25 @@ public enum ToolSetupRunner {
 
     /// Run the per-tool wizard (login → clone → sessions → memory).
     /// Caller is responsible for asking the y/n "setup this tool?" gate before calling.
-    public static func runWizard(for tool: Tool, store: EnvironmentStore) -> Config {
-        let loginSource = askLoginCopySource(tool: tool, store: store)
-        let cloneSource = askCloneSource(tool: tool, store: store)
-        let isolateSessions = askSessionIsolation(tool: tool)
+    ///
+    /// Optional override args let CLI flags pre-fill specific steps; when an override
+    /// is provided, the corresponding wizard step is skipped. `nil` for the
+    /// `String?` overrides means "ask the wizard". Bool overrides only skip the
+    /// wizard when `true`; `false` falls through to the wizard (since the flag
+    /// is opt-in: absent flag is indistinguishable from explicit `false`).
+    public static func runWizard(
+        for tool: Tool,
+        store: EnvironmentStore,
+        loginSourceOverride: String? = nil,
+        cloneSourceOverride: String? = nil,
+        isolateSessionsOverride: Bool = false,
+        isolateMemoryOverride: Bool = false
+    ) -> Config {
+        let loginSource = loginSourceOverride ?? askLoginCopySource(tool: tool, store: store)
+        let cloneSource = cloneSourceOverride ?? askCloneSource(tool: tool, store: store)
+        let isolateSessions = isolateSessionsOverride ? true : askSessionIsolation(tool: tool)
         let isolateMemory: Bool? = tool.flowType.supportsMemoryIsolation
-            ? askMemoryIsolation()
+            ? (isolateMemoryOverride ? true : askMemoryIsolation())
             : nil
         return Config(
             tool: tool,
