@@ -50,7 +50,7 @@ public enum LegacyOrbitalMigration {
         if sharedPending {
             lines.append("  ~/.orbital/shared/ 有共享的 sessions/memory")
         }
-        lines.append("要搬到 ~/.orrery/ 嗎？（選「不要」之後不再問；未來若 orbital 出現新的 env 才會再問）")
+        lines.append("要搬到 ~/.orrery/ 嗎？（選「不要」之後不會再詢問）")
         err.write(Data((lines.joined(separator: "\n") + "\n[Y/n] ").utf8))
 
         let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
