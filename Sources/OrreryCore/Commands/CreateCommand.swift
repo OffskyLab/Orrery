@@ -41,19 +41,24 @@ public struct CreateCommand: ParsableCommand {
             throw ValidationError(L10n.Create.alreadyExists(name))
         }
 
-        // Gather per-tool configs: either from CLI flags (single tool, non-interactive)
-        // or from the interactive wizard (yes/no per tool → per-tool sub-wizard).
+        // Gather per-tool configs.
+        // - `--tool X` selects the tool and skips the per-tool yes/no loop, but the
+        //   sub-wizard (login / clone / sessions / memory) still runs for that tool
+        //   unless those steps are also overridden by their own flags.
+        // - No `--tool` runs the full wizard (yes/no per tool, then sub-wizard for each
+        //   "yes"). Same per-step flag overrides apply.
         let configs: [ToolSetupRunner.Config]
         if let toolFlag = tool {
             guard let t = Tool(rawValue: toolFlag) else {
                 throw ValidationError(L10n.Create.unknownTool(toolFlag))
             }
-            configs = [ToolSetupRunner.Config(
-                tool: t,
-                loginSource: copyLoginFrom,
-                cloneSource: clone,
-                isolateSessions: isolateSessions,
-                isolateMemory: t == .claude ? isolateMemory : nil
+            configs = [ToolSetupRunner.runWizard(
+                for: t,
+                store: store,
+                loginSourceOverride: copyLoginFrom,
+                cloneSourceOverride: clone,
+                isolateSessionsOverride: isolateSessions,
+                isolateMemoryOverride: isolateMemory
             )]
         } else {
             configs = Self.runWizard(store: store)
