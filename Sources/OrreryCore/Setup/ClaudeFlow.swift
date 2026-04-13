@@ -69,6 +69,30 @@ public enum ClaudeFlow: ToolFlow {
         copyDirectoryContents(from: sourceDir, to: targetDir, skipping: skip)
     }
 
+    /// Called when the user chose "I'll log in myself". Strips foreign identity keys
+    /// and onboarding markers from `.claude.json` so Claude runs its own onboarding
+    /// + login flow at next launch, instead of silently adopting the clone source's
+    /// identity or skipping login entirely. No-op if `.claude.json` doesn't exist
+    /// (in which case Claude will run the full flow naturally).
+    public static func prepareForSelfLogin(targetDir: URL) {
+        let url = targetDir.appendingPathComponent(".claude.json")
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+
+        for key in identityKeys {
+            obj.removeValue(forKey: key)
+        }
+        for key in ephemeralKeys {
+            obj.removeValue(forKey: key)
+        }
+
+        guard let out = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted]) else { return }
+        try? out.write(to: url, options: .atomic)
+    }
+
     /// Overlay identity keys from `sourceLogin` onto an existing `targetExisting` .claude.json.
     /// Preserves everything else (theme, projects, usage, caches…). Writes back pretty-printed.
     private static func mergeIdentityKeys(from sourceLogin: URL, into targetExisting: URL) -> Bool {
