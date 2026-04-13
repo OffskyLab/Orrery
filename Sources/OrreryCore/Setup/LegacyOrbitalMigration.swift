@@ -25,6 +25,11 @@ public enum LegacyOrbitalMigration {
         let legacyHome = home.appendingPathComponent(".orbital")
         let newHome = home.appendingPathComponent(".orrery")
 
+        // Heal any already-migrated env whose .claude.json was lost but has backups.
+        // This runs on every invocation (cheap: existence checks per env) so envs
+        // migrated by an older orrery build still recover without re-migrating.
+        healExistingEnvs(newHome: newHome)
+
         guard dirExists(legacyHome) else { return }
 
         let legacyEnvsDir = legacyHome.appendingPathComponent("envs")
@@ -90,6 +95,16 @@ public enum LegacyOrbitalMigration {
         }
         #endif
 
+        // Heal `.claude.json` loss: if a migrated env's claude dir has a `backups/`
+        // directory with backup files but no `.claude.json`, restore the most recent
+        // backup so Claude doesn't greet the user with "configuration file not found"
+        // and refuse to continue on next launch.
+        for id in migrated {
+            let claudeDir = newHome.appendingPathComponent("envs").appendingPathComponent(id)
+                .appendingPathComponent("claude")
+            restoreClaudeJsonFromBackupIfNeeded(claudeDir: claudeDir)
+        }
+
         if sharedPending {
             do {
                 try fm.moveItem(at: legacyShared, to: newShared)
@@ -130,6 +145,36 @@ public enum LegacyOrbitalMigration {
     }
 
     // MARK: - Helpers
+
+    /// Walk `~/.orrery/envs/*/claude/` and restore `.claude.json` from the latest
+    /// backup for any env where it's missing but backups exist.
+    private static func healExistingEnvs(newHome: URL) {
+        let fm = FileManager.default
+        let envsDir = newHome.appendingPathComponent("envs")
+        guard let entries = try? fm.contentsOfDirectory(atPath: envsDir.path) else { return }
+        for id in entries {
+            let claudeDir = envsDir.appendingPathComponent(id).appendingPathComponent("claude")
+            restoreClaudeJsonFromBackupIfNeeded(claudeDir: claudeDir)
+        }
+    }
+
+    /// If `{claudeDir}/.claude.json` is missing but `{claudeDir}/backups/` contains
+    /// one or more `.claude.json.backup.<ts>` files, copy the newest backup back
+    /// into place. Claude Code's "config not found" error refuses to proceed when
+    /// a backup exists — this prevents that from biting users post-migration.
+    private static func restoreClaudeJsonFromBackupIfNeeded(claudeDir: URL) {
+        let fm = FileManager.default
+        let main = claudeDir.appendingPathComponent(".claude.json")
+        guard !fm.fileExists(atPath: main.path) else { return }
+
+        let backupsDir = claudeDir.appendingPathComponent("backups")
+        guard let entries = try? fm.contentsOfDirectory(atPath: backupsDir.path) else { return }
+        let backups = entries.filter { $0.hasPrefix(".claude.json.backup.") }
+        guard let latest = backups.max() else { return }  // timestamp suffix sorts correctly
+
+        let backup = backupsDir.appendingPathComponent(latest)
+        try? fm.copyItem(at: backup, to: main)
+    }
 
     private static func dirExists(_ url: URL) -> Bool {
         let fm = FileManager.default
