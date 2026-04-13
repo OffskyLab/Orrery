@@ -70,7 +70,7 @@ public struct ListCommand: ParsableCommand {
 
         return rows.map { row in
             let rawHeader = "\(row.active) \(row.name)\(String(repeating: " ", count: max(0, nameWidth - row.name.count)))\(row.detail)"
-            let header = row.active == "*" ? Self.colorize(rawHeader, code: "38;5;221") : rawHeader
+            let header = row.active == "*" ? Self.colorize(rawHeader, code: "96") : rawHeader
 
             let bodyLines: [String]
             if let fallbackBody = row.fallbackBody {
@@ -104,13 +104,13 @@ public struct ListCommand: ParsableCommand {
     private static func colorizeSuffix(_ suffix: String, email: String?, plan: String?, model: String?) -> String {
         var result = suffix
         if let model, !model.isEmpty, let range = result.range(of: model, options: .backwards) {
-            result.replaceSubrange(range, with: colorize(model, code: "38;5;110"))
+            result.replaceSubrange(range, with: colorize(model, code: "38;5;240"))
         }
         if let plan, !plan.isEmpty, let range = result.range(of: plan, options: .backwards) {
-            result.replaceSubrange(range, with: colorize(plan, code: "38;5;108"))
+            result.replaceSubrange(range, with: colorize(plan, code: "38;5;245"))
         }
         if let email, !email.isEmpty, let range = result.range(of: email) {
-            result.replaceSubrange(range, with: colorize(email, code: "38;5;215"))
+            result.replaceSubrange(range, with: colorize(email, code: "38;5;252"))
         }
         return result
     }
