@@ -30,9 +30,10 @@ public struct ListCommand: ParsableCommand {
         df.dateStyle = .short
         df.timeStyle = .short
 
-        // (active, name, toolsCol, lastUsed)
+        // (active, name, toolsCol, lastUsed-or-description)
+        // For origin: tools column = system-default tool logins; rightmost = description.
         var tuples: [(String, String, String, String)] = [
-            (defaultActive, defaultName, L10n.Create.defaultDescription, "")
+            (defaultActive, defaultName, Self.originToolsColumn(), L10n.Create.defaultDescription)
         ]
 
         for name in names {
@@ -55,5 +56,15 @@ public struct ListCommand: ParsableCommand {
         return tuples.map { (active, name, tools, lastUsed) in
             "\(active) \(name.padding(toLength: nameWidth, withPad: " ", startingAt: 0))\(tools.padding(toLength: toolsWidth, withPad: " ", startingAt: 0))\(lastUsed)"
         }
+    }
+
+    /// System-default tool login info for origin (tools without login info are omitted).
+    private static func originToolsColumn() -> String {
+        let entries = Tool.allCases.compactMap { tool -> String? in
+            let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
+            let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+            return suffix.isEmpty ? nil : "\(tool.rawValue)(\(suffix))"
+        }
+        return entries.isEmpty ? "(no logins)" : entries.joined(separator: ", ")
     }
 }

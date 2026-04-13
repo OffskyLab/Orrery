@@ -23,7 +23,7 @@ public struct InfoCommand: ParsableCommand {
             throw ValidationError(L10n.Info.noActive)
         }
         guard resolvedName != ReservedEnvironment.defaultName else {
-            print(L10n.Info.defaultInfo)
+            Self.printOriginInfo()
             return
         }
         let env = try store.load(named: resolvedName)
@@ -77,6 +77,23 @@ public struct InfoCommand: ParsableCommand {
                 let masked = value.count > 8 ? String(value.prefix(4)) + "****" : "****"
                 print("  \(key)=\(masked)")
             }
+        }
+    }
+
+    /// Info output for the reserved `origin` env — lists system-default tool logins.
+    static func printOriginInfo() {
+        print("\(L10n.Info.labelName)\(ReservedEnvironment.defaultName)")
+        print("\(L10n.Info.labelDescription)\(L10n.Create.defaultDescription)")
+        print(L10n.Info.labelTools)
+        let entries = Tool.allCases.compactMap { tool -> String? in
+            let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
+            let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+            return suffix.isEmpty ? nil : "  \(tool.rawValue) (\(suffix))"
+        }
+        if entries.isEmpty {
+            print("  \(L10n.Info.none)")
+        } else {
+            entries.forEach { print($0) }
         }
     }
 }

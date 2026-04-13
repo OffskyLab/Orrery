@@ -138,6 +138,12 @@ public struct EnvironmentStore: Sendable {
 
     /// Creates symlinks from the tool's session subdirectories to a shared location.
     /// Shared path: `~/.orrery/shared/<tool>/<subdir>/`
+    ///
+    /// Handles three starting states:
+    /// - Already correctly symlinked → no-op.
+    /// - Symlink pointing somewhere else (e.g. stale post-migration pointer into
+    ///   `~/.orbital/shared/`) → remove and recreate.
+    /// - Real directory (fresh env) → move contents to shared, remove, recreate as symlink.
     private func linkSharedSessionDirs(tool: Tool, toolDir: URL) throws {
         let fm = FileManager.default
         for subdir in tool.sessionSubdirectories {
@@ -146,24 +152,33 @@ public struct EnvironmentStore: Sendable {
             try fm.createDirectory(at: sharedDir, withIntermediateDirectories: true)
 
             let linkPath = toolDir.appendingPathComponent(subdir)
-            // Skip if already a symlink pointing to the correct target
+
+            // Already correctly symlinked — done.
             if let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath.path),
                dest == sharedDir.path {
                 continue
             }
-            // If a real directory already exists, move its contents to shared first
-            var isDir: ObjCBool = false
-            if fm.fileExists(atPath: linkPath.path, isDirectory: &isDir), isDir.boolValue {
-                let contents = try fm.contentsOfDirectory(atPath: linkPath.path)
-                for item in contents {
-                    let src = linkPath.appendingPathComponent(item)
-                    let dst = sharedDir.appendingPathComponent(item)
-                    if !fm.fileExists(atPath: dst.path) {
-                        try fm.moveItem(at: src, to: dst)
-                    }
-                }
+
+            // Symlink pointing elsewhere (or dangling). `destinationOfSymbolicLink`
+            // only succeeds for symlinks, so this distinguishes them from real dirs.
+            if (try? fm.destinationOfSymbolicLink(atPath: linkPath.path)) != nil {
                 try fm.removeItem(at: linkPath)
+            } else {
+                // Real directory — migrate its contents into shared, then remove.
+                var isDir: ObjCBool = false
+                if fm.fileExists(atPath: linkPath.path, isDirectory: &isDir), isDir.boolValue {
+                    let contents = (try? fm.contentsOfDirectory(atPath: linkPath.path)) ?? []
+                    for item in contents {
+                        let src = linkPath.appendingPathComponent(item)
+                        let dst = sharedDir.appendingPathComponent(item)
+                        if !fm.fileExists(atPath: dst.path) {
+                            try fm.moveItem(at: src, to: dst)
+                        }
+                    }
+                    try fm.removeItem(at: linkPath)
+                }
             }
+
             try fm.createSymbolicLink(at: linkPath, withDestinationURL: sharedDir)
         }
     }

@@ -20,6 +20,7 @@ public struct ShellFunctionGenerator {
           [ -f "$_ts_file" ] && _last=$(cat "$_ts_file" 2>/dev/null || echo 0)
           if [ $((_now - _last)) -ge 14400 ]; then
             (echo "$_now" > "$_ts_file"; _r=$(command orrery _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file") &
+            disown 2>/dev/null || true
           fi
 
           local cmd="${1:-}"
