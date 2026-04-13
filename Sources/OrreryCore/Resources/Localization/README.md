@@ -19,6 +19,9 @@ inside the binary, so single-file deploys (Homebrew, `.deb`) keep working.
   reads this so the generated typed API stays stable across translation edits.
   Translators should NOT touch this file; only edit it when the *Swift API*
   needs to grow (new key, new parameter, etc.).
+- `keys.md` — translator reference. Per-key context, placeholder meanings, and
+  formatting rules that can't live inside the flat JSON (JSON has no comment
+  syntax). Read this before translating; edit when a key's meaning changes.
 
 ## Schema
 

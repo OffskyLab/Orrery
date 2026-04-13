@@ -59,7 +59,7 @@ public struct ListCommand: ParsableCommand {
                 let configDir = store.toolConfigDir(tool: tool, environment: name)
                 let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
                 let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
-                return ToolRow(name: tool.rawValue, suffix: Self.colorizeModel(in: suffix, model: info.model))
+                return ToolRow(name: tool.rawValue, suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model))
             }
             let lastUsed = df.string(from: env.lastUsed)
             rows.append(EnvRow(active: active, name: name, tools: toolRows, fallbackBody: env.tools.isEmpty ? "(none)" : nil, detail: lastUsed))
@@ -69,20 +69,22 @@ public struct ListCommand: ParsableCommand {
         let toolWidth = (Tool.allCases.map { $0.rawValue.count }.max() ?? 0) + 2
 
         return rows.map { row in
-            let renderedName = row.name == defaultName ? Self.colorize(row.name, code: "33") : row.name
-            let header = "\(row.active) \(renderedName)\(String(repeating: " ", count: max(0, nameWidth - row.name.count)))\(row.detail)"
+            let rawHeader = "\(row.active) \(row.name)\(String(repeating: " ", count: max(0, nameWidth - row.name.count)))\(row.detail)"
+            let header = row.active == "*" ? Self.colorize(rawHeader, code: "38;5;221") : rawHeader
 
             let bodyLines: [String]
             if let fallbackBody = row.fallbackBody {
-                bodyLines = ["    \(fallbackBody)"]
+                bodyLines = ["  · \(fallbackBody)"]
             } else if row.tools.isEmpty, row.name == defaultName {
                 bodyLines = Tool.allCases.map {
-                    "    \($0.rawValue)\(String(repeating: " ", count: max(0, toolWidth - $0.rawValue.count)))"
+                    let padded = $0.rawValue + String(repeating: " ", count: max(0, toolWidth - $0.rawValue.count))
+                    return Self.colorize("  · \(padded)", code: "90")
                 }
             } else {
                 bodyLines = row.tools.map { tool in
                     let paddedName = tool.name + String(repeating: " ", count: max(0, toolWidth - tool.name.count))
-                    return tool.suffix.isEmpty ? "    \(paddedName)" : "    \(paddedName)\(tool.suffix)"
+                    let prefix = Self.colorize("  · \(paddedName)", code: "90")
+                    return tool.suffix.isEmpty ? prefix : "\(prefix)\(tool.suffix)"
                 }
             }
 
@@ -95,16 +97,21 @@ public struct ListCommand: ParsableCommand {
             let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
             let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
             guard !suffix.isEmpty else { return nil }
-            return ToolRow(name: tool.rawValue, suffix: Self.colorizeModel(in: suffix, model: info.model))
+            return ToolRow(name: tool.rawValue, suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model))
         }
     }
 
-    private static func colorizeModel(in suffix: String, model: String?) -> String {
-        guard let model, !model.isEmpty else { return suffix }
-        let coloredModel = colorize(model, code: "90")
-        guard let range = suffix.range(of: model, options: .backwards) else { return suffix }
+    private static func colorizeSuffix(_ suffix: String, email: String?, plan: String?, model: String?) -> String {
         var result = suffix
-        result.replaceSubrange(range, with: coloredModel)
+        if let model, !model.isEmpty, let range = result.range(of: model, options: .backwards) {
+            result.replaceSubrange(range, with: colorize(model, code: "38;5;110"))
+        }
+        if let plan, !plan.isEmpty, let range = result.range(of: plan, options: .backwards) {
+            result.replaceSubrange(range, with: colorize(plan, code: "38;5;108"))
+        }
+        if let email, !email.isEmpty, let range = result.range(of: email) {
+            result.replaceSubrange(range, with: colorize(email, code: "38;5;215"))
+        }
         return result
     }
 

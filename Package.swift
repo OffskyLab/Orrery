@@ -24,6 +24,10 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/OrreryCore",
+            exclude: [
+                "Resources/Localization/README.md",
+                "Resources/Localization/keys.md",
+            ],
             plugins: [.plugin(name: "L10nCodegen")]
         ),
         .executableTarget(
