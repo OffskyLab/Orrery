@@ -8,7 +8,8 @@ public enum ToolAuth {
     public struct AccountInfo: Sendable {
         public let email: String?
         public let plan: String?
-        public var isEmpty: Bool { email == nil && plan == nil }
+        public let model: String?
+        public var isEmpty: Bool { email == nil && plan == nil && model == nil }
     }
 
     /// Fast email-only lookup — skips macOS Keychain (for Claude) and subprocess calls.
@@ -39,10 +40,13 @@ public enum ToolAuth {
     public static func accountInfo(tool: Tool, configDir: URL?) -> AccountInfo {
         switch tool {
         case .claude:
+            let dir = configDir ?? tool.defaultConfigDir
+            let model = jsonModel(dir: dir)
             #if canImport(CryptoKit)
-            return ClaudeKeychain.accountInfo(for: configDir?.path)
+            let info = ClaudeKeychain.accountInfo(for: configDir?.path)
+            return AccountInfo(email: info.email, plan: info.plan, model: model)
             #else
-            return AccountInfo(email: nil, plan: nil)
+            return AccountInfo(email: nil, plan: nil, model: model)
             #endif
         case .codex:
             let dir = configDir ?? tool.defaultConfigDir
@@ -56,27 +60,29 @@ public enum ToolAuth {
     // MARK: - Codex
 
     private static func codexAccountInfo(dir: URL) -> AccountInfo {
+        let model = codexModel(dir: dir)
         let url = dir.appendingPathComponent("auth.json")
         guard let data = try? Data(contentsOf: url),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return AccountInfo(email: nil, plan: nil) }
+        else { return AccountInfo(email: nil, plan: nil, model: model) }
 
         if (obj["auth_mode"] as? String) == "api" {
-            return AccountInfo(email: nil, plan: "api key")
+            return AccountInfo(email: nil, plan: "api key", model: model)
         }
         guard let tokens = obj["tokens"] as? [String: Any],
               let idToken = tokens["id_token"] as? String,
               let payload = decodeJWTPayload(idToken)
-        else { return AccountInfo(email: nil, plan: nil) }
+        else { return AccountInfo(email: nil, plan: nil, model: model) }
 
         let email = payload["email"] as? String
         let plan = (payload["https://api.openai.com/auth"] as? [String: Any])?["chatgpt_plan_type"] as? String
-        return AccountInfo(email: email, plan: plan)
+        return AccountInfo(email: email, plan: plan, model: model)
     }
 
     // MARK: - Gemini
 
     private static func geminiAccountInfo(dir: URL) -> AccountInfo {
+        let model = jsonModel(dir: dir)
         // OAuth login: id_token carries the email.
         let oauthURL = dir.appendingPathComponent("oauth_creds.json")
         if let data = try? Data(contentsOf: oauthURL),
@@ -84,7 +90,7 @@ public enum ToolAuth {
            let idToken = obj["id_token"] as? String,
            let payload = decodeJWTPayload(idToken),
            let email = payload["email"] as? String {
-            return AccountInfo(email: email, plan: nil)
+            return AccountInfo(email: email, plan: nil, model: model)
         }
 
         // API-key / Vertex auth: the key lives in GEMINI_API_KEY (env var or
@@ -99,15 +105,39 @@ public enum ToolAuth {
                 ?? (obj["auth"] as? [String: Any])?["selectedType"] as? String
             switch selectedType {
             case "gemini-api-key":
-                return AccountInfo(email: nil, plan: "api key")
+                return AccountInfo(email: nil, plan: "api key", model: model)
             case "vertex-ai":
-                return AccountInfo(email: nil, plan: "vertex")
+                return AccountInfo(email: nil, plan: "vertex", model: model)
             default:
                 break
             }
         }
 
-        return AccountInfo(email: nil, plan: nil)
+        return AccountInfo(email: nil, plan: nil, model: model)
+    }
+
+    private static func jsonModel(dir: URL) -> String? {
+        let url = dir.appendingPathComponent("settings.json")
+        guard let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let model = obj["model"] as? String,
+              !model.isEmpty else { return nil }
+        return model
+    }
+
+    private static func codexModel(dir: URL) -> String? {
+        let url = dir.appendingPathComponent("config.toml")
+        guard let contents = try? String(contentsOf: url),
+              let regex = try? NSRegularExpression(pattern: #"^\s*model\s*=\s*"([^"]+)""#, options: [.anchorsMatchLines])
+        else { return nil }
+
+        let range = NSRange(contents.startIndex..<contents.endIndex, in: contents)
+        guard let match = regex.firstMatch(in: contents, options: [], range: range),
+              let modelRange = Range(match.range(at: 1), in: contents)
+        else { return nil }
+
+        let model = String(contents[modelRange])
+        return model.isEmpty ? nil : model
     }
 
     // MARK: - JWT

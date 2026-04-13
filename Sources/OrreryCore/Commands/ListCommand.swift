@@ -1,5 +1,6 @@
 import ArgumentParser
 import Foundation
+import Darwin
 
 public struct ListCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -15,10 +16,21 @@ public struct ListCommand: ParsableCommand {
         if rows.isEmpty {
             print(L10n.List.empty)
         } else {
-            print(L10n.List.header)
-            print(String(repeating: "-", count: 60))
-            rows.forEach { print($0) }
+            print(rows.joined(separator: "\n\n"))
         }
+    }
+
+    private struct ToolRow {
+        let name: String
+        let suffix: String
+    }
+
+    private struct EnvRow {
+        let active: String
+        let name: String
+        let tools: [ToolRow]
+        let fallbackBody: String?
+        let detail: String
     }
 
     public static func environmentRows(activeEnv: String?, store: EnvironmentStore) throws -> [String] {
@@ -30,41 +42,74 @@ public struct ListCommand: ParsableCommand {
         df.dateStyle = .short
         df.timeStyle = .short
 
-        // (active, name, toolsCol, lastUsed-or-description)
-        // For origin: tools column = system-default tool logins; rightmost = description.
-        var tuples: [(String, String, String, String)] = [
-            (defaultActive, defaultName, Self.originToolsColumn(), L10n.Create.defaultDescription)
+        var rows: [EnvRow] = [
+            EnvRow(
+                active: defaultActive,
+                name: defaultName,
+                tools: Self.originToolRows(),
+                fallbackBody: nil,
+                detail: L10n.Create.defaultDescription
+            )
         ]
 
         for name in names {
             let env = try store.load(named: name)
             let active = name == activeEnv ? "*" : " "
-            let toolEntries = env.tools.map { tool -> String in
+            let toolRows = env.tools.map { tool -> ToolRow in
                 let configDir = store.toolConfigDir(tool: tool, environment: name)
                 let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
-                let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
-                return suffix.isEmpty ? tool.rawValue : "\(tool.rawValue)(\(suffix))"
+                let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+                return ToolRow(name: tool.rawValue, suffix: Self.colorizeModel(in: suffix, model: info.model))
             }
-            let toolsCol = toolEntries.isEmpty ? "(none)" : toolEntries.joined(separator: ", ")
             let lastUsed = df.string(from: env.lastUsed)
-            tuples.append((active, name, toolsCol, lastUsed))
+            rows.append(EnvRow(active: active, name: name, tools: toolRows, fallbackBody: env.tools.isEmpty ? "(none)" : nil, detail: lastUsed))
         }
 
-        let nameWidth  = max(12, tuples.map(\.1.count).max() ?? 0) + 2
-        let toolsWidth = max(24, tuples.map(\.2.count).max() ?? 0) + 2
+        let nameWidth = max(12, rows.map(\.name.count).max() ?? 0) + 2
+        let toolWidth = (Tool.allCases.map { $0.rawValue.count }.max() ?? 0) + 2
 
-        return tuples.map { (active, name, tools, lastUsed) in
-            "\(active) \(name.padding(toLength: nameWidth, withPad: " ", startingAt: 0))\(tools.padding(toLength: toolsWidth, withPad: " ", startingAt: 0))\(lastUsed)"
+        return rows.map { row in
+            let renderedName = row.name == defaultName ? Self.colorize(row.name, code: "33") : row.name
+            let header = "\(row.active) \(renderedName)\(String(repeating: " ", count: max(0, nameWidth - row.name.count)))\(row.detail)"
+
+            let bodyLines: [String]
+            if let fallbackBody = row.fallbackBody {
+                bodyLines = ["    \(fallbackBody)"]
+            } else if row.tools.isEmpty, row.name == defaultName {
+                bodyLines = Tool.allCases.map {
+                    "    \($0.rawValue)\(String(repeating: " ", count: max(0, toolWidth - $0.rawValue.count)))"
+                }
+            } else {
+                bodyLines = row.tools.map { tool in
+                    let paddedName = tool.name + String(repeating: " ", count: max(0, toolWidth - tool.name.count))
+                    return tool.suffix.isEmpty ? "    \(paddedName)" : "    \(paddedName)\(tool.suffix)"
+                }
+            }
+
+            return ([header] + bodyLines).joined(separator: "\n")
         }
     }
 
-    /// System-default tool login info for origin (tools without login info are omitted).
-    private static func originToolsColumn() -> String {
-        let entries = Tool.allCases.compactMap { tool -> String? in
+    private static func originToolRows() -> [ToolRow] {
+        Tool.allCases.compactMap { tool -> ToolRow? in
             let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
-            let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
-            return suffix.isEmpty ? nil : "\(tool.rawValue)(\(suffix))"
+            let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+            guard !suffix.isEmpty else { return nil }
+            return ToolRow(name: tool.rawValue, suffix: Self.colorizeModel(in: suffix, model: info.model))
         }
-        return entries.isEmpty ? "(no logins)" : entries.joined(separator: ", ")
+    }
+
+    private static func colorizeModel(in suffix: String, model: String?) -> String {
+        guard let model, !model.isEmpty else { return suffix }
+        let coloredModel = colorize(model, code: "90")
+        guard let range = suffix.range(of: model, options: .backwards) else { return suffix }
+        var result = suffix
+        result.replaceSubrange(range, with: coloredModel)
+        return result
+    }
+
+    private static func colorize(_ s: String, code: String) -> String {
+        guard isatty(STDOUT_FILENO) != 0 else { return s }
+        return "\u{001B}[\(code)m\(s)\u{001B}[0m"
     }
 }
