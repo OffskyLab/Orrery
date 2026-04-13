@@ -202,10 +202,12 @@ public enum L10n {
 
     public enum Delete {
         public static var abstract: String {
-            isChinese ? "刪除 orrery 環境" : "Delete an orrery environment"
+            isChinese
+                ? "刪除 orrery 環境（不帶名稱會開多選介面）"
+                : "Delete orrery environments (no name → multi-select)"
         }
         public static var nameHelp: String {
-            isChinese ? "要刪除的環境名稱" : "Name of the environment to delete"
+            isChinese ? "要刪除的環境名稱（省略則開多選介面）" : "Environment name (omit to open multi-select)"
         }
         public static var forceHelp: String {
             isChinese ? "跳過確認提示" : "Skip confirmation prompt"
@@ -214,6 +216,24 @@ public enum L10n {
             isChinese
                 ? "確定要刪除環境 '\(name)'？此操作無法復原。[y/N] "
                 : "Delete environment '\(name)'? This cannot be undone. [y/N] "
+        }
+        public static var multiSelectTitle: String {
+            isChinese
+                ? "選擇要刪除的環境（↑↓ 移動，空白鍵切換,Enter 確認）："
+                : "Select environments to delete (↑↓ move, space toggle, enter confirm):"
+        }
+        public static func confirmBatch(_ count: Int) -> String {
+            isChinese
+                ? "確定要刪除這 \(count) 個環境？此操作無法復原。[y/N] "
+                : "Delete these \(count) environment(s)? This cannot be undone. [y/N] "
+        }
+        public static var noEnvs: String {
+            isChinese
+                ? "沒有任何環境可刪除。"
+                : "No environments to delete."
+        }
+        public static var nothingSelected: String {
+            isChinese ? "未選擇任何環境。" : "No environments selected."
         }
         public static var aborted: String {
             isChinese ? "已取消。" : "Aborted."
