@@ -1,0 +1,14 @@
+name: Localization Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  localization-check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test

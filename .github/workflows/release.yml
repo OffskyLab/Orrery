@@ -9,7 +9,14 @@ permissions:
   contents: write
 
 jobs:
+  verify-localization:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+
   build-macos-arm64:
+    needs: verify-localization
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +34,7 @@ jobs:
           path: orrery-darwin-arm64.tar.gz
 
   build-linux-x86_64:
+    needs: verify-localization
     runs-on: ubuntu-latest
     container: swift:6.0-jammy
     steps:
@@ -72,6 +80,7 @@ jobs:
             orrery_*_amd64.deb
 
   build-linux-arm64:
+    needs: verify-localization
     runs-on: ubuntu-24.04-arm
     container: swift:6.0-jammy
     steps:

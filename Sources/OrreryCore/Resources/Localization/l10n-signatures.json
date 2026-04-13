@@ -1,0 +1,1958 @@
+[
+  {
+    "path": [
+      "Create",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "alreadyExists"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "askSetupTool"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "cloneFrom"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "cloneHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "cloneNone"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "clonePrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "clonePromptFor"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "cloned"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "source",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginCopied"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "source",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginFailed"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "source",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginFrom"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "label",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginIndependent"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginPromptFor"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "copyLoginStatus"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "created"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "defaultDescription"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "descriptionHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "firstEnvCreated"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "freshLoginStatus"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "isolateMemoryHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "isolateSessionsHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "memory"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "isolated",
+        "type": "Bool"
+      }
+    ],
+    "variants": {
+      "selector": "isolated",
+      "type": "bool",
+      "true": "isolated",
+      "false": "shared"
+    }
+  },
+  {
+    "path": [
+      "Create",
+      "memoryShareNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "memorySharePrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "memoryShareYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "nameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "noToolSelected"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "queryingLoginStatus"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "reservedName"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "sessionShareNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "sessionSharePrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "sessionSharePromptFor"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "sessionShareYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "sessions"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "isolated",
+        "type": "Bool"
+      }
+    ],
+    "variants": {
+      "selector": "isolated",
+      "type": "bool",
+      "true": "isolated",
+      "false": "shared"
+    }
+  },
+  {
+    "path": [
+      "Create",
+      "setupToolNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "setupToolYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "toolHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "tools"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "list",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "unknownTool"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "raw",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "wizardTitle"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Current",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Current",
+      "noActive"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "promptHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "aborted"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "confirm"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Delete",
+      "confirmBatch"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "count",
+        "type": "Int"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Delete",
+      "deleted"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Delete",
+      "forceHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "multiSelectTitle"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "nameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "noEnvs"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "nothingSelected"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delete",
+      "reservedName"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "defaultNotSupported"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "noActive"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "set"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "key",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "EnvVar",
+      "setAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "EnvVar",
+      "unset"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "key",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "EnvVar",
+      "unsetAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "defaultInfo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelCreated"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelDescription"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelEnvVars"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelID"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelLastUsed"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelMemoryMode"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelMemoryPath"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelName"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelPath"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelSessionMode"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "labelTools"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "modeIsolated"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "modeShared"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "nameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "noActive"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Info",
+      "none"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Init",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "List",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "List",
+      "empty"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "List",
+      "header"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "MCPServerCmd",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "MCPSetup",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "MCPSetup",
+      "setupAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "MCPSetup",
+      "success"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "MCPSetup",
+      "wroteSettings"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "aborted"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "actionExport"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "actionInfo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "actionIsolate"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "actionShare"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "actionStorage"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "alreadyIsolated"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "alreadyShared"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "defaultNotSupported"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "discardConfirm"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "exportAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "exported"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "infoAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "isolateAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationDiscardToIsolated"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationDiscardToShared"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationDone"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "isolated",
+        "type": "Bool"
+      }
+    ],
+    "variants": {
+      "selector": "isolated",
+      "type": "bool",
+      "true": "isolated",
+      "false": "shared"
+    }
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationMergeToIsolated"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationMergeToShared"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "migrationWarning"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "from",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "to",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "noActiveEnv"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "noMemory"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "outputHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "settingsPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "shareAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "statusExists"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "exists",
+        "type": "Bool"
+      },
+      {
+        "label": "_",
+        "name": "size",
+        "type": "Int"
+      }
+    ],
+    "variants": {
+      "selector": "exists",
+      "type": "bool",
+      "true": "present",
+      "false": "absent"
+    }
+  },
+  {
+    "path": [
+      "Memory",
+      "statusMode"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "isolated",
+        "type": "Bool"
+      }
+    ],
+    "variants": {
+      "selector": "isolated",
+      "type": "bool",
+      "true": "isolated",
+      "false": "shared"
+    }
+  },
+  {
+    "path": [
+      "Memory",
+      "statusPath"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "storageAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageCopied"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageCopyNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageCopyPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageCopyYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageNotDirectory"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "storagePathHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageReset"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageResetHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "storageSet"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "storageStatus"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String?"
+      }
+    ],
+    "variants": {
+      "selector": "path",
+      "type": "optional",
+      "present": "custom",
+      "absent": "default"
+    }
+  },
+  {
+    "path": [
+      "Orrery",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Rename",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Rename",
+      "nameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Rename",
+      "newNameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Rename",
+      "renamed"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "old",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "new",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Rename",
+      "reservedName"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Resume",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Resume",
+      "indexOutOfRange"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "index",
+        "type": "Int"
+      },
+      {
+        "label": "_",
+        "name": "count",
+        "type": "Int"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Resume",
+      "noIndex"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Run",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Run",
+      "commandHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Run",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Run",
+      "noCommand"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Sessions",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Sessions",
+      "noSessions"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Setup",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Setup",
+      "addedTo"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Setup",
+      "alreadyPresent"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Setup",
+      "failedToWrite"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "error",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Setup",
+      "migratedRc"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Setup",
+      "shellHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Setup",
+      "unsupportedShell"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "shell",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Setup",
+      "wroteActivate"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolFlag",
+      "claude"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "ToolFlag",
+      "codex"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "ToolFlag",
+      "gemini"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "installNow"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "installed"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "installing"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "cmd",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "loginNow"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "notInstalled"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "skipping"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "ToolSetup",
+      "skippingLogin"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "addAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "addWizardTitle"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "added"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "defaultNotSupported"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "noActive"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "noToolsToAdd"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "noToolsToRemove"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "removeAbstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Tools",
+      "removeWizardTitle"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "envName",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Tools",
+      "removed"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Update",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Update",
+      "notice"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "current",
+        "name": "current",
+        "type": "String"
+      },
+      {
+        "label": "latest",
+        "name": "latest",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Update",
+      "unsupportedPlatform"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Update",
+      "upgrading"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Use",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Use",
+      "nameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Use",
+      "needsShellIntegration"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Use",
+      "switchedToOrigin"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Which",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Which",
+      "noActive"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Which",
+      "toolHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Which",
+      "unknownTool"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Export",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Unexport",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  }
+]
