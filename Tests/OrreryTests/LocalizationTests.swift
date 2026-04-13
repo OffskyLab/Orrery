@@ -13,7 +13,7 @@ final class LocalizationTests: XCTestCase {
             Localizer.string("delegate.abstract"),
             Localizer.string("run.abstract"),
             Localizer.string("memory.abstract"),
-            Localizer.string("toolSetup.success"),
+            Localizer.string("toolSetup.installed"),
         ]
         XCTAssertEqual(values.count, 10)
         XCTAssertTrue(values.allSatisfy { !$0.isEmpty })
@@ -31,13 +31,13 @@ final class LocalizationTests: XCTestCase {
             "orrery.abstract",
             "create.abstract",
             "create.alreadyExists",
-            "delete.confirmSingle",
+            "delete.abstract",
             "list.empty",
-            "resume.pickPrompt",
-            "delegate.success",
-            "run.success",
-            "memory.statusTitle",
-            "toolSetup.success",
+            "resume.abstract",
+            "delegate.abstract",
+            "run.abstract",
+            "memory.abstract",
+            "toolSetup.installed",
         ]
         XCTAssertTrue(keys.allSatisfy { !(L10nData.en[$0] ?? "").isEmpty })
         XCTAssertTrue(keys.allSatisfy { !(L10nData.zhHant[$0] ?? "").isEmpty })
@@ -45,7 +45,10 @@ final class LocalizationTests: XCTestCase {
 
     func testLocalesHaveIdenticalKeySets() {
         // Validator enforces this at build time already, but a runtime guard
-        // catches any accidental drift if the check is ever bypassed.
-        XCTAssertEqual(Set(L10nData.en.keys), Set(L10nData.zhHant.keys))
+        // catches any accidental drift if the check is ever bypassed. Add new
+        // locales here as they're introduced.
+        let baseKeys = Set(L10nData.en.keys)
+        XCTAssertEqual(baseKeys, Set(L10nData.zhHant.keys))
+        XCTAssertEqual(baseKeys, Set(L10nData.ja.keys))
     }
 }

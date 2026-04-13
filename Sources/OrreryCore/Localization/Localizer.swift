@@ -33,6 +33,7 @@ public enum Localizer {
         switch locale {
         case .en:     return L10nData.en
         case .zhHant: return L10nData.zhHant
+        case .ja:     return L10nData.ja
         }
     }
 }
