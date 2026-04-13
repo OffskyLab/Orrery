@@ -77,13 +77,37 @@ public enum ToolAuth {
     // MARK: - Gemini
 
     private static func geminiAccountInfo(dir: URL) -> AccountInfo {
-        let url = dir.appendingPathComponent("oauth_creds.json")
-        guard let data = try? Data(contentsOf: url),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let idToken = obj["id_token"] as? String,
-              let payload = decodeJWTPayload(idToken)
-        else { return AccountInfo(email: nil, plan: nil) }
-        return AccountInfo(email: payload["email"] as? String, plan: nil)
+        // OAuth login: id_token carries the email.
+        let oauthURL = dir.appendingPathComponent("oauth_creds.json")
+        if let data = try? Data(contentsOf: oauthURL),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let idToken = obj["id_token"] as? String,
+           let payload = decodeJWTPayload(idToken),
+           let email = payload["email"] as? String {
+            return AccountInfo(email: email, plan: nil)
+        }
+
+        // API-key / Vertex auth: the key lives in GEMINI_API_KEY (env var or
+        // project `.env`), not in the config dir — only the selected mode is
+        // persisted in settings.json. Newer gemini-cli nests it under
+        // `security.auth.selectedType`; older versions used top-level `auth`.
+        let settingsURL = dir.appendingPathComponent("settings.json")
+        if let data = try? Data(contentsOf: settingsURL),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let selectedType =
+                ((obj["security"] as? [String: Any])?["auth"] as? [String: Any])?["selectedType"] as? String
+                ?? (obj["auth"] as? [String: Any])?["selectedType"] as? String
+            switch selectedType {
+            case "gemini-api-key":
+                return AccountInfo(email: nil, plan: "api key")
+            case "vertex-ai":
+                return AccountInfo(email: nil, plan: "vertex")
+            default:
+                break
+            }
+        }
+
+        return AccountInfo(email: nil, plan: nil)
     }
 
     // MARK: - JWT

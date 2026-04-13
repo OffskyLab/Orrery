@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.1.2
+
+- **Gemini env isolation.** gemini-cli ignores `GEMINI_CONFIG_DIR` and always
+  reads `~/.gemini/`, so each orrery env now gets a sibling `gemini-home/`
+  dir whose `.gemini` symlinks back to the env's gemini config. `orrery use`
+  exports `ORRERY_GEMINI_HOME` and a shell `gemini()` wrapper runs gemini
+  with `HOME=$ORRERY_GEMINI_HOME` so it lands in the right config dir.
+  `orrery delegate --gemini` sets `HOME` on the child process directly.
+  Setup is idempotent and backfilled for existing envs on `orrery use`.
+- **`orrery delegate --gemini` works with API-key auth.** gemini-cli's
+  non-interactive validator (`gemini -p …`) only looks at
+  `process.env.GEMINI_API_KEY` and won't fall through to its own Keychain /
+  encrypted-file lookup — so delegate now pre-extracts the stored key
+  (macOS Keychain first, then decrypts `gemini-credentials.json` via scrypt
+  + AES-256-GCM, same derivation gemini-cli uses) and injects it before
+  invoking the child.
+- **`orrery list` shows API-key auth for gemini.** Detects
+  `security.auth.selectedType` (new schema) or `auth.selectedType` (legacy)
+  in `settings.json` and renders `gemini(api key)` / `gemini(vertex)`
+  alongside the OAuth email case.
+- **Background update check no longer prints `[N] PID`.** The background
+  version check is now wrapped in a double subshell so the interactive
+  shell never registers it as a job — silences both zsh's `[N] PID` line
+  and bash's equivalent, replacing the earlier `& disown` dance that still
+  leaked a notice on some setups.
+
 ## v2.1.1
 
 - **Fix: `orrery delegate` no longer triggers Claude's "no stdin data
