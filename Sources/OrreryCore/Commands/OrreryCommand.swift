@@ -4,7 +4,7 @@ public struct OrreryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "orrery",
         abstract: L10n.Orrery.abstract,
-        version: "2.1.2",
+        version: "2.2.0",
         subcommands: [
             UpdateCommand.self,
             SetupCommand.self,

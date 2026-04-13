@@ -1,5 +1,30 @@
 # Changelog
 
+## v2.2.0
+
+- **Localization moved to JSON + build-time codegen.** All CLI strings now
+  live in `Sources/OrreryCore/Resources/Localization/<locale>.json` (with
+  `en.json` as the schema base). An SPM build plugin (`L10nCodegen`) reads
+  the JSON on every `swift build` and emits the typed `L10n.*` accessors
+  plus embedded translation tables, so single-file deploys (Homebrew,
+  `.deb`) keep working with no runtime resource lookup. Drift across
+  locales (missing keys, mismatched placeholders) fails the build.
+- **Japanese locale (`ja.json`).** Currently stubbed from English while the
+  translation lands; falls back to EN at runtime via `AppLocale.detect()`
+  (matches `LANG=ja*`). Adding a future locale is now drop-a-JSON +
+  `AppLocale` case + `Localizer` switch arm.
+- **Translator key reference (`Resources/Localization/keys.md`).** Per-key
+  context, placeholder meanings, and formatting rules (literal commands,
+  trailing whitespace in prompts, `\n` placement) for every key — the
+  context that can't live inside the flat JSON.
+- **`orrery list` rewritten with a multi-line layout.** Each environment
+  now shows on its own block with one tool per indented line — much easier
+  to read once an env has multiple tools or longer suffixes. Tool rows are
+  prefixed with `·`, and the active environment header is highlighted
+  (cyan) so it pops out at a glance. Per-field colors keep the readout
+  scannable: email near-white, plan mid-gray, model dim. Strips ANSI
+  cleanly for non-TTY output (pipes, MCP).
+
 ## v2.1.2
 
 - **Gemini env isolation.** gemini-cli ignores `GEMINI_CONFIG_DIR` and always
