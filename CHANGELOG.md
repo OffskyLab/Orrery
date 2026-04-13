@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.1.1
+
+- **Fix: `orrery delegate` no longer triggers Claude's "no stdin data
+  received in 3s" warning.** The delegated tool (`claude -p`, `codex exec`,
+  `gemini -p`) takes the prompt as an arg, so the child's stdin is now wired
+  to `/dev/null` instead of inheriting the caller's. Removes the warning and
+  the 3-second startup latency in non-TTY callers (other scripts, SSH
+  without a pty, the MCP server).
+
 ## v2.1.0
 
 - **`orrery delete` without args opens a multi-select.** Pick any number of envs

@@ -72,7 +72,12 @@ public struct DelegateCommand: ParsableCommand {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = command
         process.environment = processEnv
-        process.standardInput = FileHandle.standardInput
+        // Redirect stdin to /dev/null so the delegated tool doesn't wait for input
+        // it'll never use — `claude -p`, `codex exec`, and `gemini -p` all take the
+        // prompt as an arg. With inherited stdin, a non-TTY caller (another script,
+        // an SSH session without a pty, the MCP server) triggers Claude's
+        // "no stdin data received in 3s" warning and adds 3s latency.
+        process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError
 
