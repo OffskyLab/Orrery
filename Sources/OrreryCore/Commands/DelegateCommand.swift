@@ -41,6 +41,24 @@ public struct DelegateCommand: ParsableCommand {
             for (key, value) in env.env {
                 envVars[key] = value
             }
+            // gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,
+            // so when delegating to gemini we override HOME to a per-env wrapper
+            // whose `.gemini` symlinks back to the env's gemini config.
+            if tool == .gemini, env.tools.contains(.gemini) {
+                try store.ensureGeminiHomeWrapper(envName: envName)
+                envVars["HOME"] = store.geminiHomeDir(environment: envName).path
+                // For API-key auth, gemini-cli's non-interactive validator
+                // only looks at `process.env.GEMINI_API_KEY` and won't fall
+                // through to its own Keychain/encrypted-file lookup. Pre-extract
+                // the stored key so `gemini -p` passes validation.
+                if envVars["GEMINI_API_KEY"] == nil,
+                   ProcessInfo.processInfo.environment["GEMINI_API_KEY"] == nil {
+                    let configDir = store.toolConfigDir(tool: .gemini, environment: envName)
+                    if let key = GeminiCredentials.loadAPIKey(configDir: configDir) {
+                        envVars["GEMINI_API_KEY"] = key
+                    }
+                }
+            }
         }
 
         var processEnv = ProcessInfo.processInfo.environment

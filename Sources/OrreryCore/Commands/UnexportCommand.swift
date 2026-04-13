@@ -24,6 +24,9 @@ public struct UnexportCommand: ParsableCommand {
         for tool in env.tools {
             lines.append("unset \(tool.envVarName)")
         }
+        if env.tools.contains(.gemini) {
+            lines.append("unset ORRERY_GEMINI_HOME")
+        }
 
         for key in env.env.keys.sorted() {
             lines.append("unset \(key)")

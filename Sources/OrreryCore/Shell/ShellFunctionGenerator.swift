@@ -19,8 +19,10 @@ public struct ShellFunctionGenerator {
           local _last=0
           [ -f "$_ts_file" ] && _last=$(cat "$_ts_file" 2>/dev/null || echo 0)
           if [ $((_now - _last)) -ge 14400 ]; then
-            (echo "$_now" > "$_ts_file"; _r=$(command orrery _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file") &
-            disown 2>/dev/null || true
+            # Double subshell: the inner `&` runs in a child shell that exits
+            # immediately, so the interactive shell never sees a background job
+            # and never prints `[N] PID` (zsh) or a job notice (bash).
+            ( ( echo "$_now" > "$_ts_file"; _r=$(command orrery _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file" ) & ) >/dev/null 2>&1
           fi
 
           local cmd="${1:-}"
@@ -35,7 +37,7 @@ public struct ShellFunctionGenerator {
                 eval "$(command orrery _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
               fi
               if [ "$2" = "origin" ]; then
-                unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR
+                unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
                 export ORRERY_ACTIVE_ENV="origin"
                 command orrery _set-current origin 2>/dev/null || true
                 echo "\(L10n.Use.switchedToOrigin)"
@@ -98,6 +100,17 @@ public struct ShellFunctionGenerator {
           fi
           # Ensure ORRERY_MEMORY.md is linked into Claude's auto-memory dir
           command orrery _link-memory 2>/dev/null || true
+        }
+
+        # gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,
+        # so env isolation is achieved by overriding HOME to a per-env wrapper
+        # dir whose `.gemini` symlinks back to the env's gemini config.
+        gemini() {
+          if [ -n "${ORRERY_GEMINI_HOME:-}" ]; then
+            HOME="$ORRERY_GEMINI_HOME" command gemini "$@"
+          else
+            command gemini "$@"
+          fi
         }
 
         _orrery_init

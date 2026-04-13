@@ -123,6 +123,10 @@ public struct EnvironmentStore: Sendable {
             try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
         }
 
+        if tool == .gemini {
+            try ensureGeminiHomeWrapper(envName: envName)
+        }
+
         if !env.tools.contains(tool) {
             env.tools.append(tool)
             try save(env)
@@ -134,6 +138,41 @@ public struct EnvironmentStore: Sendable {
     public func ensureSharedSessionLinks(tool: Tool, environment envName: String) throws {
         let toolDir = toolConfigDir(tool: tool, environment: envName)
         try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
+    }
+
+    /// Per-env fake HOME for gemini. gemini-cli ignores `GEMINI_CONFIG_DIR`
+    /// and always reads `~/.gemini/`, so isolation is achieved by setting
+    /// HOME to this dir (via the shell wrapper / delegate process env).
+    /// Layout: `<env>/gemini-home/.gemini/` is a symlink to `<env>/gemini/`,
+    /// so the existing config dir stays where everything else expects it.
+    public func geminiHomeDir(environment envName: String) -> URL {
+        let id = (try? resolveID(for: envName)) ?? envName
+        return envURL(id: id).appendingPathComponent("gemini-home")
+    }
+
+    /// Idempotent setup of the gemini home wrapper for an env: creates the
+    /// `gemini-home` dir and the `.gemini` → `../gemini` symlink. Safe to call
+    /// repeatedly (used both by addTool and lazily on `orrery use`).
+    public func ensureGeminiHomeWrapper(envName: String) throws {
+        let fm = FileManager.default
+        let homeDir = geminiHomeDir(environment: envName)
+        let configDir = toolConfigDir(tool: .gemini, environment: envName)
+        try fm.createDirectory(at: configDir, withIntermediateDirectories: true)
+        try fm.createDirectory(at: homeDir, withIntermediateDirectories: true)
+
+        let link = homeDir.appendingPathComponent(".gemini")
+        // Already correctly symlinked → done
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
+           dest == "../gemini" || dest == configDir.path {
+            return
+        }
+        // Wrong symlink or real dir at link path → remove first
+        if fm.fileExists(atPath: link.path) ||
+           (try? fm.destinationOfSymbolicLink(atPath: link.path)) != nil {
+            try fm.removeItem(at: link)
+        }
+        // Create as relative symlink so the env dir stays portable
+        try fm.createSymbolicLink(atPath: link.path, withDestinationPath: "../gemini")
     }
 
     /// Creates symlinks from the tool's session subdirectories to a shared location.

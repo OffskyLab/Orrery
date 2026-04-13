@@ -28,11 +28,21 @@ public struct ExportCommand: ParsableCommand {
         for tool in env.tools where !env.isolateSessions(for: tool) {
             try store.ensureSharedSessionLinks(tool: tool, environment: name)
         }
+        // gemini-cli ignores GEMINI_CONFIG_DIR; isolation is achieved by
+        // overriding HOME to a wrapper dir whose `.gemini` symlinks back to
+        // the env's gemini config. Make sure the wrapper exists for old envs.
+        if env.tools.contains(.gemini) {
+            try store.ensureGeminiHomeWrapper(envName: name)
+        }
 
         var lines: [String] = []
         for tool in env.tools {
             let dir = store.toolConfigDir(tool: tool, environment: name).path
             lines.append("export \(tool.envVarName)=\(dir)")
+        }
+        if env.tools.contains(.gemini) {
+            let homeDir = store.geminiHomeDir(environment: name).path
+            lines.append("export ORRERY_GEMINI_HOME=\(homeDir)")
         }
         for (key, value) in env.env.sorted(by: { $0.key < $1.key }) {
             lines.append("export \(key)=\(value)")
