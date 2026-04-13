@@ -49,26 +49,40 @@ struct L10nCodegenTool {
 
     static func run() throws {
         let arguments = CommandLine.arguments
-        guard arguments.count == 5 else {
-            throw ValidationError("usage: L10nCodegenTool <en.json> <zh-Hant.json> <output.swift> <package-root>")
+        // usage: L10nCodegenTool <output.swift> <package-root> <base.json> [<other.json> ...]
+        // The first locale file is the authoritative base (English). Its key set
+        // defines the schema every other locale must match.
+        guard arguments.count >= 4 else {
+            throw ValidationError("usage: L10nCodegenTool <output.swift> <package-root> <en.json> [<other.json> ...]")
         }
 
-        let enURL = URL(fileURLWithPath: arguments[1])
-        let zhURL = URL(fileURLWithPath: arguments[2])
-        let outputURL = URL(fileURLWithPath: arguments[3])
-        let packageRoot = URL(fileURLWithPath: arguments[4])
+        let outputURL = URL(fileURLWithPath: arguments[1])
+        let packageRoot = URL(fileURLWithPath: arguments[2])
         let signatureURL = packageRoot.appendingPathComponent("Sources/OrreryCore/Resources/Localization/l10n-signatures.json")
 
-        let english = try loadLocale(at: enURL)
-        let chinese = try loadLocale(at: zhURL)
+        // Parse each remaining arg as a locale file. Infer the locale code from
+        // the filename (sans extension): `en.json` → "en", `zh-Hant.json` → "zh-Hant".
+        var locales: [(code: String, content: [String: String])] = []
+        for path in arguments.dropFirst(3) {
+            let url = URL(fileURLWithPath: path)
+            let code = url.deletingPathExtension().lastPathComponent
+            let content = try loadLocale(at: url)
+            try validate(localeName: code, locale: content)
+            locales.append((code, content))
+        }
+        guard let base = locales.first else {
+            throw ValidationError("no locale files provided")
+        }
+
+        // Cross-validate every other locale against the base's key set + placeholders.
+        for other in locales.dropFirst() {
+            try validatePairs(base: base, other: other)
+        }
+
         let signatures = try loadSignatures(at: signatureURL)
+        try validateSignatures(signatures: signatures, english: base.content)
 
-        try validate(localeName: "en", locale: english)
-        try validate(localeName: "zh-Hant", locale: chinese)
-        try validatePairs(english: english, chinese: chinese)
-        try validateSignatures(signatures: signatures, english: english)
-
-        let generated = render(signatures: signatures, english: english, chinese: chinese)
+        let generated = render(signatures: signatures, locales: locales)
         try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try generated.write(to: outputURL, atomically: true, encoding: .utf8)
     }
@@ -92,27 +106,28 @@ struct L10nCodegenTool {
         }
     }
 
-    static func validatePairs(english: [String: String], chinese: [String: String]) throws {
-        let englishKeys = Set(english.keys)
-        let chineseKeys = Set(chinese.keys)
-        let missingInChinese = englishKeys.subtracting(chineseKeys).sorted()
-        let missingInEnglish = chineseKeys.subtracting(englishKeys).sorted()
-        if !missingInChinese.isEmpty || !missingInEnglish.isEmpty {
+    static func validatePairs(base: (code: String, content: [String: String]),
+                              other: (code: String, content: [String: String])) throws {
+        let baseKeys = Set(base.content.keys)
+        let otherKeys = Set(other.content.keys)
+        let missingInOther = baseKeys.subtracting(otherKeys).sorted()
+        let extraInOther  = otherKeys.subtracting(baseKeys).sorted()
+        if !missingInOther.isEmpty || !extraInOther.isEmpty {
             var messages: [String] = []
-            if !missingInChinese.isEmpty {
-                messages.append("Keys missing from zh-Hant.json: \(missingInChinese.joined(separator: ", "))")
+            if !missingInOther.isEmpty {
+                messages.append("Keys missing from \(other.code).json: \(missingInOther.joined(separator: ", "))")
             }
-            if !missingInEnglish.isEmpty {
-                messages.append("Keys missing from en.json: \(missingInEnglish.joined(separator: ", "))")
+            if !extraInOther.isEmpty {
+                messages.append("Extra keys in \(other.code).json (not in \(base.code).json): \(extraInOther.joined(separator: ", "))")
             }
             throw ValidationError(messages.joined(separator: "\n"))
         }
 
-        for key in englishKeys.sorted() {
-            let enPlaceholders = placeholders(in: english[key] ?? "")
-            let zhPlaceholders = placeholders(in: chinese[key] ?? "")
-            if enPlaceholders != zhPlaceholders {
-                throw ValidationError("Placeholder mismatch for key '\(key)': en=\(enPlaceholders.sorted()) zh-Hant=\(zhPlaceholders.sorted())")
+        for key in baseKeys.sorted() {
+            let basePH  = placeholders(in: base.content[key]  ?? "")
+            let otherPH = placeholders(in: other.content[key] ?? "")
+            if basePH != otherPH {
+                throw ValidationError("Placeholder mismatch for key '\(key)': \(base.code)=\(basePH.sorted()) \(other.code)=\(otherPH.sorted())")
             }
         }
     }
@@ -201,7 +216,7 @@ struct L10nCodegenTool {
         }
     }
 
-    static func render(signatures: [Signature], english: [String: String], chinese: [String: String]) -> String {
+    static func render(signatures: [Signature], locales: [(code: String, content: [String: String])]) -> String {
         let grouped = Dictionary(grouping: signatures, by: { $0.path[0] })
         var output: [String] = []
         output.append("import Foundation")
@@ -209,17 +224,17 @@ struct L10nCodegenTool {
 
         // Embed translations as Swift data. Keeps strings in the binary so
         // deployments don't need to ship the resource bundle alongside.
+        // One `static let <propertyName>` per locale; property name is the
+        // filename's lowerCamel form (`en` → `en`, `zh-Hant` → `zhHant`,
+        // `ja` → `ja`).
         output.append("enum L10nData {")
-        output.append("    static let en: [String: String] = [")
-        for key in english.keys.sorted() {
-            output.append("        \"\(key)\": \(swiftQuoted(english[key]!)),")
+        for locale in locales {
+            output.append("    static let \(propertyName(forLocaleCode: locale.code)): [String: String] = [")
+            for key in locale.content.keys.sorted() {
+                output.append("        \"\(key)\": \(swiftQuoted(locale.content[key]!)),")
+            }
+            output.append("    ]")
         }
-        output.append("    ]")
-        output.append("    static let zhHant: [String: String] = [")
-        for key in chinese.keys.sorted() {
-            output.append("        \"\(key)\": \(swiftQuoted(chinese[key]!)),")
-        }
-        output.append("    ]")
         output.append("}")
         output.append("")
 
@@ -338,6 +353,19 @@ struct L10nCodegenTool {
     static func lowerCamel(_ value: String) -> String {
         guard let first = value.first else { return value }
         return first.lowercased() + value.dropFirst()
+    }
+
+    /// Convert a BCP-47-ish locale code to a Swift property name:
+    /// `en` → `en`, `zh-Hant` → `zhHant`, `pt-BR` → `ptBR`.
+    static func propertyName(forLocaleCode code: String) -> String {
+        let parts = code.split(separator: "-")
+        guard let first = parts.first else { return code }
+        var out = first.lowercased()
+        for rest in parts.dropFirst() {
+            guard let head = rest.first else { continue }
+            out += head.uppercased() + rest.dropFirst()
+        }
+        return out
     }
 
     static func placeholders(in string: String) -> Set<String> {
