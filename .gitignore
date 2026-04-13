@@ -1,2 +1,7 @@
 .build/
+.build-local/
+.swift-cache/
+.swiftpm/
+.claude/
+.mcp.json
 *.resolved
