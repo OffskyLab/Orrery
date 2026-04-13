@@ -1006,8 +1006,43 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.0.0</span>
+        <span class="changelog-ver">v2.2.0</span>
         <span class="changelog-new">latest</span>
+        <h3>Localized CLI + Japanese stub + readable <code>orrery list</code></h3>
+      </div>
+      <p class="changelog-body">Every CLI string now lives in <code>Sources/OrreryCore/Resources/Localization/&lt;locale&gt;.json</code> instead of being hard-coded in Swift. An SPM build plugin reads the JSON on every <code>swift build</code> and generates typed accessors plus embedded translation tables — no runtime resource lookup, so single-file deploys (Homebrew, <code>.deb</code>) keep working. A drift check (missing keys, mismatched placeholders) fails the build before a release can ship a half-translated locale. Japanese (<code>ja.json</code>) is wired up but stubbed from English while the translation lands; it falls back to EN at runtime via <code>AppLocale.detect()</code>.</p>
+      <p class="changelog-body"><code>orrery list</code> got a multi-line layout: each environment becomes its own block with one tool per indented row, prefixed with <code>·</code>. Once an env has multiple tools or longer suffixes (email + plan + model), this is much easier to scan than the old single-line format. The active environment header is highlighted in cyan; the rest uses a quiet monochrome ladder (email near-white → plan mid-gray → model dim) so the data stays readable without competing colors. ANSI is stripped cleanly when piped or read by MCP.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.2</span>
+        <h3>Gemini honors orrery envs — and <code>delegate --gemini</code> works with API keys</h3>
+      </div>
+      <p class="changelog-body">gemini-cli ignores <code>GEMINI_CONFIG_DIR</code> and always reads <code>~/.gemini/</code>, which made per-env isolation impossible. Each env now ships with a sibling <code>gemini-home/</code> directory whose <code>.gemini</code> symlinks back to the env's gemini config; <code>orrery use</code> exports <code>ORRERY_GEMINI_HOME</code> and a shell <code>gemini()</code> wrapper runs gemini with <code>HOME=$ORRERY_GEMINI_HOME</code> so it lands in the right place. Setup is idempotent and backfilled for existing envs on the next <code>orrery use</code>.</p>
+      <p class="changelog-body"><code>orrery delegate --gemini</code> with API-key auth used to fail because gemini-cli's non-interactive validator only looks at <code>process.env.GEMINI_API_KEY</code> and won't fall through to its own Keychain or encrypted-file lookup. Delegate now pre-extracts the stored key (macOS Keychain first, then decrypts <code>gemini-credentials.json</code> via the same scrypt + AES-256-GCM derivation gemini-cli uses) and injects it before invoking the child. <code>orrery list</code> also surfaces gemini's auth type — <code>gemini(api key)</code> / <code>gemini(vertex)</code> / OAuth email — by reading <code>settings.json</code>.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.1</span>
+        <h3><code>orrery delegate</code> no longer stalls 3 seconds in non-TTY callers</h3>
+      </div>
+      <p class="changelog-body">When <code>orrery delegate</code> was invoked from a script, SSH without a pty, or the MCP server, Claude (and the other tools) would print a "no stdin data received in 3s" warning and hang for 3 seconds before continuing. The delegated tool already takes the prompt as a CLI argument, so the child's stdin is now wired to <code>/dev/null</code> instead of inheriting the caller's. Removes both the warning and the latency.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.0</span>
+        <h3><code>orrery delete</code> opens a multi-select when called without args</h3>
+      </div>
+      <p class="changelog-body">Cleaning out throwaway envs after testing used to mean running <code>orrery delete &lt;name&gt;</code> once per env. Now <code>orrery delete</code> with no name opens a multi-select picker — arrow keys + space to mark, enter to confirm — and deletes them all in one go. <code>--force</code> skips the confirmation; passing a name still does the original single-env delete.</p>
+      <p class="changelog-body">Bug fixes bundled in: <code>orrery create --tool X</code> now still runs the chosen tool's sub-wizard (login source, clone source, sessions, memory) instead of skipping every wizard step; clone no longer leaks identity via a <code>backups/</code> heal step; self-login and clone strip identity + onboarding so Claude re-prompts cleanly; missing <code>.claude.json</code> is healed from backups after migration; stale symlinks after migration and origin tool logins are fixed.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.0.0</span>
         <h3>Renamed to Orrery</h3>
       </div>
       <p class="changelog-body">Why the rename? <code>orbital</code> is a crowded name in software land — search results constantly collide with unrelated tools. This release renames the project to <code>orrery</code> (the mechanical model of the solar system) — thematically closer to what this tool does (maintaining multiple parallel config universes), and much less common as a software name.</p>

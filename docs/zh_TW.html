@@ -991,8 +991,43 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.0.0</span>
+        <span class="changelog-ver">v2.2.0</span>
         <span class="changelog-new">最新</span>
+        <h3>CLI 字串外部化、日文 stub、<code>orrery list</code> 重排</h3>
+      </div>
+      <p class="changelog-body">所有 CLI 字串改放在 <code>Sources/OrreryCore/Resources/Localization/&lt;locale&gt;.json</code>，不再硬寫在 Swift 裡。SPM build plugin 在每次 <code>swift build</code> 時讀 JSON、產生 typed accessor 與內嵌的翻譯表 — 完全沒有 runtime resource lookup，所以單檔部署（Homebrew、<code>.deb</code>）照樣 work。CI 還會檢查各 locale 的 key 集合與 placeholder 是否一致，缺一個就 build fail，避免半翻譯版本流到 release。日文（<code>ja.json</code>）已接好，但內容暫時沿用英文，等翻譯完成；runtime 透過 <code>AppLocale.detect()</code> fallback 到英文。</p>
+      <p class="changelog-body"><code>orrery list</code> 改成多行排版：每個環境自成一塊，每個 tool 一行，前面加 <code>·</code>。一旦 env 多個 tool 或 suffix 變長（email + plan + model），這比舊版單行密集排版好讀很多。當前環境 header 用青色強調，其餘走灰階梯度（email 近白 → plan 中灰 → model 暗）— 資料保持高可讀性，又不會被顏色干擾。輸出 pipe 或被 MCP 讀取時 ANSI 會自動去除。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.2</span>
+        <h3>Gemini 終於認 orrery 環境，<code>delegate --gemini</code> 也認 API key</h3>
+      </div>
+      <p class="changelog-body">gemini-cli 不認 <code>GEMINI_CONFIG_DIR</code>、永遠讀 <code>~/.gemini/</code>，導致 per-env 隔離一直失敗。現在每個 env 旁邊都會有一個 <code>gemini-home/</code> 目錄，裡面的 <code>.gemini</code> 會 symlink 回該 env 的 gemini config；<code>orrery use</code> 會 export <code>ORRERY_GEMINI_HOME</code>，shell 端的 <code>gemini()</code> wrapper 用 <code>HOME=$ORRERY_GEMINI_HOME</code> 跑 gemini，落地點就對了。整套 setup 是 idempotent，現有 env 在下一次 <code>orrery use</code> 時會自動補齊。</p>
+      <p class="changelog-body"><code>orrery delegate --gemini</code> 在 API key 模式下原本會失敗 — gemini-cli 的非互動 validator 只看 <code>process.env.GEMINI_API_KEY</code>，不會 fallback 到自己的 Keychain 或加密檔。delegate 現在會先把儲存的 key 撈出來（先試 macOS Keychain，再用跟 gemini-cli 一樣的 scrypt + AES-256-GCM 解 <code>gemini-credentials.json</code>）注入 child process。<code>orrery list</code> 也會讀 <code>settings.json</code>、把 gemini 的 auth type 顯示出來 — <code>gemini(api key)</code> / <code>gemini(vertex)</code> / OAuth email。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.1</span>
+        <h3><code>orrery delegate</code> 在非 TTY 呼叫端不再卡 3 秒</h3>
+      </div>
+      <p class="changelog-body"><code>orrery delegate</code> 從 script、SSH 沒 pty、或 MCP server 呼叫時，Claude（其他工具也一樣）會印 “no stdin data received in 3s” 警告、然後卡 3 秒才繼續。被 delegate 的工具其實是用 CLI argument 拿 prompt 的，所以 child 的 stdin 改接到 <code>/dev/null</code>，不再繼承呼叫端的 stdin。警告跟 latency 一起消失。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.1.0</span>
+        <h3><code>orrery delete</code> 不帶參數會開多選</h3>
+      </div>
+      <p class="changelog-body">測試完一堆 throwaway env 要清掉時，舊版只能 <code>orrery delete &lt;name&gt;</code> 一個一個刪。現在不帶名字直接 <code>orrery delete</code> 會跳 multi-select — 上下鍵移動、空白鍵勾選、Enter 確認，一次刪完。<code>--force</code> 跳過確認；帶名字仍然是原本的單一刪除流程。</p>
+      <p class="changelog-body">同時修了一批：<code>orrery create --tool X</code> 仍會跑該 tool 的 sub-wizard（login 來源、clone 來源、sessions、memory），不再被誤跳過；clone 不再透過 <code>backups/</code> heal 步驟洩漏來源 identity；self-login 與 clone 會剝掉 identity + onboarding，讓 Claude 重新 prompt；migration 後遺漏的 <code>.claude.json</code> 會從 backup 自動修；migration 留下的 stale symlink 與 origin tool login 也修了。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.0.0</span>
         <h3>改名為 Orrery</h3>
       </div>
       <p class="changelog-body">為什麼要改名？因為 <code>orbital</code> 作為軟體名稱太常見了，搜尋起來常常撞到別的工具。這版改成 <code>orrery</code>（原意是太陽系機械模型）— 主題上更貼近這個專案「維護多個平行設定宇宙」的精神，名稱也夠冷門。</p>
