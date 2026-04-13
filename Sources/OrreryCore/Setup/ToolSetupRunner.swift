@@ -96,6 +96,11 @@ public enum ToolSetupRunner {
             } else {
                 print(L10n.Create.copyLoginFailed(loginSource))
             }
+        } else if config.tool == .claude {
+            // User chose "I'll log in myself". If a clone brought over X's .claude.json,
+            // strip X's identity + onboarding markers so Claude runs its own onboarding
+            // + login at next launch (instead of silently adopting X's account).
+            ClaudeFlow.prepareForSelfLogin(targetDir: targetDir)
         }
     }
 
