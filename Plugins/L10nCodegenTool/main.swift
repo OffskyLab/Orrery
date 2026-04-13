@@ -42,7 +42,7 @@ struct L10nCodegenTool {
         do {
             try run()
         } catch {
-            fputs("L10n codegen failed: \(error)\n", stderr)
+            FileHandle.standardError.write(Data("L10n codegen failed: \(error)\n".utf8))
             Foundation.exit(1)
         }
     }
