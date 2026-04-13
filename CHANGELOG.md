@@ -1,5 +1,39 @@
 # Changelog
 
+## v2.1.0
+
+- **`orrery delete` without args opens a multi-select.** Pick any number of envs
+  with arrow keys + space, confirm once, and delete them in one go. Useful
+  after testing or when cleaning out a pile of throwaway envs. `--force`
+  skips the confirmation; passing a name still does the single-env delete
+  with the original confirmation prompt.
+
+Bug fixes carried over (originally drafted for v2.0.1):
+
+- **`orrery create --tool X` now still runs the sub-wizard** for the chosen
+  tool (login source, clone source, sessions, memory). The flag was supposed
+  to mean "skip the per-tool yes/no loop", not "skip every wizard step".
+- **Self-login + clone no longer adopts the source's identity.** Identity
+  keys (`oauthAccount`, `userID`, `anonymousId`) and onboarding markers
+  (`hasCompletedOnboarding`, `lastOnboardingVersion`) are stripped from
+  the cloned `.claude.json` so Claude runs its own onboarding + login flow
+  at next launch.
+- **Clone skips `backups/`.** `.claude.json.backup.<ts>` snapshots carry a
+  full identity. Without this, the heal-from-backup pass would later
+  restore the source's identity into the new env, defeating the strip above.
+- **Origin's tool logins shown in `list` and `info`.** The `* origin` row
+  shows each tool's email + plan, same format as regular envs.
+- **Stale session symlinks healed on `orrery use`.** After migration, env's
+  `claude/projects` etc. symlinks still pointed at `~/.orbital/shared/...`.
+  `linkSharedSessionDirs` now detects misaligned symlinks (not just real
+  directories) and recreates them pointing at `~/.orrery/shared/...`.
+- **Background version-check no longer prints `[N] done` notices** in zsh —
+  the subshell is `disown`'d after backgrounding.
+- **Migration heals lost `.claude.json` from backups** when a migrated env
+  has `claude/backups/.claude.json.backup.<ts>` present but the main file
+  missing (Claude Code refuses to launch in that state).
+- **Migration prompt wording tightened.**
+
 ## v2.0.0
 
 Orbital has been renamed to **Orrery** and forked to `OffskyLab/Orrery`. This
