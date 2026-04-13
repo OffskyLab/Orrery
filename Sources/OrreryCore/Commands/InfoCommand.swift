@@ -52,7 +52,7 @@ public struct InfoCommand: ParsableCommand {
             for tool in env.tools {
                 let configDir = store.toolConfigDir(tool: tool, environment: resolvedName)
                 let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
-                let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+                let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
                 print(suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))")
             }
         }
@@ -87,7 +87,7 @@ public struct InfoCommand: ParsableCommand {
         print(L10n.Info.labelTools)
         let entries = Tool.allCases.compactMap { tool -> String? in
             let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
-            let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+            let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
             return suffix.isEmpty ? nil : "  \(tool.rawValue) (\(suffix))"
         }
         if entries.isEmpty {
