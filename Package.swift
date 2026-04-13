@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "orrery", targets: ["orrery"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
+        .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
@@ -22,7 +23,17 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources/OrreryCore"
+            path: "Sources/OrreryCore",
+            plugins: [.plugin(name: "L10nCodegen")]
+        ),
+        .executableTarget(
+            name: "L10nCodegenTool",
+            path: "Plugins/L10nCodegenTool"
+        ),
+        .plugin(
+            name: "L10nCodegen",
+            capability: .buildTool(),
+            dependencies: ["L10nCodegenTool"]
         ),
         .testTarget(
             name: "OrreryTests",
