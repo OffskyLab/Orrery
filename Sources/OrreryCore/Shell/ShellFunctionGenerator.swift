@@ -11,7 +11,10 @@ public struct ShellFunctionGenerator {
           local _ts_file="$_orrery_home/.update-ts"
 
           # Show update notice on every command until orrery update clears it
-          [ -f "$_notice_file" ] && printf '\\033[1;33m%s\\033[0m\\n' "$(cat "$_notice_file")"
+          # (suppressed while the user is actually running `orrery update`)
+          if [ "${1:-}" != "update" ] && [ "${1:-}" != "_check-update" ]; then
+            [ -f "$_notice_file" ] && printf '\\033[1;33m%s\\033[0m\\n' "$(cat "$_notice_file")"
+          fi
 
           # Background version check — at most once every 4 hours
           local _now
