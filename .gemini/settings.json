@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "orrery": {
+      "command": "orrery mcp-server",
+      "args": []
+    }
+  }
+}

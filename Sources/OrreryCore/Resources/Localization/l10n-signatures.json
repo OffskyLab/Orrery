@@ -521,6 +521,14 @@
   {
     "path": [
       "Delegate",
+      "codexResumePromptUnsupported"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
       "envHelp"
     ],
     "kind": "var",
@@ -529,7 +537,55 @@
   {
     "path": [
       "Delegate",
+      "noPromptNoResume"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
       "promptHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "resumeHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "resumeNotFound"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionRequiresPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionResumeExclusive"
     ],
     "kind": "var",
     "parameters": []
