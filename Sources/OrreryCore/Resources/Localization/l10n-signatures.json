@@ -1422,6 +1422,20 @@
   },
   {
     "path": [
+      "Resume",
+      "pickerTitle"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "count",
+        "type": "Int"
+      }
+    ]
+  },
+  {
+    "path": [
       "Run",
       "abstract"
     ],

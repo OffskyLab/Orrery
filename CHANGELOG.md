@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.2.2
+
+- **`orrery resume` interactive picker now works correctly when launched
+  from inside a Claude Code session.** The previous implementation used
+  `Process().run()` + `waitUntilExit()` to spawn the tool, which left
+  `CLAUDECODE` / `CLAUDE_CODE_ENTRYPOINT` / `CLAUDE_CODE_EXECPATH` in the
+  child's environment — causing claude to detect itself as a subprocess
+  and hang indefinitely. Now uses `execvp()` (same as `orrery run`),
+  replacing the orrery process entirely and stripping those IPC variables
+  before exec. Full TTY is inherited cleanly.
+- **Picker I/O moved to `/dev/tty`.** `SingleSelect` and `MultiSelect`
+  now open `/dev/tty` directly for all keyboard input, ANSI output, and
+  terminal-mode changes. `stdin` and `stdout` are never touched, so the
+  tool that runs after the picker receives a completely clean TTY.
+- **Active session detection.** Sessions that are currently open in
+  another window are marked with a green `▶` in the picker. Selecting one
+  shows a warning before launching.
+- **Session ID shown in picker.** Each entry now displays the first 8
+  characters of the session ID (dim, before the title) for quick
+  identification.
+
 ## v2.2.1
 
 - **`orrery list` no longer deadlocks on large Claude credentials.** When

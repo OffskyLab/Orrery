@@ -468,7 +468,7 @@ public struct MCPServer {
 
     private static func currentVersion() -> String {
         // Read from OrreryCommand would create a circular dep, just hardcode sync point
-        "2.2.1"
+        "2.2.2"
     }
 }
 
