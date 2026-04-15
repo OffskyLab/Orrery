@@ -206,13 +206,38 @@ public struct MCPServer {
 
         do {
             try process.run()
-            process.waitUntilExit()
         } catch {
             return toolError("Failed to run: \(args.joined(separator: " ")): \(error)")
         }
 
-        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let errOutput = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        // Drain BOTH pipes concurrently before waitUntilExit. If the child
+        // writes more than the pipe buffer (~16 KB on macOS) and we wait
+        // first, the child blocks on a full pipe and we block waiting for
+        // the child → deadlock. Reading sequentially isn't enough either,
+        // since whichever pipe we read second can fill while we're stuck
+        // on the first.
+        let outBox = DataBox()
+        let errBox = DataBox()
+        let group = DispatchGroup()
+        let outHandle = pipe.fileHandleForReading
+        let errHandle = errPipe.fileHandleForReading
+
+        group.enter()
+        DispatchQueue.global().async {
+            outBox.set(outHandle.readDataToEndOfFile())
+            group.leave()
+        }
+        group.enter()
+        DispatchQueue.global().async {
+            errBox.set(errHandle.readDataToEndOfFile())
+            group.leave()
+        }
+
+        process.waitUntilExit()
+        group.wait()
+
+        let output = String(data: outBox.snapshot, encoding: .utf8) ?? ""
+        let errOutput = String(data: errBox.snapshot, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 {
             let msg = errOutput.isEmpty ? output : errOutput
@@ -444,5 +469,24 @@ public struct MCPServer {
     private static func currentVersion() -> String {
         // Read from OrreryCommand would create a circular dep, just hardcode sync point
         "2.2.1"
+    }
+}
+
+/// Mutable Data sink usable from concurrent `DispatchQueue.global().async`
+/// reads under Swift 6 strict concurrency.
+private final class DataBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = Data()
+
+    func set(_ data: Data) {
+        lock.lock()
+        value = data
+        lock.unlock()
+    }
+
+    var snapshot: Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
     }
 }

@@ -994,8 +994,10 @@
       <div class="changelog-head">
         <span class="changelog-ver">v2.2.1</span>
         <span class="changelog-new">最新</span>
-        <h3>Memory 路徑是資料夾，不是幽靈 <code>ORRERY_MEMORY.md</code></h3>
+        <h3><code>orrery list</code>：修正 pipe-buffer deadlock、平行化 lookup、Memory 路徑改顯示資料夾</h3>
       </div>
+      <p class="changelog-body"><code>orrery list</code> 在裝了多個 MCP server（figma、notion 等）的機器上會無限卡死 — 那些 OAuth tokens 會被塞進 Claude 的 Keychain credential JSON，整包 size 超過 macOS pipe buffer（約 16 KB，有時更小）。<code>ClaudeKeychain.findPassword</code> 的順序是先呼叫 <code>security</code>、再 <code>waitUntilExit()</code>、最後才讀 pipe — 教科書級的 pipe-buffer deadlock：<code>security</code> 在寫滿的 pipe 上 block，orrery 在等 <code>security</code> 結束，互相等對方。直接跑 <code>security find-generic-password</code>（25 毫秒回傳完整 credential）就能驗證 Keychain 本身沒問題。修法：在 <code>waitUntilExit</code> 之前先把 pipe 讀乾淨。同樣的 pattern 也在 <code>MCPServer.execCommand</code>，現在 stdout 與 stderr 用兩個 background queue 平行 drain（序列讀的話另一支還是會在中途滿掉再 deadlock）。</p>
+      <p class="changelog-body">每個 env 的 Claude/Codex/Gemini 帳號查詢以前是序列的，env&nbsp;1 的 Keychain 讀取慢，env 2..N 全部跟著等。<code>environmentRows</code> 現在把所有 <code>(env, tool)</code> pair 攤平成一個 work list，用 <code>DispatchQueue.concurrentPerform</code> 派發。worst-case wall time 從 <code>O(N×M×單次)</code> 降到大約 <code>O(單次)</code>。輸出格式與順序不變。</p>
       <p class="changelog-body"><code>orrery info</code> 與 <code>orrery memory info</code> 以前印的是 <code>.../ORRERY_MEMORY.md</code> — 一個從未真正存在的檔案。v1.1.0 原始設計是寫單一 <code>ORRERY_MEMORY.md</code> 再 symlink 進 Claude 的 auto-memory 目錄；v1.1.2 改成對整個目錄做 symlink，讓所有 auto-memory 寫入直接落在共享可同步路徑，這之後 <code>ORRERY_MEMORY.md</code> 這個檔名就變成 code 一直在追的死重。Memory Path 現在顯示資料夾（例如 <code>~/.orrery/shared/memory/&#123;projectKey&#125;/</code>）— <code>MEMORY.md</code> 與 fragment 檔真正住的地方。</p>
       <p class="changelog-body">MCP 工具 <code>orrery_memory_read</code> / <code>orrery_memory_write</code> 現在操作該資料夾內的 <code>MEMORY.md</code>，對齊 Claude auto-memory 慣例 — Codex 與 Gemini（透過 MCP 呼叫這些工具）讀寫的就是 Claude session 啟動時讀的同一份檔案。內部重構：<code>EnvironmentStore.memoryFile()</code> → <code>memoryDir()</code>；<code>memory export</code> 預設輸出檔名改為 <code>MEMORY.md</code>。</p>
     </article>

@@ -71,10 +71,19 @@ public enum ClaudeKeychain {
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
+
         do { try proc.run() } catch { return nil }
-        proc.waitUntilExit()
-        guard proc.terminationStatus == 0 else { return nil }
+
+        // Drain the pipe BEFORE waitUntilExit. Claude Code now embeds MCP
+        // OAuth tokens (figma, notion, etc.) in the credential JSON, which
+        // can exceed the pipe buffer (~16 KB on macOS, sometimes less). If
+        // we waited first, `security` would block on a full pipe while
+        // we'd block on `security` exiting → permanent deadlock observed
+        // in the wild as a multi-minute orrery list hang.
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        proc.waitUntilExit()
+
+        guard proc.terminationStatus == 0 else { return nil }
         let pw = String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (pw?.isEmpty == false) ? pw : nil

@@ -2,6 +2,27 @@
 
 ## v2.2.1
 
+- **`orrery list` no longer deadlocks on large Claude credentials.** When
+  Claude Code embeds OAuth tokens for connected MCP servers (figma,
+  notion, etc.) into its Keychain entry, the credential JSON can exceed
+  the macOS pipe buffer (~16 KB, sometimes less). `ClaudeKeychain.findPassword`
+  ran `security find-generic-password`, called `waitUntilExit()` *first*,
+  then read the pipe — the textbook pipe-buffer deadlock: `security`
+  blocks writing into a full pipe while orrery blocks waiting for
+  `security` to exit. Observed in the wild as a multi-minute hang with
+  `security find-generic-password -s Claude Code-credentials …` visible
+  in `ps` while `orrery list` sat idle. Now drains the pipe before
+  `waitUntilExit`. Same deadlock pattern fixed in `MCPServer.execCommand`,
+  where both stdout AND stderr pipes are now drained concurrently on
+  background queues (sequential drain would still deadlock on whichever
+  pipe filled second).
+- **`orrery list` runs tool account lookups in parallel.** Each env's
+  Claude/Codex/Gemini lookup used to run serially, so a slow Keychain
+  read on env 1 blocked envs 2..N. Now flattens all `(env, tool)` pairs
+  into a single work list and dispatches them via
+  `DispatchQueue.concurrentPerform`. Worst-case wall time drops from
+  `O(N envs × M tools × per-call)` to roughly `O(per-call)`. Output
+  formatting and ordering are unchanged.
 - **Memory path = a directory, not a phantom file.** `orrery info` and
   `orrery memory info` now print the memory **directory** (e.g.
   `~/.orrery/shared/memory/{projectKey}/`) instead of
