@@ -47,11 +47,11 @@ public struct ResumeCommand: ParsableCommand {
         } else {
             // --- Interactive picker ---
             // Picker uses /dev/tty directly; check it's openable before proceeding.
-            let ttyCheck = Darwin.open("/dev/tty", O_RDWR)
+            let ttyCheck = open("/dev/tty", O_RDWR)
             guard ttyCheck >= 0 else {
                 throw ValidationError(L10n.Resume.noIndex)
             }
-            Darwin.close(ttyCheck)
+            close(ttyCheck)
 
             let tools: [Tool]
             if claude { tools = [.claude] } else if codex { tools = [.codex] } else if gemini { tools = [.gemini] } else { tools = Tool.allCases }

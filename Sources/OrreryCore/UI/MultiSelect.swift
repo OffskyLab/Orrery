@@ -19,9 +19,9 @@ public struct MultiSelect: Sendable {
     /// Run interactive multi-select via /dev/tty (leaves stdin/stdout untouched).
     /// Returns indices of selected options, or preSelected on cancel.
     public func run() -> IndexSet {
-        let tty = Darwin.open("/dev/tty", O_RDWR)
+        let tty = posixOpen("/dev/tty", O_RDWR)
         guard tty >= 0 else { return preSelected }
-        defer { close(tty) }
+        defer { posixClose(tty) }
 
         var selected = preSelected
         var cursor = 0
@@ -83,7 +83,7 @@ public struct MultiSelect: Sendable {
 
     private func ttyWrite(_ fd: Int32, _ str: String) {
         var data = Array(str.utf8)
-        _ = Darwin.write(fd, &data, data.count)
+        _ = posixWrite(fd, &data, data.count)
     }
 
     private enum Key { case up, down, space, enter, ctrlC, other }
@@ -121,10 +121,37 @@ public struct MultiSelect: Sendable {
 }
 
 @inline(__always)
+private func posixOpen(_ path: String, _ flags: Int32) -> Int32 {
+    #if canImport(Darwin)
+    Darwin.open(path, flags)
+    #else
+    Glibc.open(path, flags)
+    #endif
+}
+
+@inline(__always)
+private func posixClose(_ fd: Int32) {
+    #if canImport(Darwin)
+    Darwin.close(fd)
+    #else
+    Glibc.close(fd)
+    #endif
+}
+
+@inline(__always)
 private func posixRead(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ count: Int) -> Int {
     #if canImport(Darwin)
     Darwin.read(fd, buf, count)
     #else
     Glibc.read(fd, buf, count)
+    #endif
+}
+
+@inline(__always)
+private func posixWrite(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ count: Int) -> Int {
+    #if canImport(Darwin)
+    Darwin.write(fd, buf, count)
+    #else
+    Glibc.write(fd, buf, count)
     #endif
 }

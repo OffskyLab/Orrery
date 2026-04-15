@@ -27,9 +27,9 @@ public struct SingleSelect: Sendable {
     /// Returns the selected index, or `nil` on cancel or if /dev/tty is unavailable.
     public func runOrNil() -> Int? {
         // Open /dev/tty directly — picker I/O is completely separate from stdin/stdout.
-        let tty = ttyOpen()
+        let tty = posixOpen("/dev/tty", O_RDWR)
         guard tty >= 0 else { return nil }
-        defer { close(tty) }
+        defer { posixClose(tty) }
 
         var cursor = preSelected
 
@@ -107,7 +107,7 @@ public struct SingleSelect: Sendable {
 
     private func ttyWrite(_ fd: Int32, _ str: String) {
         var data = Array(str.utf8)
-        _ = Darwin.write(fd, &data, data.count)
+        _ = posixWrite(fd, &data, data.count)
     }
 
     // MARK: - Input
@@ -150,7 +150,12 @@ public struct SingleSelect: Sendable {
 
     private func terminalSize(tty: Int32) -> (width: Int, height: Int) {
         var ws = winsize()
-        if ioctl(tty, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0 {
+        #if canImport(Darwin)
+        let ret = ioctl(tty, TIOCGWINSZ, &ws)
+        #else
+        let ret = ioctl(tty, UInt(TIOCGWINSZ), &ws)
+        #endif
+        if ret == 0 && ws.ws_col > 0 {
             return (Int(ws.ws_col), Int(ws.ws_row))
         }
         return (80, 24)
@@ -206,8 +211,21 @@ public struct SingleSelect: Sendable {
 }
 
 @inline(__always)
-private func ttyOpen() -> Int32 {
-    Darwin.open("/dev/tty", O_RDWR)
+private func posixOpen(_ path: String, _ flags: Int32) -> Int32 {
+    #if canImport(Darwin)
+    Darwin.open(path, flags)
+    #else
+    Glibc.open(path, flags)
+    #endif
+}
+
+@inline(__always)
+private func posixClose(_ fd: Int32) {
+    #if canImport(Darwin)
+    Darwin.close(fd)
+    #else
+    Glibc.close(fd)
+    #endif
 }
 
 @inline(__always)
@@ -216,5 +234,14 @@ private func posixRead(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ count: Int
     Darwin.read(fd, buf, count)
     #else
     Glibc.read(fd, buf, count)
+    #endif
+}
+
+@inline(__always)
+private func posixWrite(_ fd: Int32, _ buf: UnsafeMutableRawPointer, _ count: Int) -> Int {
+    #if canImport(Darwin)
+    Darwin.write(fd, buf, count)
+    #else
+    Glibc.write(fd, buf, count)
     #endif
 }
