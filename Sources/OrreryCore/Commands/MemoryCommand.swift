@@ -15,7 +15,7 @@ public struct MemoryCommand: ParsableCommand {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
         let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+        let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
 
         let isIsolated: Bool
         let storagePath: String?
@@ -30,7 +30,7 @@ public struct MemoryCommand: ParsableCommand {
 
         // Show current status
         print(L10n.Memory.statusMode(isIsolated))
-        print(L10n.Memory.statusPath(memoryFile.path))
+        print(L10n.Memory.statusPath(memoryDir.path))
         print(L10n.Memory.storageStatus(storagePath))
         print("")
 
@@ -89,7 +89,8 @@ public struct MemoryCommand: ParsableCommand {
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
             let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+            let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
+            let memoryFile = memoryDir.appendingPathComponent("MEMORY.md")
 
             let isIsolated: Bool
             if let envName, envName != ReservedEnvironment.defaultName,
@@ -104,7 +105,7 @@ public struct MemoryCommand: ParsableCommand {
             let size = (try? fm.attributesOfItem(atPath: memoryFile.path)[.size] as? Int) ?? 0
 
             print(L10n.Memory.statusMode(isIsolated))
-            print(L10n.Memory.statusPath(memoryFile.path))
+            print(L10n.Memory.statusPath(memoryDir.path))
             print(L10n.Memory.statusExists(exists, size))
         }
     }
@@ -127,7 +128,8 @@ public struct MemoryCommand: ParsableCommand {
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
             let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            let memoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+            let memoryFile = store.memoryDir(projectKey: projectKey, envName: envName)
+                .appendingPathComponent("MEMORY.md")
 
             guard FileManager.default.fileExists(atPath: memoryFile.path) else {
                 print(L10n.Memory.noMemory)
@@ -135,7 +137,7 @@ public struct MemoryCommand: ParsableCommand {
             }
 
             let content = try String(contentsOf: memoryFile, encoding: .utf8)
-            let outputPath = output ?? "ORRERY_MEMORY.md"
+            let outputPath = output ?? "MEMORY.md"
             let outputURL = URL(fileURLWithPath: outputPath)
             try content.write(to: outputURL, atomically: true, encoding: .utf8)
             print(L10n.Memory.exported(outputURL.path))
@@ -175,11 +177,10 @@ public struct MemoryCommand: ParsableCommand {
 
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
-            let sharedFile = store.memoryFile(projectKey: projectKey, envName: nil)
+            let sharedDir = store.memoryDir(projectKey: projectKey, envName: nil)
             let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
-            let isolatedFile = isolatedDir.appendingPathComponent("ORRERY_MEMORY.md")
 
-            print(L10n.Memory.migrationWarning(sharedFile.path, isolatedFile.path))
+            print(L10n.Memory.migrationWarning(sharedDir.path, isolatedDir.path))
             print("")
 
             let choice = askMigrationChoiceToIsolated()
@@ -192,7 +193,7 @@ public struct MemoryCommand: ParsableCommand {
                 }
             }
 
-            try applyMigration(merge: choice == 0, from: sharedFile, toDir: isolatedDir)
+            try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
 
             env.isolateMemory = true
             try store.save(env)
@@ -233,11 +234,10 @@ public struct MemoryCommand: ParsableCommand {
 
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
-            let isolatedFile = store.memoryFile(projectKey: projectKey, envName: envName)
+            let isolatedDir = store.memoryDir(projectKey: projectKey, envName: envName)
             let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
-            let sharedFile = sharedDir.appendingPathComponent("ORRERY_MEMORY.md")
 
-            print(L10n.Memory.migrationWarning(isolatedFile.path, sharedFile.path))
+            print(L10n.Memory.migrationWarning(isolatedDir.path, sharedDir.path))
             print("")
 
             let choice = askMigrationChoiceToShared()
@@ -250,7 +250,7 @@ public struct MemoryCommand: ParsableCommand {
                 }
             }
 
-            try applyMigration(merge: choice == 0, from: isolatedFile, toDir: sharedDir)
+            try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
 
             env.isolateMemory = false
             try store.save(env)
@@ -314,13 +314,14 @@ public struct MemoryCommand: ParsableCommand {
             }
 
             // Check if new path has no memory yet, but current location does
-            let newMemoryFile = URL(fileURLWithPath: expanded).appendingPathComponent("ORRERY_MEMORY.md")
+            let newMemoryFile = URL(fileURLWithPath: expanded).appendingPathComponent("MEMORY.md")
             let newIsEmpty = !fm.fileExists(atPath: newMemoryFile.path)
 
             if newIsEmpty {
                 let projectKey = FileManager.default.currentDirectoryPath
                     .replacingOccurrences(of: "/", with: "-")
-                let currentMemoryFile = store.memoryFile(projectKey: projectKey, envName: envName)
+                let currentMemoryFile = store.memoryDir(projectKey: projectKey, envName: envName)
+                    .appendingPathComponent("MEMORY.md")
                 let currentExists = fm.fileExists(atPath: currentMemoryFile.path)
 
                 if currentExists {
@@ -369,10 +370,11 @@ private func askMigrationChoiceToIsolated() -> Int {
     return selector.run()
 }
 
-private func applyMigration(merge: Bool, from sourceFile: URL, toDir destDir: URL) throws {
+private func applyMigration(merge: Bool, fromDir sourceDir: URL, toDir destDir: URL) throws {
     guard merge else { return }
 
     let fm = FileManager.default
+    let sourceFile = sourceDir.appendingPathComponent("MEMORY.md")
     guard fm.fileExists(atPath: sourceFile.path),
           let content = try? String(contentsOf: sourceFile, encoding: .utf8) else {
         return

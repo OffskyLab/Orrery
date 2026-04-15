@@ -16,7 +16,7 @@ public struct OrreryEnvironment: Codable, Sendable {
     /// Tools NOT in this set share sessions across envs (the default).
     public var isolatedSessionTools: Set<Tool>
     public var isolateMemory: Bool
-    /// Custom storage root for memory. When set, ORRERY_MEMORY.md and fragments/ live here
+    /// Custom storage root for memory. When set, MEMORY.md and fragments/ live here
     /// instead of the default ~/.orrery path. Useful for external wikis (e.g. Obsidian).
     public var memoryStoragePath: String?
 

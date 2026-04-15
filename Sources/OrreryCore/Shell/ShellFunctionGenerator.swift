@@ -101,7 +101,7 @@ public struct ShellFunctionGenerator {
               orrery use "$env_name" >/dev/null 2>&1 || true
             fi
           fi
-          # Ensure ORRERY_MEMORY.md is linked into Claude's auto-memory dir
+          # Ensure the Orrery memory directory is linked into Claude's auto-memory location
           command orrery _link-memory 2>/dev/null || true
         }
 

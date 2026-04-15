@@ -258,22 +258,21 @@ public struct EnvironmentStore: Sendable {
         sharedMemoryDir(projectKey: projectKey).appendingPathComponent(envName)
     }
 
-    /// Returns the correct ORRERY_MEMORY.md URL for the given env (nil = default/shared).
+    /// Returns the memory directory URL for the given env (nil = default/shared).
     /// Priority: custom memoryStoragePath > isolateMemory > shared default.
-    public func memoryFile(projectKey: String, envName: String?) -> URL {
+    /// The directory is symlinked into Claude's auto-memory dir so `MEMORY.md` +
+    /// fragment files written by any tool land here and can be synced across machines.
+    public func memoryDir(projectKey: String, envName: String?) -> URL {
         if let envName, envName != ReservedEnvironment.defaultName,
            let env = try? load(named: envName) {
             if let storagePath = env.memoryStoragePath {
                 return URL(fileURLWithPath: storagePath)
-                    .appendingPathComponent("ORRERY_MEMORY.md")
             }
             if env.isolateMemory {
                 return isolatedMemoryDir(projectKey: projectKey, envName: envName)
-                    .appendingPathComponent("ORRERY_MEMORY.md")
             }
         }
         return sharedMemoryDir(projectKey: projectKey)
-            .appendingPathComponent("ORRERY_MEMORY.md")
     }
 
     /// Symlink Claude's memory directory for the given project to the orrery shared memory dir.
@@ -281,8 +280,7 @@ public struct EnvironmentStore: Sendable {
     /// which orrery-sync can then replicate across machines.
     /// `claudeConfigDir` is either toolConfigDir(.claude, env) or CLAUDE_CONFIG_DIR env var.
     public func linkOrreryMemory(projectKey: String, envName: String, claudeConfigDir: URL) {
-        let targetDir = memoryFile(projectKey: projectKey, envName: envName)
-            .deletingLastPathComponent()
+        let targetDir = memoryDir(projectKey: projectKey, envName: envName)
         let memoryDirURL = claudeConfigDir
             .appendingPathComponent("projects")
             .appendingPathComponent(projectKey)
