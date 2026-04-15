@@ -83,7 +83,7 @@ public enum ToolSetupRunner {
         // Add to env (creates config dir + session symlinks per env's updated flags)
         try store.addTool(config.tool, to: envName)
 
-        // Link ORRERY_MEMORY.md for Claude
+        // Link the Orrery memory directory into Claude's auto-memory location
         if config.tool == .claude {
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")

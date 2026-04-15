@@ -1,5 +1,27 @@
 # Changelog
 
+## v2.2.1
+
+- **Memory path = a directory, not a phantom file.** `orrery info` and
+  `orrery memory info` now print the memory **directory** (e.g.
+  `~/.orrery/shared/memory/{projectKey}/`) instead of
+  `.../ORRERY_MEMORY.md` — a file that never actually existed. The
+  original v1.1.0 design wrote a single `ORRERY_MEMORY.md` and symlinked
+  it into Claude's auto-memory; v1.1.2 switched to directory-level
+  symlinking (so every auto-memory write lands in the shared/syncable
+  path), which left the `ORRERY_MEMORY.md` filename as dead weight the
+  code kept referencing.
+- **MCP `orrery_memory_read/write` now operates on `MEMORY.md`.** Matches
+  Claude's auto-memory convention, so Codex and Gemini — which call
+  these tools via MCP — read and write the exact same file Claude does
+  at session start. The memory folder remains the single source of
+  truth; Claude gets it automatically via the existing symlink, other
+  tools read it through the MCP tool.
+- **Internal rename: `EnvironmentStore.memoryFile()` →
+  `memoryDir()`.** Returns the folder URL. Downstream call sites
+  (MemoryCommand, InfoCommand, MCPServer) updated. `memory export`
+  default output filename changed to `MEMORY.md`.
+
 ## v2.2.0
 
 - **Localization moved to JSON + build-time codegen.** All CLI strings now

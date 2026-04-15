@@ -4,7 +4,7 @@ import Foundation
 public struct LinkMemoryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_link-memory",
-        abstract: "Internal: symlink ORRERY_MEMORY.md into Claude's auto-memory directory",
+        abstract: "Internal: symlink the Orrery memory directory into Claude's auto-memory location",
         shouldDisplay: false
     )
 

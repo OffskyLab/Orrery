@@ -121,7 +121,7 @@
   "memory.migrationWarning": "⚠️  此操作將變更 memory 的儲存路徑。\n    原本路徑：{from}\n    新的路徑：{to}",
   "memory.noActiveEnv": "沒有啟用的環境。請先執行 'orrery use <name>'，或使用 -e <name>。",
   "memory.noMemory": "此專案沒有共享記憶。",
-  "memory.outputHelp": "輸出檔案路徑（預設：ORRERY_MEMORY.md）",
+  "memory.outputHelp": "輸出檔案路徑（預設：MEMORY.md）",
   "memory.settingsPrompt": "Memory 設定（↑↓ 移動，Enter 確認）：",
   "memory.shareAbstract": "將此環境的 memory 切換為共享模式",
   "memory.statusExists.absent": "檔案：（尚無記憶）",

@@ -117,7 +117,7 @@ public struct MCPServer {
             ],
             [
                 "name": "orrery_memory_read",
-                "description": "Read the shared Orrery memory for the current project. This memory is shared across all AI tools (Claude, Codex, Gemini) and all Orrery environments. Use this to recall project decisions, architecture notes, conventions, or anything previously saved. Always read before writing to avoid overwriting existing knowledge. If pending sync fragments are present, consolidate them into the memory and write back with append=false to complete integration.",
+                "description": "Read the shared Orrery memory (MEMORY.md) for the current project. This memory directory is shared across all AI tools (Claude, Codex, Gemini) and all Orrery environments. Use this to recall project decisions, architecture notes, conventions, or anything previously saved. Always read before writing to avoid overwriting existing knowledge. If pending sync fragments are present, consolidate them into MEMORY.md and write back with append=false to complete integration.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [String: Any](),
@@ -126,7 +126,7 @@ public struct MCPServer {
             ],
             [
                 "name": "orrery_memory_write",
-                "description": "Write or append to the shared Orrery memory for the current project. Use markdown format. This memory persists across sessions and is shared across all AI tools (Claude, Codex, Gemini) and environments. Use this to save: project decisions (e.g. 'we chose PostgreSQL 16'), architecture notes, coding conventions, deployment info, or anything the team should remember. Default is append mode — set append=false only to rewrite the entire memory.",
+                "description": "Write or append to the shared Orrery memory (MEMORY.md) for the current project. Use markdown format. This memory persists across sessions and is shared across all AI tools (Claude, Codex, Gemini) and environments. Use this to save: project decisions (e.g. 'we chose PostgreSQL 16'), architecture notes, coding conventions, deployment info, or anything the team should remember. Default is append mode — set append=false only to rewrite the entire MEMORY.md.",
                 "inputSchema": [
                     "type": "object",
                     "properties": [
@@ -240,16 +240,11 @@ public struct MCPServer {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
         let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        let store = EnvironmentStore.default
-        return store.memoryFile(projectKey: projectKey, envName: envName)
-            .deletingLastPathComponent()
+        return EnvironmentStore.default.memoryDir(projectKey: projectKey, envName: envName)
     }
 
     private static func sharedMemoryFile() -> URL {
-        let projectKey = FileManager.default.currentDirectoryPath
-            .replacingOccurrences(of: "/", with: "-")
-        let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        return EnvironmentStore.default.memoryFile(projectKey: projectKey, envName: envName)
+        sharedMemoryDirectory().appendingPathComponent("MEMORY.md")
     }
 
     private static func fragmentsDirectory() -> URL {
@@ -299,8 +294,9 @@ public struct MCPServer {
         }
     }
 
-    /// Ensure ORRERY_MEMORY.md is symlinked into Claude's auto-memory directory
-    /// so Claude picks it up automatically at session start without any CLAUDE.md setup.
+    /// Ensure the Orrery memory directory is symlinked into Claude's auto-memory location
+    /// so Claude picks up MEMORY.md + fragments automatically at session start, without any
+    /// CLAUDE.md setup, and so writes land in the shared/syncable path.
     private static func ensureClaudeSymlink() {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
@@ -447,6 +443,6 @@ public struct MCPServer {
 
     private static func currentVersion() -> String {
         // Read from OrreryCommand would create a circular dep, just hardcode sync point
-        "2.2.0"
+        "2.2.1"
     }
 }

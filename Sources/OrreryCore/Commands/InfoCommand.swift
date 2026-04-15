@@ -36,7 +36,7 @@ public struct InfoCommand: ParsableCommand {
 
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
-        let memoryFile = store.memoryFile(projectKey: projectKey, envName: resolvedName)
+        let memoryDir = store.memoryDir(projectKey: projectKey, envName: resolvedName)
 
         print("\(L10n.Info.labelName)\(env.name)")
         print("\(L10n.Info.labelID)\(env.id)")
@@ -58,7 +58,7 @@ public struct InfoCommand: ParsableCommand {
         }
         let memoryMode = env.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
         print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
-        print("\(L10n.Info.labelMemoryPath)\(memoryFile.path)")
+        print("\(L10n.Info.labelMemoryPath)\(memoryDir.path)")
         // Per-tool session isolation: list each tool's mode
         print("\(L10n.Info.labelSessionMode)")
         if env.tools.isEmpty {

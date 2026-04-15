@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.2.0</div>
+  <div class="badge">v2.2.1</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1007,8 +1007,17 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.2.0</span>
+        <span class="changelog-ver">v2.2.1</span>
         <span class="changelog-new">latest</span>
+        <h3>Memory path is a directory, not a phantom <code>ORRERY_MEMORY.md</code></h3>
+      </div>
+      <p class="changelog-body"><code>orrery info</code> and <code>orrery memory info</code> used to print <code>.../ORRERY_MEMORY.md</code> — a file that never actually existed. The original v1.1.0 design wrote a single <code>ORRERY_MEMORY.md</code> and symlinked it into Claude's auto-memory dir; v1.1.2 switched to directory-level symlinking so every auto-memory write lands in the shared/syncable path, which left the filename as dead weight the code kept referencing. The Memory Path line now shows the folder (e.g. <code>~/.orrery/shared/memory/&#123;projectKey&#125;/</code>), which is where <code>MEMORY.md</code> + fragment files actually live.</p>
+      <p class="changelog-body">The MCP tools <code>orrery_memory_read</code> / <code>orrery_memory_write</code> now operate on <code>MEMORY.md</code> inside that folder — matching Claude's auto-memory convention — so Codex and Gemini (which call these tools via MCP) read and write the exact same file Claude does at session start. Internal rename: <code>EnvironmentStore.memoryFile()</code> → <code>memoryDir()</code>; <code>memory export</code> now defaults its output filename to <code>MEMORY.md</code>.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.0</span>
         <h3>Localized CLI + Japanese stub + readable <code>orrery list</code></h3>
       </div>
       <p class="changelog-body">Every CLI string now lives in <code>Sources/OrreryCore/Resources/Localization/&lt;locale&gt;.json</code> instead of being hard-coded in Swift. An SPM build plugin reads the JSON on every <code>swift build</code> and generates typed accessors plus embedded translation tables — no runtime resource lookup, so single-file deploys (Homebrew, <code>.deb</code>) keep working. A drift check (missing keys, mismatched placeholders) fails the build before a release can ship a half-translated locale. Japanese (<code>ja.json</code>) is wired up but stubbed from English while the translation lands; it falls back to EN at runtime via <code>AppLocale.detect()</code>.</p>

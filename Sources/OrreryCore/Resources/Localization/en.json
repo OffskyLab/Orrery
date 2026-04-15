@@ -121,7 +121,7 @@
   "memory.migrationWarning": "⚠️  This will change where memory is stored.\n    Current: {from}\n    New:     {to}",
   "memory.noActiveEnv": "No active environment. Run 'orrery use <name>' first, or use -e <name>.",
   "memory.noMemory": "No shared memory for this project.",
-  "memory.outputHelp": "Output file path (default: ORRERY_MEMORY.md)",
+  "memory.outputHelp": "Output file path (default: MEMORY.md)",
   "memory.settingsPrompt": "Memory settings (↑↓ move, enter confirm):",
   "memory.shareAbstract": "Switch this environment to shared memory",
   "memory.statusExists.absent": "File:  (no memory yet)",
