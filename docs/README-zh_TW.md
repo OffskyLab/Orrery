@@ -4,38 +4,94 @@
   <img src="../assets/icon-1024x1024.png" alt="Orrery" width="256" height="256" />
 </p>
 
-Per-shell 環境管理工具，為 AI CLI 工具（Claude Code、Codex CLI、Gemini CLI）隔離帳號，輕鬆切換工作與個人情境，**同時保留跨帳號的對話連續性**。
+[English](../README.md)
 
-## 問題
+**Orrery 是 AI 工具的 runtime 環境管理工具。**
 
-Claude Code、Codex、Gemini 等 AI CLI 工具，會將設定（API 金鑰、認證 token、偏好設定）存放在單一全域目錄。如果你同時有工作帳號與個人帳號，切換時就得手動搬移憑證，或者乾脆準備兩台電腦。
+讓你在各自隔離的環境中執行 Claude Code、Codex CLI、Gemini CLI — 每個環境有獨立帳號與憑證 — 同時在切換帳號時保留完整的對話連續性。
 
-更麻煩的是，切換帳號通常意味著**對話歷史全部消失**。你正在用 Claude 處理任務，切到另一個帳號，session 就斷了 — 只能重頭開始、重新解釋所有上下文。
+> CLI 指令為小寫 `orrery`，產品名稱則大寫為 **Orrery**。
 
-## Orrery 如何解決
+---
 
-Orrery 管理存放在 `~/.orrery/envs/` 下的命名環境。每個環境有自己獨立的認證憑證，但**預設共享 session 資料** — 讓你切換帳號後能直接接續對話。
+## 🧠 為什麼需要 Orrery？
 
-- **認證隔離**：每個環境的每個工具都有獨立的設定目錄，憑證不會互相干擾
-- **Session 共享**：對話歷史、專案上下文、session 資料透過 symlink 指向共享位置（`~/.orrery/shared/`），切換環境後 `claude --resume` 無縫接續
-- **Per-shell 生效**：`orrery use work` 只影響當前終端機 — 其他視窗維持各自的環境
+使用 AI CLI 工具的日常往往很混亂：
+
+- 切換帳號會打斷你的情境
+- 對話歷史無法跨帳號保留
+- 工具之間無法協調任務
+
+Orrery 以一個概念解決這些問題：
+
+> **隔離、可組合的 AI 環境**
+
+每個環境有自己的認證憑證與設定。但 session — 對話歷史與專案上下文 — **預設共享**，讓你切換帳號後能直接接續對話。
+
+---
+
+## 🧩 核心概念
+
+### Environment（環境）
+
+AI 工具的獨立執行空間：
+
+- 獨立的帳號與憑證
+- 每個工具各自獨立的設定
+- Per-shell 生效 — 其他終端機視窗不受影響
+
+### Session（對話）
+
+對話會跨環境持續保存。從 `work` 切到 `personal`，session 仍在 — `claude --resume` 可在切換帳號後接續同一個對話。
+
+### MCP Delegation（委派）
+
+在執行中的 session 內，將任務指派給特定環境。讓一個 Claude instance 可以委派工作給另一個跑在不同帳號下的 instance。
+
+---
+
+## 🧠 系統模型
+
+Orrery 為 AI 工具引入了結構化的 runtime 模型：
+
+- **Environment** → 隔離身份（帳號、憑證、設定）
+- **Session** → 代表連續性（對話、上下文、記憶）
+- **Delegation (MCP)** → 讓環境之間可以協調
+
+這樣的設計分離讓你可以：
+
+- 隔離身份，同時不失去上下文
+- 跨帳號工作流程，不需重複設定
+- 多 agent 協作，邊界明確
+
+傳統工具的類比：
+
+- `virtualenv` 隔離依賴套件
+- `nvm` 隔離 runtime 版本
+
+Orrery 把這個概念延伸到：
+
+> **AI 的身份、上下文與協調**
+
+---
+
+## 🎯 使用情境
+
+- 管理多個 AI 帳號（工作 / 個人 / 客戶）
+- 同時跑多條 AI 工作流程，憑證互不干擾
+- 建構跨環境的多 agent 系統
+- 在不影響主帳號的前提下安全實驗
+
+---
 
 ## 系統需求
 
 - macOS 13+ 或 Linux
 - bash 或 zsh
 
+---
+
 ## 安裝
-
-### 安裝腳本（推薦）
-
-自動下載適合你平台的預建 binary，不需要安裝 Swift。
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/OffskyLab/Orrery/main/install.sh)"
-```
-
-支援 macOS（arm64、x86_64）與 Linux（x86_64、arm64）。若無預建 binary 則自動從原始碼編譯。
 
 ### Homebrew（macOS / Linux）
 
@@ -44,6 +100,21 @@ brew install OffskyLab/orrery/orrery
 ```
 
 ### APT（Ubuntu / Debian）
+
+```bash
+echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
+sudo apt update && sudo apt install orrery
+```
+
+### Windows（透過 WSL）
+
+Windows 上的 Claude Code 跑在 WSL 裡。請先以系統管理員身份開啟 PowerShell 啟用 WSL，再到 WSL Ubuntu shell 裡安裝：
+
+```powershell
+wsl --install
+```
+
+接著在 WSL 終端機內執行：
 
 ```bash
 echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
@@ -70,7 +141,9 @@ orrery setup
 source ~/.orrery/activate.sh
 ```
 
-`orrery setup` 會產生 `~/.orrery/activate.sh` 並寫入 rc 檔（`~/.zshrc` 或 `~/.bashrc`，自動偵測）。新開的 shell 會自動載入。
+`orrery setup` 會產生 `~/.orrery/activate.sh`、寫入 rc 檔（`~/.zshrc` 或 `~/.bashrc`），並將現有的工具設定移入 Orrery 管理。新開的 shell 會自動載入。
+
+---
 
 ## 快速開始
 
@@ -79,23 +152,68 @@ source ~/.orrery/activate.sh
 orrery create work --description "工作帳號"
 orrery create personal --description "個人帳號"
 
-# 加入 / 移除工具（每次 wizard 處理一個工具）
+# 互動式加入工具
 orrery tools add -e work
-orrery tools remove -e work
+orrery tools add -e personal
 
-# 儲存憑證
-orrery set env ANTHROPIC_API_KEY sk-ant-work123 -e work
-orrery set env ANTHROPIC_API_KEY sk-ant-personal456 -e personal
-
-# 切換環境 — 對話歷史會自動保留
+# 切換環境 — 對話歷史自動保留
 orrery use work
 claude                    # 開始對話
 orrery use personal
 claude --resume           # 無縫接續同一個 session
 
-# 停用（清除所有 Orrery 環境變數）
-orrery deactivate
+# 停用並返回原始系統設定
+orrery use origin
 ```
+
+---
+
+## `origin` 環境
+
+`origin` 是 Orrery 的保留名稱，代表你原始的系統環境。切換到 `origin` 等同離開 Orrery 管理 — 所有 Orrery 環境變數清除，工具回到系統全域設定，就像 Orrery 不存在一樣。
+
+```bash
+orrery use origin     # 返回系統設定
+orrery deactivate     # 同上
+```
+
+### Origin 接管
+
+`orrery setup` 會自動將現有的工具設定（`~/.claude/`、`~/.codex/`、`~/.gemini/`）移入 Orrery 的儲存空間（`~/.orrery/origin/`），並在原位建立 symlink。你的資料完整保留，只是搬進 Orrery 的管理範圍，方便同步與備份。
+
+隨時可以還原：
+
+```bash
+orrery origin release           # 還原所有工具至原始位置
+orrery origin release --claude  # 只還原 Claude
+orrery origin status            # 查看目前狀態
+```
+
+完整移除 Orrery：
+
+```bash
+orrery uninstall    # 還原所有已接管的設定 + 移除 shell 整合
+```
+
+---
+
+## Session 共享
+
+預設所有環境共享 session 資料：
+
+- 從 `work` 切到 `personal` → Claude 對話仍在
+- 切換帳號後 `claude --resume` 可接續同一個 session
+- 各環境仍有**獨立的認證憑證**
+
+共享機制是把工具的 session 目錄（`projects/`、`sessions/`、`session-env/`）symlink 到 `~/.orrery/shared/`。
+
+需要完全隔離 session 時（例如合規要求）：
+
+```bash
+orrery create secure-env --isolate-sessions
+```
+
+---
 
 ## 指令
 
@@ -105,12 +223,11 @@ orrery deactivate
 |---|---|
 | `orrery create <name>` | 建立新環境（預設共享 session） |
 | `orrery create <name> --clone <source>` | 從現有環境複製工具與環境變數 |
-| `orrery create <name> --isolate-sessions` | 建立環境並完全隔離 session |
-| `orrery delete <name>` | 刪除環境（會要求確認） |
-| `orrery delete <name> --force` | 不確認直接刪除 |
+| `orrery create <name> --isolate-sessions` | 建立並完全隔離 session 的環境 |
+| `orrery delete <name>` | 刪除環境 |
 | `orrery rename <old> <new>` | 重新命名環境 |
-| `orrery list` | 列出所有環境（`*` 標示目前啟用的） |
-| `orrery info [name]` | 顯示環境的詳細資訊（預設為目前啟用的環境） |
+| `orrery list` | 列出所有環境 |
+| `orrery info [name]` | 顯示環境詳細資訊 |
 
 ### 切換
 
@@ -119,29 +236,25 @@ orrery deactivate
 | 指令 | 說明 |
 |---|---|
 | `orrery use <name>` | 在當前 shell 啟用環境 |
-| `orrery deactivate` | 停用目前的環境 |
+| `orrery deactivate` | 停用並返回 origin |
 | `orrery current` | 顯示目前啟用的環境名稱 |
 
 ### 設定
 
 | 指令 | 說明 |
 |---|---|
-| `orrery tools add [-e <name>]` | 透過 wizard 加入工具（含登入狀態與設定複製） |
-| `orrery tools remove [-e <name>]` | 從環境移除工具 |
-| `orrery set env <KEY> <VALUE> -e <name>` | 設定環境變數 |
-| `orrery unset env <KEY> -e <name>` | 移除環境變數 |
-| `orrery which <tool>` | 顯示目前環境中工具的設定目錄路徑 |
-
-> 如果已啟用環境（`orrery use <name>`），可省略 `-e` 參數。
+| `orrery tools add [-e <name>]` | 透過 wizard 加入工具 |
+| `orrery tools remove [-e <name>]` | 移除工具 |
+| `orrery set env <KEY> <VALUE> [-e <name>]` | 設定環境變數 |
+| `orrery unset env <KEY> [-e <name>]` | 移除環境變數 |
+| `orrery which <tool>` | 顯示工具的設定目錄路徑 |
 
 ### Session 管理
 
 | 指令 | 說明 |
 |---|---|
-| `orrery sessions` | 列出當前專案的所有 AI tool session |
-| `orrery sessions --claude` | 只顯示 Anthropic Claude session |
-| `orrery sessions --codex` | 只顯示 OpenAI Codex session |
-| `orrery sessions --gemini` | 只顯示 Google Gemini session |
+| `orrery sessions` | 列出當前專案的所有 session |
+| `orrery resume [index]` | 接續 session（無 index 則開啟互動選單） |
 
 ### 跨工具
 
@@ -149,9 +262,26 @@ orrery deactivate
 |---|---|
 | `orrery run -e <name> <command>` | 在指定環境中執行指令 |
 | `orrery delegate -e <name> "prompt"` | 委派任務給其他環境的 AI 工具 |
-| `orrery resume <index>` | 用 index 接續 session（搭配 `orrery sessions`） |
 
-### AI 工具整合（MCP）
+### Origin 管理
+
+| 指令 | 說明 |
+|---|---|
+| `orrery origin status` | 顯示哪些工具由 Orrery 管理 |
+| `orrery origin takeover` | 將工具設定移入 Orrery 儲存空間 |
+| `orrery origin release` | 將工具設定還原至原始位置 |
+| `orrery uninstall` | 移除 shell 整合並還原所有已接管的設定 |
+
+### Shell 整合
+
+| 指令 | 說明 |
+|---|---|
+| `orrery setup` | 安裝 shell 整合（冪等） |
+| `orrery update` | 更新 Orrery 至最新版本 |
+
+---
+
+## MCP 整合
 
 Orrery 透過 [MCP](https://modelcontextprotocol.io/) 整合 Claude Code、Codex CLI 和 Gemini CLI。
 
@@ -159,7 +289,7 @@ Orrery 透過 [MCP](https://modelcontextprotocol.io/) 整合 Claude Code、Codex
 orrery mcp setup
 ```
 
-一行指令註冊 MCP server 並安裝 `/delegate` 和 `/sessions` slash commands。可用的 MCP 工具：
+一行指令註冊 MCP server 並安裝 slash commands。可用的 MCP 工具：
 
 | 工具 | 說明 |
 |---|---|
@@ -170,61 +300,81 @@ orrery mcp setup
 | `orrery_memory_read` | 讀取共享專案記憶 |
 | `orrery_memory_write` | 寫入共享專案記憶 |
 
-**共享記憶**：所有 AI 工具讀寫同一份 `ORRERY_MEMORY.md`。Claude 儲存的知識，Codex 和 Gemini 也能存取，反之亦然。
+**共享記憶**：所有 AI 工具讀寫同一份 `MEMORY.md`。Claude 儲存的知識，Codex 和 Gemini 也能存取，反之亦然。
 
-### Shell 整合
+**外部記憶儲存**：可將記憶重導向到任意目錄，例如 Obsidian vault：
+
+```bash
+orrery memory storage ~/Documents/my-wiki/orrery
+orrery memory storage --reset   # 還原預設路徑
+```
+
+---
+
+## P2P 記憶同步
+
+透過 [orrery-sync](https://github.com/OffskyLab/orrery-sync) 在多台機器或團隊成員之間即時同步專案記憶。
+
+```bash
+# 桌機
+orrery sync daemon --port 9527
+
+# 筆電（透過 Bonjour 自動探索）
+orrery sync daemon --port 9528
+```
+
+跨網路同步時，在 VPS 上執行 rendezvous server：
+
+```bash
+orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
+```
+
+只有專案記憶會同步 — session 保留在本機。記憶變更以無衝突片段追蹤，由 AI agent 在 session 開始時整合。
 
 | 指令 | 說明 |
 |---|---|
-| `orrery setup` | 安裝 shell 整合到 rc 檔（冪等操作） |
-| `orrery init` | 輸出 shell 整合腳本（供手動設定） |
+| `orrery sync daemon` | 啟動同步 daemon |
+| `orrery sync status` | 顯示 daemon 與 peer 狀態 |
+| `orrery sync team create <name>` | 建立新團隊 |
+| `orrery sync team invite` | 產生邀請碼 |
+| `orrery sync team join <code>` | 加入團隊 |
 
-## Session 共享
-
-預設情況下，不同環境會共享 session 資料（對話歷史），讓你可以在切換帳號後接續同一個對話。共享的目錄會存放在 `~/.orrery/shared/<tool>/`，透過 symlink 連結到各環境。
-
-如果需要完全隔離 session，可在建立環境時加上 `--isolate-sessions` 參數。
+---
 
 ## 儲存結構
 
-環境存放在 `$ORRERY_HOME`（預設：`~/.orrery`）底下：
-
 ```
 ~/.orrery/
-  current                # 上次啟用的環境名稱
-  shared/                # 跨環境共享的 session 資料
+  current                  # 目前啟用的環境名稱
+  origin/                  # 原始工具設定（orrery setup 接管後）
+    claude/                #   ~/.claude/ 的 symlink 指向此處
+    codex/
+    gemini/
+  shared/                  # 跨環境共享的 session 資料
     claude/
-      projects/          # 各專案的對話歷史
-      sessions/          # session 中繼資料
-      session-env/       # session 環境快照
+      projects/            #   各專案的對話歷史
+      sessions/            #   session 中繼資料
   envs/
     <UUID>/
-      env.json           # 中繼資料：工具、環境變數、時間戳
-      claude/            # CLAUDE_CONFIG_DIR 指向此處
-        .claude.json     # 認證憑證（各環境獨立）
-        projects/  -> ~/.orrery/shared/claude/projects   (symlink)
-        sessions/  -> ~/.orrery/shared/claude/sessions   (symlink)
-      codex/             # CODEX_CONFIG_DIR 指向此處
-    <UUID>/
-      env.json
-      claude/
+      env.json             #   中繼資料：工具、環境變數、時間戳
+      claude/              #   CLAUDE_CONFIG_DIR 指向此處
+        .claude.json       #   認證憑證（各環境獨立）
+        projects/  →  ~/.orrery/shared/claude/projects
+        sessions/  →  ~/.orrery/shared/claude/sessions
+      codex/               #   CODEX_CONFIG_DIR 指向此處
 ```
 
 設定 `ORRERY_HOME` 環境變數可使用自訂路徑。
 
-## `orrery use` 設定的環境變數
+---
 
-| 工具 | 變數 |
-|---|---|
-| `claude` | `CLAUDE_CONFIG_DIR` |
-| `codex` | `CODEX_CONFIG_DIR` |
-| `gemini` | `GEMINI_CONFIG_DIR` |
+## 🚀 願景
 
-透過 `orrery set env` 設定的自訂環境變數也會在 `orrery use` 時匯出。
+> **AI 原生工作流程的「virtualenv」**
 
-## 多語系支援
+隨著 AI 工具成為核心基礎設施，團隊需要和開發環境一樣的隔離性、可攜性與可組合性。Orrery 把這層能力帶到 AI 這一層。
 
-Orrery 會偵測系統語系（`LC_ALL`、`LC_MESSAGES`、`LANG`），自動切換繁體中文或英文介面。
+---
 
 ## 授權
 
