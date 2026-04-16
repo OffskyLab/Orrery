@@ -1,5 +1,10 @@
 import ArgumentParser
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 public struct SetupCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -98,15 +103,17 @@ public struct SetupCommand: ParsableCommand {
 
         guard !takenOverTools.isEmpty else { return }
 
-        // Interactive prompts only when a TTY is available for writing
-        guard let ttyOut = FileHandle(forWritingAtPath: "/dev/tty") else { return }
+        // Interactive prompts only when /dev/tty is available
+        let ttyCheck = open("/dev/tty", O_RDWR)
+        guard ttyCheck >= 0 else { return }
+        close(ttyCheck)
 
         var config = store.loadOriginConfig()
 
         // For each tool: ask session, show summary, then ask memory, show summary
         for tool in takenOverTools {
-            // Colored tool header on its own line
-            ttyOut.write(Data("\n\(tool.coloredTag)\n".utf8))
+            // Colored tool header on its own line — write directly to stderr (no ObjC exceptions)
+            ttyWrite("\n\(tool.coloredTag)\n")
 
             // --- Session ---
             let sessionPicker = SingleSelect(
@@ -121,8 +128,8 @@ public struct SetupCommand: ParsableCommand {
                 config.isolatedSessionTools.remove(tool)
                 try? store.ensureSharedSessionLinksForOrigin(tool: tool)
             }
-            // Summary line — stays visible
-            ttyOut.write(Data("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n".utf8))
+            // Summary line stays visible (SingleSelect cleared its own lines; cursor is here)
+            ttyWrite("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n")
 
             // --- Memory ---
             let memoryPicker = SingleSelect(
@@ -132,11 +139,17 @@ public struct SetupCommand: ParsableCommand {
             )
             let isolateMemory = memoryPicker.run() == 1
             config.isolateMemory = isolateMemory
-            // Summary line — stays visible
-            ttyOut.write(Data("\(tool.coloredTag) \(L10n.Create.memory(isolateMemory))\n".utf8))
+            ttyWrite("\(tool.coloredTag) \(L10n.Create.memory(isolateMemory))\n")
         }
 
         try? store.saveOriginConfig(config)
+    }
+
+    /// Write a string directly to stderr using the posix write syscall.
+    /// Avoids NSFileHandle's ObjC exception on write errors.
+    private static func ttyWrite(_ str: String) {
+        var buf = Array(str.utf8)
+        _ = write(STDERR_FILENO, &buf, buf.count)
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {
