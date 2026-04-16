@@ -603,6 +603,21 @@
     <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
   </div>
   <div style="height:.75rem"></div>
+  <div class="install-label">Or on Windows (via WSL)</div>
+  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Claude Code on Windows runs inside WSL. Open PowerShell as Administrator and enable WSL first if you haven't already, then install Orrery inside the WSL Ubuntu shell using APT.</div>
+  <div class="code-block">
+    <button class="copy-btn" data-cmd="wsl --install">Copy</button>
+    <span class="prompt">PS&gt; </span>wsl --install
+  </div>
+  <div style="height:.5rem"></div>
+  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Then, inside your WSL (Ubuntu) terminal:</div>
+  <div class="code-block">
+    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery'>Copy</button>
+    <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
+    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
+    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
+  </div>
+  <div style="height:.75rem"></div>
   <div class="install-label">Activate shell integration</div>
   <div class="code-block">
     <button class="copy-btn" data-cmd='source ~/.orrery/activate.sh'>Copy</button>
