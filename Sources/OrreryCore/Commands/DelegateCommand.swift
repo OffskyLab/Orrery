@@ -96,11 +96,40 @@ public struct DelegateCommand: ParsableCommand {
         // an SSH session without a pty, the MCP server) triggers Claude's
         // "no stdin data received in 3s" warning and adds 3s latency.
         process.standardInput = FileHandle.nullDevice
-        process.standardOutput = FileHandle.standardOutput
-        process.standardError = FileHandle.standardError
+
+        // Pipe stdout/stderr through readabilityHandler rather than inheriting
+        // FileHandle.standardOutput directly. When orrery is called as a Bash tool
+        // by Claude Code, our own stdout is a pipe whose buffer is ~64 KB. A
+        // delegate session (code review, long task) can easily emit more than that
+        // before it finishes. With inherited handles, write() in the child blocks
+        // once the buffer is full, waitUntilExit() never returns, and all three
+        // processes deadlock. Draining via readabilityHandler keeps the buffer clear.
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        let outFH = FileHandle.standardOutput
+        let errFH = FileHandle.standardError
+        stdoutPipe.fileHandleForReading.readabilityHandler = { fh in
+            let data = fh.availableData
+            if !data.isEmpty { outFH.write(data) }
+        }
+        stderrPipe.fileHandleForReading.readabilityHandler = { fh in
+            let data = fh.availableData
+            if !data.isEmpty { errFH.write(data) }
+        }
 
         try process.run()
         process.waitUntilExit()
+
+        stdoutPipe.fileHandleForReading.readabilityHandler = nil
+        stderrPipe.fileHandleForReading.readabilityHandler = nil
+        // Flush any remaining bytes after the handler is removed.
+        let remainingOut = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        if !remainingOut.isEmpty { outFH.write(remainingOut) }
+        let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        if !remainingErr.isEmpty { errFH.write(remainingErr) }
 
         throw ExitCode(process.terminationStatus)
     }

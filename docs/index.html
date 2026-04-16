@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.2.2</div>
+  <div class="badge">v2.2.3</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1007,8 +1007,16 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.2.2</span>
+        <span class="changelog-ver">v2.2.3</span>
         <span class="changelog-new">latest</span>
+        <h3><code>orrery delegate</code>: pipe-buffer deadlock fix</h3>
+      </div>
+      <p class="changelog-body">When <code>orrery delegate</code> was called as a Bash tool inside Claude Code, the parent process received output via a pipe whose buffer is ~64 KB. A long delegate session (code review, multi-step task) easily emits more than that before finishing. The previous <code>process.standardOutput = FileHandle.standardOutput</code> + <code>waitUntilExit()</code> pattern caused the child to block on <code>write()</code> once the buffer was full while orrery blocked in <code>waitUntilExit()</code> — a classic pipe-buffer deadlock. Fixed by routing stdout and stderr through <code>Pipe</code> and draining them via <code>readabilityHandler</code> on background queues, keeping the buffer clear for the lifetime of the subprocess.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.2</span>
         <h3><code>orrery list</code>: pipe-buffer deadlock fix + parallel lookups + memory path = directory</h3>
       </div>
       <p class="changelog-body"><code>orrery list</code> could hang indefinitely on machines where Claude Code had connected several MCP servers (figma, notion, etc.) — their OAuth tokens get embedded into the Claude Keychain entry, and the resulting credential JSON exceeds the macOS pipe buffer (~16 KB, sometimes less). <code>ClaudeKeychain.findPassword</code> called <code>security</code>, then <code>waitUntilExit()</code>, <em>then</em> read the pipe — the textbook pipe-buffer deadlock: <code>security</code> blocks writing into a full pipe while orrery blocks waiting for it to exit. Diagnosed by running <code>security find-generic-password</code> directly (returns in 25 ms with the full credential), confirming Keychain itself was fine. Fix: drain the pipe before <code>waitUntilExit</code>. The same pattern lurked in <code>MCPServer.execCommand</code>; both stdout and stderr pipes are now drained concurrently on background queues, since serialized drain would still deadlock on whichever pipe filled second.</p>

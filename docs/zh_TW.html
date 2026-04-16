@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.2.2</div>
+  <div class="badge">v2.2.3</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -992,8 +992,16 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.2.2</span>
+        <span class="changelog-ver">v2.2.3</span>
         <span class="changelog-new">最新</span>
+        <h3><code>orrery delegate</code>：修正 pipe-buffer deadlock</h3>
+      </div>
+      <p class="changelog-body">在 Claude Code 內部以 Bash tool 呼叫 <code>orrery delegate</code> 時，父層用 pipe 接收輸出，buffer 約 64 KB。長一點的 delegate 任務（code review、多步驟工作）很容易在結束前就超過這個量。舊的 <code>process.standardOutput = FileHandle.standardOutput</code> + <code>waitUntilExit()</code> 寫法導致 buffer 滿後 child 卡在 <code>write()</code>，orrery 卡在 <code>waitUntilExit()</code> — 教科書級的 pipe-buffer deadlock。修法：stdout 與 stderr 改走 <code>Pipe</code>，用 <code>readabilityHandler</code> 在 background queue 上持續 drain，讓 subprocess 存活期間 buffer 永不填滿。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.2</span>
         <h3><code>orrery list</code>：修正 pipe-buffer deadlock、平行化 lookup、Memory 路徑改顯示資料夾</h3>
       </div>
       <p class="changelog-body"><code>orrery list</code> 在裝了多個 MCP server（figma、notion 等）的機器上會無限卡死 — 那些 OAuth tokens 會被塞進 Claude 的 Keychain credential JSON，整包 size 超過 macOS pipe buffer（約 16 KB，有時更小）。<code>ClaudeKeychain.findPassword</code> 的順序是先呼叫 <code>security</code>、再 <code>waitUntilExit()</code>、最後才讀 pipe — 教科書級的 pipe-buffer deadlock：<code>security</code> 在寫滿的 pipe 上 block，orrery 在等 <code>security</code> 結束，互相等對方。直接跑 <code>security find-generic-password</code>（25 毫秒回傳完整 credential）就能驗證 Keychain 本身沒問題。修法：在 <code>waitUntilExit</code> 之前先把 pipe 讀乾淨。同樣的 pattern 也在 <code>MCPServer.execCommand</code>，現在 stdout 與 stderr 用兩個 background queue 平行 drain（序列讀的話另一支還是會在中途滿掉再 deadlock）。</p>

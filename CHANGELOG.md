@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.2.3
+
+- **`orrery delegate` no longer deadlocks on large output.** When called as
+  a Bash tool inside Claude Code, the parent process receives output via a
+  pipe whose buffer is ~64 KB. A long delegate session (code review, multi-step
+  task) easily emits more than that before finishing. The previous
+  `process.standardOutput = FileHandle.standardOutput` + `waitUntilExit()`
+  pattern caused the child to block on `write()` once the buffer was full
+  while orrery blocked in `waitUntilExit()` — a classic pipe-buffer deadlock.
+  Fixed by routing stdout and stderr through `Pipe` and draining them via
+  `readabilityHandler` on background queues, keeping the buffer clear for
+  the lifetime of the subprocess.
+
 ## v2.2.2
 
 - **`orrery resume` interactive picker now works correctly when launched
