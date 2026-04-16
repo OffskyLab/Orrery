@@ -57,8 +57,8 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
     public var ansiColor: String {
         switch self {
         case .claude: return "\u{1B}[38;5;173m"  // #D7875F ≈ Claude coral orange #D97757
-        case .gemini: return "\u{1B}[38;5;69m"   // #5F87FF ≈ Gemini blue #4285F4
-        case .codex:  return "\u{1B}[38;5;36m"   // #00AF87 ≈ OpenAI teal #10A37F
+        case .codex:  return "\u{1B}[38;5;69m"   // #5F87FF ≈ Codex periwinkle #7090F0
+        case .gemini: return "\u{1B}[38;5;33m"   // #0087FF ≈ Gemini royal blue #3080F0
         }
     }
 
