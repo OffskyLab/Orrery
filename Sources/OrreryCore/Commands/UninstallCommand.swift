@@ -14,8 +14,7 @@ public struct UninstallCommand: ParsableCommand {
 
     public func run() throws {
         if !force {
-            print(L10n.Uninstall.confirmPrompt, terminator: "")
-            fflush(stdout)
+            stdoutWrite(L10n.Uninstall.confirmPrompt)
             let line = readLine() ?? ""
             guard line.lowercased().hasPrefix("y") else {
                 print(L10n.Uninstall.aborted)
