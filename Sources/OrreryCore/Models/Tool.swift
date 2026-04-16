@@ -58,7 +58,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         switch self {
         case .claude: return "\u{1B}[38;5;173m"  // #D7875F ≈ Claude coral orange #D97757
         case .codex:  return "\u{1B}[38;5;69m"   // #5F87FF ≈ Codex periwinkle #7090F0
-        case .gemini: return "\u{1B}[38;5;33m"   // #0087FF ≈ Gemini royal blue #3080F0
+        case .gemini: return "\u{1B}[38;5;35m"   // #00AF5F ≈ Gemini green #10B060 (bottom spike)
         }
     }
 
