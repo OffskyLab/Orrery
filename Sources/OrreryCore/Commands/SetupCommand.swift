@@ -78,6 +78,7 @@ public struct SetupCommand: ParsableCommand {
 
     static func offerOriginTakeover() {
         let store = EnvironmentStore.default
+        store.setOriginTakeoverOptOut(false)
         for tool in Tool.allCases {
             guard !store.isOriginManaged(tool: tool),
                   FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)

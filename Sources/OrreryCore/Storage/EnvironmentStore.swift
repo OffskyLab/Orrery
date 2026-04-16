@@ -331,6 +331,27 @@ public struct EnvironmentStore: Sendable {
         originDir.appendingPathComponent(tool.subdirectory)
     }
 
+    /// Marker file that suppresses automatic origin takeover.
+    /// Written by `orrery origin release` / `orrery uninstall`.
+    /// Deleted by `orrery origin takeover` / `orrery setup`.
+    public var originTakeoverOptOutMarker: URL {
+        homeURL.appendingPathComponent(".no-origin-takeover")
+    }
+
+    public var isOriginTakeoverOptedOut: Bool {
+        FileManager.default.fileExists(atPath: originTakeoverOptOutMarker.path)
+    }
+
+    public func setOriginTakeoverOptOut(_ optOut: Bool) {
+        let fm = FileManager.default
+        if optOut {
+            try? fm.createDirectory(at: homeURL, withIntermediateDirectories: true)
+            fm.createFile(atPath: originTakeoverOptOutMarker.path, contents: nil)
+        } else {
+            try? fm.removeItem(at: originTakeoverOptOutMarker)
+        }
+    }
+
     /// Returns true if `tool.defaultConfigDir` is a symlink pointing to orrery's origin storage.
     public func isOriginManaged(tool: Tool) -> Bool {
         guard let dest = try? FileManager.default.destinationOfSymbolicLink(
@@ -343,8 +364,9 @@ public struct EnvironmentStore: Sendable {
     }
 
     /// Move `tool.defaultConfigDir` into orrery origin storage and replace it with a symlink.
-    /// Idempotent — no-op if already managed.
+    /// Idempotent — no-op if already managed. Clears the opt-out marker.
     public func originTakeover(tool: Tool) throws {
+        setOriginTakeoverOptOut(false)
         guard !isOriginManaged(tool: tool) else { return }
         let fm = FileManager.default
         let src = tool.defaultConfigDir
@@ -379,8 +401,10 @@ public struct EnvironmentStore: Sendable {
     }
 
     /// Remove the symlink and move data back to `tool.defaultConfigDir`.
-    /// Idempotent — no-op if not managed.
+    /// Idempotent — no-op if not managed. Sets the opt-out marker so orrery
+    /// won't auto-takeover on the next invocation.
     public func originRelease(tool: Tool) throws {
+        setOriginTakeoverOptOut(true)
         guard isOriginManaged(tool: tool) else { return }
         let fm = FileManager.default
         let link = tool.defaultConfigDir
