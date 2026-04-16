@@ -79,16 +79,63 @@ public struct SetupCommand: ParsableCommand {
     static func offerOriginTakeover() {
         let store = EnvironmentStore.default
         store.setOriginTakeoverOptOut(false)
+
+        var takenOverTools: [Tool] = []
         for tool in Tool.allCases {
             guard !store.isOriginManaged(tool: tool),
                   FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)
-            else { continue }
+            else {
+                if store.isOriginManaged(tool: tool) { takenOverTools.append(tool) }
+                continue
+            }
             if (try? store.originTakeover(tool: tool)) != nil {
                 FileHandle.standardError.write(
                     Data(L10n.Origin.tookOver(tool.rawValue, store.originConfigDir(tool: tool).path).utf8 + [0x0A])
                 )
+                takenOverTools.append(tool)
             }
         }
+
+        // Ask session + memory sharing only when a TTY is available
+        let ttyFd = open("/dev/tty", O_RDWR)
+        guard ttyFd >= 0 else { return }
+        close(ttyFd)
+
+        var config = store.loadOriginConfig()
+
+        // Per-tool session sharing
+        for tool in takenOverTools {
+            let isolate = askSessionIsolate(for: tool)
+            if isolate {
+                config.isolatedSessionTools.insert(tool)
+            } else {
+                config.isolatedSessionTools.remove(tool)
+                try? store.ensureSharedSessionLinksForOrigin(tool: tool)
+            }
+        }
+
+        // Memory sharing (single question)
+        config.isolateMemory = askMemoryIsolate()
+
+        try? store.saveOriginConfig(config)
+    }
+
+    private static func askSessionIsolate(for tool: Tool) -> Bool {
+        let selector = SingleSelect(
+            title: L10n.Create.sessionSharePromptFor(tool.rawValue),
+            options: [L10n.Create.sessionShareYes, L10n.Create.sessionShareNo],
+            selected: 0
+        )
+        return selector.run() == 1   // 0 = share, 1 = isolate
+    }
+
+    private static func askMemoryIsolate() -> Bool {
+        let selector = SingleSelect(
+            title: L10n.Create.memorySharePrompt,
+            options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
+            selected: 0
+        )
+        return selector.run() == 1   // 0 = share, 1 = isolate
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {

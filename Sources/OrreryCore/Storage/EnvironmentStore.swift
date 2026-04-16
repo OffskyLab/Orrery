@@ -140,6 +140,11 @@ public struct EnvironmentStore: Sendable {
         try linkSharedSessionDirs(tool: tool, toolDir: toolDir)
     }
 
+    /// Set up shared session symlinks for the origin env's tool config dir.
+    public func ensureSharedSessionLinksForOrigin(tool: Tool) throws {
+        try linkSharedSessionDirs(tool: tool, toolDir: originConfigDir(tool: tool))
+    }
+
     /// Per-env fake HOME for gemini. gemini-cli ignores `GEMINI_CONFIG_DIR`
     /// and always reads `~/.gemini/`, so isolation is achieved by setting
     /// HOME to this dir (via the shell wrapper / delegate process env).
