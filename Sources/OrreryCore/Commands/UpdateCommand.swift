@@ -26,7 +26,7 @@ public struct UpdateCommand: ParsableCommand {
 
         // execvp only returns on failure
         let errMsg = String(cString: strerror(errno))
-        FileHandle.standardError.write(Data("orrery: update failed: \(errMsg)\n".utf8))
+        stderrWrite("orrery: update failed: \(errMsg)\n")
         throw ExitCode.failure
     }
 }

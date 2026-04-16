@@ -75,9 +75,9 @@ public struct SetupCommand: ParsableCommand {
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
-            FileHandle.standardError.write(Data(L10n.Setup.wroteActivate(url.path).utf8))
+            stderrWrite(L10n.Setup.wroteActivate(url.path))
         } catch {
-            FileHandle.standardError.write(Data(L10n.Setup.failedToWrite(url.path, error.localizedDescription).utf8))
+            stderrWrite(L10n.Setup.failedToWrite(url.path, error.localizedDescription))
         }
     }
 
@@ -85,23 +85,19 @@ public struct SetupCommand: ParsableCommand {
         let store = EnvironmentStore.default
         store.setOriginTakeoverOptOut(false)
 
-        var takenOverTools: [Tool] = []
+        // Only show prompts for tools taken over during THIS run (not previously managed ones).
+        var newlyTakenOver: [Tool] = []
         for tool in Tool.allCases {
             guard !store.isOriginManaged(tool: tool),
                   FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)
-            else {
-                if store.isOriginManaged(tool: tool) { takenOverTools.append(tool) }
-                continue
-            }
+            else { continue }
             if (try? store.originTakeover(tool: tool)) != nil {
-                FileHandle.standardError.write(
-                    Data(L10n.Origin.tookOver(tool.rawValue, store.originConfigDir(tool: tool).path).utf8 + [0x0A])
-                )
-                takenOverTools.append(tool)
+                stderrWrite(L10n.Origin.tookOver(tool.rawValue, store.originConfigDir(tool: tool).path) + "\n")
+                newlyTakenOver.append(tool)
             }
         }
 
-        guard !takenOverTools.isEmpty else { return }
+        guard !newlyTakenOver.isEmpty else { return }
 
         // Interactive prompts only when /dev/tty is available
         let ttyCheck = open("/dev/tty", O_RDWR)
@@ -110,10 +106,9 @@ public struct SetupCommand: ParsableCommand {
 
         var config = store.loadOriginConfig()
 
-        // For each tool: ask session, show summary, then ask memory, show summary
-        for tool in takenOverTools {
-            // Colored tool header on its own line — write directly to stderr (no ObjC exceptions)
-            ttyWrite("\n\(tool.coloredTag)\n")
+        // For each newly taken-over tool: ask session then memory; summaries stay visible
+        for tool in newlyTakenOver {
+            stderrWrite("\n\(tool.coloredTag)\n")
 
             // --- Session ---
             let sessionPicker = SingleSelect(
@@ -128,8 +123,7 @@ public struct SetupCommand: ParsableCommand {
                 config.isolatedSessionTools.remove(tool)
                 try? store.ensureSharedSessionLinksForOrigin(tool: tool)
             }
-            // Summary line stays visible (SingleSelect cleared its own lines; cursor is here)
-            ttyWrite("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n")
+            stderrWrite("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n")
 
             // --- Memory ---
             let memoryPicker = SingleSelect(
@@ -137,19 +131,11 @@ public struct SetupCommand: ParsableCommand {
                 options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
                 selected: 0
             )
-            let isolateMemory = memoryPicker.run() == 1
-            config.isolateMemory = isolateMemory
-            ttyWrite("\(tool.coloredTag) \(L10n.Create.memory(isolateMemory))\n")
+            config.isolateMemory = memoryPicker.run() == 1
+            stderrWrite("\(tool.coloredTag) \(L10n.Create.memory(config.isolateMemory))\n")
         }
 
         try? store.saveOriginConfig(config)
-    }
-
-    /// Write a string directly to stderr using the posix write syscall.
-    /// Avoids NSFileHandle's ObjC exception on write errors.
-    private static func ttyWrite(_ str: String) {
-        var buf = Array(str.utf8)
-        _ = write(STDERR_FILENO, &buf, buf.count)
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {
@@ -162,7 +148,7 @@ public struct SetupCommand: ParsableCommand {
 
         // Already has the source line
         if existing.contains(sourceLine) {
-            FileHandle.standardError.write(Data(L10n.Setup.alreadyPresent(url.path).utf8))
+            stderrWrite(L10n.Setup.alreadyPresent(url.path))
             return
         }
 
@@ -171,9 +157,9 @@ public struct SetupCommand: ParsableCommand {
             let migrated = existing.replacingOccurrences(of: oldEvalLine, with: sourceLine)
             do {
                 try migrated.write(to: url, atomically: true, encoding: .utf8)
-                FileHandle.standardError.write(Data(L10n.Setup.migratedRc(url.path).utf8))
+                stderrWrite(L10n.Setup.migratedRc(url.path))
             } catch {
-                FileHandle.standardError.write(Data(L10n.Setup.failedToWrite(url.path, error.localizedDescription).utf8))
+                stderrWrite(L10n.Setup.failedToWrite(url.path, error.localizedDescription))
             }
             return
         }
@@ -182,9 +168,9 @@ public struct SetupCommand: ParsableCommand {
         let appended = existing + "\n# orrery shell integration\n\(sourceLine)\n"
         do {
             try appended.write(to: url, atomically: true, encoding: .utf8)
-            FileHandle.standardError.write(Data(L10n.Setup.addedTo(url.path).utf8))
+            stderrWrite(L10n.Setup.addedTo(url.path))
         } catch {
-            FileHandle.standardError.write(Data(L10n.Setup.failedToWrite(url.path, error.localizedDescription).utf8))
+            stderrWrite(L10n.Setup.failedToWrite(url.path, error.localizedDescription))
         }
     }
 }

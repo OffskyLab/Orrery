@@ -31,9 +31,7 @@ public struct SyncCommand: ParsableCommand {
         let binary = Self.findBinary()
 
         guard let binary else {
-            FileHandle.standardError.write(Data(
-                "orrery-sync not found. Install it with: brew install OffskyLab/orrery/orrery-sync\n".utf8
-            ))
+            stderrWrite("orrery-sync not found. Install it with: brew install OffskyLab/orrery/orrery-sync\n")
             throw ExitCode.failure
         }
 

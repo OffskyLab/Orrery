@@ -131,7 +131,7 @@ public enum ToolSetupRunner {
 
         // Yellow loading indicator, erased after queries are done.
         let loading = "\u{1B}[1;33m\(L10n.Create.queryingLoginStatus)\u{1B}[0m"
-        FileHandle.standardOutput.write(Data(loading.utf8))
+        stdoutWrite(loading)
 
         var seenEmails = Set<String>()
         var unique: [(source: String, info: ToolAuth.AccountInfo)] = []
@@ -161,7 +161,7 @@ public enum ToolSetupRunner {
         }
 
         // Clear loading line before showing the wizard.
-        FileHandle.standardOutput.write(Data("\r\u{1B}[2K".utf8))
+        stdoutWrite("\r\u{1B}[2K")
 
         var options = [L10n.Create.copyLoginIndependent]
         var sources: [String?] = [nil]

@@ -22,15 +22,16 @@ public enum OriginTakeoverBootstrap {
         }
     }
 
-    /// Returns true if the current invocation is `orrery origin release` or
-    /// `orrery uninstall`, so we don't immediately re-take-over what's being released.
+    /// Returns true if the current invocation should skip the bootstrap takeover.
     private static func isReleasingOrUninstalling() -> Bool {
         let args = CommandLine.arguments.dropFirst()   // drop binary path
         let subcommands = args.filter { !$0.hasPrefix("-") }
-        // orrery origin release [flags]
+        // orrery origin release — avoid immediately re-taking over what's being released
         if subcommands.first == "origin" && subcommands.dropFirst().first == "release" { return true }
-        // orrery uninstall [flags]
+        // orrery uninstall — same reason
         if subcommands.first == "uninstall" { return true }
+        // orrery setup — handles takeover itself with interactive prompts; skip silent bootstrap
+        if subcommands.first == "setup" { return true }
         return false
     }
 }

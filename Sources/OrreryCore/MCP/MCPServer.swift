@@ -3,9 +3,6 @@ import Foundation
 /// Minimal MCP (Model Context Protocol) server over stdin/stdout JSON-RPC 2.0.
 public struct MCPServer {
 
-    private static let out = FileHandle.standardOutput
-    private static let err = FileHandle.standardError
-
     public static func run() {
         log("Orrery MCP server starting")
 
@@ -459,11 +456,11 @@ public struct MCPServer {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               var str = String(data: data, encoding: .utf8) else { return }
         str += "\n"
-        out.write(Data(str.utf8))
+        stdoutWrite(str)
     }
 
     private static func log(_ message: String) {
-        err.write(Data("[\(message)]\n".utf8))
+        stderrWrite("[\(message)]\n")
     }
 
     private static func currentVersion() -> String {

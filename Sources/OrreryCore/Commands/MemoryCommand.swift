@@ -183,7 +183,7 @@ public struct MemoryCommand: ParsableCommand {
                 print("")
                 let choice = askMigrationChoiceToIsolated()
                 if choice == 1 {
-                    FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                    stdoutWrite(L10n.Memory.discardConfirm)
                     let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
                     guard confirm == "y" || confirm == "yes" else {
                         print(L10n.Memory.aborted)
@@ -212,7 +212,7 @@ public struct MemoryCommand: ParsableCommand {
 
             let choice = askMigrationChoiceToIsolated()
             if choice == 1 {
-                FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                stdoutWrite(L10n.Memory.discardConfirm)
                 let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
                 guard confirm == "y" || confirm == "yes" else {
                     print(L10n.Memory.aborted)
@@ -264,7 +264,7 @@ public struct MemoryCommand: ParsableCommand {
                 print("")
                 let choice = askMigrationChoiceToShared()
                 if choice == 1 {
-                    FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                    stdoutWrite(L10n.Memory.discardConfirm)
                     let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
                     guard confirm == "y" || confirm == "yes" else {
                         print(L10n.Memory.aborted)
@@ -293,7 +293,7 @@ public struct MemoryCommand: ParsableCommand {
 
             let choice = askMigrationChoiceToShared()
             if choice == 1 {
-                FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                stdoutWrite(L10n.Memory.discardConfirm)
                 let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
                 guard confirm == "y" || confirm == "yes" else {
                     print(L10n.Memory.aborted)

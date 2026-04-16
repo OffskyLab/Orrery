@@ -59,7 +59,7 @@ public struct UninstallCommand: ParsableCommand {
             if updated != content {
                 content = updated
                 try content.write(to: rcFile, atomically: true, encoding: .utf8)
-                FileHandle.standardError.write(Data(L10n.Uninstall.removedIntegration(rcFile.path).utf8))
+                stderrWrite(L10n.Uninstall.removedIntegration(rcFile.path))
             }
         }
 

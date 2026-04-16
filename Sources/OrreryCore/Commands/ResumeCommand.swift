@@ -58,8 +58,7 @@ public struct ResumeCommand: ParsableCommand {
 
             // Show indicator before reading session files — discovery can be slow
             // (many large JSONL files) and the terminal would otherwise appear frozen.
-            let fh = FileHandle.standardOutput
-            fh.write(Data("Loading sessions…".utf8))
+            stdoutWrite("Loading sessions…")
 
             let activeIds = SessionsCommand.activeClaudeSessionIds(store: store)
 
@@ -73,7 +72,7 @@ public struct ResumeCommand: ParsableCommand {
             items.sort { ($0.entry.lastTime ?? .distantPast) > ($1.entry.lastTime ?? .distantPast) }
 
             // Clear the loading line before showing the picker (or the noSessions message).
-            fh.write(Data("\r\u{1B}[2K".utf8))
+            stdoutWrite("\r\u{1B}[2K")
 
             guard !items.isEmpty else {
                 print(L10n.Sessions.noSessions)

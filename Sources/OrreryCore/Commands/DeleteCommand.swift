@@ -75,7 +75,7 @@ public struct DeleteCommand: ParsableCommand {
                 try store.delete(named: n)
                 print(L10n.Delete.deleted(n))
             } catch {
-                FileHandle.standardError.write(Data("⚠️  \(n): \(error.localizedDescription)\n".utf8))
+                stderrWrite("⚠️  \(n): \(error.localizedDescription)\n")
             }
         }
     }

@@ -47,7 +47,6 @@ public enum LegacyOrbitalMigration {
         guard !candidates.isEmpty || sharedPending else { return }
 
         // Prompt
-        let err = FileHandle.standardError
         var lines: [String] = ["", "\u{1B}[1;33mOrbital → Orrery migration\u{1B}[0m"]
         if !candidates.isEmpty {
             lines.append("  \(candidates.count) 個環境還在 ~/.orbital/envs/ 裡")
@@ -56,7 +55,7 @@ public enum LegacyOrbitalMigration {
             lines.append("  ~/.orbital/shared/ 有共享的 sessions/memory")
         }
         lines.append("要搬到 ~/.orrery/ 嗎？（選「不要」之後不會再詢問）")
-        err.write(Data((lines.joined(separator: "\n") + "\n[Y/n] ").utf8))
+        stderrWrite(lines.joined(separator: "\n") + "\n[Y/n] ")
 
         let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
         let accepted = input.isEmpty || input == "y" || input == "yes"
@@ -65,7 +64,7 @@ public enum LegacyOrbitalMigration {
             state.declinedEnvIds.append(contentsOf: candidates)
             if sharedPending { state.declinedShared = true }
             saveState(state, newHome: newHome)
-            err.write(Data("已跳過。\n".utf8))
+            stderrWrite("已跳過。\n")
             return
         }
 
@@ -79,7 +78,7 @@ public enum LegacyOrbitalMigration {
                 try fm.moveItem(at: src, to: dst)
                 migrated.append(id)
             } catch {
-                err.write(Data("  ⚠️  env \(id) 搬移失敗：\(error.localizedDescription)\n".utf8))
+                stderrWrite("  ⚠️  env \(id) 搬移失敗：\(error.localizedDescription)\n")
             }
         }
 
@@ -109,7 +108,7 @@ public enum LegacyOrbitalMigration {
             do {
                 try fm.moveItem(at: legacyShared, to: newShared)
             } catch {
-                err.write(Data("  ⚠️  shared/ 搬移失敗：\(error.localizedDescription)\n".utf8))
+                stderrWrite("  ⚠️  shared/ 搬移失敗：\(error.localizedDescription)\n")
             }
         }
 
@@ -141,7 +140,7 @@ public enum LegacyOrbitalMigration {
             }
         }
 
-        err.write(Data("已搬移 \(migrated.count) 個環境。開新 shell 或 re-source rc 檔讓新的 ORRERY_* 環境變數生效。\n".utf8))
+        stderrWrite("已搬移 \(migrated.count) 個環境。開新 shell 或 re-source rc 檔讓新的 ORRERY_* 環境變數生效。\n")
     }
 
     // MARK: - Helpers

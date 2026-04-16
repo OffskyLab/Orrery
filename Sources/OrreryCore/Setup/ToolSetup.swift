@@ -14,7 +14,7 @@ public struct ToolSetup {
 
         if !isInstalled(tool) {
             print(L10n.ToolSetup.notInstalled(tool.rawValue))
-            FileHandle.standardOutput.write(Data(L10n.ToolSetup.installNow.utf8))
+            stdoutWrite(L10n.ToolSetup.installNow)
             let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
             guard input.isEmpty || input == "y" || input == "yes" else {
                 print(L10n.ToolSetup.skipping(tool.rawValue))
@@ -31,7 +31,7 @@ public struct ToolSetup {
         for t in tools {
             guard let authCmd = t.authLoginCommand else { continue }
             print("")
-            FileHandle.standardOutput.write(Data(L10n.ToolSetup.loginNow(t.rawValue).utf8))
+            stdoutWrite(L10n.ToolSetup.loginNow(t.rawValue))
             let input = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
             guard input.isEmpty || input == "y" || input == "yes" else {
                 print(L10n.ToolSetup.skippingLogin(t.rawValue))
@@ -74,7 +74,7 @@ public struct ToolSetup {
     static func install(_ tool: Tool) throws {
         guard let cmd = tool.installCommand else { return }
 
-        FileHandle.standardOutput.write(Data("\u{1B}[?1049h".utf8))
+        stdoutWrite("\u{1B}[?1049h")
         print(L10n.ToolSetup.installing(tool.rawValue, cmd.joined(separator: " ")))
 
         let process = Process()
@@ -83,7 +83,7 @@ public struct ToolSetup {
         try process.run()
         process.waitUntilExit()
 
-        FileHandle.standardOutput.write(Data("\u{1B}[?1049l".utf8))
+        stdoutWrite("\u{1B}[?1049l")
 
         guard process.terminationStatus == 0 else {
             throw SetupError.installFailed(tool.rawValue)
