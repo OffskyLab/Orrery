@@ -125,14 +125,16 @@ public struct SetupCommand: ParsableCommand {
             }
             stderrWrite("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n")
 
-            // --- Memory ---
-            let memoryPicker = SingleSelect(
-                title: L10n.Create.memorySharePrompt,
-                options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
-                selected: 0
-            )
-            config.isolateMemory = memoryPicker.run() == 1
-            stderrWrite("\(tool.coloredTag) \(L10n.Create.memory(config.isolateMemory))\n")
+            // --- Memory (Claude only — codex/gemini have no memory concept) ---
+            if tool == .claude {
+                let memoryPicker = SingleSelect(
+                    title: L10n.Create.memorySharePrompt,
+                    options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
+                    selected: 1   // default: 不共享 (isolate)
+                )
+                config.isolateMemory = memoryPicker.run() == 1
+                stderrWrite("\(tool.coloredTag) \(L10n.Create.memory(config.isolateMemory))\n")
+            }
         }
 
         try? store.saveOriginConfig(config)

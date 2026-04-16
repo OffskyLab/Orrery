@@ -14,7 +14,7 @@ public struct OriginConfig: Codable, Sendable {
     public var isolatedSessionTools: Set<Tool>
 
     public init(
-        isolateMemory: Bool = false,
+        isolateMemory: Bool = true,
         memoryStoragePath: String? = nil,
         isolatedSessionTools: Set<Tool> = []
     ) {
