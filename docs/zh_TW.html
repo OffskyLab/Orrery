@@ -711,8 +711,13 @@
     </p>
     <p>
       與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
-      也不支援工具設定或環境變數。它沒有任何隔離、也沒有獨立的 memory 或 session —
-      它就是進入 Orrery 之前的狀態。
+      也不支援自訂工具設定或環境變數 — 它始終使用系統的原生 config 路徑。
+    </p>
+    <p>
+      不過，<code>origin</code> 支援 memory 與 session 設定。
+      可以用 <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code>
+      設定 memory 的存放位置，也可以在 <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。
+      執行 <code>orrery info origin</code> 查看完整狀態。
     </p>
     <p>
       這讓 <code>origin</code> 成為一個乾淨的退出點：
