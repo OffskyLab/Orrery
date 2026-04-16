@@ -135,7 +135,7 @@
   "mCPServerCmd.abstract": "Start MCP server (for Claude Code integration)",
   "mCPSetup.abstract": "MCP integration management",
   "mCPSetup.setupAbstract": "Set up Orrery MCP server for the current project",
-  "mCPSetup.success": "Orrery MCP server and slash commands installed. Restart your AI tool to use /orrery:delegate, /orrery:sessions, and /orrery:resume.",
+  "mCPSetup.success": "Orrery MCP server and slash commands installed. Restart your AI tool to use /orrery:delegate, /orrery:sessions, /orrery:resume, and /orrery:magi.",
   "mCPSetup.wroteSettings": "orrery: wrote {path}\n",
   "memory.aborted": "Aborted.",
   "memory.abstract": "Manage shared project memory",

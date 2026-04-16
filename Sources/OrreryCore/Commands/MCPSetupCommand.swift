@@ -132,6 +132,30 @@ public struct MCPSetupCommand: ParsableCommand {
             ```
             """
             try resumeContent.write(to: resumeMd, atomically: true, encoding: .utf8)
+
+            let magiMd = commandsDir.appendingPathComponent("orrery:magi.md")
+            let magiContent = """
+            # Multi-model discussion (Magi)
+
+            Start a multi-model discussion where Claude, Codex, and Gemini debate a topic
+            and produce a consensus report.
+
+            Usage: Describe the topic to discuss. Use semicolons to separate sub-topics.
+
+            Example: /orrery:magi Should we use REST or GraphQL for the new API?
+            Example: /orrery:magi Performance; Developer experience; Maintenance cost
+
+            When this command is invoked, use the orrery_magi MCP tool with:
+            - topic: "$ARGUMENTS"
+            - rounds: 1 (default; use more rounds only if the user explicitly asks for deeper discussion)
+
+            If the user requests multiple rounds (e.g. "3 rounds", "deeper discussion"),
+            warn them it may take several minutes, then set rounds accordingly.
+
+            After receiving the result, summarize the consensus report for the user,
+            highlighting areas of agreement and disagreement.
+            """
+            try magiContent.write(to: magiMd, atomically: true, encoding: .utf8)
         }
     }
 }

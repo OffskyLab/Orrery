@@ -135,7 +135,7 @@
   "mCPServerCmd.abstract": "啟動 MCP server（供 Claude Code 等工具整合）",
   "mCPSetup.abstract": "MCP 整合管理",
   "mCPSetup.setupAbstract": "在當前專案設定 Orrery MCP server",
-  "mCPSetup.success": "Orrery MCP server 與 slash commands 已設定完成。重新啟動 AI tool 即可使用 /orrery:delegate、/orrery:sessions 和 /orrery:resume。",
+  "mCPSetup.success": "Orrery MCP server 與 slash commands 已設定完成。重新啟動 AI tool 即可使用 /orrery:delegate、/orrery:sessions、/orrery:resume 和 /orrery:magi。",
   "mCPSetup.wroteSettings": "orrery: 已寫入 {path}\n",
   "memory.aborted": "已取消。",
   "memory.abstract": "管理共享專案記憶",

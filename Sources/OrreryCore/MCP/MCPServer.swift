@@ -122,6 +122,34 @@ public struct MCPServer {
                 ]
             ],
             [
+                "name": "orrery_magi",
+                "description": "Start a multi-model discussion (Claude, Codex, Gemini) on a topic and produce a consensus report.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "topic": [
+                            "type": "string",
+                            "description": "Discussion topic. Use semicolons to separate sub-topics."
+                        ],
+                        "rounds": [
+                            "type": "integer",
+                            "description": "Maximum discussion rounds (default: 1 for MCP)"
+                        ],
+                        "tools": [
+                            "type": "array",
+                            "items": ["type": "string", "enum": ["claude", "codex", "gemini"]],
+                            "description": "Participating tools (default: all installed)"
+                        ],
+                        "environment": [
+                            "type": "string",
+                            "description": "Environment name (default: active environment)"
+                        ]
+                    ],
+                    "required": ["topic"],
+                    "additionalProperties": false
+                ]
+            ],
+            [
                 "name": "orrery_memory_write",
                 "description": "Write or append to the shared Orrery memory (MEMORY.md) for the current project. Use markdown format. This memory persists across sessions and is shared across all AI tools (Claude, Codex, Gemini) and environments. Use this to save: project decisions (e.g. 'we chose PostgreSQL 16'), architecture notes, coding conventions, deployment info, or anything the team should remember. Default is append mode — set append=false only to rewrite the entire MEMORY.md.",
                 "inputSchema": [
@@ -173,6 +201,22 @@ public struct MCPServer {
 
         case "orrery_current":
             return execCommand(["orrery-bin", "current"])
+
+        case "orrery_magi":
+            guard let topic = arguments["topic"] as? String else {
+                return toolError("Missing required parameter: topic")
+            }
+            var args = ["orrery", "magi"]
+            let rounds = arguments["rounds"] as? Int ?? 1  // MCP 預設 1 輪
+            args += ["--rounds", String(rounds)]
+            if let env = arguments["environment"] as? String {
+                args += ["-e", env]
+            }
+            if let tools = arguments["tools"] as? [String] {
+                for tool in tools { args.append("--\(tool)") }
+            }
+            args.append(topic)
+            return execCommand(args)
 
         case "orrery_memory_read":
             return readMemory()
