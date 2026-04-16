@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **`orrery magi` — multi-model discussion and consensus.**  New subcommand
+  that lets Claude, Codex, and Gemini discuss a topic over multiple rounds
+  and produce a structured consensus report.  Each round, models see their
+  own full reasoning chain plus a structured summary of other participants'
+  positions.  Consensus is computed by deterministic majority voting
+  (`agreed` / `majority` / `disputed` / `pending`).  Supports `--rounds`,
+  `--output`, tool selection flags (`--claude`, `--codex`, `--gemini`), and
+  semicolon-separated sub-topics.  Discussion runs are saved as JSON to
+  `~/.orrery/magi/` for later reference.
+- **`DelegateProcessBuilder` gains `OutputMode`.**  New `.capture` mode
+  pipes stdout to a `Pipe` for programmatic reading (used by `magi`).
+  Existing `.passthrough` behaviour is the default — no change to
+  `delegate` or other call sites.
+
 ## v2.5.0
 
 - **`orrery install <id>` is now a top-level command.** The previous `orrery thirdparty install` is replaced by `orrery install`, matching `npm install` / `brew install` conventions. `uninstall`, `list`, and `available` remain under `orrery thirdparty` because the top-level slots are taken by orrery's own commands.

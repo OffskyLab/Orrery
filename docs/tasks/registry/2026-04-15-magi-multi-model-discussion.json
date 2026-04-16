@@ -1,0 +1,25 @@
+{
+  "id": "2026-04-15-magi-multi-model-discussion",
+  "file": "docs/tasks/2026-04-15-magi-multi-model-discussion.md",
+  "title": "Magi：多模型互相對話討論並達成共識",
+  "status": "done",
+  "completed": "2026-04-15",
+  "created": "2026-04-15",
+  "depends_on": [],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-15-magi-multi-model-discussion.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Commands/OrreryCommand.swift"
+  ],
+  "verification": [
+    "swift build",
+    "swift run orrery magi --help"
+  ],
+  "tags": ["feature"],
+  "status_history": [
+    {"status": "ready", "at": "2026-04-15T15:00:00Z"},
+    {"status": "in-progress", "at": "2026-04-15T16:00:00Z", "session": "pickup: magi multi-model discussion"},
+    {"status": "done", "at": "2026-04-15T17:00:00Z"}
+  ]
+}

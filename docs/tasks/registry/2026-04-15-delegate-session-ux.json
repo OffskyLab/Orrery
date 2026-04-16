@@ -1,0 +1,32 @@
+{
+  "id": "2026-04-15-delegate-session-ux",
+  "file": "docs/tasks/2026-04-15-delegate-session-ux.md",
+  "title": "delegate --session UX 改善 + cleanup（修正 Codex command + 刪除 fallback + picker + auto tool inference）",
+  "status": "done",
+  "completed": "2026-04-15",
+  "created": "2026-04-15",
+  "depends_on": ["2026-04-13-delegate-session"],
+  "supersedes": ["2026-04-14-delegate-managed-session"],
+  "discussion": "docs/discussions/2026-04-15-delegate-session-ux.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Helpers/TeeCapture.swift",
+    "file:Sources/OrreryCore/Helpers/SessionContextBuilder.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Helpers/SessionMapping.swift",
+    "file:Sources/OrreryCore/Commands/DelegateCommand.swift"
+  ],
+  "verification": [
+    "swift build",
+    "! grep -r TeeCapture Sources/",
+    "! grep -r SessionContextBuilder Sources/",
+    "! grep -r SessionTurn Sources/",
+    "! grep -r codexResumePromptUnsupported Sources/"
+  ],
+  "tags": ["feature", "cleanup", "ux"],
+  "status_history": [
+    {"status": "draft", "at": "2026-04-15T10:00:00Z"},
+    {"status": "ready", "at": "2026-04-15T12:00:00Z"},
+    {"status": "in-progress", "at": "2026-04-15T14:00:00Z", "session": "pickup: delegate session UX cleanup + picker"},
+    {"status": "done", "at": "2026-04-15T14:30:00Z"}
+  ]
+}
