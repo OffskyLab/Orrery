@@ -26,6 +26,8 @@ public enum OriginTakeoverBootstrap {
     private static func isReleasingOrUninstalling() -> Bool {
         let args = CommandLine.arguments.dropFirst()   // drop binary path
         let subcommands = args.filter { !$0.hasPrefix("-") }
+        // Pure flag invocations like --version / --help have no subcommands; skip takeover
+        if subcommands.isEmpty { return true }
         // orrery origin release — avoid immediately re-taking over what's being released
         if subcommands.first == "origin" && subcommands.dropFirst().first == "release" { return true }
         // orrery uninstall — same reason
