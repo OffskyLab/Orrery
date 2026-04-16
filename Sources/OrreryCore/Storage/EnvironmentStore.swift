@@ -321,6 +321,77 @@ public struct EnvironmentStore: Sendable {
         try? fm.createSymbolicLink(at: memoryDirURL, withDestinationURL: targetDir)
     }
 
+    // MARK: - Origin management
+
+    /// Storage directory for origin tool configs: `~/.orrery/origin/`
+    public var originDir: URL { homeURL.appendingPathComponent("origin") }
+
+    /// Per-tool storage path inside origin: `~/.orrery/origin/{tool}/`
+    public func originConfigDir(tool: Tool) -> URL {
+        originDir.appendingPathComponent(tool.subdirectory)
+    }
+
+    /// Returns true if `tool.defaultConfigDir` is a symlink pointing to orrery's origin storage.
+    public func isOriginManaged(tool: Tool) -> Bool {
+        guard let dest = try? FileManager.default.destinationOfSymbolicLink(
+            atPath: tool.defaultConfigDir.path
+        ) else { return false }
+        let target = originConfigDir(tool: tool)
+        // Accept both absolute and relative dest paths
+        return dest == target.path ||
+               URL(fileURLWithPath: dest, relativeTo: tool.defaultConfigDir.deletingLastPathComponent()) == target
+    }
+
+    /// Move `tool.defaultConfigDir` into orrery origin storage and replace it with a symlink.
+    /// Idempotent — no-op if already managed.
+    public func originTakeover(tool: Tool) throws {
+        guard !isOriginManaged(tool: tool) else { return }
+        let fm = FileManager.default
+        let src = tool.defaultConfigDir
+        let dst = originConfigDir(tool: tool)
+
+        try fm.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        var srcIsDir: ObjCBool = false
+        if fm.fileExists(atPath: src.path, isDirectory: &srcIsDir) {
+            if fm.fileExists(atPath: dst.path) {
+                // dst already exists — merge src contents in, then remove src
+                if srcIsDir.boolValue {
+                    let contents = (try? fm.contentsOfDirectory(atPath: src.path)) ?? []
+                    for item in contents {
+                        let srcItem = src.appendingPathComponent(item)
+                        let dstItem = dst.appendingPathComponent(item)
+                        if !fm.fileExists(atPath: dstItem.path) {
+                            try fm.moveItem(at: srcItem, to: dstItem)
+                        }
+                    }
+                }
+                try fm.removeItem(at: src)
+            } else {
+                try fm.moveItem(at: src, to: dst)
+            }
+        } else {
+            // No existing config — just create the target dir so the tool has somewhere to write
+            try fm.createDirectory(at: dst, withIntermediateDirectories: true)
+        }
+
+        try fm.createSymbolicLink(at: src, withDestinationURL: dst)
+    }
+
+    /// Remove the symlink and move data back to `tool.defaultConfigDir`.
+    /// Idempotent — no-op if not managed.
+    public func originRelease(tool: Tool) throws {
+        guard isOriginManaged(tool: tool) else { return }
+        let fm = FileManager.default
+        let link = tool.defaultConfigDir
+        let stored = originConfigDir(tool: tool)
+
+        try fm.removeItem(at: link)
+        if fm.fileExists(atPath: stored.path) {
+            try fm.moveItem(at: stored, to: link)
+        }
+    }
+
     public func rename(from oldName: String, to newName: String) throws {
         var env = try load(named: oldName)
         env.name = newName

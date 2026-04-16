@@ -1968,5 +1968,55 @@
     ],
     "kind": "var",
     "parameters": []
+  },
+  { "path": ["Origin", "abstract"],        "kind": "var", "parameters": [] },
+  { "path": ["Origin", "statusAbstract"],  "kind": "var", "parameters": [] },
+  { "path": ["Origin", "takeoverAbstract"],"kind": "var", "parameters": [] },
+  { "path": ["Origin", "releaseAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Origin", "hint"],            "kind": "var", "parameters": [] },
+  { "path": ["Origin", "nothingToRelease"],"kind": "var", "parameters": [] },
+  {
+    "path": ["Origin", "alreadyManaged"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
+  },
+  {
+    "path": ["Origin", "alreadyUnmanaged"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
+  },
+  {
+    "path": ["Origin", "tookOver"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Origin", "released"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  },
+  { "path": ["Setup", "originPromptTitle"],    "kind": "var", "parameters": [] },
+  {
+    "path": ["Setup", "originPromptBody"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "paths", "type": "String" }]
+  },
+  { "path": ["Setup", "originPromptQuestion"], "kind": "var", "parameters": [] },
+  { "path": ["Setup", "originDone"],           "kind": "var", "parameters": [] },
+  { "path": ["Setup", "originSkipped"],        "kind": "var", "parameters": [] },
+  { "path": ["Uninstall", "abstract"],         "kind": "var", "parameters": [] },
+  { "path": ["Uninstall", "confirmPrompt"],    "kind": "var", "parameters": [] },
+  { "path": ["Uninstall", "aborted"],          "kind": "var", "parameters": [] },
+  { "path": ["Uninstall", "done"],             "kind": "var", "parameters": [] },
+  {
+    "path": ["Uninstall", "removedIntegration"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "path", "type": "String" }]
   }
 ]
