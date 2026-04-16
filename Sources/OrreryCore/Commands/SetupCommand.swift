@@ -1,10 +1,5 @@
 import ArgumentParser
 import Foundation
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
 
 public struct SetupCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -83,33 +78,15 @@ public struct SetupCommand: ParsableCommand {
 
     static func offerOriginTakeover() {
         let store = EnvironmentStore.default
-        let unmanaged = Tool.allCases.filter {
-            !store.isOriginManaged(tool: $0) &&
-            FileManager.default.fileExists(atPath: $0.defaultConfigDir.path)
-        }
-        guard !unmanaged.isEmpty else { return }
-
-        // Only prompt when we have a real TTY to read from
-        let ttyFd = open("/dev/tty", O_RDWR)
-        guard ttyFd >= 0 else { return }
-        close(ttyFd)
-
-        let paths = unmanaged.map { "~/." + $0.rawValue + "/" }.joined(separator: ", ")
-        print("")
-        print(L10n.Setup.originPromptTitle)
-        print(L10n.Setup.originPromptBody(paths))
-        print(L10n.Setup.originPromptQuestion, terminator: "")
-        fflush(stdout)
-
-        let line = readLine() ?? ""
-        if line.lowercased().hasPrefix("y") || line.isEmpty {
-            for tool in unmanaged {
-                try? store.originTakeover(tool: tool)
-                print(L10n.Origin.tookOver(tool.rawValue, store.originConfigDir(tool: tool).path))
+        for tool in Tool.allCases {
+            guard !store.isOriginManaged(tool: tool),
+                  FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)
+            else { continue }
+            if (try? store.originTakeover(tool: tool)) != nil {
+                FileHandle.standardError.write(
+                    Data(L10n.Origin.tookOver(tool.rawValue, store.originConfigDir(tool: tool).path).utf8 + [0x0A])
+                )
             }
-            print(L10n.Setup.originDone)
-        } else {
-            print(L10n.Setup.originSkipped)
         }
     }
 

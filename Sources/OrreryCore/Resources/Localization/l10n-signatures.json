@@ -2001,15 +2001,6 @@
       { "label": "_", "name": "path", "type": "String" }
     ]
   },
-  { "path": ["Setup", "originPromptTitle"],    "kind": "var", "parameters": [] },
-  {
-    "path": ["Setup", "originPromptBody"],
-    "kind": "func",
-    "parameters": [{ "label": "_", "name": "paths", "type": "String" }]
-  },
-  { "path": ["Setup", "originPromptQuestion"], "kind": "var", "parameters": [] },
-  { "path": ["Setup", "originDone"],           "kind": "var", "parameters": [] },
-  { "path": ["Setup", "originSkipped"],        "kind": "var", "parameters": [] },
   { "path": ["Uninstall", "abstract"],         "kind": "var", "parameters": [] },
   { "path": ["Uninstall", "confirmPrompt"],    "kind": "var", "parameters": [] },
   { "path": ["Uninstall", "aborted"],          "kind": "var", "parameters": [] },
