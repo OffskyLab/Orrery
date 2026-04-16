@@ -53,6 +53,18 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// ANSI color code for this tool (used in terminal UI).
+    public var ansiColor: String {
+        switch self {
+        case .claude: return "\u{1B}[33m"   // orange/yellow
+        case .gemini: return "\u{1B}[32m"   // green
+        case .codex:  return "\u{1B}[90m"   // dark gray
+        }
+    }
+
+    /// Colored `[name]` tag for terminal display, e.g. `\u{1B}[33m[claude]\u{1B}[0m`.
+    public var coloredTag: String { "\(ansiColor)[\(rawValue)]\u{1B}[0m" }
+
     /// Subdirectories within the tool's config dir that hold session data.
     /// These are symlinked to a shared location when `isolateSessions` is false.
     public var sessionSubdirectories: [String] {

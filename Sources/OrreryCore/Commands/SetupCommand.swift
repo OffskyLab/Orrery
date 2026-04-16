@@ -96,46 +96,47 @@ public struct SetupCommand: ParsableCommand {
             }
         }
 
-        // Ask session + memory sharing only when a TTY is available
-        let ttyFd = open("/dev/tty", O_RDWR)
-        guard ttyFd >= 0 else { return }
-        close(ttyFd)
+        guard !takenOverTools.isEmpty else { return }
+
+        // Interactive prompts only when a TTY is available for writing
+        guard let ttyOut = FileHandle(forWritingAtPath: "/dev/tty") else { return }
 
         var config = store.loadOriginConfig()
 
-        // Per-tool session sharing
+        // For each tool: ask session, show summary, then ask memory, show summary
         for tool in takenOverTools {
-            let isolate = askSessionIsolate(for: tool)
-            if isolate {
+            // Colored tool header on its own line
+            ttyOut.write(Data("\n\(tool.coloredTag)\n".utf8))
+
+            // --- Session ---
+            let sessionPicker = SingleSelect(
+                title: L10n.Create.sessionSharePrompt,
+                options: [L10n.Create.sessionShareYes, L10n.Create.sessionShareNo],
+                selected: 0
+            )
+            let isolateSession = sessionPicker.run() == 1
+            if isolateSession {
                 config.isolatedSessionTools.insert(tool)
             } else {
                 config.isolatedSessionTools.remove(tool)
                 try? store.ensureSharedSessionLinksForOrigin(tool: tool)
             }
+            // Summary line — stays visible
+            ttyOut.write(Data("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n".utf8))
+
+            // --- Memory ---
+            let memoryPicker = SingleSelect(
+                title: L10n.Create.memorySharePrompt,
+                options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
+                selected: 0
+            )
+            let isolateMemory = memoryPicker.run() == 1
+            config.isolateMemory = isolateMemory
+            // Summary line — stays visible
+            ttyOut.write(Data("\(tool.coloredTag) \(L10n.Create.memory(isolateMemory))\n".utf8))
         }
 
-        // Memory sharing (single question)
-        config.isolateMemory = askMemoryIsolate()
-
         try? store.saveOriginConfig(config)
-    }
-
-    private static func askSessionIsolate(for tool: Tool) -> Bool {
-        let selector = SingleSelect(
-            title: L10n.Create.sessionSharePromptFor(tool.rawValue),
-            options: [L10n.Create.sessionShareYes, L10n.Create.sessionShareNo],
-            selected: 0
-        )
-        return selector.run() == 1   // 0 = share, 1 = isolate
-    }
-
-    private static func askMemoryIsolate() -> Bool {
-        let selector = SingleSelect(
-            title: L10n.Create.memorySharePrompt,
-            options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
-            selected: 0
-        )
-        return selector.run() == 1   // 0 = share, 1 = isolate
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {

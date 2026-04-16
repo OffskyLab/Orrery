@@ -88,13 +88,7 @@ public struct ResumeCommand: ParsableCommand {
                 let idx = String(repeating: " ", count: indexWidth - n.count) + n
                 // Color-coded tool tag: orange=claude, green=gemini, dark-gray=codex
                 let tag = "[\(item.tool.rawValue)]".padding(toLength: 9, withPad: " ", startingAt: 0)
-                let ansi: String
-                switch item.tool {
-                case .claude: ansi = "\u{1B}[33m"   // orange/yellow
-                case .gemini: ansi = "\u{1B}[32m"   // green
-                case .codex:  ansi = "\u{1B}[90m"   // dark gray
-                }
-                let toolTag = "\(ansi)\(tag)\u{1B}[0m"
+                let toolTag = "\(item.tool.ansiColor)\(tag)\u{1B}[0m"
                 let timeStr = (item.entry.lastTime.map { df.string(from: $0) } ?? "?")
                     .padding(toLength: 11, withPad: " ", startingAt: 0)
                 let msgs = "\(item.entry.userCount) msgs"
