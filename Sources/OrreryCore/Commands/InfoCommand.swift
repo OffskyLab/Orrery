@@ -116,10 +116,11 @@ public struct InfoCommand: ParsableCommand {
         print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
         print("\(L10n.Info.labelMemoryPath)\(memoryDir.path)")
 
-        // Session mode: origin always uses shared sessions
+        // Session mode: reflect OriginConfig
         print(L10n.Info.labelSessionMode)
         for tool in Tool.allCases {
-            print("  \(tool.rawValue): \(L10n.Info.modeShared)")
+            let mode = originConfig.isolateSessions(for: tool) ? L10n.Info.modeIsolated : L10n.Info.modeShared
+            print("  \(tool.rawValue): \(mode)")
         }
 
         print("\(L10n.Info.labelEnvVars)\(none)")

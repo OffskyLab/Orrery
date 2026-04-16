@@ -9,10 +9,22 @@ public enum ReservedEnvironment {
 public struct OriginConfig: Codable, Sendable {
     public var isolateMemory: Bool
     public var memoryStoragePath: String?
+    /// Tools whose sessions are isolated (not symlinked to shared).
+    /// Absent from the set → shared (default).
+    public var isolatedSessionTools: Set<Tool>
 
-    public init(isolateMemory: Bool = false, memoryStoragePath: String? = nil) {
+    public init(
+        isolateMemory: Bool = false,
+        memoryStoragePath: String? = nil,
+        isolatedSessionTools: Set<Tool> = []
+    ) {
         self.isolateMemory = isolateMemory
         self.memoryStoragePath = memoryStoragePath
+        self.isolatedSessionTools = isolatedSessionTools
+    }
+
+    public func isolateSessions(for tool: Tool) -> Bool {
+        isolatedSessionTools.contains(tool)
     }
 }
 
