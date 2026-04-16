@@ -26,6 +26,7 @@ public struct OrreryCommand: ParsableCommand {
             RunCommand.self,
             ResumeCommand.self,
             DelegateCommand.self,
+            MagiCommand.self,
             SessionsCommand.self,
             MemoryCommand.self,
             MCPSetupCommand.self,

@@ -521,7 +521,7 @@
   {
     "path": [
       "Delegate",
-      "codexResumePromptUnsupported"
+      "envHelp"
     ],
     "kind": "var",
     "parameters": []
@@ -529,7 +529,7 @@
   {
     "path": [
       "Delegate",
-      "envHelp"
+      "noManagedSessions"
     ],
     "kind": "var",
     "parameters": []
@@ -569,7 +569,31 @@
   {
     "path": [
       "Delegate",
-      "sessionHelp"
+      "sessionNameHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionPickerHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionPickerRequiresTTY"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "sessionPickerTitle"
     ],
     "kind": "var",
     "parameters": []
@@ -2152,5 +2176,127 @@
       { "label": "_", "name": "date", "type": "String" }
     ]
   },
-  { "path": ["Thirdparty", "availableAbstract"], "kind": "var", "parameters": [] }
+  { "path": ["Thirdparty", "availableAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": [
+      "Magi",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "consensusReport"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "insufficientTools"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "outputHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "roundStart"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "n",
+        "type": "Int"
+      },
+      {
+        "label": "_",
+        "name": "total",
+        "type": "Int"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "roundsHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "runSaved"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "toolDone"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "parseStatus",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "toolStart"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "topicHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  }
 ]
