@@ -4,30 +4,13 @@ public struct SessionMappingEntry: Codable {
     public let tool: String
     public let nativeSessionId: String?
     public let lastUsed: String
+    public let summary: String?
 
-    public init(tool: String, nativeSessionId: String?, lastUsed: String) {
+    public init(tool: String, nativeSessionId: String?, lastUsed: String, summary: String? = nil) {
         self.tool = tool
         self.nativeSessionId = nativeSessionId
         self.lastUsed = lastUsed
-    }
-}
-
-public struct SessionTurn: Codable {
-    public let role: String
-    public let content: String
-    public let timestamp: String
-    public let tokenEstimate: Int
-
-    enum CodingKeys: String, CodingKey {
-        case role, content, timestamp
-        case tokenEstimate = "token_estimate"
-    }
-
-    public init(role: String, content: String, timestamp: String, tokenEstimate: Int) {
-        self.role = role
-        self.content = content
-        self.timestamp = timestamp
-        self.tokenEstimate = tokenEstimate
+        self.summary = summary
     }
 }
 
@@ -45,13 +28,6 @@ public struct SessionMapping {
             .appendingPathComponent("\(name).json")
     }
 
-    public func codexHistoryFile(name: String, cwd: String) -> URL {
-        let projectKey = cwd.replacingOccurrences(of: "/", with: "-")
-        return baseDir
-            .appendingPathComponent(projectKey)
-            .appendingPathComponent("\(name).codex.jsonl")
-    }
-
     public func load(name: String, cwd: String) -> SessionMappingEntry? {
         let file = mappingFile(name: name, cwd: cwd)
         guard let data = try? Data(contentsOf: file) else { return nil }
@@ -67,31 +43,21 @@ public struct SessionMapping {
         try data.write(to: file)
     }
 
-    public func loadCodexTurns(name: String, cwd: String) -> [SessionTurn] {
-        let file = codexHistoryFile(name: name, cwd: cwd)
-        guard let data = try? String(contentsOf: file, encoding: .utf8) else { return [] }
-        return data.components(separatedBy: .newlines)
-            .filter { !$0.isEmpty }
-            .compactMap { line in
-                try? JSONDecoder().decode(SessionTurn.self, from: Data(line.utf8))
+    public func allMappings(cwd: String) -> [(name: String, entry: SessionMappingEntry)] {
+        let projectKey = cwd.replacingOccurrences(of: "/", with: "-")
+        let dir = baseDir.appendingPathComponent(projectKey)
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: nil
+        ) else { return [] }
+        return files
+            .filter { $0.pathExtension == "json" }
+            .compactMap { file -> (String, SessionMappingEntry)? in
+                guard let data = try? Data(contentsOf: file),
+                      let entry = try? JSONDecoder().decode(SessionMappingEntry.self, from: data)
+                else { return nil }
+                let name = file.deletingPathExtension().lastPathComponent
+                return (name, entry)
             }
-    }
-
-    public func appendCodexTurn(_ turn: SessionTurn, name: String, cwd: String) throws {
-        let file = codexHistoryFile(name: name, cwd: cwd)
-        let dir = file.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-        let json = try JSONEncoder().encode(turn)
-        let line = String(data: json, encoding: .utf8)! + "\n"
-
-        if FileManager.default.fileExists(atPath: file.path) {
-            let handle = try FileHandle(forWritingTo: file)
-            handle.seekToEndOfFile()
-            handle.write(Data(line.utf8))
-            handle.closeFile()
-        } else {
-            try line.write(to: file, atomically: true, encoding: .utf8)
-        }
+            .sorted { $0.1.lastUsed > $1.1.lastUsed }
     }
 }

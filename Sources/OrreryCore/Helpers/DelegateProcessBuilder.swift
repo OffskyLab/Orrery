@@ -7,42 +7,41 @@ public enum StdinMode {
     case injectedThenInteractive(String)
 }
 
+public enum OutputMode {
+    case passthrough
+    case capture
+}
+
 public struct DelegateProcessBuilder {
     public let tool: Tool
     public let prompt: String?
     public let resumeSessionId: String?
     public let environment: String?
     public let store: EnvironmentStore
-    public let captureStdout: Bool
 
     public init(tool: Tool, prompt: String?, resumeSessionId: String?,
-                environment: String?, store: EnvironmentStore,
-                captureStdout: Bool = false) {
+                environment: String?, store: EnvironmentStore) {
         self.tool = tool
         self.prompt = prompt
         self.resumeSessionId = resumeSessionId
         self.environment = environment
         self.store = store
-        self.captureStdout = captureStdout
     }
 
-    public func build() throws -> (process: Process, stdinMode: StdinMode, teeCapture: TeeCapture?) {
-        // Codex guard: resume + prompt not supported
-        if tool == .codex, resumeSessionId != nil, prompt != nil {
-            throw ValidationError(L10n.Delegate.codexResumePromptUnsupported)
-        }
-
+    public func build(outputMode: OutputMode = .passthrough) throws -> (process: Process, stdinMode: StdinMode, outputPipe: Pipe?) {
         // Build command array
         let command: [String]
         switch (tool, resumeSessionId, prompt) {
         case (.claude, let id?, let p?):
-            command = ["claude", "--resume", id, "-p", p, "--allowedTools", "Bash"]
+            command = ["claude", "-p", "--resume", id, p, "--allowedTools", "Bash"]
         case (.claude, let id?, nil):
             command = ["claude", "--resume", id]
         case (.claude, nil, let p?):
             command = ["claude", "-p", p, "--allowedTools", "Bash"]
+        case (.codex, let id?, let p?):
+            command = ["codex", "exec", "resume", id, p]
         case (.codex, let id?, nil):
-            command = ["codex", "resume", id]
+            command = ["codex", "exec", "resume", id]
         case (.codex, nil, let p?):
             command = ["codex", "exec", p]
         case (.gemini, let id?, let p?):
@@ -117,16 +116,15 @@ public struct DelegateProcessBuilder {
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = command
         process.environment = processEnv
-        // stdout: tee capture or direct passthrough (builder owns this)
-        let teeCapture: TeeCapture?
-        if captureStdout {
-            let capture = TeeCapture()
-            capture.start(forwardTo: FileHandle.standardOutput)
-            process.standardOutput = capture.pipe
-            teeCapture = capture
-        } else {
+        let outputPipe: Pipe?
+        switch outputMode {
+        case .capture:
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            outputPipe = pipe
+        case .passthrough:
             process.standardOutput = FileHandle.standardOutput
-            teeCapture = nil
+            outputPipe = nil
         }
         process.standardError = FileHandle.standardError
 
@@ -140,6 +138,6 @@ public struct DelegateProcessBuilder {
             throw ValidationError("stdin injection not yet implemented")
         }
 
-        return (process, stdinMode, teeCapture)
+        return (process, stdinMode, outputPipe)
     }
 }
