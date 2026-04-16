@@ -178,6 +178,7 @@
   "setup.migratedRc": "orrery: migrated {path} from eval to source\n",
   "setup.shellHelp": "Shell type to configure (bash, zsh). Auto-detected if omitted.",
   "setup.unsupportedShell": "Unsupported shell '{shell}'. Supported: bash, zsh",
+  "setup.originToolHeader": "configure {tool} in origin",
   "setup.wroteActivate": "orrery: wrote {path}\n",
   "toolFlag.claude": "Anthropic Claude (default)",
   "toolFlag.codex": "OpenAI Codex",

@@ -1566,6 +1566,11 @@
     ]
   },
   {
+    "path": ["Setup", "originToolHeader"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
+  },
+  {
     "path": [
       "Setup",
       "wroteActivate"

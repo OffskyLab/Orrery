@@ -108,7 +108,8 @@ public struct SetupCommand: ParsableCommand {
 
         // For each newly taken-over tool: ask session then memory; summaries stay visible
         for tool in newlyTakenOver {
-            stderrWrite("\n\(tool.coloredTag)\n")
+            let header = "\(tool.ansiColor)[\(L10n.Setup.originToolHeader(tool.rawValue))]\u{1B}[0m"
+            stderrWrite("\n\(header)\n")
 
             // --- Session ---
             let sessionPicker = SingleSelect(
