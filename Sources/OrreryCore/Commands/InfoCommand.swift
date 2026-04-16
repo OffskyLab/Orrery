@@ -107,11 +107,13 @@ public struct InfoCommand: ParsableCommand {
             toolEntries.forEach { print($0) }
         }
 
-        // Memory: origin always uses shared memory
+        // Memory: origin respects OriginConfig
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
         let memoryDir = store.memoryDir(projectKey: projectKey, envName: ReservedEnvironment.defaultName)
-        print("\(L10n.Info.labelMemoryMode)\(L10n.Info.modeShared)")
+        let originConfig = store.loadOriginConfig()
+        let memoryMode = originConfig.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
+        print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
         print("\(L10n.Info.labelMemoryPath)\(memoryDir.path)")
 
         // Session mode: origin always uses shared sessions

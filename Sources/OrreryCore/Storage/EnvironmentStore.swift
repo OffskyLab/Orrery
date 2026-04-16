@@ -263,13 +263,22 @@ public struct EnvironmentStore: Sendable {
     /// The directory is symlinked into Claude's auto-memory dir so `MEMORY.md` +
     /// fragment files written by any tool land here and can be synced across machines.
     public func memoryDir(projectKey: String, envName: String?) -> URL {
-        if let envName, envName != ReservedEnvironment.defaultName,
-           let env = try? load(named: envName) {
-            if let storagePath = env.memoryStoragePath {
-                return URL(fileURLWithPath: storagePath)
-            }
-            if env.isolateMemory {
-                return isolatedMemoryDir(projectKey: projectKey, envName: envName)
+        if let envName {
+            if envName == ReservedEnvironment.defaultName {
+                let config = loadOriginConfig()
+                if let storagePath = config.memoryStoragePath {
+                    return URL(fileURLWithPath: storagePath)
+                }
+                if config.isolateMemory {
+                    return isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                }
+            } else if let env = try? load(named: envName) {
+                if let storagePath = env.memoryStoragePath {
+                    return URL(fileURLWithPath: storagePath)
+                }
+                if env.isolateMemory {
+                    return isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                }
             }
         }
         return sharedMemoryDir(projectKey: projectKey)
@@ -325,6 +334,23 @@ public struct EnvironmentStore: Sendable {
 
     /// Storage directory for origin tool configs: `~/.orrery/origin/`
     public var originDir: URL { homeURL.appendingPathComponent("origin") }
+
+    private var originConfigURL: URL { originDir.appendingPathComponent("config.json") }
+
+    public func loadOriginConfig() -> OriginConfig {
+        guard let data = try? Data(contentsOf: originConfigURL),
+              let config = try? JSONDecoder().decode(OriginConfig.self, from: data)
+        else { return OriginConfig() }
+        return config
+    }
+
+    public func saveOriginConfig(_ config: OriginConfig) throws {
+        try FileManager.default.createDirectory(at: originDir, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(config)
+        try data.write(to: originConfigURL)
+    }
 
     /// Per-tool storage path inside origin: `~/.orrery/origin/{tool}/`
     public func originConfigDir(tool: Tool) -> URL {
