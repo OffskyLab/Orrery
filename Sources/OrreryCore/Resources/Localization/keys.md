@@ -152,7 +152,6 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `memory.abstract` | Parent command help. |
 | `memory.actionExport` / `memory.actionInfo` / `memory.actionIsolate` / `memory.actionShare` / `memory.actionStorage` | Menu labels for the interactive memory prompt. |
 | `memory.alreadyIsolated` / `memory.alreadyShared` | No-op messages when the env is already in the requested mode. |
-| `memory.defaultNotSupported` | Error when operating on `origin`. |
 | `memory.discardConfirm` | Confirm prompt before discarding memory. `⚠️` emoji intentional. Trailing `[y/N] ` has a trailing space. |
 | `memory.exportAbstract` | `memory export` sub-command help. |
 | `memory.exported` | Success message. `{path}` = output file path. |

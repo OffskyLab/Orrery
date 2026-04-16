@@ -19,8 +19,11 @@ public struct MemoryCommand: ParsableCommand {
 
         let isIsolated: Bool
         let storagePath: String?
-        if let envName, envName != ReservedEnvironment.defaultName,
-           let env = try? store.load(named: envName) {
+        if let envName, envName == ReservedEnvironment.defaultName {
+            let config = store.loadOriginConfig()
+            isIsolated = config.isolateMemory
+            storagePath = config.memoryStoragePath
+        } else if let envName, let env = try? store.load(named: envName) {
             isIsolated = env.isolateMemory
             storagePath = env.memoryStoragePath
         } else {
@@ -38,7 +41,7 @@ public struct MemoryCommand: ParsableCommand {
         var options: [String] = [L10n.Memory.actionInfo, L10n.Memory.actionExport]
         var canToggle = false
         var canStorage = false
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if envName != nil {
             options.append(isIsolated ? L10n.Memory.actionShare : L10n.Memory.actionIsolate)
             options.append(L10n.Memory.actionStorage)
             canToggle = true
@@ -163,11 +166,37 @@ public struct MemoryCommand: ParsableCommand {
             guard let envName else {
                 throw ValidationError(L10n.Memory.noActiveEnv)
             }
-            guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Memory.defaultNotSupported)
-            }
 
             let store = EnvironmentStore.default
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+
+            if envName == ReservedEnvironment.defaultName {
+                var config = store.loadOriginConfig()
+                guard !config.isolateMemory else {
+                    print(L10n.Memory.alreadyIsolated)
+                    return
+                }
+                let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+                let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                print(L10n.Memory.migrationWarning(sharedDir.path, isolatedDir.path))
+                print("")
+                let choice = askMigrationChoiceToIsolated()
+                if choice == 1 {
+                    FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                    let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                    guard confirm == "y" || confirm == "yes" else {
+                        print(L10n.Memory.aborted)
+                        return
+                    }
+                }
+                try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
+                config.isolateMemory = true
+                try store.saveOriginConfig(config)
+                print(L10n.Memory.migrationDone(envName, true))
+                return
+            }
+
             var env = try store.load(named: envName)
 
             guard !env.isolateMemory else {
@@ -175,8 +204,6 @@ public struct MemoryCommand: ParsableCommand {
                 return
             }
 
-            let projectKey = FileManager.default.currentDirectoryPath
-                .replacingOccurrences(of: "/", with: "-")
             let sharedDir = store.memoryDir(projectKey: projectKey, envName: nil)
             let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
 
@@ -220,11 +247,37 @@ public struct MemoryCommand: ParsableCommand {
             guard let envName else {
                 throw ValidationError(L10n.Memory.noActiveEnv)
             }
-            guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Memory.defaultNotSupported)
-            }
 
             let store = EnvironmentStore.default
+            let projectKey = FileManager.default.currentDirectoryPath
+                .replacingOccurrences(of: "/", with: "-")
+
+            if envName == ReservedEnvironment.defaultName {
+                var config = store.loadOriginConfig()
+                guard config.isolateMemory else {
+                    print(L10n.Memory.alreadyShared)
+                    return
+                }
+                let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+                print(L10n.Memory.migrationWarning(isolatedDir.path, sharedDir.path))
+                print("")
+                let choice = askMigrationChoiceToShared()
+                if choice == 1 {
+                    FileHandle.standardOutput.write(Data(L10n.Memory.discardConfirm.utf8))
+                    let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                    guard confirm == "y" || confirm == "yes" else {
+                        print(L10n.Memory.aborted)
+                        return
+                    }
+                }
+                try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
+                config.isolateMemory = false
+                try store.saveOriginConfig(config)
+                print(L10n.Memory.migrationDone(envName, false))
+                return
+            }
+
             var env = try store.load(named: envName)
 
             guard env.isolateMemory else {
@@ -232,8 +285,6 @@ public struct MemoryCommand: ParsableCommand {
                 return
             }
 
-            let projectKey = FileManager.default.currentDirectoryPath
-                .replacingOccurrences(of: "/", with: "-")
             let isolatedDir = store.memoryDir(projectKey: projectKey, envName: envName)
             let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
 
@@ -283,11 +334,27 @@ public struct MemoryCommand: ParsableCommand {
             guard let envName else {
                 throw ValidationError(L10n.Memory.noActiveEnv)
             }
-            guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Memory.defaultNotSupported)
-            }
 
             let store = EnvironmentStore.default
+
+            if envName == ReservedEnvironment.defaultName {
+                var config = store.loadOriginConfig()
+                if reset {
+                    config.memoryStoragePath = nil
+                    try store.saveOriginConfig(config)
+                    print(L10n.Memory.storageReset)
+                    return
+                }
+                guard let path else {
+                    print(L10n.Memory.storageStatus(config.memoryStoragePath))
+                    return
+                }
+                try applyStoragePath(path, currentEnvName: envName, store: store,
+                    getPath: { config.memoryStoragePath },
+                    setPath: { config.memoryStoragePath = $0; try store.saveOriginConfig(config) })
+                return
+            }
+
             var env = try store.load(named: envName)
 
             if reset {
@@ -302,46 +369,54 @@ public struct MemoryCommand: ParsableCommand {
                 return
             }
 
-            let expanded = (path as NSString).expandingTildeInPath
-            let fm = FileManager.default
-            var isDir: ObjCBool = false
-            let exists = fm.fileExists(atPath: expanded, isDirectory: &isDir)
-            if exists && !isDir.boolValue {
-                throw ValidationError(L10n.Memory.storageNotDirectory(expanded))
-            }
-            if !exists {
-                try fm.createDirectory(atPath: expanded, withIntermediateDirectories: true, attributes: nil)
-            }
-
-            // Check if new path has no memory yet, but current location does
-            let newMemoryFile = URL(fileURLWithPath: expanded).appendingPathComponent("MEMORY.md")
-            let newIsEmpty = !fm.fileExists(atPath: newMemoryFile.path)
-
-            if newIsEmpty {
-                let projectKey = FileManager.default.currentDirectoryPath
-                    .replacingOccurrences(of: "/", with: "-")
-                let currentMemoryFile = store.memoryDir(projectKey: projectKey, envName: envName)
-                    .appendingPathComponent("MEMORY.md")
-                let currentExists = fm.fileExists(atPath: currentMemoryFile.path)
-
-                if currentExists {
-                    let selector = SingleSelect(
-                        title: L10n.Memory.storageCopyPrompt,
-                        options: [L10n.Memory.storageCopyYes, L10n.Memory.storageCopyNo],
-                        selected: 0
-                    )
-                    if selector.run() == 0 {
-                        try fm.copyItem(at: currentMemoryFile, to: newMemoryFile)
-                        print(L10n.Memory.storageCopied)
-                    }
-                }
-            }
-
-            env.memoryStoragePath = expanded
-            try store.save(env)
-            print(L10n.Memory.storageSet(expanded))
+            try applyStoragePath(path, currentEnvName: envName, store: store,
+                getPath: { env.memoryStoragePath },
+                setPath: { env.memoryStoragePath = $0; try store.save(env) })
         }
     }
+}
+
+private func applyStoragePath(
+    _ path: String,
+    currentEnvName: String,
+    store: EnvironmentStore,
+    getPath: () -> String?,
+    setPath: (String) throws -> Void
+) throws {
+    let expanded = (path as NSString).expandingTildeInPath
+    let fm = FileManager.default
+    var isDir: ObjCBool = false
+    let exists = fm.fileExists(atPath: expanded, isDirectory: &isDir)
+    if exists && !isDir.boolValue {
+        throw ValidationError(L10n.Memory.storageNotDirectory(expanded))
+    }
+    if !exists {
+        try fm.createDirectory(atPath: expanded, withIntermediateDirectories: true, attributes: nil)
+    }
+
+    let newMemoryFile = URL(fileURLWithPath: expanded).appendingPathComponent("MEMORY.md")
+    let newIsEmpty = !fm.fileExists(atPath: newMemoryFile.path)
+
+    if newIsEmpty {
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let currentMemoryFile = store.memoryDir(projectKey: projectKey, envName: currentEnvName)
+            .appendingPathComponent("MEMORY.md")
+        if fm.fileExists(atPath: currentMemoryFile.path) {
+            let selector = SingleSelect(
+                title: L10n.Memory.storageCopyPrompt,
+                options: [L10n.Memory.storageCopyYes, L10n.Memory.storageCopyNo],
+                selected: 0
+            )
+            if selector.run() == 0 {
+                try fm.copyItem(at: currentMemoryFile, to: newMemoryFile)
+                print(L10n.Memory.storageCopied)
+            }
+        }
+    }
+
+    try setPath(expanded)
+    print(L10n.Memory.storageSet(expanded))
 }
 
 // MARK: - Migration helpers

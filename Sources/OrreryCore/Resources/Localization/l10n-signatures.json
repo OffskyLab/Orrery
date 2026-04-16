@@ -980,14 +980,6 @@
   {
     "path": [
       "Memory",
-      "defaultNotSupported"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Memory",
       "discardConfirm"
     ],
     "kind": "var",

@@ -4,6 +4,18 @@ public enum ReservedEnvironment {
     public static let defaultName = "origin"
 }
 
+/// Persisted settings for the reserved `origin` environment.
+/// Stored at `~/.orrery/origin/config.json`.
+public struct OriginConfig: Codable, Sendable {
+    public var isolateMemory: Bool
+    public var memoryStoragePath: String?
+
+    public init(isolateMemory: Bool = false, memoryStoragePath: String? = nil) {
+        self.isolateMemory = isolateMemory
+        self.memoryStoragePath = memoryStoragePath
+    }
+}
+
 public struct OrreryEnvironment: Codable, Sendable {
     public var id: String
     public var name: String
