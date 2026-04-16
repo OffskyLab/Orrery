@@ -1910,7 +1910,7 @@
   {
     "path": [
       "Use",
-      "switchedToOrigin"
+      "switched"
     ],
     "kind": "var",
     "parameters": []

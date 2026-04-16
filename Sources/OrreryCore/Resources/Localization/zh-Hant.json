@@ -210,7 +210,7 @@
   "use.abstract": "在目前的 shell 中啟用環境",
   "use.nameHelp": "環境名稱",
   "use.needsShellIntegration": "error: 'orrery use' 需要 shell 整合。\n請執行 'orrery setup' 安裝後，重新啟動終端機。\n",
-  "use.switchedToOrigin": "已回到初始環境，如需回到 Orrery 管理環境，請再次使用 orrery use <name> 即可。",
+  "use.switched": "已切換至環境：%s",
   "which.abstract": "顯示目前環境中工具的設定目錄路徑",
   "which.noActive": "沒有啟用的環境。請先執行 'orrery use <name>'。",
   "which.toolHelp": "工具名稱：claude、codex 或 gemini",

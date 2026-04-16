@@ -210,7 +210,7 @@
   "use.abstract": "Activate an environment in the current shell",
   "use.nameHelp": "Environment name",
   "use.needsShellIntegration": "error: 'orrery use' requires shell integration.\nRun 'orrery setup' to install it, then restart your terminal.\n",
-  "use.switchedToOrigin": "Returned to the origin environment. To re-enter an Orrery environment, run: orrery use <name>",
+  "use.switched": "Switched to environment: %s",
   "which.abstract": "Print the config directory path for a tool in the active environment",
   "which.noActive": "No active environment. Run 'orrery use <name>' first.",
   "which.toolHelp": "Tool name: claude, codex, or gemini",

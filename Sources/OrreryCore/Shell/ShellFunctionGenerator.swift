@@ -43,15 +43,14 @@ public struct ShellFunctionGenerator {
                 unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
                 export ORRERY_ACTIVE_ENV="origin"
                 command orrery _set-current origin 2>/dev/null || true
-                echo "\(L10n.Use.switchedToOrigin)"
               else
                 local exports
                 exports=$(command orrery _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
                 eval "$exports"
                 export ORRERY_ACTIVE_ENV="$2"
                 command orrery _set-current "$2" 2>/dev/null || true
-                echo "Switched to environment: $2"
               fi
+              printf "\(L10n.Use.switched)\\n" "$2"
               ;;
             deactivate)
               orrery use origin
