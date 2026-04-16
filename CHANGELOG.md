@@ -1,5 +1,24 @@
 # Changelog
 
+## v2.2.4
+
+- **`orrery setup` no longer gets killed.** All `FileHandle.write(Data(...))` calls
+  (ObjC API) have been replaced with posix `write()` syscall helpers in a new
+  `PosixIO.swift` module. The ObjC API raises `NSFileHandleOperationException` on
+  any write failure — an exception Swift cannot catch — causing a SIGABRT that
+  appears as `KILL` in iTerm2. The posix syscall silently returns a negative value
+  on error and never throws. 14 files updated.
+- **`orrery setup` session/memory prompts shown only once.** Previously the
+  per-tool session-sharing and memory-sharing prompts appeared on every `orrery setup`
+  run for all managed tools. Now they appear only for tools newly taken over in the
+  current run — first-time setup still prompts, subsequent runs are silent.
+- **`orrery info origin` shows full structured output.** Matching the layout for
+  regular environments: Name, Path, Description, Tools with login info, Memory Mode,
+  Memory Path, Session Mode, Env Vars.
+- **`orrery memory isolate/share/storage` now works for the origin environment.**
+  Was previously blocked with an error. Settings are stored in
+  `~/.orrery/origin/config.json`.
+
 ## v2.2.3
 
 - **`orrery delegate` no longer deadlocks on large output.** When called as

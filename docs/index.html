@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.2.3</div>
+  <div class="badge">v2.2.4</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1022,8 +1022,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.2.3</span>
+        <span class="changelog-ver">v2.2.4</span>
         <span class="changelog-new">latest</span>
+        <h3><code>orrery setup</code>: KILL crash fix + origin memory/session support</h3>
+      </div>
+      <p class="changelog-body">All <code>FileHandle.write(Data(...))</code> calls — the ObjC API that raises <code>NSFileHandleOperationException</code> on write failure, an exception Swift cannot catch — have been replaced with posix <code>write()</code> syscall helpers in a new <code>PosixIO.swift</code> module. On any terminal write failure this previously caused SIGABRT, visible as <code>KILL</code> in iTerm2. The posix syscall silently returns a negative value and never throws. 14 files updated.</p>
+      <p class="changelog-body"><code>orrery setup</code> session/memory prompts are now shown only for tools newly taken over in the current run. Previously the prompts appeared on every <code>orrery setup</code> run for all managed tools.</p>
+      <p class="changelog-body"><code>orrery info origin</code> now shows full structured output matching regular environments: Name, Path, Description, Tools with login info, Memory Mode, Memory Path, Session Mode, Env Vars. <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> now work for the origin environment (settings stored in <code>~/.orrery/origin/config.json</code>).</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.3</span>
         <h3><code>orrery delegate</code>: pipe-buffer deadlock fix</h3>
       </div>
       <p class="changelog-body">When <code>orrery delegate</code> was called as a Bash tool inside Claude Code, the parent process received output via a pipe whose buffer is ~64 KB. A long delegate session (code review, multi-step task) easily emits more than that before finishing. The previous <code>process.standardOutput = FileHandle.standardOutput</code> + <code>waitUntilExit()</code> pattern caused the child to block on <code>write()</code> once the buffer was full while orrery blocked in <code>waitUntilExit()</code> — a classic pipe-buffer deadlock. Fixed by routing stdout and stderr through <code>Pipe</code> and draining them via <code>readabilityHandler</code> on background queues, keeping the buffer clear for the lifetime of the subprocess.</p>

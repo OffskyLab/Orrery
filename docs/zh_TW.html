@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.2.3</div>
+  <div class="badge">v2.2.4</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1007,8 +1007,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.2.3</span>
+        <span class="changelog-ver">v2.2.4</span>
         <span class="changelog-new">最新</span>
+        <h3><code>orrery setup</code>：修正 KILL crash + origin 環境支援 memory/session 設定</h3>
+      </div>
+      <p class="changelog-body">所有 <code>FileHandle.write(Data(...))</code>（ObjC API）已全數換成 posix <code>write()</code> syscall，集中到新的 <code>PosixIO.swift</code>。ObjC API 在寫入失敗時會拋出 <code>NSFileHandleOperationException</code>，Swift 無法捕捉，結果是 SIGABRT — 在 iTerm2 裡看起來就是 <code>KILL</code>。posix syscall 遇到失敗只傳回負值，不拋例外。共修改 14 個檔案。</p>
+      <p class="changelog-body"><code>orrery setup</code> 的 session/memory 設定提示現在只在當次 run 新接管的 tool 出現，不再每次 <code>orrery setup</code> 都對所有已管理的 tool 重複顯示。</p>
+      <p class="changelog-body"><code>orrery info origin</code> 現在輸出與一般環境一致的完整結構：Name、Path、Description、Tools（含登入資訊）、Memory Mode、Memory Path、Session Mode、Env Vars。<code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> 現在也支援 origin 環境（設定存在 <code>~/.orrery/origin/config.json</code>）。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.3</span>
         <h3><code>orrery delegate</code>：修正 pipe-buffer deadlock</h3>
       </div>
       <p class="changelog-body">在 Claude Code 內部以 Bash tool 呼叫 <code>orrery delegate</code> 時，父層用 pipe 接收輸出，buffer 約 64 KB。長一點的 delegate 任務（code review、多步驟工作）很容易在結束前就超過這個量。舊的 <code>process.standardOutput = FileHandle.standardOutput</code> + <code>waitUntilExit()</code> 寫法導致 buffer 滿後 child 卡在 <code>write()</code>，orrery 卡在 <code>waitUntilExit()</code> — 教科書級的 pipe-buffer deadlock。修法：stdout 與 stderr 改走 <code>Pipe</code>，用 <code>readabilityHandler</code> 在 background queue 上持續 drain，讓 subprocess 存活期間 buffer 永不填滿。</p>
