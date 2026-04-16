@@ -711,8 +711,13 @@
     </p>
     <p>
       Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
-      with tools and environment variables. It has no isolation, no per-project memory, and no
-      session separation — it's simply the state before Orrery.
+      with custom tools and environment variables — it always uses the system's native config paths.
+    </p>
+    <p>
+      However, <code>origin</code> does support memory and session settings.
+      Use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
+      control where its project memory lives, and choose per-tool session sharing during
+      <code>orrery setup</code>. Run <code>orrery info origin</code> to see the full status.
     </p>
     <p>
       This makes <code>origin</code> useful as a clean escape hatch: run a quick command
