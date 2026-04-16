@@ -53,12 +53,12 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// ANSI color code for this tool (used in terminal UI).
+    /// ANSI 256-color code for this tool, matched to each tool's brand color.
     public var ansiColor: String {
         switch self {
-        case .claude: return "\u{1B}[33m"   // orange/yellow
-        case .gemini: return "\u{1B}[32m"   // green
-        case .codex:  return "\u{1B}[90m"   // dark gray
+        case .claude: return "\u{1B}[38;5;173m"  // #D7875F ≈ Claude coral orange #D97757
+        case .gemini: return "\u{1B}[38;5;69m"   // #5F87FF ≈ Gemini blue #4285F4
+        case .codex:  return "\u{1B}[38;5;36m"   // #00AF87 ≈ OpenAI teal #10A37F
         }
     }
 
