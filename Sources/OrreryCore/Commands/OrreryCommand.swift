@@ -32,6 +32,8 @@ public struct OrreryCommand: ParsableCommand {
             CheckUpdateCommand.self,
             LinkMemoryCommand.self,
             SyncCommand.self,
+            OriginCommand.self,
+            UninstallCommand.self,
         ]
     )
     public init() {}
