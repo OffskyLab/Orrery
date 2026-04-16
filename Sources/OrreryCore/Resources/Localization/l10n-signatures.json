@@ -1565,11 +1565,7 @@
       }
     ]
   },
-  {
-    "path": ["Setup", "originToolHeader"],
-    "kind": "func",
-    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
-  },
+  { "path": ["Setup", "originHeader"], "kind": "var", "parameters": [] },
   {
     "path": [
       "Setup",

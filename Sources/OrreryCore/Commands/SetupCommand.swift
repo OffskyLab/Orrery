@@ -106,10 +106,11 @@ public struct SetupCommand: ParsableCommand {
 
         var config = store.loadOriginConfig()
 
+        stderrWrite("\n\(L10n.Setup.originHeader)\n")
+
         // For each newly taken-over tool: ask session then memory; summaries stay visible
         for tool in newlyTakenOver {
-            let header = "\(tool.ansiColor)[\(L10n.Setup.originToolHeader(tool.rawValue))]\u{1B}[0m"
-            stderrWrite("\n\(header)\n")
+            stderrWrite("\n  \(tool.coloredTag)\n")
 
             // --- Session ---
             let sessionPicker = SingleSelect(
@@ -124,7 +125,7 @@ public struct SetupCommand: ParsableCommand {
                 config.isolatedSessionTools.remove(tool)
                 try? store.ensureSharedSessionLinksForOrigin(tool: tool)
             }
-            stderrWrite("\(tool.coloredTag) \(L10n.Create.sessions(isolateSession))\n")
+            stderrWrite("    \(L10n.Create.sessions(isolateSession))\n")
 
             // --- Memory (Claude only — codex/gemini have no memory concept) ---
             if tool == .claude {
@@ -134,7 +135,7 @@ public struct SetupCommand: ParsableCommand {
                     selected: 1   // default: 不共享 (isolate)
                 )
                 config.isolateMemory = memoryPicker.run() == 1
-                stderrWrite("\(tool.coloredTag) \(L10n.Create.memory(config.isolateMemory))\n")
+                stderrWrite("    \(L10n.Create.memory(config.isolateMemory))\n")
             }
         }
 
