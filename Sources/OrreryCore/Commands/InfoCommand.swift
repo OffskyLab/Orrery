@@ -80,20 +80,46 @@ public struct InfoCommand: ParsableCommand {
         }
     }
 
-    /// Info output for the reserved `origin` env — lists system-default tool logins.
+    /// Info output for the reserved `origin` env — same structured format as regular envs.
     static func printOriginInfo() {
+        let store = EnvironmentStore.default
+        let none = L10n.Info.none
+
         print("\(L10n.Info.labelName)\(ReservedEnvironment.defaultName)")
+        print("\(L10n.Info.labelPath)\(store.originDir.path)")
         print("\(L10n.Info.labelDescription)\(L10n.Create.defaultDescription)")
+
+        // Tools: show all tools that have a config dir (managed or system)
         print(L10n.Info.labelTools)
-        let entries = Tool.allCases.compactMap { tool -> String? in
-            let info = ToolAuth.accountInfo(tool: tool, configDir: nil)
+        let toolEntries = Tool.allCases.compactMap { tool -> String? in
+            let configDir: URL? = store.isOriginManaged(tool: tool)
+                ? store.originConfigDir(tool: tool)
+                : (FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)
+                   ? tool.defaultConfigDir : nil)
+            guard let dir = configDir else { return nil }
+            let info = ToolAuth.accountInfo(tool: tool, configDir: dir)
             let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
-            return suffix.isEmpty ? nil : "  \(tool.rawValue) (\(suffix))"
+            return suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))"
         }
-        if entries.isEmpty {
-            print("  \(L10n.Info.none)")
+        if toolEntries.isEmpty {
+            print("  \(none)")
         } else {
-            entries.forEach { print($0) }
+            toolEntries.forEach { print($0) }
         }
+
+        // Memory: origin always uses shared memory
+        let projectKey = FileManager.default.currentDirectoryPath
+            .replacingOccurrences(of: "/", with: "-")
+        let memoryDir = store.memoryDir(projectKey: projectKey, envName: ReservedEnvironment.defaultName)
+        print("\(L10n.Info.labelMemoryMode)\(L10n.Info.modeShared)")
+        print("\(L10n.Info.labelMemoryPath)\(memoryDir.path)")
+
+        // Session mode: origin always uses shared sessions
+        print(L10n.Info.labelSessionMode)
+        for tool in Tool.allCases {
+            print("  \(tool.rawValue): \(L10n.Info.modeShared)")
+        }
+
+        print("\(L10n.Info.labelEnvVars)\(none)")
     }
 }
