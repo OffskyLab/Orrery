@@ -188,7 +188,7 @@ private final class ResultsCollector: @unchecked Sendable {
 
     init(count: Int) {
         self.values = Array(
-            repeating: ToolAuth.AccountInfo(email: nil, plan: nil, model: nil),
+            repeating: ToolAuth.AccountInfo(email: nil, plan: nil, model: nil, key: nil),
             count: count
         )
     }

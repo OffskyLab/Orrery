@@ -9,7 +9,8 @@ public enum ToolAuth {
         public let email: String?
         public let plan: String?
         public let model: String?
-        public var isEmpty: Bool { email == nil && plan == nil && model == nil }
+        public let key: String?
+        public var isEmpty: Bool { email == nil && plan == nil && model == nil && key == nil }
     }
 
     /// Fast email-only lookup — skips macOS Keychain (for Claude) and subprocess calls.
@@ -44,9 +45,9 @@ public enum ToolAuth {
             let model = jsonModel(dir: dir)
             #if canImport(CryptoKit)
             let info = ClaudeKeychain.accountInfo(for: configDir?.path)
-            return AccountInfo(email: info.email, plan: info.plan, model: model)
+            return AccountInfo(email: info.email, plan: info.plan, model: model, key: nil)
             #else
-            return AccountInfo(email: nil, plan: nil, model: model)
+            return AccountInfo(email: nil, plan: nil, model: model, key: nil)
             #endif
         case .codex:
             let dir = configDir ?? tool.defaultConfigDir
@@ -64,19 +65,20 @@ public enum ToolAuth {
         let url = dir.appendingPathComponent("auth.json")
         guard let data = try? Data(contentsOf: url),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return AccountInfo(email: nil, plan: nil, model: model) }
+        else { return AccountInfo(email: nil, plan: nil, model: model, key: nil) }
 
         if (obj["auth_mode"] as? String) == "api" {
-            return AccountInfo(email: nil, plan: "api key", model: model)
+            let apiKey = obj["OPENAI_API_KEY"] as? String
+            return AccountInfo(email: nil, plan: "api key", model: model, key: apiKey)
         }
         guard let tokens = obj["tokens"] as? [String: Any],
               let idToken = tokens["id_token"] as? String,
               let payload = decodeJWTPayload(idToken)
-        else { return AccountInfo(email: nil, plan: nil, model: model) }
+        else { return AccountInfo(email: nil, plan: nil, model: model, key: nil) }
 
         let email = payload["email"] as? String
         let plan = (payload["https://api.openai.com/auth"] as? [String: Any])?["chatgpt_plan_type"] as? String
-        return AccountInfo(email: email, plan: plan, model: model)
+        return AccountInfo(email: email, plan: plan, model: model, key: nil)
     }
 
     // MARK: - Gemini
@@ -90,7 +92,7 @@ public enum ToolAuth {
            let idToken = obj["id_token"] as? String,
            let payload = decodeJWTPayload(idToken),
            let email = payload["email"] as? String {
-            return AccountInfo(email: email, plan: nil, model: model)
+            return AccountInfo(email: email, plan: nil, model: model, key: nil)
         }
 
         // API-key / Vertex auth: the key lives in GEMINI_API_KEY (env var or
@@ -105,15 +107,16 @@ public enum ToolAuth {
                 ?? (obj["auth"] as? [String: Any])?["selectedType"] as? String
             switch selectedType {
             case "gemini-api-key":
-                return AccountInfo(email: nil, plan: "api key", model: model)
+                let apiKey = GeminiCredentials.loadAPIKey(configDir: dir)
+                return AccountInfo(email: nil, plan: "api key", model: model, key: apiKey)
             case "vertex-ai":
-                return AccountInfo(email: nil, plan: "vertex", model: model)
+                return AccountInfo(email: nil, plan: "vertex", model: model, key: nil)
             default:
                 break
             }
         }
 
-        return AccountInfo(email: nil, plan: nil, model: model)
+        return AccountInfo(email: nil, plan: nil, model: model, key: nil)
     }
 
     private static func jsonModel(dir: URL) -> String? {

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.3.0
+
+- **`orrery auth show` new command.** Displays credential info for tools in an environment. Supports `--env`, `--claude`/`--codex`/`--gemini` filters, `--filename` (keychain service name or credential file path), and `--masked-key` (masked API key). When a specific tool flag is given, output is plain (scriptable). When no tool flag is given, output is grouped with headers.
+- **`orrery info` shows auth detail per tool.** Claude shows the Keychain service name (`keychain: Claude Code-credentials-{hash}`), Codex and Gemini show the credential file path. Masked API key is shown in the summary line when the tool uses API key auth mode.
+
 ## v2.2.4
 
 - **`orrery setup` no longer gets killed.** All `FileHandle.write(Data(...))` calls
