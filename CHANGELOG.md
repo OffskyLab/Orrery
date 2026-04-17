@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.3.1
+
+- **`orrery auth show` renamed to `orrery auth store`.** Reflects that the command displays credential store locations (keychain service name, file path, masked API key). Removed separate `--filename` and `--masked-key` flags — all store info is shown together.
+
 ## v2.3.0
 
 - **`orrery auth show` new command.** Displays credential info for tools in an environment. Supports `--env`, `--claude`/`--codex`/`--gemini` filters, `--filename` (keychain service name or credential file path), and `--masked-key` (masked API key). When a specific tool flag is given, output is plain (scriptable). When no tool flag is given, output is grouped with headers.
