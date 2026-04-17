@@ -2,8 +2,16 @@ import Foundation
 
 public struct ToolSetup {
 
-    public enum SetupError: Error {
+    public enum SetupError: Error, LocalizedError {
         case installFailed(String)
+
+        public var errorDescription: String? {
+            switch self {
+            case .installFailed(let tool):
+                let cmd = Tool(rawValue: tool)?.installCommandDisplay ?? "see tool docs"
+                return "Install failed for '\(tool)'. Run manually: \(cmd)"
+            }
+        }
     }
 
     /// Run the full setup flow for a tool: check install → offer install.
@@ -74,16 +82,13 @@ public struct ToolSetup {
     static func install(_ tool: Tool) throws {
         guard let cmd = tool.installCommand else { return }
 
-        stdoutWrite("\u{1B}[?1049h")
-        print(L10n.ToolSetup.installing(tool.rawValue, cmd.joined(separator: " ")))
+        print(L10n.ToolSetup.installing(tool.rawValue, tool.installCommandDisplay))
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = cmd
         try process.run()
         process.waitUntilExit()
-
-        stdoutWrite("\u{1B}[?1049l")
 
         guard process.terminationStatus == 0 else {
             throw SetupError.installFailed(tool.rawValue)

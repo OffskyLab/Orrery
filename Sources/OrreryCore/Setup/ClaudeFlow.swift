@@ -61,13 +61,34 @@ public enum ClaudeFlow: ToolFlow {
     }
 
     public static func copyNonLoginSettings(sourceDir: URL, targetDir: URL) {
-        // Skip `backups/` — Claude Code stores `.claude.json.backup.<ts>` snapshots
-        // there, each containing a full identity. If we copied them in self-login
-        // scenarios, the heal step would restore the source's identity into the
-        // target's `.claude.json` on the next orrery invocation, defeating
-        // `prepareForSelfLogin`. Backups carry no user-tunable preferences, so
-        // dropping them costs nothing.
-        var skip: Set<String> = ["backups"]
+        // backups/ — identity snapshots (.claude.json.backup.*); copying them would let
+        //   the heal step restore the source's identity into the target, defeating prepareForSelfLogin.
+        // session dirs — project/session/session-env data is machine- and account-specific.
+        // cache/ stats-cache.json statsig/ — per-account caches; Claude Code repopulates them.
+        // agent-memory/ — accumulated agent memory belonging to the source account.
+        // telemetry/ usage-data/ — analytics, never meaningful to carry over.
+        // mcp-needs-auth-cache.json — account-specific MCP auth state.
+        // paste-cache/ shell-snapshots/ history.jsonl file-history/ debug/ downloads/ — ephemeral.
+        // plans/ tasks/ todos/ — in-progress work state from the source session.
+        var skip: Set<String> = [
+            "backups",
+            "cache",
+            "stats-cache.json",
+            "statsig",
+            "agent-memory",
+            "telemetry",
+            "usage-data",
+            "mcp-needs-auth-cache.json",
+            "paste-cache",
+            "shell-snapshots",
+            "history.jsonl",
+            "file-history",
+            "debug",
+            "downloads",
+            "plans",
+            "tasks",
+            "todos",
+        ]
         skip.formUnion(Tool.claude.sessionSubdirectories)
         copyDirectoryContents(from: sourceDir, to: targetDir, skipping: skip)
     }

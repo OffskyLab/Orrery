@@ -33,12 +33,21 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// npm install command, nil if setup not supported
+    /// Install command passed to `/usr/bin/env`. Shell commands use `["sh", "-c", "..."]`.
     public var installCommand: [String]? {
         switch self {
-        case .claude: return ["npm", "install", "-g", "@anthropic-ai/claude-code"]
+        case .claude: return ["sh", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
         case .codex:  return ["npm", "install", "-g", "@openai/codex"]
         case .gemini: return ["npm", "install", "-g", "@google/gemini-cli"]
+        }
+    }
+
+    /// Human-readable install command shown in prompts and error messages.
+    public var installCommandDisplay: String {
+        switch self {
+        case .claude: return "curl -fsSL https://claude.ai/install.sh | bash"
+        case .codex:  return "npm install -g @openai/codex"
+        case .gemini: return "npm install -g @google/gemini-cli"
         }
     }
 
