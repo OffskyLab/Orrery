@@ -33,7 +33,7 @@ public enum ClaudeKeychain {
             jsonURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
         }
         let email = parseEmail(fromClaudeJSON: jsonURL)
-        return ToolAuth.AccountInfo(email: email, plan: plan, model: nil)
+        return ToolAuth.AccountInfo(email: email, plan: plan, model: nil, key: nil)
     }
 
     private static func parsePlan(fromCredential json: String) -> String? {

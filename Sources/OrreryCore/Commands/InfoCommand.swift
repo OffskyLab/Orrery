@@ -52,8 +52,10 @@ public struct InfoCommand: ParsableCommand {
             for tool in env.tools {
                 let configDir = store.toolConfigDir(tool: tool, environment: resolvedName)
                 let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
-                let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+                let maskedKey = info.key.map { k in k.count > 8 ? String(k.prefix(4)) + "****" : "****" }
+                let suffix = [info.email, info.plan, info.model, maskedKey].compactMap { $0 }.joined(separator: ", ")
                 print(suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))")
+                Self.printToolAuthDetail(tool: tool, configDir: configDir)
             }
         }
         let memoryMode = env.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
@@ -91,20 +93,23 @@ public struct InfoCommand: ParsableCommand {
 
         // Tools: show all tools that have a config dir (managed or system)
         print(L10n.Info.labelTools)
-        let toolEntries = Tool.allCases.compactMap { tool -> String? in
+        let toolDirs: [(Tool, URL)] = Tool.allCases.compactMap { tool in
             let configDir: URL? = store.isOriginManaged(tool: tool)
                 ? store.originConfigDir(tool: tool)
                 : (FileManager.default.fileExists(atPath: tool.defaultConfigDir.path)
                    ? tool.defaultConfigDir : nil)
-            guard let dir = configDir else { return nil }
-            let info = ToolAuth.accountInfo(tool: tool, configDir: dir)
-            let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
-            return suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))"
+            return configDir.map { (tool, $0) }
         }
-        if toolEntries.isEmpty {
+        if toolDirs.isEmpty {
             print("  \(none)")
         } else {
-            toolEntries.forEach { print($0) }
+            for (tool, dir) in toolDirs {
+                let info = ToolAuth.accountInfo(tool: tool, configDir: dir)
+                let maskedKey = info.key.map { k in k.count > 8 ? String(k.prefix(4)) + "****" : "****" }
+                let suffix = [info.email, info.plan, info.model, maskedKey].compactMap { $0 }.joined(separator: ", ")
+                print(suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))")
+                printToolAuthDetail(tool: tool, configDir: dir)
+            }
         }
 
         // Memory: origin respects OriginConfig
@@ -124,5 +129,28 @@ public struct InfoCommand: ParsableCommand {
         }
 
         print("\(L10n.Info.labelEnvVars)\(none)")
+    }
+
+    private static func printToolAuthDetail(tool: Tool, configDir: URL) {
+        switch tool {
+        case .claude:
+            #if canImport(CryptoKit)
+            print("    keychain: \(ClaudeKeychain.service(for: configDir.path))")
+            #endif
+        case .codex:
+            let file = configDir.appendingPathComponent("auth.json")
+            if FileManager.default.fileExists(atPath: file.path) {
+                print("    file: \(file.path)")
+            }
+        case .gemini:
+            let credFile = configDir.appendingPathComponent("gemini-credentials.json")
+            let oauthFile = configDir.appendingPathComponent("oauth_creds.json")
+            let fm = FileManager.default
+            if fm.fileExists(atPath: credFile.path) {
+                print("    file: \(credFile.path)")
+            } else if fm.fileExists(atPath: oauthFile.path) {
+                print("    file: \(oauthFile.path)")
+            }
+        }
     }
 }
