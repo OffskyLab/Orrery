@@ -62,8 +62,10 @@ public struct AuthCommand: ParsableCommand {
 
                 switch tool {
                 case .claude:
-                    #if canImport(CryptoKit)
+                    #if os(macOS)
                     values.append(ClaudeKeychain.service(for: configDir.path))
+                    #else
+                    values.append(ClaudeKeychain.credentialsFile(for: configDir.path).path)
                     #endif
                 case .codex:
                     values.append(configDir.appendingPathComponent("auth.json").path)

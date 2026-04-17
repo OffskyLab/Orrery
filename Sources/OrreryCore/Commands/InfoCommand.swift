@@ -134,8 +134,13 @@ public struct InfoCommand: ParsableCommand {
     private static func printToolAuthDetail(tool: Tool, configDir: URL) {
         switch tool {
         case .claude:
-            #if canImport(CryptoKit)
+            #if os(macOS)
             print("    keychain: \(ClaudeKeychain.service(for: configDir.path))")
+            #else
+            let credFile = ClaudeKeychain.credentialsFile(for: configDir.path)
+            if FileManager.default.fileExists(atPath: credFile.path) {
+                print("    file: \(credFile.path)")
+            }
             #endif
         case .codex:
             let file = configDir.appendingPathComponent("auth.json")

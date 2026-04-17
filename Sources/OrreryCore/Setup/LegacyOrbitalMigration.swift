@@ -83,8 +83,10 @@ public enum LegacyOrbitalMigration {
         }
 
         // Migrate Claude Keychain entries for each moved env — their service names
-        // include SHA256(configDir), which changes with the renamed path.
-        #if canImport(CryptoKit)
+        // include SHA256(configDir), which changes with the renamed path. Linux
+        // keeps credentials in `{configDir}/.credentials.json`, so `moveItem`
+        // above already carried them to the new path; no-op there.
+        #if os(macOS)
         for id in migrated {
             let oldPath = legacyEnvsDir.appendingPathComponent(id)
                 .appendingPathComponent("claude").path

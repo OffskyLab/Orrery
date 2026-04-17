@@ -1,7 +1,8 @@
 import Foundation
 
 /// Claude Code's login state lives in two places:
-/// - macOS Keychain entry (service name derived from CLAUDE_CONFIG_DIR hash)
+/// - Credential store: macOS Keychain entry (service name derived from CLAUDE_CONFIG_DIR
+///   hash), or on Linux `{configDir}/.credentials.json`.
 /// - `.claude.json` (at `$HOME/.claude.json` for origin, `{CLAUDE_CONFIG_DIR}/.claude.json` for env)
 ///
 /// Extra nuance: `.claude.json` mixes identity (oauthAccount, userID, onboarding flags)
@@ -31,15 +32,15 @@ public enum ClaudeFlow: ToolFlow {
     ]
 
     public static func copyLoginState(sourceDir: URL?, targetDir: URL) -> Bool {
-        #if canImport(CryptoKit)
         let fm = FileManager.default
         let isOrigin = sourceDir == nil
 
         try? fm.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
-        // Keychain: origin has no hash suffix; envs use SHA256(configDir) hash.
-        let srcKeychainDir: String? = isOrigin ? nil : sourceDir?.path
-        let keychainOK = ClaudeKeychain.copyCredential(from: srcKeychainDir, to: targetDir.path)
+        // Credential store: origin has no hash suffix (Keychain) / lives at
+        // ~/.claude/.credentials.json (Linux); envs use the config-dir-derived store.
+        let srcCredDir: String? = isOrigin ? nil : sourceDir?.path
+        let credOK = ClaudeKeychain.copyCredential(from: srcCredDir, to: targetDir.path)
 
         // .claude.json — location differs between origin and env configs.
         let srcJson: URL = isOrigin
@@ -56,10 +57,7 @@ public enum ClaudeFlow: ToolFlow {
                 jsonOK = copySingleFile(from: srcJson, to: dstJson)
             }
         }
-        return keychainOK && jsonOK
-        #else
-        return false
-        #endif
+        return credOK && jsonOK
     }
 
     public static func copyNonLoginSettings(sourceDir: URL, targetDir: URL) {

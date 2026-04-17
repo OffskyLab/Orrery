@@ -1,7 +1,7 @@
 import Foundation
 
 /// Unified account-info lookup across tools. Each tool stores login info differently:
-/// - Claude: macOS Keychain + `.claude.json`
+/// - Claude: macOS Keychain + `.claude.json`; on Linux `.credentials.json` + `.claude.json`
 /// - Codex: `auth.json` (auth_mode + JWT id_token)
 /// - Gemini: `oauth_creds.json` (Google OAuth id_token)
 public enum ToolAuth {
@@ -13,9 +13,9 @@ public enum ToolAuth {
         public var isEmpty: Bool { email == nil && plan == nil && model == nil && key == nil }
     }
 
-    /// Fast email-only lookup — skips macOS Keychain (for Claude) and subprocess calls.
-    /// Useful for deduping during wizards before doing the full `accountInfo` lookup.
-    /// Returns nil if no email can be extracted.
+    /// Fast email-only lookup — skips macOS Keychain / Linux credentials file reads
+    /// (for Claude) and subprocess calls. Useful for deduping during wizards before
+    /// doing the full `accountInfo` lookup. Returns nil if no email can be extracted.
     public static func quickEmail(tool: Tool, configDir: URL?) -> String? {
         switch tool {
         case .claude:
@@ -43,12 +43,8 @@ public enum ToolAuth {
         case .claude:
             let dir = configDir ?? tool.defaultConfigDir
             let model = jsonModel(dir: dir)
-            #if canImport(CryptoKit)
             let info = ClaudeKeychain.accountInfo(for: configDir?.path)
             return AccountInfo(email: info.email, plan: info.plan, model: model, key: nil)
-            #else
-            return AccountInfo(email: nil, plan: nil, model: model, key: nil)
-            #endif
         case .codex:
             let dir = configDir ?? tool.defaultConfigDir
             return codexAccountInfo(dir: dir)
