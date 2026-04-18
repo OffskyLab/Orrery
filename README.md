@@ -93,33 +93,29 @@ Orrery extends this idea to:
 
 ## Installation
 
-### Homebrew (macOS / Linux)
+### Native install (macOS, Linux, WSL) — recommended
+
+```bash
+curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+```
+
+Detects your OS/arch, downloads the matching release binary, and installs it to `/usr/local/bin/orrery`. The same command also upgrades an existing install in place.
+
+### Homebrew (macOS)
 
 ```bash
 brew install OffskyLab/orrery/orrery
 ```
 
-### APT (Ubuntu / Debian)
+### Windows
 
-```bash
-echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
-sudo apt update && sudo apt install orrery
-```
-
-### Windows (via WSL)
-
-Claude Code on Windows runs inside WSL. Open PowerShell as Administrator and enable WSL first, then install inside your WSL Ubuntu shell:
+Claude Code on Windows runs inside WSL. Open PowerShell as Administrator and enable WSL first:
 
 ```powershell
 wsl --install
 ```
 
-Then inside WSL:
-
-```bash
-echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
-sudo apt update && sudo apt install orrery
-```
+Then, inside your WSL shell, run the native install command above.
 
 ### Build from source
 

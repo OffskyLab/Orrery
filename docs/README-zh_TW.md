@@ -93,33 +93,29 @@ Orrery 把這個概念延伸到：
 
 ## 安裝
 
-### Homebrew（macOS / Linux）
+### 原生安裝（macOS、Linux、WSL）— 推薦
+
+```bash
+curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+```
+
+自動偵測 OS/arch、下載對應的 release binary，安裝到 `/usr/local/bin/orrery`。同一個指令也能就地升級。
+
+### Homebrew（macOS）
 
 ```bash
 brew install OffskyLab/orrery/orrery
 ```
 
-### APT（Ubuntu / Debian）
+### Windows
 
-```bash
-echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
-sudo apt update && sudo apt install orrery
-```
-
-### Windows（透過 WSL）
-
-Windows 上的 Claude Code 跑在 WSL 裡。請先以系統管理員身份開啟 PowerShell 啟用 WSL，再到 WSL Ubuntu shell 裡安裝：
+Windows 上的 Claude Code 跑在 WSL 裡。請先以系統管理員身份開啟 PowerShell 啟用 WSL：
 
 ```powershell
 wsl --install
 ```
 
-接著在 WSL 終端機內執行：
-
-```bash
-echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list
-sudo apt update && sudo apt install orrery
-```
+接著在 WSL shell 裡執行上面的原生安裝指令。
 
 ### 從原始碼編譯
 

@@ -589,34 +589,27 @@
 
 <!-- Install -->
 <div class="install-block" id="install">
-  <div class="install-label">透過 Homebrew 安裝</div>
+  <div class="install-label">原生安裝（macOS、Linux、WSL）— 推薦</div>
+  <div class="code-block">
+    <button class="copy-btn" data-cmd="curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash" data-label="複製" data-copied="已複製！">複製</button>
+    <span class="prompt">$ </span>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+  </div>
+
+  <div style="height:.75rem"></div>
+  <div class="install-label">或透過 Homebrew 安裝（macOS）</div>
   <div class="code-block">
     <button class="copy-btn" data-cmd="brew install OffskyLab/orrery/orrery" data-label="複製" data-copied="已複製！">複製</button>
     <span class="prompt">$ </span>brew install OffskyLab/orrery/orrery
   </div>
+
   <div style="height:.75rem"></div>
-  <div class="install-label">或透過 APT 安裝（Ubuntu / Debian）</div>
-  <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery' data-label="複製" data-copied="已複製！">複製</button>
-    <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
-  </div>
-  <div style="height:.75rem"></div>
-  <div class="install-label">或在 Windows 上安裝（透過 WSL）</div>
-  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Windows 上的 Claude Code 跑在 WSL 裡。請先以系統管理員身份開啟 PowerShell 啟用 WSL，再到 WSL Ubuntu shell 裡用 APT 安裝 Orrery。</div>
+  <div class="install-label">Windows — 透過 WSL</div>
+  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Windows 上的 Claude Code 跑在 WSL 裡。請先以系統管理員身份開啟 PowerShell 啟用 WSL，再到 WSL shell 裡用上面的原生安裝指令安裝 Orrery。</div>
   <div class="code-block">
     <button class="copy-btn" data-cmd="wsl --install" data-label="複製" data-copied="已複製！">複製</button>
     <span class="prompt">PS&gt; </span>wsl --install
   </div>
-  <div style="height:.5rem"></div>
-  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">接著在 WSL（Ubuntu）終端機內執行：</div>
-  <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery' data-label="複製" data-copied="已複製！">複製</button>
-    <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
-  </div>
+
   <div style="height:.75rem"></div>
   <div class="install-label">啟用 Shell 整合</div>
   <div class="code-block">
@@ -1039,7 +1032,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery setup</span><span class="cmd-desc">安裝 shell 整合</span></div>
         <div class="command-item"><span class="cmd">orrery init</span><span class="cmd-desc">輸出 shell function</span></div>
-        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">透過 Homebrew / apt 自動更新</span></div>
+        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">自動更新（install script 或 Homebrew）</span></div>
       </div>
     </div>
   </div>

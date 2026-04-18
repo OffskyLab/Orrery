@@ -101,10 +101,6 @@ fi
 
 VERSION=$(orrery --version 2>/dev/null || echo "installed")
 
-# Fire-and-forget install ping (anonymous, no personal data)
-curl -fsS "https://orrery-stats.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev/ping?os=${os}&arch=${arch}" \
-  --max-time 3 --silent --output /dev/null &
-
 echo ""
 info "Orrery ${VERSION} successfully!"
 echo ""

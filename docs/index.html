@@ -589,34 +589,27 @@
 
 <!-- Install -->
 <div class="install-block" id="install">
-  <div class="install-label">Install via Homebrew</div>
+  <div class="install-label">Native Install (macOS, Linux, WSL) — recommended</div>
+  <div class="code-block">
+    <button class="copy-btn" data-cmd="curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash">Copy</button>
+    <span class="prompt">$ </span>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+  </div>
+
+  <div style="height:.75rem"></div>
+  <div class="install-label">Or via Homebrew (macOS)</div>
   <div class="code-block">
     <button class="copy-btn" data-cmd="brew install OffskyLab/orrery/orrery">Copy</button>
     <span class="prompt">$ </span>brew install OffskyLab/orrery/orrery
   </div>
+
   <div style="height:.75rem"></div>
-  <div class="install-label">Or via APT (Ubuntu / Debian)</div>
-  <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery'>Copy</button>
-    <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
-  </div>
-  <div style="height:.75rem"></div>
-  <div class="install-label">Or on Windows (via WSL)</div>
-  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Claude Code on Windows runs inside WSL. Open PowerShell as Administrator and enable WSL first if you haven't already, then install Orrery inside the WSL Ubuntu shell using APT.</div>
+  <div class="install-label">Windows — via WSL</div>
+  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Claude Code on Windows runs inside WSL. Open PowerShell as Administrator and enable WSL first if you haven't already, then install Orrery inside the WSL shell using the native install command above.</div>
   <div class="code-block">
     <button class="copy-btn" data-cmd="wsl --install">Copy</button>
     <span class="prompt">PS&gt; </span>wsl --install
   </div>
-  <div style="height:.5rem"></div>
-  <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Then, inside your WSL (Ubuntu) terminal:</div>
-  <div class="code-block">
-    <button class="copy-btn" data-cmd='echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" | sudo tee /etc/apt/sources.list.d/orrery.list && sudo apt update && sudo apt install orrery'>Copy</button>
-    <span class="prompt">$ </span>echo "deb [trusted=yes] https://offskylab.github.io/apt stable main" \<br/>
-    &nbsp;&nbsp;| sudo tee /etc/apt/sources.list.d/orrery.list<br/>
-    <span class="prompt">$ </span>sudo apt update && sudo apt install orrery
-  </div>
+
   <div style="height:.75rem"></div>
   <div class="install-label">Activate shell integration</div>
   <div class="code-block">
@@ -1054,7 +1047,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery setup</span><span class="cmd-desc">Install shell integration</span></div>
         <div class="command-item"><span class="cmd">orrery init</span><span class="cmd-desc">Print shell function (eval)</span></div>
-        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">Self-update via Homebrew / apt</span></div>
+        <div class="command-item"><span class="cmd">orrery update</span><span class="cmd-desc">Self-update (install script or Homebrew)</span></div>
       </div>
     </div>
   </div>
