@@ -17,6 +17,8 @@ done
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 info()    { echo -e "${GREEN}==>${NC} $1"; }
@@ -112,9 +114,14 @@ if command -v orrery &>/dev/null; then
   info "Running orrery setup..."
   echo ""
   orrery setup || warn "orrery setup exited with a non-zero status — run it manually later."
-  echo ""
-  echo "  Activate in your current shell:"
-  echo ""
-  echo "    source ~/.orrery/activate.sh"
-  echo ""
 fi
+
+echo ""
+echo -e "${CYAN}──────────────────────────────────────────────${NC}"
+echo -e "${BOLD}  Next step — activate in this shell:${NC}"
+echo ""
+echo -e "    ${GREEN}source ~/.orrery/activate.sh${NC}"
+echo ""
+echo -e "${CYAN}──────────────────────────────────────────────${NC}"
+echo "  New shells pick it up automatically via your rc file."
+echo ""
