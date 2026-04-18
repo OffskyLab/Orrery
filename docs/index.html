@@ -733,39 +733,34 @@
 <section class="origin-section" id="origin">
   <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> Environment</h2>
   <div class="origin-callout">
-    <h3>Not just another environment — a system passthrough</h3>
+    <h3>Orrery's default-managed environment</h3>
     <p>
-      <code>origin</code> is Orrery's reserved name for your unmodified system environment.
-      Switching to it with <code>orrery use origin</code> (or <code>orrery deactivate</code>)
-      doesn't load any isolated config — it unsets all Orrery variables and lets your tools
-      fall back to their system-wide settings, exactly as if Orrery weren't installed.
+      <code>origin</code> is the environment Orrery takes over on first <code>orrery setup</code>.
+      Your existing tool configs (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>)
+      are moved into <code>~/.orrery/origin/</code> and the original paths become symlinks — your
+      data is untouched, it just lives where Orrery can manage and sync it.
     </p>
     <p>
-      Unlike regular environments, <code>origin</code> cannot be deleted, renamed, or configured
-      with custom tools and environment variables — it always uses the system's native config paths.
+      <code>orrery use origin</code> (or <code>orrery deactivate</code>) switches back to this
+      default environment. Orrery-specific variables like <code>CLAUDE_CONFIG_DIR</code> get
+      unset, so each tool falls back to its native path — which now resolves to the managed
+      config via the symlink. The experience feels like "exit Orrery", but you're still on
+      Orrery-managed storage.
     </p>
     <p>
-      However, <code>origin</code> does support memory and session settings.
-      Use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
+      Unlike regular environments, <code>origin</code> cannot be deleted or renamed and
+      uses the system's native config paths. It does support memory and session settings —
+      use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
       control where its project memory lives, and choose per-tool session sharing during
-      <code>orrery setup</code>. Run <code>orrery info origin</code> to see the full status.
-    </p>
-    <p>
-      This makes <code>origin</code> useful as a clean escape hatch: run a quick command
-      under your default system credentials without switching accounts or polluting any
-      Orrery environment.
+      <code>orrery setup</code>. Run <code>orrery info origin</code> to see full state.
     </p>
     <p style="margin-top:1rem">
-      <strong style="color:var(--text)">Origin takeover.</strong>
-      <code>orrery setup</code> moves your existing tool configs
-      (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>) into
-      <code>~/.orrery/origin/</code> and replaces them with symlinks — your data is
-      untouched, it just lives where Orrery can manage and sync it. You can reverse
-      this at any time:
+      <strong style="color:var(--text)">Reverting the takeover.</strong>
+      If you want a tool fully out of Orrery (back to its pre-setup state), release it:
     </p>
     <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
       <span class="prompt">$ </span>orrery origin status<br/>
-      <span style="color:var(--muted)"># show which tools are managed by Orrery</span><br/><br/>
+      <span style="color:var(--muted)"># show which tools are currently managed by Orrery</span><br/><br/>
       <span class="prompt">$ </span>orrery origin release<br/>
       <span style="color:var(--muted)"># restore all tools to their original locations</span><br/><br/>
       <span class="prompt">$ </span>orrery origin release --claude<br/>
