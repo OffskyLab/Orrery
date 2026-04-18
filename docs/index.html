@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.2</div>
+  <div class="badge">v2.3.3</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1064,8 +1064,19 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.2</span>
+        <span class="changelog-ver">v2.3.3</span>
         <span class="changelog-new">latest</span>
+        <h3>Native install script · smarter <code>orrery update</code> · setup runs automatically</h3>
+      </div>
+      <p class="changelog-body">Recommended install is now <code>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash</code> for macOS / Linux / WSL. Homebrew remains as a macOS alternative. The APT repo has been retired — too much overhead to maintain.</p>
+      <p class="changelog-body"><code>orrery update</code> is smarter now. On macOS it checks <code>brew list orrery</code> and uses <code>brew upgrade</code> when installed via Homebrew; otherwise it re-runs the install script. On Linux it always re-runs the script.</p>
+      <p class="changelog-body"><code>orrery setup</code> now auto-runs after install — both the curl install script and the Homebrew formula's <code>post_install</code> hook invoke it directly. One install command generates <code>activate.sh</code>, patches your rc file, and performs origin takeover. Next time you open a shell you're good to go; in the current shell, just <code>source ~/.orrery/activate.sh</code>.</p>
+      <p class="changelog-body">Docs re-structured to match Claude's install layout (Native Install first, Homebrew second, WSL note for Windows). The <code>origin</code> section also got reframed as Orrery's default-managed environment rather than a system passthrough.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.2</span>
         <h3>Origin claude fix · Linux credential support · cleaner clone · native Claude installer</h3>
       </div>
       <p class="changelog-body">Fixed <code>orrery info origin</code> and <code>orrery auth store --env origin</code> for Claude: under <code>origin</code> <code>CLAUDE_CONFIG_DIR</code> is unset, so Claude stores its credential under the default Keychain service and <code>~/.claude.json</code> at home root — not inside the managed dir. Both commands now follow the unset-dir conventions in this case, so Claude's email / plan / keychain name resolve correctly.</p>

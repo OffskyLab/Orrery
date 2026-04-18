@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.2</div>
+  <div class="badge">v2.3.3</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1049,8 +1049,19 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.2</span>
+        <span class="changelog-ver">v2.3.3</span>
         <span class="changelog-new">最新</span>
+        <h3>原生安裝腳本 · <code>orrery update</code> 改聰明 · setup 安裝後自動執行</h3>
+      </div>
+      <p class="changelog-body">macOS / Linux / WSL 的推薦安裝方式改為 <code>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash</code>。Homebrew 仍然保留作為 macOS 的替代方案。APT repo 已停用 — 維護成本太高。</p>
+      <p class="changelog-body"><code>orrery update</code> 現在更聰明。macOS 上會用 <code>brew list orrery</code> 偵測是否透過 Homebrew 安裝，有的話走 <code>brew upgrade</code>，否則直接重跑 install script。Linux 一律重跑 install script。</p>
+      <p class="changelog-body"><code>orrery setup</code> 在安裝後會自動執行 — curl install script 與 Homebrew formula 的 <code>post_install</code> hook 都會直接呼叫它。一個指令就完成 <code>activate.sh</code> 產生、rc 檔修補、origin 接管。新 shell 自動生效，當前 shell 只要 <code>source ~/.orrery/activate.sh</code> 就好。</p>
+      <p class="changelog-body">安裝文件排版對齊 Claude 的 install 頁面（原生安裝推薦在第一、Homebrew 第二、WSL 註記給 Windows）。<code>origin</code> 區塊也改為 Orrery 預設接管的環境，而非「系統透通」。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.2</span>
         <h3>Origin claude 修正 · Linux credential 支援 · clone 精簡 · Claude 改用官方 installer</h3>
       </div>
       <p class="changelog-body">修正 <code>orrery info origin</code> 與 <code>orrery auth store --env origin</code> 的 Claude 查詢：origin 環境下 <code>CLAUDE_CONFIG_DIR</code> 是 unset，Claude 會用「系統預設」來存 credential — Keychain service 沒有 hash 後綴、<code>.claude.json</code> 放在家目錄根（不是 managed dir 內）。現在兩個指令都按照這個慣例查詢，Claude 的 email / plan / keychain 名稱都能正確顯示。</p>
