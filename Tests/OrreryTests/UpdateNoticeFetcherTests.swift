@@ -396,4 +396,37 @@ struct UpdateNoticeFetcherTests {
         #expect(fetcher.fetch(currentVersion: current) == nil)
         #expect(!FileManager.default.fileExists(atPath: cacheURL.path))
     }
+
+    @Test(".notModified with non-matching cached applies-to returns nil")
+    func notModifiedNoMatch() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        NoticeCache(url: cacheURL).write(
+            .init(etag: "W/\"v1\"", body: "old notice", appliesToRaw: "<2.0.0", fetchedAt: 0)
+        )
+        // current is 2.2.0 — above the <2.0.0 ceiling
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .notModified }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+    }
+
+    @Test(".failed + cache with non-matching applies-to returns nil")
+    func failedCacheNoMatch() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        NoticeCache(url: cacheURL).write(
+            .init(etag: "W/\"v1\"", body: "old notice", appliesToRaw: "<2.0.0", fetchedAt: 0)
+        )
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .failed }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+    }
 }
