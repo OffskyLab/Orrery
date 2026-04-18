@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import OrreryCore
 
 @Suite("SemanticVersion")
@@ -175,5 +176,68 @@ struct UpdateNoticeTests {
         #expect(notice.applies(to: SemanticVersion("2.1.0")!))
         #expect(!notice.applies(to: SemanticVersion("1.9.0")!))
         #expect(!notice.applies(to: SemanticVersion("2.3.0")!))
+    }
+}
+
+@Suite("NoticeCache")
+struct NoticeCacheTests {
+
+    private func tempCacheURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-notice-cache-\(UUID().uuidString).json")
+    }
+
+    @Test("round-trip write and read")
+    func roundTrip() throws {
+        let url = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let entry = NoticeCache.Entry(
+            etag: "W/\"abc\"",
+            body: "Reinstall via install.sh.",
+            appliesToRaw: "<2.3.0",
+            fetchedAt: 1734567890
+        )
+        let cache = NoticeCache(url: url)
+        cache.write(entry)
+
+        let read = cache.read()
+        #expect(read == entry)
+    }
+
+    @Test("read returns nil when file missing")
+    func readMissing() {
+        let url = tempCacheURL()
+        let cache = NoticeCache(url: url)
+        #expect(cache.read() == nil)
+    }
+
+    @Test("read returns nil on corrupt JSON")
+    func readCorrupt() throws {
+        let url = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try "not json at all".write(to: url, atomically: true, encoding: .utf8)
+
+        let cache = NoticeCache(url: url)
+        #expect(cache.read() == nil)
+    }
+
+    @Test("delete removes the file")
+    func deleteRemoves() throws {
+        let url = tempCacheURL()
+        let entry = NoticeCache.Entry(etag: nil, body: "x", appliesToRaw: "<1.0.0", fetchedAt: 0)
+        let cache = NoticeCache(url: url)
+        cache.write(entry)
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        cache.delete()
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test("delete is a no-op when file is absent")
+    func deleteMissing() {
+        let url = tempCacheURL()
+        let cache = NoticeCache(url: url)
+        cache.delete()  // must not throw / crash
     }
 }
