@@ -70,3 +70,57 @@ struct VersionConstraint: Equatable {
         }
     }
 }
+
+struct UpdateNotice: Equatable {
+    let constraints: [VersionConstraint]
+    let body: String
+
+    static func parse(_ raw: String) -> UpdateNotice? {
+        // Normalize CRLF → LF so split on "\n" works
+        let normalized = raw.replacingOccurrences(of: "\r\n", with: "\n")
+        let lines = normalized.components(separatedBy: "\n")
+        guard lines.first == "---" else { return nil }
+
+        // Find the closing `---` on its own line, starting from line 1
+        var closingIndex: Int? = nil
+        for i in 1..<lines.count where lines[i] == "---" {
+            closingIndex = i
+            break
+        }
+        guard let closing = closingIndex else { return nil }
+
+        // Header is lines 1..<closing; body is lines closing+1..<end
+        var appliesToRaw: String? = nil
+        for line in lines[1..<closing] {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            if let colon = trimmed.firstIndex(of: ":") {
+                let key = trimmed[..<colon].trimmingCharacters(in: .whitespaces)
+                let value = trimmed[trimmed.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+                if key == "applies-to" {
+                    appliesToRaw = value
+                }
+            }
+        }
+        guard let rawConstraint = appliesToRaw else { return nil }
+
+        // Parse comma-separated constraints
+        let parts = rawConstraint.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        var constraints: [VersionConstraint] = []
+        for part in parts {
+            guard let c = VersionConstraint(part) else { return nil }
+            constraints.append(c)
+        }
+        guard !constraints.isEmpty else { return nil }
+
+        let bodyLines = lines[(closing + 1)...]
+        // Trim trailing empty lines for tidier output; leading newline is kept lean
+        let body = bodyLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return UpdateNotice(constraints: constraints, body: body)
+    }
+
+    func applies(to current: SemanticVersion) -> Bool {
+        constraints.allSatisfy { $0.isSatisfied(by: current) }
+    }
+}
