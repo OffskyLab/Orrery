@@ -104,11 +104,17 @@ public struct InfoCommand: ParsableCommand {
             print("  \(none)")
         } else {
             for (tool, dir) in toolDirs {
-                let info = ToolAuth.accountInfo(tool: tool, configDir: dir)
+                // Under origin, CLAUDE_CONFIG_DIR is unset — Claude's credential
+                // lookup must use the unset-dir conventions (keychain service
+                // without hash, ~/.claude.json at home root). Codex/Gemini
+                // store their files inside the (symlinked) managed dir, so
+                // their configDir works either way.
+                let accountDir: URL? = (tool == .claude) ? nil : dir
+                let info = ToolAuth.accountInfo(tool: tool, configDir: accountDir)
                 let maskedKey = info.key.map { k in k.count > 8 ? String(k.prefix(4)) + "****" : "****" }
                 let suffix = [info.email, info.plan, info.model, maskedKey].compactMap { $0 }.joined(separator: ", ")
                 print(suffix.isEmpty ? "  \(tool.rawValue)" : "  \(tool.rawValue) (\(suffix))")
-                printToolAuthDetail(tool: tool, configDir: dir)
+                printToolAuthDetail(tool: tool, configDir: accountDir)
             }
         }
 
@@ -131,23 +137,28 @@ public struct InfoCommand: ParsableCommand {
         print("\(L10n.Info.labelEnvVars)\(none)")
     }
 
-    private static func printToolAuthDetail(tool: Tool, configDir: URL) {
+    /// Print the credential-store line for a tool.
+    /// Pass `nil` for Claude under origin (CLAUDE_CONFIG_DIR unset → default
+    /// keychain entry / `~/.claude/.credentials.json`).
+    private static func printToolAuthDetail(tool: Tool, configDir: URL?) {
         switch tool {
         case .claude:
             #if os(macOS)
-            print("    keychain: \(ClaudeKeychain.service(for: configDir.path))")
+            print("    keychain: \(ClaudeKeychain.service(for: configDir?.path))")
             #else
-            let credFile = ClaudeKeychain.credentialsFile(for: configDir.path)
+            let credFile = ClaudeKeychain.credentialsFile(for: configDir?.path)
             if FileManager.default.fileExists(atPath: credFile.path) {
                 print("    file: \(credFile.path)")
             }
             #endif
         case .codex:
+            guard let configDir else { return }
             let file = configDir.appendingPathComponent("auth.json")
             if FileManager.default.fileExists(atPath: file.path) {
                 print("    file: \(file.path)")
             }
         case .gemini:
+            guard let configDir else { return }
             let credFile = configDir.appendingPathComponent("gemini-credentials.json")
             let oauthFile = configDir.appendingPathComponent("oauth_creds.json")
             let fm = FileManager.default
