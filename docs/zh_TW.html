@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.3</div>
+  <div class="badge">v2.4.0</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1049,8 +1049,19 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.3</span>
+        <span class="changelog-ver">v2.4.0</span>
         <span class="changelog-new">最新</span>
+        <h3>Binary 改名 <code>orrery</code> → <code>orrery-bin</code> · rc 改用 lazy-bootstrap stub</h3>
+      </div>
+      <p class="changelog-body">使用者看到的 <code>orrery</code> 指令現在**完全**是 shell function — 真正的 binary 改名 <code>orrery-bin</code>，不再開放給使用者直接呼叫。這徹底解掉一個長期的坑：過去在沒有 source 過 <code>activate.sh</code> 的 shell 裡跑 <code>orrery use work</code>，binary 無法改父 shell 的環境變數，結果靜默失敗。現在這條路直接變成 <code>command not found</code>，明確且容易修復。</p>
+      <p class="changelog-body"><code>orrery setup</code> 改在 rc 檔寫入一個精簡的 lazy-bootstrap stub，取代舊的 <code>source ~/.orrery/activate.sh</code>。shell 啟動成本幾乎歸零 — <code>activate.sh</code> 只在你第一次呼叫 <code>orrery</code> 時才載入。舊的 <code>source …/activate.sh</code> 與 <code>eval "$(orrery setup)"</code> 寫法會自動被遷移。</p>
+      <p class="changelog-body">安裝 / 升級流程（install.sh、Homebrew formula、deb postinst）都會清掉舊的 <code>/usr/local/bin/orrery</code>，確保唯一進入點就是 shell function。新的 tarball 內是 <code>orrery-bin</code>；install.sh 同時也支援舊格式 tarball（內含 <code>orrery</code>），避免過渡期卡死既有 curl 安裝的機器。</p>
+      <p class="changelog-body">MCP 整合改指向 <code>orrery-bin mcp-server</code>（MCP host 以非互動 subprocess 啟動 server，沒辦法走 shell function）。如果你之前有設定過 MCP，請重跑一次 <code>orrery mcp setup</code>。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.3</span>
         <h3>原生安裝腳本 · <code>orrery update</code> 改聰明 · setup 安裝後自動執行</h3>
       </div>
       <p class="changelog-body">macOS / Linux / WSL 的推薦安裝方式改為 <code>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash</code>。Homebrew 仍然保留作為 macOS 的替代方案。APT repo 已停用 — 維護成本太高。</p>

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.4.0
 
 - **Binary renamed `orrery` → `orrery-bin`.** The `orrery` command is now exclusively a shell function (defined in `~/.orrery/activate.sh`), removing the class of bugs where users accidentally invoked the binary in a shell that hadn't sourced the activation script. The binary itself is an implementation detail called by the shell function.
 - **Lazy-bootstrap stub in rc file.** `orrery setup` now writes a tiny stub `orrery()` function to your rc file instead of a `source ~/.orrery/activate.sh` line. Shell startup is effectively free — activate.sh is loaded on first `orrery` invocation. Existing source lines / legacy `eval "$(orrery setup)"` shapes are migrated automatically.

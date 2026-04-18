@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.3</div>
+  <div class="badge">v2.4.0</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1064,8 +1064,19 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.3</span>
+        <span class="changelog-ver">v2.4.0</span>
         <span class="changelog-new">latest</span>
+        <h3>Binary renamed <code>orrery</code> → <code>orrery-bin</code> · rc uses lazy-bootstrap stub</h3>
+      </div>
+      <p class="changelog-body">The user-facing <code>orrery</code> command is now exclusively a shell function — the binary itself is renamed <code>orrery-bin</code> and isn't meant to be called directly. This removes a long-standing pitfall where running <code>orrery use work</code> in a shell that hadn't sourced <code>activate.sh</code> would silently fail (the binary alone can't set env vars in the parent shell). Now that path is simply "command not found", which is clear and fixable.</p>
+      <p class="changelog-body"><code>orrery setup</code> writes a tiny lazy-bootstrap stub into your rc file instead of a <code>source ~/.orrery/activate.sh</code> line. Shell startup stays effectively free — <code>activate.sh</code> is loaded only on the first <code>orrery</code> invocation. Legacy <code>source …/activate.sh</code> and <code>eval "$(orrery setup)"</code> lines are migrated automatically.</p>
+      <p class="changelog-body">Install / upgrade paths (install.sh, Homebrew formula, deb postinst) all clean up the legacy <code>/usr/local/bin/orrery</code> on upgrade so the shell function is the only way in. The install tarball now ships <code>orrery-bin</code>; install.sh still accepts older tarballs containing <code>orrery</code> so the transition doesn't break existing curl-installed boxes mid-flight.</p>
+      <p class="changelog-body">MCP integration points at <code>orrery-bin mcp-server</code> (MCP hosts launch servers non-interactively, so they can't rely on the shell function). Re-run <code>orrery mcp setup</code> if you had it configured from an older version.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.3</span>
         <h3>Native install script · smarter <code>orrery update</code> · setup runs automatically</h3>
       </div>
       <p class="changelog-body">Recommended install is now <code>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash</code> for macOS / Linux / WSL. Homebrew remains as a macOS alternative. The APT repo has been retired — too much overhead to maintain.</p>
