@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3.3
+
+- **Install via curl script; APT dropped.** Recommended install is now `curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash` for macOS / Linux / WSL. Homebrew remains as an alternative for macOS. APT repo is retired.
+- **`orrery update` smarter.** On macOS, detects `brew list orrery` and uses `brew upgrade` when installed via Homebrew; otherwise re-runs the install script. On Linux, always re-runs the install script.
+- **`orrery setup` auto-runs after install.** Both `install.sh` and the Homebrew formula's `post_install` hook now invoke `orrery setup` immediately, so a single install command is enough to generate `activate.sh`, patch your rc file, and perform origin takeover.
+- **Docs aligned with Claude's install layout.** Native Install (recommended) first, Homebrew (macOS) second, WSL note for Windows; origin reframed as Orrery's default-managed environment rather than a system passthrough.
+
 ## v2.3.2
 
 - **Fix `orrery info origin` claude missing email/plan.** Under `origin` `CLAUDE_CONFIG_DIR` is unset — Claude stores its credential under the default Keychain entry and `~/.claude.json` at home root, not inside the managed dir. `orrery info` and `orrery auth store` now follow this convention for origin claude lookup.
