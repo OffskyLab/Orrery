@@ -108,15 +108,18 @@ Uses `curl` for consistency with existing `CheckUpdateCommand`. No `URLSession`.
 Request shape:
 
 ```sh
-curl -sf --max-time 5 \
+curl -s --max-time 5 \
+  -D <hdrfile> \
+  -o <bodyfile> \
   -w '%{http_code}' \
-  -o <tmpfile> \
   -H 'User-Agent: orrery-cli' \
   -H 'If-None-Match: <etag-if-cached>' \
   https://raw.githubusercontent.com/OffskyLab/Orrery/main/docs/update-notice.md
 ```
 
-Status code is captured from stdout; body is read from `<tmpfile>` (so it's clean of curl's own output).
+Status code is captured from stdout; body is read from `<bodyfile>`; the response `ETag` is parsed from `<hdrfile>` (curl's `-D` header dump).
+
+**Note on `-f`:** Intentionally omitted. `curl -f` causes non-2xx responses to produce exit code 22, which would hide the distinction between 404 (maps to `.gone`, deletes cache) and 5xx (maps to `.failed`, keeps cache). We rely on the explicit `%{http_code}` value to drive the `FetchResult` mapping.
 
 ### Outcome matrix
 
