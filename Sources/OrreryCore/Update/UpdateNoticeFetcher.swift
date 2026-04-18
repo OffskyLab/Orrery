@@ -179,7 +179,7 @@ struct UpdateNoticeFetcher {
 
     let url: URL
     let cacheURL: URL
-    let transport: (URL, String?) -> FetchResult
+    let transport: @Sendable (URL, String?) -> FetchResult
 
     func fetch(currentVersion: SemanticVersion) -> String? {
         let cache = NoticeCache(url: cacheURL)
@@ -237,5 +237,94 @@ struct UpdateNoticeFetcher {
         case .gt:  opStr = ">"
         }
         return "\(opStr)\(c.version.major).\(c.version.minor).\(c.version.patch)"
+    }
+}
+
+extension UpdateNoticeFetcher {
+    /// Default production configuration: fetches from the repo's main branch
+    /// and caches under $ORRERY_HOME/.update-notice-cache.json.
+    static func production() -> UpdateNoticeFetcher {
+        let defaultURL = URL(string: "https://raw.githubusercontent.com/OffskyLab/Orrery/main/docs/update-notice.md")!
+        return UpdateNoticeFetcher(
+            url: defaultURL,
+            cacheURL: Self.defaultCacheURL(),
+            transport: Self.curlTransport
+        )
+    }
+
+    static func defaultCacheURL() -> URL {
+        let home: URL
+        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
+            home = URL(fileURLWithPath: custom)
+        } else {
+            home = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".orrery")
+        }
+        return home.appendingPathComponent(".update-notice-cache.json")
+    }
+
+    static let curlTransport: @Sendable (URL, String?) -> FetchResult = { url, etag in
+        let tmp = FileManager.default.temporaryDirectory
+        let bodyFile = tmp.appendingPathComponent("orrery-notice-body-\(UUID().uuidString)")
+        let hdrFile = tmp.appendingPathComponent("orrery-notice-hdr-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: bodyFile)
+            try? FileManager.default.removeItem(at: hdrFile)
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        var args = [
+            "curl", "-s", "--max-time", "5",
+            "-D", hdrFile.path,
+            "-o", bodyFile.path,
+            "-w", "%{http_code}",
+            "-H", "User-Agent: orrery-cli",
+        ]
+        if let etag = etag {
+            args.append("-H")
+            args.append("If-None-Match: \(etag)")
+        }
+        args.append(url.absoluteString)
+        process.arguments = args
+
+        let statusPipe = Pipe()
+        process.standardOutput = statusPipe
+        process.standardError = FileHandle.nullDevice
+
+        guard (try? process.run()) != nil else { return .failed }
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return .failed }
+
+        let statusData = statusPipe.fileHandleForReading.readDataToEndOfFile()
+        let statusStr = String(data: statusData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let status = Int(statusStr) else { return .failed }
+
+        switch status {
+        case 200:
+            guard let body = try? String(contentsOf: bodyFile, encoding: .utf8) else {
+                return .failed
+            }
+            let responseEtag = parseEtag(fromHeaderFile: hdrFile)
+            return .ok(etag: responseEtag, body: body)
+        case 304: return .notModified
+        case 404: return .gone
+        default:  return .failed
+        }
+    }
+
+    private static func parseEtag(fromHeaderFile url: URL) -> String? {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        // Use the LAST ETag line — if curl followed redirects, earlier headers
+        // belong to redirect responses rather than the final 200.
+        var latest: String? = nil
+        for line in text.components(separatedBy: "\n") {
+            let lower = line.lowercased()
+            guard lower.hasPrefix("etag:") else { continue }
+            let value = line.dropFirst("etag:".count).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty { latest = value }
+        }
+        return latest
     }
 }
