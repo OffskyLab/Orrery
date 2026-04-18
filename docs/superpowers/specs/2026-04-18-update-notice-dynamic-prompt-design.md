@@ -74,7 +74,7 @@ All new code lives under `Sources/OrreryCore/Update/`:
 | `UpdateNotice` | Value type. `appliesTo: [VersionConstraint]`, `body: String`. Has `parse(_ raw: String) -> UpdateNotice?` and `applies(to currentVersion: SemanticVersion) -> Bool`. |
 | `VersionConstraint` | `(op: Operator, version: SemanticVersion)`. Five operators. |
 | `SemanticVersion` | Lightweight `MAJOR.MINOR.PATCH`, `Comparable`. |
-| `NoticeCache` (file-private) | Reads/writes `$ORRERY_HOME/.update-notice-cache.json`. |
+| `NoticeCache` | Reads/writes `$ORRERY_HOME/.update-notice-cache.json`. Module-internal so unit tests can exercise the JSON round-trip directly via `@testable import`. |
 
 Modified:
 
