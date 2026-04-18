@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.1</div>
+  <div class="badge">v2.3.2</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1076,13 +1076,23 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.1</span>
+        <span class="changelog-ver">v2.3.2</span>
         <span class="changelog-new">latest</span>
+        <h3>Origin claude fix · Linux credential support · cleaner clone · native Claude installer</h3>
+      </div>
+      <p class="changelog-body">Fixed <code>orrery info origin</code> and <code>orrery auth store --env origin</code> for Claude: under <code>origin</code> <code>CLAUDE_CONFIG_DIR</code> is unset, so Claude stores its credential under the default Keychain service and <code>~/.claude.json</code> at home root — not inside the managed dir. Both commands now follow the unset-dir conventions in this case, so Claude's email / plan / keychain name resolve correctly.</p>
+      <p class="changelog-body">Claude credential lookup on Linux now reads <code>{configDir}/.credentials.json</code> — the JSON format Claude Code uses on non-macOS platforms — instead of falling through to the macOS Keychain path.</p>
+      <p class="changelog-body"><code>orrery create --clone</code> only copies useful settings now. Skips cache, agent-memory, telemetry, usage-data, statsig, paste-cache, shell-snapshots, history.jsonl, file-history, debug, downloads, plans, tasks, todos. Only <code>settings.json</code>, <code>commands/</code>, <code>skills/</code>, <code>plugins/</code>, <code>agents/</code>, <code>CLAUDE.md</code>, and <code>statusline.sh</code> carry over.</p>
+      <p class="changelog-body"><code>orrery setup</code> / <code>orrery tools add</code> install Claude via the native installer (<code>curl -fsSL https://claude.ai/install.sh | bash</code>) instead of <code>npm install -g</code>. Setup errors now surface the manual install command on failure instead of a raw enum case.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.1</span>
         <h3><code>orrery auth store</code> — inspect credential storage per tool</h3>
       </div>
       <p class="changelog-body">New <code>orrery auth store</code> command displays where each tool's credential actually lives: for Claude, the macOS Keychain service name (<code>Claude Code-credentials-{hash}</code>); for Codex and Gemini, the credential file path (<code>auth.json</code> / <code>oauth_creds.json</code>). When the tool uses API-key auth, the masked key (first 4 chars + <code>****</code>) is shown too. Supports <code>--env &lt;name&gt;</code> to target a specific environment and <code>--claude</code> / <code>--codex</code> / <code>--gemini</code> to filter by tool — passing a tool flag switches output to plain values so it's easy to capture from scripts.</p>
       <p class="changelog-body"><code>orrery info</code> now also shows the credential-store line per tool as a sub-line under the existing summary (<code>keychain: …</code> for Claude, <code>file: …</code> for Codex/Gemini), and masked API keys are included in the tool summary when present.</p>
-      <p class="changelog-body">Fixed <code>orrery info origin</code> and <code>orrery auth store --env origin</code> for Claude: under <code>origin</code> <code>CLAUDE_CONFIG_DIR</code> is unset, so Claude stores its credential under the default Keychain service and <code>~/.claude.json</code> at home root — not inside the managed dir. Both commands now follow the unset-dir conventions in this case, so Claude's email / plan / keychain name resolve correctly.</p>
     </article>
 
     <article class="changelog-entry">
