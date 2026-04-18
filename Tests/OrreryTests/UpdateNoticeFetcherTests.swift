@@ -241,3 +241,159 @@ struct NoticeCacheTests {
         cache.delete()  // must not throw / crash
     }
 }
+
+@Suite("UpdateNoticeFetcher")
+struct UpdateNoticeFetcherTests {
+
+    private let url = URL(string: "https://example.test/notice.md")!
+    private let current = SemanticVersion("2.2.0")!
+
+    private func tempCacheURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-notice-fetcher-\(UUID().uuidString).json")
+    }
+
+    private func validNoticeBody(appliesTo: String = "<2.3.0", body: String = "Upgrade via install.sh") -> String {
+        """
+        ---
+        applies-to: \(appliesTo)
+        ---
+        \(body)
+        """
+    }
+
+    @Test("first run: .ok with matching applies-to returns body, writes cache")
+    func firstRunMatches() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, etag in
+                #expect(etag == nil)  // no cache yet
+                return .ok(etag: "W/\"v1\"", body: self.validNoticeBody())
+            }
+        )
+        let out = fetcher.fetch(currentVersion: current)
+        #expect(out == "Upgrade via install.sh")
+        #expect(NoticeCache(url: cacheURL).read()?.etag == "W/\"v1\"")
+    }
+
+    @Test(".ok but applies-to doesn't match returns nil, still writes cache")
+    func firstRunNoMatch() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in
+                .ok(etag: "W/\"v1\"", body: self.validNoticeBody(appliesTo: ">=9.0.0"))
+            }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+        #expect(NoticeCache(url: cacheURL).read()?.appliesToRaw == ">=9.0.0")
+    }
+
+    @Test(".notModified uses cached body when applies-to matches")
+    func notModifiedUsesCache() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let cache = NoticeCache(url: cacheURL)
+        cache.write(.init(etag: "W/\"v1\"", body: "cached body", appliesToRaw: "<2.3.0", fetchedAt: 0))
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, etag in
+                #expect(etag == "W/\"v1\"")
+                return .notModified
+            }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == "cached body")
+    }
+
+    @Test(".failed + cache returns stale cached body")
+    func failedUsesStaleCache() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        NoticeCache(url: cacheURL).write(
+            .init(etag: "W/\"v1\"", body: "stale body", appliesToRaw: "<2.3.0", fetchedAt: 0)
+        )
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .failed }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == "stale body")
+    }
+
+    @Test(".failed + no cache returns nil")
+    func failedNoCache() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .failed }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+        #expect(!FileManager.default.fileExists(atPath: cacheURL.path))
+    }
+
+    @Test(".gone deletes cache, returns nil")
+    func goneDeletesCache() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        NoticeCache(url: cacheURL).write(
+            .init(etag: "W/\"v1\"", body: "old", appliesToRaw: "<2.3.0", fetchedAt: 0)
+        )
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .gone }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+        #expect(!FileManager.default.fileExists(atPath: cacheURL.path))
+    }
+
+    @Test(".ok with unparseable body returns nil, cache untouched")
+    func okParseFails() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        NoticeCache(url: cacheURL).write(
+            .init(etag: "W/\"v0\"", body: "previous", appliesToRaw: "<2.3.0", fetchedAt: 0)
+        )
+
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .ok(etag: "W/\"v1\"", body: "no frontmatter here") }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+        #expect(NoticeCache(url: cacheURL).read()?.etag == "W/\"v0\"")  // untouched
+    }
+
+    @Test(".ok with body > 64 KB returns nil, cache untouched")
+    func okBodyTooLarge() {
+        let cacheURL = tempCacheURL()
+        defer { try? FileManager.default.removeItem(at: cacheURL) }
+
+        let oversized = String(repeating: "a", count: 65 * 1024)
+        let fetcher = UpdateNoticeFetcher(
+            url: url,
+            cacheURL: cacheURL,
+            transport: { _, _ in .ok(etag: "W/\"big\"", body: oversized) }
+        )
+        #expect(fetcher.fetch(currentVersion: current) == nil)
+        #expect(!FileManager.default.fileExists(atPath: cacheURL.path))
+    }
+}

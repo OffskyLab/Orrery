@@ -166,3 +166,76 @@ struct NoticeCache {
         try? FileManager.default.removeItem(at: url)
     }
 }
+
+enum FetchResult {
+    case ok(etag: String?, body: String)
+    case notModified
+    case gone
+    case failed
+}
+
+struct UpdateNoticeFetcher {
+    static let maxBodyBytes = 64 * 1024
+
+    let url: URL
+    let cacheURL: URL
+    let transport: (URL, String?) -> FetchResult
+
+    func fetch(currentVersion: SemanticVersion) -> String? {
+        let cache = NoticeCache(url: cacheURL)
+        let existing = cache.read()
+
+        let result = transport(url, existing?.etag)
+
+        switch result {
+        case .ok(let etag, let body):
+            guard body.utf8.count <= Self.maxBodyBytes else { return nil }
+            guard let notice = UpdateNotice.parse(body) else { return nil }
+            let appliesToRaw = notice.constraints
+                .map { formatConstraint($0) }
+                .joined(separator: ", ")
+            cache.write(.init(
+                etag: etag,
+                body: notice.body,
+                appliesToRaw: appliesToRaw,
+                fetchedAt: Int(Date().timeIntervalSince1970)
+            ))
+            return notice.applies(to: currentVersion) ? notice.body : nil
+
+        case .notModified:
+            guard let cached = existing else { return nil }
+            return renderFromCache(cached, current: currentVersion)
+
+        case .gone:
+            cache.delete()
+            return nil
+
+        case .failed:
+            guard let cached = existing else { return nil }
+            return renderFromCache(cached, current: currentVersion)
+        }
+    }
+
+    private func renderFromCache(_ entry: NoticeCache.Entry, current: SemanticVersion) -> String? {
+        let parts = entry.appliesToRaw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        var constraints: [VersionConstraint] = []
+        for part in parts {
+            guard let c = VersionConstraint(part) else { return nil }
+            constraints.append(c)
+        }
+        guard constraints.allSatisfy({ $0.isSatisfied(by: current) }) else { return nil }
+        return entry.body
+    }
+
+    private func formatConstraint(_ c: VersionConstraint) -> String {
+        let opStr: String
+        switch c.op {
+        case .lt:  opStr = "<"
+        case .lte: opStr = "<="
+        case .eq:  opStr = "="
+        case .gte: opStr = ">="
+        case .gt:  opStr = ">"
+        }
+        return "\(opStr)\(c.version.major).\(c.version.minor).\(c.version.patch)"
+    }
+}
