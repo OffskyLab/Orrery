@@ -102,9 +102,19 @@ fi
 VERSION=$(orrery --version 2>/dev/null || echo "installed")
 
 echo ""
-info "Orrery ${VERSION} successfully!"
+info "Orrery ${VERSION} installed."
 echo ""
-echo "  Next step — activate shell integration:"
-echo ""
-echo "    orrery setup && source ~/.orrery/activate.sh"
-echo ""
+
+# Auto-run `orrery setup` — generates activate.sh, patches rc file, and
+# performs origin takeover. Setup itself skips interactive prompts when
+# /dev/tty is unavailable, so it's safe under `curl | bash`.
+if command -v orrery &>/dev/null; then
+  info "Running orrery setup..."
+  echo ""
+  orrery setup || warn "orrery setup exited with a non-zero status — run it manually later."
+  echo ""
+  echo "  Activate in your current shell:"
+  echo ""
+  echo "    source ~/.orrery/activate.sh"
+  echo ""
+fi
