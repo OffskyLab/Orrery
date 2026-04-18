@@ -140,6 +140,21 @@ source ~/.orrery/activate.sh
 
 `orrery setup` generates `~/.orrery/activate.sh`, adds a `source` line to your shell rc file (`~/.zshrc` or `~/.bashrc`), and moves your existing tool configs into Orrery storage. New shells activate automatically.
 
+### Migrating from APT (Linux, v2.3.x or earlier)
+
+If you installed Orrery via APT (`apt install orrery`) on v2.3.x or earlier, running `orrery update` may report `already the newest version (2.3.x)` — the APT repo is no longer updated, and the old update path didn't run `apt update` first. Run the native installer once to transition:
+
+```bash
+curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+```
+
+This removes the legacy APT-managed binary, installs the new `orrery-bin`, and switches `orrery update` to the native install flow for all future upgrades. You can optionally clean up the stale APT source afterwards:
+
+```bash
+sudo rm /etc/apt/sources.list.d/orrery.list
+sudo apt update
+```
+
 ---
 
 ## Quick Start

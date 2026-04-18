@@ -616,6 +616,20 @@
     <button class="copy-btn" data-cmd='source ~/.orrery/activate.sh'>Copy</button>
     <span class="prompt">$ </span>source ~/.orrery/activate.sh
   </div>
+
+  <div style="height:1rem"></div>
+  <details style="background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:.9rem 1.1rem;font-size:.85rem;color:var(--muted);line-height:1.65">
+    <summary style="cursor:pointer;color:var(--text);font-weight:600">Migrating from APT on Linux (v2.3.x or earlier)</summary>
+    <p style="margin-top:.6rem">If you installed Orrery via APT (<code>apt install orrery</code>), running <code>orrery update</code> may show <code>already the newest version (2.3.x)</code>. The APT repo is no longer maintained, and the old update path didn't run <code>apt update</code> first. Run the native installer once to transition:</p>
+    <div class="code-block" style="margin-top:.6rem;font-size:.8rem">
+      <span class="prompt">$ </span>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+    </div>
+    <p style="margin-top:.6rem">This removes the APT-managed binary, installs the new <code>orrery-bin</code>, and switches future <code>orrery update</code> calls to the native install flow. Optionally clean up the stale APT source:</p>
+    <div class="code-block" style="margin-top:.4rem;font-size:.8rem">
+      <span class="prompt">$ </span>sudo rm /etc/apt/sources.list.d/orrery.list<br/>
+      <span class="prompt">$ </span>sudo apt update
+    </div>
+  </details>
 </div>
 
 <!-- Features -->

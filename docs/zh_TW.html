@@ -616,6 +616,20 @@
     <button class="copy-btn" data-cmd='source ~/.orrery/activate.sh' data-label="複製" data-copied="已複製！">複製</button>
     <span class="prompt">$ </span>source ~/.orrery/activate.sh
   </div>
+
+  <div style="height:1rem"></div>
+  <details style="background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:.9rem 1.1rem;font-size:.85rem;color:var(--muted);line-height:1.65">
+    <summary style="cursor:pointer;color:var(--text);font-weight:600">從 APT 遷移（Linux，v2.3.x 或更早）</summary>
+    <p style="margin-top:.6rem">如果你之前用 APT（<code>apt install orrery</code>）安裝，跑 <code>orrery update</code> 可能會看到 <code>already the newest version (2.3.x)</code>。APT repo 已不再維護，而且舊版的 update 流程沒有先跑 <code>apt update</code>。只要跑一次原生安裝指令就能完成遷移：</p>
+    <div class="code-block" style="margin-top:.6rem;font-size:.8rem">
+      <span class="prompt">$ </span>curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+    </div>
+    <p style="margin-top:.6rem">這會移除 APT 管理的舊 binary、安裝新的 <code>orrery-bin</code>，並把之後的 <code>orrery update</code> 切到原生安裝流程。你可以順手清掉已失效的 APT 設定：</p>
+    <div class="code-block" style="margin-top:.4rem;font-size:.8rem">
+      <span class="prompt">$ </span>sudo rm /etc/apt/sources.list.d/orrery.list<br/>
+      <span class="prompt">$ </span>sudo apt update
+    </div>
+  </details>
 </div>
 
 <!-- Features -->

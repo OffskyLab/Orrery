@@ -140,6 +140,21 @@ source ~/.orrery/activate.sh
 
 `orrery setup` 會產生 `~/.orrery/activate.sh`、寫入 rc 檔（`~/.zshrc` 或 `~/.bashrc`），並將現有的工具設定移入 Orrery 管理。新開的 shell 會自動載入。
 
+### 從 APT 遷移（Linux，v2.3.x 或更早）
+
+如果你之前用 APT（`apt install orrery`）安裝 v2.3.x 或更早版本，`orrery update` 可能會回報 `already the newest version (2.3.x)` — APT repo 已不再更新，而且舊版的 update 流程沒有先跑 `apt update`。只要跑一次原生安裝指令就能完成遷移：
+
+```bash
+curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+```
+
+這會移除 APT 管理的舊 binary、安裝新的 `orrery-bin`，並把 `orrery update` 切到原生安裝流程，之後的升級都會自動走新路徑。你可以順手清掉已失效的 APT 設定：
+
+```bash
+sudo rm /etc/apt/sources.list.d/orrery.list
+sudo apt update
+```
+
 ---
 
 ## 快速開始
