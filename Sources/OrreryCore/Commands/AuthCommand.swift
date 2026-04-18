@@ -56,16 +56,21 @@ public struct AuthCommand: ParsableCommand {
                     ? store.originConfigDir(tool: tool)
                     : store.toolConfigDir(tool: tool, environment: resolvedName)
 
-                let info = ToolAuth.accountInfo(tool: tool, configDir: configDir)
+                // Under origin, CLAUDE_CONFIG_DIR is unset — Claude stores its
+                // credential under the default keychain entry / `~/.claude.json`,
+                // not inside the managed dir. Pass nil so account lookup and
+                // keychain service name use the unset-dir conventions.
+                let claudeLookupDir: URL? = (tool == .claude && isOrigin) ? nil : configDir
+                let info = ToolAuth.accountInfo(tool: tool, configDir: claudeLookupDir)
 
                 var values: [String] = []
 
                 switch tool {
                 case .claude:
                     #if os(macOS)
-                    values.append(ClaudeKeychain.service(for: configDir.path))
+                    values.append(ClaudeKeychain.service(for: claudeLookupDir?.path))
                     #else
-                    values.append(ClaudeKeychain.credentialsFile(for: configDir.path).path)
+                    values.append(ClaudeKeychain.credentialsFile(for: claudeLookupDir?.path).path)
                     #endif
                 case .codex:
                     values.append(configDir.appendingPathComponent("auth.json").path)
