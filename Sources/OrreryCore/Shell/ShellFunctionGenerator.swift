@@ -25,7 +25,7 @@ public struct ShellFunctionGenerator {
             # Double subshell: the inner `&` runs in a child shell that exits
             # immediately, so the interactive shell never sees a background job
             # and never prints `[N] PID` (zsh) or a job notice (bash).
-            ( ( echo "$_now" > "$_ts_file"; _r=$(command orrery _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file" ) & ) >/dev/null 2>&1
+            ( ( echo "$_now" > "$_ts_file"; _r=$(command orrery-bin _check-update 2>/dev/null); [ -n "$_r" ] && echo "$_r" > "$_notice_file" || rm -f "$_notice_file" ) & ) >/dev/null 2>&1
           fi
 
           local cmd="${1:-}"
@@ -37,18 +37,18 @@ public struct ShellFunctionGenerator {
               fi
               # Unexport previous env vars if switching
               if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
-                eval "$(command orrery _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
+                eval "$(command orrery-bin _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
               fi
               if [ "$2" = "origin" ]; then
                 unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
                 export ORRERY_ACTIVE_ENV="origin"
-                command orrery _set-current origin 2>/dev/null || true
+                command orrery-bin _set-current origin 2>/dev/null || true
               else
                 local exports
-                exports=$(command orrery _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
+                exports=$(command orrery-bin _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
                 eval "$exports"
                 export ORRERY_ACTIVE_ENV="$2"
-                command orrery _set-current "$2" 2>/dev/null || true
+                command orrery-bin _set-current "$2" 2>/dev/null || true
               fi
               printf "\(L10n.Use.switched)\\n" "$2"
               ;;
@@ -56,7 +56,7 @@ public struct ShellFunctionGenerator {
               orrery use origin
               ;;
             create)
-              command orrery "$@"
+              command orrery-bin "$@"
               if [ $? -eq 0 ]; then
                 local _env_name="" _skip=0
                 for _arg in "${@:2}"; do
@@ -77,7 +77,7 @@ public struct ShellFunctionGenerator {
               fi
               ;;
             *)
-              command orrery "$@"
+              command orrery-bin "$@"
               ;;
           esac
         }
@@ -101,7 +101,7 @@ public struct ShellFunctionGenerator {
             fi
           fi
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
-          command orrery _link-memory 2>/dev/null || true
+          command orrery-bin _link-memory 2>/dev/null || true
         }
 
         # gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,

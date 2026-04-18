@@ -24,9 +24,12 @@ public struct MCPSetupCommand: ParsableCommand {
             let cwd = fm.currentDirectoryPath
 
             // 1. Register MCP server with each installed tool
-            Self.registerMCP(tool: "claude", args: ["claude", "mcp", "add", "--scope", "project", "orrery", "--", "orrery", "mcp-server"])
-            Self.registerMCP(tool: "codex", args: ["codex", "mcp", "add", "orrery", "--", "orrery", "mcp-server"])
-            Self.registerMCP(tool: "gemini", args: ["gemini", "mcp", "add", "orrery", "orrery mcp-server"])
+            // MCP servers are launched by the host tool as non-interactive
+            // subprocesses — there's no shell function wrapping them, so they
+            // must invoke the renamed binary `orrery-bin` directly.
+            Self.registerMCP(tool: "claude", args: ["claude", "mcp", "add", "--scope", "project", "orrery", "--", "orrery-bin", "mcp-server"])
+            Self.registerMCP(tool: "codex", args: ["codex", "mcp", "add", "orrery", "--", "orrery-bin", "mcp-server"])
+            Self.registerMCP(tool: "gemini", args: ["gemini", "mcp", "add", "orrery", "orrery-bin mcp-server"])
 
             // 2. Install slash commands
             try Self.installSlashCommands(projectDir: cwd)

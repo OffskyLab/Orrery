@@ -3,7 +3,8 @@ set -e
 
 REPO="OffskyLab/Orrery"
 INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="orrery"
+BINARY_NAME="orrery-bin"
+OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
 
 # Parse flags
@@ -86,7 +87,17 @@ else
   info "Downloading pre-built binary..."
   if curl -fsSL -o "$TMP_DIR/$ASSET_NAME" "$DOWNLOAD_URL" 2>/dev/null; then
     tar -xzf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
-    $USE_SUDO cp "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+    # Tarball may contain either `orrery-bin` (>= 2.4) or the legacy `orrery`
+    # (<= 2.3.x). Normalize to orrery-bin on disk so downstream always uses
+    # the new name.
+    if [[ -f "$TMP_DIR/$BINARY_NAME" ]]; then
+      EXTRACTED="$TMP_DIR/$BINARY_NAME"
+    elif [[ -f "$TMP_DIR/$OLD_BINARY_NAME" ]]; then
+      EXTRACTED="$TMP_DIR/$OLD_BINARY_NAME"
+    else
+      error "Tarball contents unexpected — no binary found."
+    fi
+    $USE_SUDO cp "$EXTRACTED" "$INSTALL_DIR/$BINARY_NAME"
     $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
     info "Installed pre-built binary to $INSTALL_DIR/$BINARY_NAME"
   else
@@ -95,25 +106,31 @@ else
   fi
 fi
 
+# Remove the legacy binary so users can't bypass the shell function.
+if [[ -e "$INSTALL_DIR/$OLD_BINARY_NAME" ]]; then
+  info "Removing legacy binary at $INSTALL_DIR/$OLD_BINARY_NAME (users now go through the shell function)."
+  $USE_SUDO rm -f "$INSTALL_DIR/$OLD_BINARY_NAME"
+fi
+
 # Verify
-if ! command -v orrery &>/dev/null; then
-  warn "orrery installed to $INSTALL_DIR but it's not in your PATH."
+if ! command -v "$BINARY_NAME" &>/dev/null; then
+  warn "$BINARY_NAME installed to $INSTALL_DIR but it's not in your PATH."
   warn "Add to your shell profile: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-VERSION=$(orrery --version 2>/dev/null || echo "installed")
+VERSION=$($BINARY_NAME --version 2>/dev/null || echo "installed")
 
 echo ""
 info "Orrery ${VERSION} installed."
 echo ""
 
-# Auto-run `orrery setup` — generates activate.sh, patches rc file, and
-# performs origin takeover. Setup itself skips interactive prompts when
-# /dev/tty is unavailable, so it's safe under `curl | bash`.
-if command -v orrery &>/dev/null; then
+# Auto-run setup — generates activate.sh, patches rc file with the
+# lazy-bootstrap stub, and performs origin takeover. Setup skips interactive
+# prompts when /dev/tty is unavailable, so it's safe under `curl | bash`.
+if command -v "$BINARY_NAME" &>/dev/null; then
   info "Running orrery setup..."
   echo ""
-  orrery setup || warn "orrery setup exited with a non-zero status — run it manually later."
+  "$BINARY_NAME" setup || warn "orrery setup exited with a non-zero status — run it manually later."
 fi
 
 echo ""
