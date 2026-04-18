@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.3.2
+
+- **Fix `orrery info origin` claude missing email/plan.** Under `origin` `CLAUDE_CONFIG_DIR` is unset — Claude stores its credential under the default Keychain entry and `~/.claude.json` at home root, not inside the managed dir. `orrery info` and `orrery auth store` now follow this convention for origin claude lookup.
+- **Claude credential lookup on Linux.** Reads `{configDir}/.credentials.json` (Claude Code's non-macOS format) instead of falling through to macOS Keychain code.
+- **`orrery create --clone` copies only useful settings.** Skips cache/telemetry/session-ephemeral dirs. Only `settings.json`, `commands/`, `skills/`, `plugins/`, `agents/`, `CLAUDE.md`, and `statusline.sh` carry over.
+- **Claude install uses the native installer.** `orrery setup` / `orrery tools add` switch from `npm install -g` to `curl -fsSL https://claude.ai/install.sh | bash`. Install errors now surface the manual install command on failure.
+- **Docs.** GitHub Pages aligned with README — added "The Model" section (Environment / Session / MCP Delegation) and origin management commands (`orrery origin status/release/uninstall`) in the Origin section.
+
 ## v2.3.1
 
 - **`orrery auth show` renamed to `orrery auth store`.** Reflects that the command displays credential store locations (keychain service name, file path, masked API key). Removed separate `--filename` and `--masked-key` flags — all store info is shown together.

@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.3.1</div>
+  <div class="badge">v2.3.2</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1060,13 +1060,23 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.3.1</span>
+        <span class="changelog-ver">v2.3.2</span>
         <span class="changelog-new">最新</span>
+        <h3>Origin claude 修正 · Linux credential 支援 · clone 精簡 · Claude 改用官方 installer</h3>
+      </div>
+      <p class="changelog-body">修正 <code>orrery info origin</code> 與 <code>orrery auth store --env origin</code> 的 Claude 查詢：origin 環境下 <code>CLAUDE_CONFIG_DIR</code> 是 unset，Claude 會用「系統預設」來存 credential — Keychain service 沒有 hash 後綴、<code>.claude.json</code> 放在家目錄根（不是 managed dir 內）。現在兩個指令都按照這個慣例查詢，Claude 的 email / plan / keychain 名稱都能正確顯示。</p>
+      <p class="changelog-body">Linux 上 Claude credential 查詢改讀 <code>{configDir}/.credentials.json</code>（Claude Code 在非 macOS 平台的 JSON 格式），不再誤用 macOS Keychain 路徑。</p>
+      <p class="changelog-body"><code>orrery create --clone</code> 改為只複製真正有用的設定：跳過 cache、agent-memory、telemetry、usage-data、statsig、paste-cache、shell-snapshots、history.jsonl、file-history、debug、downloads、plans、tasks、todos。只有 <code>settings.json</code>、<code>commands/</code>、<code>skills/</code>、<code>plugins/</code>、<code>agents/</code>、<code>CLAUDE.md</code>、<code>statusline.sh</code> 會帶過去。</p>
+      <p class="changelog-body"><code>orrery setup</code> / <code>orrery tools add</code> 安裝 Claude 改用官方 installer（<code>curl -fsSL https://claude.ai/install.sh | bash</code>），取代原本的 <code>npm install -g</code>。安裝失敗時訊息會顯示可手動執行的指令，而不是 enum case 的原始字串。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.3.1</span>
         <h3><code>orrery auth store</code> — 查看各工具的 credential 儲存位置</h3>
       </div>
       <p class="changelog-body">新增 <code>orrery auth store</code>，顯示每個工具 credential 實際存放的位置：Claude 顯示 macOS Keychain 的 service 名稱（<code>Claude Code-credentials-{hash}</code>）；Codex 與 Gemini 顯示 credential 檔案路徑（<code>auth.json</code> / <code>oauth_creds.json</code>）。若工具是用 API key 登入，也會一併顯示 masked key（前 4 碼 + <code>****</code>）。支援 <code>--env &lt;name&gt;</code> 指定環境，以及 <code>--claude</code> / <code>--codex</code> / <code>--gemini</code> 篩選單一工具 — 指定 tool flag 時輸出會切換為純值，方便腳本擷取。</p>
       <p class="changelog-body"><code>orrery info</code> 在每個工具的 summary 底下也加了 credential-store 子行（Claude 顯示 <code>keychain: …</code>，Codex/Gemini 顯示 <code>file: …</code>），API key 登入時 masked key 也會出現在 summary 裡。</p>
-      <p class="changelog-body">修正 <code>orrery info origin</code> 與 <code>orrery auth store --env origin</code> 的 Claude 查詢：origin 環境下 <code>CLAUDE_CONFIG_DIR</code> 是 unset，Claude 會用「系統預設」來存 credential — Keychain service 沒有 hash 後綴、<code>.claude.json</code> 放在家目錄根（不是 managed dir 內）。現在兩個指令都按照這個慣例查詢，Claude 的 email / plan / keychain 名稱都能正確顯示。</p>
     </article>
 
     <article class="changelog-entry">
