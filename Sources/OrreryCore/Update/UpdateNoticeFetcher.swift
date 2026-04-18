@@ -30,3 +30,43 @@ struct SemanticVersion: Equatable, Comparable {
         return lhs.patch < rhs.patch
     }
 }
+
+struct VersionConstraint: Equatable {
+    enum Operator: Equatable {
+        case lt, lte, eq, gte, gt
+    }
+
+    let op: Operator
+    let version: SemanticVersion
+
+    init(op: Operator, version: SemanticVersion) {
+        self.op = op
+        self.version = version
+    }
+
+    init?(_ raw: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        // Order matters: longer prefixes first
+        let prefixes: [(String, Operator)] = [
+            ("<=", .lte), (">=", .gte), ("<", .lt), (">", .gt), ("=", .eq)
+        ]
+        for (prefix, op) in prefixes where trimmed.hasPrefix(prefix) {
+            let rest = trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+            guard let version = SemanticVersion(rest) else { return nil }
+            self.op = op
+            self.version = version
+            return
+        }
+        return nil
+    }
+
+    func isSatisfied(by current: SemanticVersion) -> Bool {
+        switch op {
+        case .lt:  return current <  version
+        case .lte: return current <= version
+        case .eq:  return current == version
+        case .gte: return current >= version
+        case .gt:  return current >  version
+        }
+    }
+}
