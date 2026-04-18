@@ -15,6 +15,14 @@ public struct CheckUpdateCommand: ParsableCommand {
         let current = Self.currentVersion()
         guard latest != current else { return }
         print(L10n.Update.notice(current: current, latest: latest))
+
+        // Dynamic notice — best-effort, always silent on failure.
+        // Per spec: unparseable current version is treated as 0.0.0.
+        let currentSemVer = SemanticVersion(current) ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+        if let extra = UpdateNoticeFetcher.production().fetch(currentVersion: currentSemVer) {
+            print("")
+            print(extra)
+        }
     }
 
     private static func currentVersion() -> String {
