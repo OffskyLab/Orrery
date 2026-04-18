@@ -80,3 +80,100 @@ struct VersionConstraintTests {
         #expect(!VersionConstraint(">2.3.0")!.isSatisfied(by: v230))
     }
 }
+
+@Suite("UpdateNotice")
+struct UpdateNoticeTests {
+
+    @Test("parses well-formed frontmatter and body")
+    func parsesWellFormed() {
+        let raw = """
+        ---
+        applies-to: <2.3.0
+        ---
+        Reinstall via install.sh.
+        """
+        let notice = UpdateNotice.parse(raw)
+        #expect(notice != nil)
+        #expect(notice?.body == "Reinstall via install.sh.")
+        #expect(notice?.constraints.count == 1)
+        #expect(notice?.constraints.first?.op == .lt)
+    }
+
+    @Test("parses AND-combined constraints")
+    func parsesAndCombined() {
+        let raw = """
+        ---
+        applies-to: >=2.0.0, <2.3.0
+        ---
+        body
+        """
+        let notice = UpdateNotice.parse(raw)
+        #expect(notice?.constraints.count == 2)
+        #expect(notice?.constraints[0].op == .gte)
+        #expect(notice?.constraints[1].op == .lt)
+    }
+
+    @Test("returns nil when frontmatter is missing")
+    func rejectsMissingFrontmatter() {
+        #expect(UpdateNotice.parse("no frontmatter here") == nil)
+    }
+
+    @Test("returns nil when applies-to is absent")
+    func rejectsMissingAppliesTo() {
+        let raw = """
+        ---
+        other-key: foo
+        ---
+        body
+        """
+        #expect(UpdateNotice.parse(raw) == nil)
+    }
+
+    @Test("returns nil on malformed constraint")
+    func rejectsBadConstraint() {
+        let raw = """
+        ---
+        applies-to: ~2.3.0
+        ---
+        body
+        """
+        #expect(UpdateNotice.parse(raw) == nil)
+    }
+
+    @Test("preserves --- inside body")
+    func preservesInnerDashes() {
+        let raw = """
+        ---
+        applies-to: <2.3.0
+        ---
+        first line
+        ---
+        second line after horizontal rule
+        """
+        let notice = UpdateNotice.parse(raw)
+        #expect(notice?.body.contains("---") == true)
+        #expect(notice?.body.contains("second line") == true)
+    }
+
+    @Test("tolerates CRLF line endings")
+    func tolerantCRLF() {
+        let raw = "---\r\napplies-to: <2.3.0\r\n---\r\nbody line\r\n"
+        let notice = UpdateNotice.parse(raw)
+        #expect(notice != nil)
+        #expect(notice?.body.contains("body line") == true)
+    }
+
+    @Test("applies(to:) evaluates AND across constraints")
+    func appliesToAND() {
+        let raw = """
+        ---
+        applies-to: >=2.0.0, <2.3.0
+        ---
+        body
+        """
+        let notice = UpdateNotice.parse(raw)!
+        #expect(notice.applies(to: SemanticVersion("2.1.0")!))
+        #expect(!notice.applies(to: SemanticVersion("1.9.0")!))
+        #expect(!notice.applies(to: SemanticVersion("2.3.0")!))
+    }
+}
