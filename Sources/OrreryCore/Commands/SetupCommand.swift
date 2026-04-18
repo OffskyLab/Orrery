@@ -143,38 +143,101 @@ public struct SetupCommand: ParsableCommand {
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {
-        let sourceLine = "source \"\(activatePath)\""
-        let oldEvalLine = #"eval "$(orrery setup)""#
+        // Lazy-bootstrap stub: defines `orrery()` as a one-liner that sources
+        // activate.sh (which overwrites the function with the real one) and
+        // re-invokes it. The second `orrery "$@"` lookup resolves to the newly
+        // defined function because function names are resolved at call time.
+        //
+        // Why stub instead of `source activate.sh`:
+        //   1. Shell startup stays fast — activate.sh is only loaded when the
+        //      user actually invokes `orrery`.
+        //   2. Since the binary was renamed `orrery-bin`, calling `orrery`
+        //      MUST go through the shell function. A stub guarantees one is
+        //      always defined, even before activate.sh is sourced.
+        let stubMarker = "# orrery shell integration (lazy bootstrap)"
+        let stub = """
+        \(stubMarker)
+        orrery() {
+          source "\(activatePath)"
+          orrery "$@"
+        }
+        """
+
         var existing = ""
         if FileManager.default.fileExists(atPath: url.path) {
             existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         }
 
-        // Already has the source line
-        if existing.contains(sourceLine) {
-            stderrWrite(L10n.Setup.alreadyPresent(url.path))
-            return
-        }
+        // Strip every pre-existing orrery block so the final rc file contains
+        // exactly one authoritative stub. Catches both legacy shapes:
+        //   - "# orrery shell integration\nsource \".../activate.sh\""
+        //   - `eval "$(orrery setup)"`
+        // and any previous lazy-bootstrap block (even with a stale activatePath).
+        let hadPrevious = containsOrreryBlock(existing)
+        let cleaned = stripOrreryBlocks(existing)
 
-        // Migrate old eval line to source line
-        if existing.contains(oldEvalLine) {
-            let migrated = existing.replacingOccurrences(of: oldEvalLine, with: sourceLine)
-            do {
-                try migrated.write(to: url, atomically: true, encoding: .utf8)
-                stderrWrite(L10n.Setup.migratedRc(url.path))
-            } catch {
-                stderrWrite(L10n.Setup.failedToWrite(url.path, error.localizedDescription))
-            }
-            return
-        }
+        // Fresh append of the canonical stub.
+        var trailing = cleaned
+        while trailing.hasSuffix("\n\n") { trailing.removeLast() }
+        let appended = trailing + (trailing.hasSuffix("\n") ? "\n" : "\n\n") + stub + "\n"
 
-        // Fresh install
-        let appended = existing + "\n# orrery shell integration\n\(sourceLine)\n"
         do {
             try appended.write(to: url, atomically: true, encoding: .utf8)
-            stderrWrite(L10n.Setup.addedTo(url.path))
+            if hadPrevious {
+                stderrWrite(L10n.Setup.migratedRc(url.path))
+            } else {
+                stderrWrite(L10n.Setup.addedTo(url.path))
+            }
         } catch {
             stderrWrite(L10n.Setup.failedToWrite(url.path, error.localizedDescription))
         }
+    }
+
+    /// True when `text` contains at least one orrery-integration block in any
+    /// of the known shapes.
+    private static func containsOrreryBlock(_ text: String) -> Bool {
+        text.contains("# orrery shell integration") || text.contains(#"eval "$(orrery setup)""#)
+    }
+
+    /// Remove every legacy / stale orrery integration block from `text`.
+    /// Handles the three shapes we've shipped:
+    ///   1. `# orrery shell integration\nsource "…/activate.sh"`       (pre-stub)
+    ///   2. `eval "$(orrery setup)"`                                   (oldest)
+    ///   3. `# orrery shell integration (lazy bootstrap)\norrery() { … }` (current)
+    /// Any trailing blank lines left behind are collapsed by the caller.
+    private static func stripOrreryBlocks(_ text: String) -> String {
+        let lines = text.components(separatedBy: "\n")
+        var out: [String] = []
+        var i = 0
+        while i < lines.count {
+            let line = lines[i]
+            // Shape 3: lazy-bootstrap — comment + function body + closing brace
+            if line.trimmingCharacters(in: .whitespaces) == "# orrery shell integration (lazy bootstrap)" {
+                i += 1
+                while i < lines.count && lines[i].trimmingCharacters(in: .whitespaces) != "}" {
+                    i += 1
+                }
+                if i < lines.count { i += 1 } // consume closing brace
+                continue
+            }
+            // Shape 1: plain source line under the legacy comment header
+            if line.trimmingCharacters(in: .whitespaces) == "# orrery shell integration" {
+                i += 1
+                // consume the single source line (and any trailing continuation)
+                while i < lines.count
+                    && (lines[i].contains("source") && lines[i].contains("activate.sh")) {
+                    i += 1
+                }
+                continue
+            }
+            // Shape 2: one-liner eval
+            if line.contains(#"eval "$(orrery setup)""#) {
+                i += 1
+                continue
+            }
+            out.append(line)
+            i += 1
+        }
+        return out.joined(separator: "\n")
     }
 }

@@ -125,7 +125,8 @@ wsl --install
 git clone https://github.com/OffskyLab/Orrery.git
 cd Orrery
 swift build -c release
-cp .build/release/orrery /usr/local/bin/orrery
+cp .build/release/orrery-bin /usr/local/bin/orrery-bin
+orrery-bin setup   # 在 rc 檔寫入 `orrery` shell function
 ```
 
 ### Shell 整合

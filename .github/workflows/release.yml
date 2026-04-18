@@ -25,9 +25,9 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          cp .build/release/orrery dist/orrery
-          chmod +x dist/orrery
-          tar -czf orrery-darwin-arm64.tar.gz -C dist orrery
+          cp .build/release/orrery-bin dist/orrery-bin
+          chmod +x dist/orrery-bin
+          tar -czf orrery-darwin-arm64.tar.gz -C dist orrery-bin
       - uses: actions/upload-artifact@v4
         with:
           name: orrery-darwin-arm64
@@ -44,15 +44,15 @@ jobs:
       - name: Package tar.gz
         run: |
           mkdir -p dist
-          cp .build/release/orrery dist/orrery
-          chmod +x dist/orrery
-          tar -czf orrery-linux-x86_64.tar.gz -C dist orrery
+          cp .build/release/orrery-bin dist/orrery-bin
+          chmod +x dist/orrery-bin
+          tar -czf orrery-linux-x86_64.tar.gz -C dist orrery-bin
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
-          cp .build/release/orrery deb/usr/local/bin/orrery
-          chmod +x deb/usr/local/bin/orrery
+          cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
+          chmod +x deb/usr/local/bin/orrery-bin
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
@@ -67,7 +67,9 @@ jobs:
           sed -i 's/^          //' deb/DEBIAN/control
           cat > deb/DEBIAN/postinst <<'POSTINST'
           #!/bin/sh
-          orrery setup 2>/dev/null || true
+          # Remove legacy binary (< 2.4) so users can't bypass the shell function.
+          rm -f /usr/local/bin/orrery
+          orrery-bin setup 2>/dev/null || true
           POSTINST
           sed -i 's/^          //' deb/DEBIAN/postinst
           chmod 755 deb/DEBIAN/postinst
@@ -90,15 +92,15 @@ jobs:
       - name: Package tar.gz
         run: |
           mkdir -p dist
-          cp .build/release/orrery dist/orrery
-          chmod +x dist/orrery
-          tar -czf orrery-linux-arm64.tar.gz -C dist orrery
+          cp .build/release/orrery-bin dist/orrery-bin
+          chmod +x dist/orrery-bin
+          tar -czf orrery-linux-arm64.tar.gz -C dist orrery-bin
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
-          cp .build/release/orrery deb/usr/local/bin/orrery
-          chmod +x deb/usr/local/bin/orrery
+          cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
+          chmod +x deb/usr/local/bin/orrery-bin
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
@@ -113,7 +115,9 @@ jobs:
           sed -i 's/^          //' deb/DEBIAN/control
           cat > deb/DEBIAN/postinst <<'POSTINST'
           #!/bin/sh
-          orrery setup 2>/dev/null || true
+          # Remove legacy binary (< 2.4) so users can't bypass the shell function.
+          rm -f /usr/local/bin/orrery
+          orrery-bin setup 2>/dev/null || true
           POSTINST
           sed -i 's/^          //' deb/DEBIAN/postinst
           chmod 755 deb/DEBIAN/postinst

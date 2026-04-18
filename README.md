@@ -125,7 +125,8 @@ Requires Swift 6.0+.
 git clone https://github.com/OffskyLab/Orrery.git
 cd Orrery
 swift build -c release
-cp .build/release/orrery /usr/local/bin/orrery
+cp .build/release/orrery-bin /usr/local/bin/orrery-bin
+orrery-bin setup   # writes the `orrery` shell function into your rc file
 ```
 
 ### Shell integration

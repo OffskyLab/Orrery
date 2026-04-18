@@ -148,10 +148,10 @@ public struct MCPServer {
     private static func callTool(name: String, arguments: [String: Any]) -> [String: Any] {
         switch name {
         case "orrery_list":
-            return execCommand(["orrery", "list"])
+            return execCommand(["orrery-bin", "list"])
 
         case "orrery_sessions":
-            var args = ["orrery", "sessions"]
+            var args = ["orrery-bin", "sessions"]
             if let tool = arguments["tool"] as? String {
                 args.append("--\(tool)")
             }
@@ -161,7 +161,7 @@ public struct MCPServer {
             guard let prompt = arguments["prompt"] as? String else {
                 return toolError("Missing required parameter: prompt")
             }
-            var args = ["orrery", "delegate"]
+            var args = ["orrery-bin", "delegate"]
             if let env = arguments["environment"] as? String {
                 args += ["-e", env]
             }
@@ -172,7 +172,7 @@ public struct MCPServer {
             return execCommand(args)
 
         case "orrery_current":
-            return execCommand(["orrery", "current"])
+            return execCommand(["orrery-bin", "current"])
 
         case "orrery_memory_read":
             return readMemory()

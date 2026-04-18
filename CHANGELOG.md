@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Binary renamed `orrery` → `orrery-bin`.** The `orrery` command is now exclusively a shell function (defined in `~/.orrery/activate.sh`), removing the class of bugs where users accidentally invoked the binary in a shell that hadn't sourced the activation script. The binary itself is an implementation detail called by the shell function.
+- **Lazy-bootstrap stub in rc file.** `orrery setup` now writes a tiny stub `orrery()` function to your rc file instead of a `source ~/.orrery/activate.sh` line. Shell startup is effectively free — activate.sh is loaded on first `orrery` invocation. Existing source lines / legacy `eval "$(orrery setup)"` shapes are migrated automatically.
+- **Install / upgrade cleanup.** Both `install.sh` and the Homebrew formula remove the legacy `/usr/local/bin/orrery` (and `/opt/homebrew/bin/orrery`) binary so the shell function is the only path. The install tarball now ships `orrery-bin`; `install.sh` also accepts older tarballs that still contain `orrery` so the transition doesn't brick existing curl installs.
+- **MCP integration points at `orrery-bin`.** `orrery mcp setup` registers `orrery-bin mcp-server` as the MCP server path, since MCP hosts launch servers as non-interactive subprocesses that never run the shell function.
+
 ## v2.3.3
 
 - **Install via curl script; APT dropped.** Recommended install is now `curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash` for macOS / Linux / WSL. Homebrew remains as an alternative for macOS. APT repo is retired.

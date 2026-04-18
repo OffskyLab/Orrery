@@ -5,7 +5,7 @@ let package = Package(
     name: "orrery",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "orrery", targets: ["orrery"]),
+        .executable(name: "orrery-bin", targets: ["orrery-bin"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
     ],
@@ -14,7 +14,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "orrery",
+            name: "orrery-bin",
             dependencies: ["OrreryCore"],
             path: "Sources/orrery"
         ),
