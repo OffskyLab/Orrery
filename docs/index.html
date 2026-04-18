@@ -662,6 +662,37 @@
   </div>
 </section>
 
+<!-- Core Concepts -->
+<section class="section" id="concepts">
+  <h2 class="section-title">The Model</h2>
+  <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
+    Orrery draws a clean line between <strong style="color:var(--text)">identity</strong>
+    (who you're logged in as) and <strong style="color:var(--text)">continuity</strong>
+    (what you were working on). Switch identity without losing context.
+  </p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">&#x1fa90;</span>
+      <h3>Environment</h3>
+      <p>Isolates <strong style="color:var(--text)">identity</strong>: accounts, credentials, per-tool config. Activated per-shell via <code>orrery use</code> so other terminal windows stay on their own environment.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f4ac;</span>
+      <h3>Session</h3>
+      <p>Represents <strong style="color:var(--text)">continuity</strong>: conversation history and project context. Shared across environments by default — <code>claude --resume</code> works after switching accounts.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f501;</span>
+      <h3>MCP Delegation</h3>
+      <p>Enables <strong style="color:var(--text)">coordination</strong> between environments. One Claude instance delegates a task to another running under a different account — multi-agent workflows with explicit identity boundaries.</p>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:2.5rem auto 0;font-size:.9rem">
+    Traditional tooling isolates dependencies (<code>virtualenv</code>) or runtime versions (<code>nvm</code>).
+    Orrery extends that idea to <strong style="color:var(--text)">AI identity, context, and coordination</strong>.
+  </p>
+</section>
+
 <!-- How it works -->
 <section class="how-section">
   <h2 class="section-title">How it works</h2>
@@ -724,6 +755,24 @@
       under your default system credentials without switching accounts or polluting any
       Orrery environment.
     </p>
+    <p style="margin-top:1rem">
+      <strong style="color:var(--text)">Origin takeover.</strong>
+      <code>orrery setup</code> moves your existing tool configs
+      (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>) into
+      <code>~/.orrery/origin/</code> and replaces them with symlinks — your data is
+      untouched, it just lives where Orrery can manage and sync it. You can reverse
+      this at any time:
+    </p>
+    <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
+      <span class="prompt">$ </span>orrery origin status<br/>
+      <span style="color:var(--muted)"># show which tools are managed by Orrery</span><br/><br/>
+      <span class="prompt">$ </span>orrery origin release<br/>
+      <span style="color:var(--muted)"># restore all tools to their original locations</span><br/><br/>
+      <span class="prompt">$ </span>orrery origin release --claude<br/>
+      <span style="color:var(--muted)"># release just Claude</span><br/><br/>
+      <span class="prompt">$ </span>orrery uninstall<br/>
+      <span style="color:var(--muted)"># release everything + remove shell integration</span>
+    </div>
   </div>
 </section>
 
@@ -1029,6 +1078,16 @@
       <div class="changelog-head">
         <span class="changelog-ver">v2.3.1</span>
         <span class="changelog-new">latest</span>
+        <h3><code>orrery auth store</code> — inspect credential storage per tool</h3>
+      </div>
+      <p class="changelog-body">New <code>orrery auth store</code> command displays where each tool's credential actually lives: for Claude, the macOS Keychain service name (<code>Claude Code-credentials-{hash}</code>); for Codex and Gemini, the credential file path (<code>auth.json</code> / <code>oauth_creds.json</code>). When the tool uses API-key auth, the masked key (first 4 chars + <code>****</code>) is shown too. Supports <code>--env &lt;name&gt;</code> to target a specific environment and <code>--claude</code> / <code>--codex</code> / <code>--gemini</code> to filter by tool — passing a tool flag switches output to plain values so it's easy to capture from scripts.</p>
+      <p class="changelog-body"><code>orrery info</code> now also shows the credential-store line per tool as a sub-line under the existing summary (<code>keychain: …</code> for Claude, <code>file: …</code> for Codex/Gemini), and masked API keys are included in the tool summary when present.</p>
+      <p class="changelog-body">Fixed <code>orrery info origin</code> and <code>orrery auth store --env origin</code> for Claude: under <code>origin</code> <code>CLAUDE_CONFIG_DIR</code> is unset, so Claude stores its credential under the default Keychain service and <code>~/.claude.json</code> at home root — not inside the managed dir. Both commands now follow the unset-dir conventions in this case, so Claude's email / plan / keychain name resolve correctly.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.4</span>
         <h3><code>orrery setup</code>: KILL crash fix + origin memory/session support</h3>
       </div>
       <p class="changelog-body">All <code>FileHandle.write(Data(...))</code> calls — the ObjC API that raises <code>NSFileHandleOperationException</code> on write failure, an exception Swift cannot catch — have been replaced with posix <code>write()</code> syscall helpers in a new <code>PosixIO.swift</code> module. On any terminal write failure this previously caused SIGABRT, visible as <code>KILL</code> in iTerm2. The posix syscall silently returns a negative value and never throws. 14 files updated.</p>

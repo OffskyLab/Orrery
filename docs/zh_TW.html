@@ -662,6 +662,37 @@
   </div>
 </section>
 
+<!-- Core Concepts -->
+<section class="section" id="concepts">
+  <h2 class="section-title">核心模型</h2>
+  <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
+    Orrery 在<strong style="color:var(--text)">身分</strong>（你以誰的身分登入）與
+    <strong style="color:var(--text)">延續性</strong>（你正在做的事情）之間畫出清楚的界線。
+    切換身分，而不失去 context。
+  </p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">&#x1fa90;</span>
+      <h3>Environment</h3>
+      <p>隔離<strong style="color:var(--text)">身分</strong>：帳號、憑證、各工具的設定。透過 <code>orrery use</code> 以 per-shell 啟用 — 其他 terminal 視窗維持自己的環境，互不影響。</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f4ac;</span>
+      <h3>Session</h3>
+      <p>代表<strong style="color:var(--text)">延續性</strong>：對話紀錄與專案 context。預設在所有環境之間共享 — 切換帳號之後 <code>claude --resume</code> 仍然能接續。</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f501;</span>
+      <h3>MCP Delegation</h3>
+      <p>在環境之間<strong style="color:var(--text)">協作</strong>。一個 Claude 實例把任務委派給另一個在不同帳號下執行的實例 — multi-agent workflow，身分邊界清晰。</p>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:2.5rem auto 0;font-size:.9rem">
+    傳統工具隔離的是相依性（<code>virtualenv</code>）或 runtime 版本（<code>nvm</code>）。
+    Orrery 把這個概念延伸到 <strong style="color:var(--text)">AI 身分、context 與協作</strong>。
+  </p>
+</section>
+
 <!-- How it works -->
 <section class="how-section">
   <h2 class="section-title">運作方式</h2>
@@ -723,6 +754,23 @@
       這讓 <code>origin</code> 成為一個乾淨的退出點：
       想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orrery 環境。
     </p>
+    <p style="margin-top:1rem">
+      <strong style="color:var(--text)">Origin 接管。</strong>
+      <code>orrery setup</code> 會把原本的工具設定
+      （<code>~/.claude/</code>、<code>~/.codex/</code>、<code>~/.gemini/</code>）搬進
+      <code>~/.orrery/origin/</code>，並在原位建立 symlink — 資料本身完全沒動，
+      只是改住在 Orrery 可以管理與同步的位置。隨時可以還原：
+    </p>
+    <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
+      <span class="prompt">$ </span>orrery origin status<br/>
+      <span style="color:var(--muted)"># 查看目前哪些工具被 Orrery 管理</span><br/><br/>
+      <span class="prompt">$ </span>orrery origin release<br/>
+      <span style="color:var(--muted)"># 把所有工具還原到原本的位置</span><br/><br/>
+      <span class="prompt">$ </span>orrery origin release --claude<br/>
+      <span style="color:var(--muted)"># 只釋放 Claude</span><br/><br/>
+      <span class="prompt">$ </span>orrery uninstall<br/>
+      <span style="color:var(--muted)"># 釋放全部 + 移除 shell 整合</span>
+    </div>
   </div>
 </section>
 
@@ -1014,6 +1062,16 @@
       <div class="changelog-head">
         <span class="changelog-ver">v2.3.1</span>
         <span class="changelog-new">最新</span>
+        <h3><code>orrery auth store</code> — 查看各工具的 credential 儲存位置</h3>
+      </div>
+      <p class="changelog-body">新增 <code>orrery auth store</code>，顯示每個工具 credential 實際存放的位置：Claude 顯示 macOS Keychain 的 service 名稱（<code>Claude Code-credentials-{hash}</code>）；Codex 與 Gemini 顯示 credential 檔案路徑（<code>auth.json</code> / <code>oauth_creds.json</code>）。若工具是用 API key 登入，也會一併顯示 masked key（前 4 碼 + <code>****</code>）。支援 <code>--env &lt;name&gt;</code> 指定環境，以及 <code>--claude</code> / <code>--codex</code> / <code>--gemini</code> 篩選單一工具 — 指定 tool flag 時輸出會切換為純值，方便腳本擷取。</p>
+      <p class="changelog-body"><code>orrery info</code> 在每個工具的 summary 底下也加了 credential-store 子行（Claude 顯示 <code>keychain: …</code>，Codex/Gemini 顯示 <code>file: …</code>），API key 登入時 masked key 也會出現在 summary 裡。</p>
+      <p class="changelog-body">修正 <code>orrery info origin</code> 與 <code>orrery auth store --env origin</code> 的 Claude 查詢：origin 環境下 <code>CLAUDE_CONFIG_DIR</code> 是 unset，Claude 會用「系統預設」來存 credential — Keychain service 沒有 hash 後綴、<code>.claude.json</code> 放在家目錄根（不是 managed dir 內）。現在兩個指令都按照這個慣例查詢，Claude 的 email / plan / keychain 名稱都能正確顯示。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.2.4</span>
         <h3><code>orrery setup</code>：修正 KILL crash + origin 環境支援 memory/session 設定</h3>
       </div>
       <p class="changelog-body">所有 <code>FileHandle.write(Data(...))</code>（ObjC API）已全數換成 posix <code>write()</code> syscall，集中到新的 <code>PosixIO.swift</code>。ObjC API 在寫入失敗時會拋出 <code>NSFileHandleOperationException</code>，Swift 無法捕捉，結果是 SIGABRT — 在 iTerm2 裡看起來就是 <code>KILL</code>。posix syscall 遇到失敗只傳回負值，不拋例外。共修改 14 個檔案。</p>
