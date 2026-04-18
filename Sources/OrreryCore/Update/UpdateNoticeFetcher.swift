@@ -124,3 +124,45 @@ struct UpdateNotice: Equatable {
         constraints.allSatisfy { $0.isSatisfied(by: current) }
     }
 }
+
+struct NoticeCache {
+    struct Entry: Codable, Equatable {
+        let etag: String?
+        let body: String
+        let appliesToRaw: String
+        let fetchedAt: Int
+
+        enum CodingKeys: String, CodingKey {
+            case etag
+            case body
+            case appliesToRaw = "applies_to"
+            case fetchedAt = "fetched_at"
+        }
+    }
+
+    let url: URL
+
+    init(url: URL) {
+        self.url = url
+    }
+
+    func read() -> Entry? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(Entry.self, from: data)
+    }
+
+    func write(_ entry: Entry) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(entry) else { return }
+        // Ensure parent directory exists — callers may pass a path under
+        // $ORRERY_HOME which exists, but tests pass temporaryDirectory too.
+        let parent = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
+    }
+
+    func delete() {
+        try? FileManager.default.removeItem(at: url)
+    }
+}
