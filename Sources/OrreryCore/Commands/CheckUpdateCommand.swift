@@ -12,7 +12,7 @@ public struct CheckUpdateCommand: ParsableCommand {
 
     public func run() throws {
         guard let latest = Self.fetchLatestVersion() else { return }
-        let current = Self.currentVersion()
+        let current = OrreryVersion.current
         guard latest != current else { return }
         print(L10n.Update.notice(current: current, latest: latest))
 
@@ -23,10 +23,6 @@ public struct CheckUpdateCommand: ParsableCommand {
             print("")
             print(extra)
         }
-    }
-
-    private static func currentVersion() -> String {
-        OrreryCommand.configuration.version
     }
 
     private static func fetchLatestVersion() -> String? {

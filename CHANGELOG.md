@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Dynamic update notice.** When `orrery _check-update` detects a newer release, it now also fetches `docs/update-notice.md` from the repo's `main` branch and appends any matching message to the existing "new version available" line. Notices are filtered by an `applies-to:` frontmatter constraint (supports `<`, `<=`, `=`, `>=`, `>` with comma-separated AND), cached with HTTP `If-None-Match` at `$ORRERY_HOME/.update-notice-cache.json`, and served from cache on transient network failure. Failure is always silent — users never see errors from this path. Shipped with a dormant `docs/update-notice.md` (`applies-to: <0.0.1`) so maintainers can activate it by editing one file.
+
 ## v2.4.1
 
 - **`activate.sh` self-heals after `brew upgrade`.** The generated script now carries a version stamp on the first line. On every new shell, `_orrery_init` compares the stamp against the installed binary version. If they differ — e.g. because `post_install` was silently skipped — it runs `orrery-bin setup` to regenerate and immediately re-sources the file, so the shell heals itself without any manual intervention.
