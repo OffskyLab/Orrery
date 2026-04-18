@@ -733,33 +733,29 @@
 <section class="origin-section" id="origin">
   <h2 class="section-title"><code style="font-size:1.1rem;color:var(--accent2)">origin</code> 環境</h2>
   <div class="origin-callout">
-    <h3>不只是另一個環境 — 這是系統的原始狀態</h3>
+    <h3>Orrery 預設接管的環境</h3>
     <p>
-      <code>origin</code> 是 Orrery 的保留名稱，代表未經任何修改的系統原始環境。
-      執行 <code>orrery use origin</code>（或 <code>orrery deactivate</code>）後，
-      Orrery 會清除所有隔離設定，讓工具回到系統全域設定，
-      就像 Orrery 從未安裝過一樣。
+      <code>origin</code> 是 Orrery 首次執行 <code>orrery setup</code> 時接管的環境。
+      原本的工具設定（<code>~/.claude/</code>、<code>~/.codex/</code>、<code>~/.gemini/</code>）
+      會被搬進 <code>~/.orrery/origin/</code>，原路徑改為 symlink —
+      資料本身完全沒動，只是改住在 Orrery 可以管理與同步的位置。
     </p>
     <p>
-      與一般環境不同，<code>origin</code> 無法被刪除、重新命名，
-      也不支援自訂工具設定或環境變數 — 它始終使用系統的原生 config 路徑。
+      <code>orrery use origin</code>（或 <code>orrery deactivate</code>）會切回這個預設環境：
+      Orrery 專屬的變數（如 <code>CLAUDE_CONFIG_DIR</code>）會被 unset，
+      工具走自己原生的路徑 — 而這些路徑透過 symlink 指向 Orrery 管理的 config。
+      從使用感受上像「離開 Orrery」，但實際上仍在 Orrery 管理的儲存之下。
     </p>
     <p>
-      不過，<code>origin</code> 支援 memory 與 session 設定。
-      可以用 <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code>
-      設定 memory 的存放位置，也可以在 <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。
+      與一般環境不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config 路徑。
+      不過它支援 memory 與 session 設定：可以用 <code>orrery memory isolate</code> /
+      <code>share</code> / <code>storage</code> 控制 memory 存放位置，
+      也可以在 <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。
       執行 <code>orrery info origin</code> 查看完整狀態。
     </p>
-    <p>
-      這讓 <code>origin</code> 成為一個乾淨的退出點：
-      想用系統預設憑證執行指令時，不需要切換帳號，也不會影響任何 Orrery 環境。
-    </p>
     <p style="margin-top:1rem">
-      <strong style="color:var(--text)">Origin 接管。</strong>
-      <code>orrery setup</code> 會把原本的工具設定
-      （<code>~/.claude/</code>、<code>~/.codex/</code>、<code>~/.gemini/</code>）搬進
-      <code>~/.orrery/origin/</code>，並在原位建立 symlink — 資料本身完全沒動，
-      只是改住在 Orrery 可以管理與同步的位置。隨時可以還原：
+      <strong style="color:var(--text)">還原接管。</strong>
+      想讓某個工具完全脫離 Orrery（回到 setup 前的狀態），執行 release：
     </p>
     <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
       <span class="prompt">$ </span>orrery origin status<br/>
