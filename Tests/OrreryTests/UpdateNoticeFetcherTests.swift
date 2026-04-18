@@ -37,3 +37,46 @@ struct SemanticVersionTests {
         #expect(SemanticVersion("2.4.0")! == SemanticVersion("2.4.0")!)
     }
 }
+
+@Suite("VersionConstraint")
+struct VersionConstraintTests {
+
+    @Test("parses each operator")
+    func parsesOperators() {
+        #expect(VersionConstraint("<2.3.0")?.op == .lt)
+        #expect(VersionConstraint("<=2.3.0")?.op == .lte)
+        #expect(VersionConstraint("=2.3.0")?.op == .eq)
+        #expect(VersionConstraint(">=2.3.0")?.op == .gte)
+        #expect(VersionConstraint(">2.3.0")?.op == .gt)
+    }
+
+    @Test("tolerates whitespace around operator")
+    func tolerantWhitespace() {
+        #expect(VersionConstraint("  < 2.3.0 ")?.op == .lt)
+        #expect(VersionConstraint(">=  2.3.0")?.version == SemanticVersion("2.3.0"))
+    }
+
+    @Test("returns nil for missing operator")
+    func rejectsMissingOperator() {
+        #expect(VersionConstraint("2.3.0") == nil)
+    }
+
+    @Test("returns nil for malformed version")
+    func rejectsMalformedVersion() {
+        #expect(VersionConstraint("<2.3") == nil)
+        #expect(VersionConstraint("<abc") == nil)
+    }
+
+    @Test("evaluates each operator correctly")
+    func evaluates() {
+        let v230 = SemanticVersion("2.3.0")!
+        #expect(VersionConstraint("<2.3.0")!.isSatisfied(by: SemanticVersion("2.2.9")!))
+        #expect(!VersionConstraint("<2.3.0")!.isSatisfied(by: v230))
+        #expect(VersionConstraint("<=2.3.0")!.isSatisfied(by: v230))
+        #expect(VersionConstraint("=2.3.0")!.isSatisfied(by: v230))
+        #expect(!VersionConstraint("=2.3.0")!.isSatisfied(by: SemanticVersion("2.3.1")!))
+        #expect(VersionConstraint(">=2.3.0")!.isSatisfied(by: v230))
+        #expect(VersionConstraint(">2.3.0")!.isSatisfied(by: SemanticVersion("2.3.1")!))
+        #expect(!VersionConstraint(">2.3.0")!.isSatisfied(by: v230))
+    }
+}
