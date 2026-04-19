@@ -74,7 +74,7 @@ All new code lives under `Sources/OrreryCore/Update/`:
 | `UpdateNotice` | Value type. `appliesTo: [VersionConstraint]`, `body: String`. Has `parse(_ raw: String) -> UpdateNotice?` and `applies(to currentVersion: SemanticVersion) -> Bool`. |
 | `VersionConstraint` | `(op: Operator, version: SemanticVersion)`. Five operators. |
 | `SemanticVersion` | Lightweight `MAJOR.MINOR.PATCH`, `Comparable`. |
-| `NoticeCache` (file-private) | Reads/writes `$ORRERY_HOME/.update-notice-cache.json`. |
+| `NoticeCache` | Reads/writes `$ORRERY_HOME/.update-notice-cache.json`. Module-internal so unit tests can exercise the JSON round-trip directly via `@testable import`. |
 
 Modified:
 
@@ -108,15 +108,18 @@ Uses `curl` for consistency with existing `CheckUpdateCommand`. No `URLSession`.
 Request shape:
 
 ```sh
-curl -sf --max-time 5 \
+curl -s --max-time 5 \
+  -D <hdrfile> \
+  -o <bodyfile> \
   -w '%{http_code}' \
-  -o <tmpfile> \
   -H 'User-Agent: orrery-cli' \
   -H 'If-None-Match: <etag-if-cached>' \
   https://raw.githubusercontent.com/OffskyLab/Orrery/main/docs/update-notice.md
 ```
 
-Status code is captured from stdout; body is read from `<tmpfile>` (so it's clean of curl's own output).
+Status code is captured from stdout; body is read from `<bodyfile>`; the response `ETag` is parsed from `<hdrfile>` (curl's `-D` header dump).
+
+**Note on `-f`:** Intentionally omitted. `curl -f` causes non-2xx responses to produce exit code 22, which would hide the distinction between 404 (maps to `.gone`, deletes cache) and 5xx (maps to `.failed`, keeps cache). We rely on the explicit `%{http_code}` value to drive the `FetchResult` mapping.
 
 ### Outcome matrix
 

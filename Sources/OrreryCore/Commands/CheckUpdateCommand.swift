@@ -12,13 +12,17 @@ public struct CheckUpdateCommand: ParsableCommand {
 
     public func run() throws {
         guard let latest = Self.fetchLatestVersion() else { return }
-        let current = Self.currentVersion()
+        let current = OrreryVersion.current
         guard latest != current else { return }
         print(L10n.Update.notice(current: current, latest: latest))
-    }
 
-    private static func currentVersion() -> String {
-        OrreryCommand.configuration.version
+        // Dynamic notice — best-effort, always silent on failure.
+        // Per spec: unparseable current version is treated as 0.0.0.
+        let currentSemVer = SemanticVersion(current) ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+        if let extra = UpdateNoticeFetcher.production().fetch(currentVersion: currentSemVer) {
+            print("")
+            print(extra)
+        }
     }
 
     private static func fetchLatestVersion() -> String? {
