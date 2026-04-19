@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.4.0</div>
+  <div class="badge">v2.4.1</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1078,8 +1078,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.0</span>
+        <span class="changelog-ver">v2.4.1</span>
         <span class="changelog-new">latest</span>
+        <h3><code>activate.sh</code> self-heals on upgrade · clone skips account data · claude native installer</h3>
+      </div>
+      <p class="changelog-body"><code>activate.sh</code> now carries a version stamp on the first line. On every new shell, <code>_orrery_init</code> compares the stamp against the installed binary version. If they differ — e.g. because <code>post_install</code> was silently skipped after <code>brew upgrade</code> — it regenerates and re-sources the file immediately. Stale shells now heal without any manual intervention.</p>
+      <p class="changelog-body">Clone (settings copy during <code>orrery create</code> / <code>orrery tools add</code>) no longer carries over account-specific data. The blocklist grew from 4 items to 20: skips <code>cache/</code>, <code>agent-memory/</code>, <code>statsig/</code>, <code>telemetry/</code>, <code>usage-data/</code>, <code>mcp-needs-auth-cache.json</code>, <code>paste-cache/</code>, <code>shell-snapshots/</code>, <code>history.jsonl</code>, <code>file-history/</code>, <code>debug/</code>, <code>downloads/</code>, <code>plans/</code>, <code>tasks/</code>, <code>todos/</code>. Kept: <code>settings.json</code>, <code>commands/</code>, <code>skills/</code>, <code>plugins/</code>, <code>agents/</code>, <code>CLAUDE.md</code>, <code>statusline.sh</code>.</p>
+      <p class="changelog-body">Claude install command updated to the native installer (<code>curl -fsSL https://claude.ai/install.sh | bash</code>). Install failures now show the exact manual command instead of a raw enum case. The alternate-screen buffer that was hiding <code>npm</code> error output has been removed.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.0</span>
         <h3>Binary renamed <code>orrery</code> → <code>orrery-bin</code> · rc uses lazy-bootstrap stub</h3>
       </div>
       <p class="changelog-body">The user-facing <code>orrery</code> command is now exclusively a shell function — the binary itself is renamed <code>orrery-bin</code> and isn't meant to be called directly. This removes a long-standing pitfall where running <code>orrery use work</code> in a shell that hadn't sourced <code>activate.sh</code> would silently fail (the binary alone can't set env vars in the parent shell). Now that path is simply "command not found", which is clear and fixable.</p>
