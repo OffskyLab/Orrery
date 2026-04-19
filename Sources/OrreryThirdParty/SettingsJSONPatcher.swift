@@ -75,6 +75,72 @@ public enum SettingsJSONPatcher {
         entries.append(.init(keyPath: keyPath, before: .scalar(previous: existing)))
     }
 
+    /// Reverses a previously recorded patch. Safe to call on a target whose
+    /// schema has grown since apply (extra keys/elements the user added are
+    /// left alone).
+    public static func unapply(record: SettingsPatchRecord,
+                               to target: inout JSONValue) throws {
+        guard case .object = target else {
+            throw ThirdPartyError.stepFailed(reason: "settings root must be an object")
+        }
+        // Reverse order so nested entries undo before their parents.
+        for entry in record.entries.reversed() {
+            try reverse(entry, at: entry.keyPath, in: &target)
+        }
+    }
+
+    private static func reverse(_ entry: SettingsPatchRecord.Entry,
+                                at path: [String],
+                                in root: inout JSONValue) throws {
+        guard !path.isEmpty else {
+            throw ThirdPartyError.stepFailed(reason: "empty keyPath")
+        }
+        try mutate(at: path, in: &root) { slot in
+            switch entry.before {
+            case .absent:
+                slot = nil
+            case .scalar(let previous):
+                slot = previous
+            case .object(let addedKeys):
+                guard case .object(var obj) = slot else { return }
+                for k in addedKeys { obj.removeValue(forKey: k) }
+                slot = .object(obj)
+            case .array(let appended):
+                guard case .array(var arr) = slot else { return }
+                // Remove in reverse by exact equality (hook-matcher comparator
+                // is not needed here because we stored the resolved values).
+                for element in appended {
+                    if let idx = arr.lastIndex(where: { $0 == element }) {
+                        arr.remove(at: idx)
+                    }
+                }
+                slot = .array(arr)
+            }
+        }
+    }
+
+    private static func mutate(at path: [String],
+                               in root: inout JSONValue,
+                               _ transform: (inout JSONValue?) -> Void) throws {
+        if path.count == 1 {
+            guard case .object(var obj) = root else {
+                throw ThirdPartyError.stepFailed(reason: "expected object at root")
+            }
+            var slot: JSONValue? = obj[path[0]]
+            transform(&slot)
+            if let slot { obj[path[0]] = slot } else { obj.removeValue(forKey: path[0]) }
+            root = .object(obj)
+            return
+        }
+        guard case .object(var obj) = root,
+              var child = obj[path[0]] else {
+            return // nothing to reverse — the user already cleaned up
+        }
+        try mutate(at: Array(path.dropFirst()), in: &child, transform)
+        obj[path[0]] = child
+        root = .object(obj)
+    }
+
     internal static func areEqual(_ a: JSONValue, _ b: JSONValue,
                                   keyPath: [String]) -> Bool {
         // Hook-matcher shape check: objects with a `hooks` child that is
