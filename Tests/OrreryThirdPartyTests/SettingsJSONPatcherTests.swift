@@ -99,3 +99,99 @@ struct SettingsJSONPatcherArrayTests {
         #expect(entry == nil || entry?.before == .array(appendedElements: []))
     }
 }
+
+@Suite("SettingsJSONPatcher — hook-matcher comparator")
+struct SettingsJSONPatcherHookMatcherTests {
+    private func matcherEntry(_ matcher: String, commands: [String]) -> JSONValue {
+        .object([
+            "matcher": .string(matcher),
+            "hooks": .array(commands.map {
+                .object(["type": .string("command"), "command": .string($0)])
+            })
+        ])
+    }
+
+    @Test("identical matcher + same command set is deduped")
+    func identicalEntryDeduped() throws {
+        let existing = matcherEntry(".*", commands: ["node /abs/a.js"])
+        let patched = matcherEntry(".*", commands: ["node /abs/a.js"])
+
+        var target: JSONValue = .object([
+            "hooks": .object(["SubagentStart": .array([existing])])
+        ])
+        let patch: JSONValue = .object([
+            "hooks": .object(["SubagentStart": .array([patched])])
+        ])
+        _ = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let root) = target,
+              case .object(let hooks) = root["hooks"],
+              case .array(let arr) = hooks["SubagentStart"] else {
+            Issue.record("shape mismatch"); return
+        }
+        #expect(arr.count == 1)
+    }
+
+    @Test("different matcher appends independently")
+    func differentMatcherAppends() throws {
+        let existing = matcherEntry("A", commands: ["node /abs/a.js"])
+        let patched = matcherEntry("B", commands: ["node /abs/a.js"])
+
+        var target: JSONValue = .object([
+            "hooks": .object(["Stop": .array([existing])])
+        ])
+        let patch: JSONValue = .object([
+            "hooks": .object(["Stop": .array([patched])])
+        ])
+        _ = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let root) = target,
+              case .object(let hooks) = root["hooks"],
+              case .array(let arr) = hooks["Stop"] else {
+            Issue.record("shape mismatch"); return
+        }
+        #expect(arr.count == 2)
+    }
+
+    @Test("same matcher but different command set appends whole entry")
+    func differentCommandsAppendsWholeEntry() throws {
+        let existing = matcherEntry(".*", commands: ["node /abs/a.js"])
+        let patched = matcherEntry(".*", commands: ["node /abs/b.js"])
+
+        var target: JSONValue = .object([
+            "hooks": .object(["PostToolUse": .array([existing])])
+        ])
+        let patch: JSONValue = .object([
+            "hooks": .object(["PostToolUse": .array([patched])])
+        ])
+        _ = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let root) = target,
+              case .object(let hooks) = root["hooks"],
+              case .array(let arr) = hooks["PostToolUse"] else {
+            Issue.record("shape mismatch"); return
+        }
+        #expect(arr.count == 2)
+    }
+
+    @Test("same matcher + same command set in different order is deduped")
+    func reorderedCommandsDeduped() throws {
+        let existing = matcherEntry(".*", commands: ["node /abs/a.js", "node /abs/b.js"])
+        let patched = matcherEntry(".*", commands: ["node /abs/b.js", "node /abs/a.js"])
+
+        var target: JSONValue = .object([
+            "hooks": .object(["UserPromptSubmit": .array([existing])])
+        ])
+        let patch: JSONValue = .object([
+            "hooks": .object(["UserPromptSubmit": .array([patched])])
+        ])
+        _ = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let root) = target,
+              case .object(let hooks) = root["hooks"],
+              case .array(let arr) = hooks["UserPromptSubmit"] else {
+            Issue.record("shape mismatch"); return
+        }
+        #expect(arr.count == 1)
+    }
+}

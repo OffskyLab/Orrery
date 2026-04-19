@@ -75,10 +75,39 @@ public enum SettingsJSONPatcher {
         entries.append(.init(keyPath: keyPath, before: .scalar(previous: existing)))
     }
 
-    /// Array equality comparator. Defaults to deep-equal; task 9 adds the
-    /// hook-matcher special case.
     internal static func areEqual(_ a: JSONValue, _ b: JSONValue,
                                   keyPath: [String]) -> Bool {
+        // Hook-matcher shape check: objects with a `hooks` child that is
+        // itself an array of `{type, command}` objects.
+        if let aSig = hookMatcherSignature(a), let bSig = hookMatcherSignature(b) {
+            return aSig == bSig
+        }
         return a == b
+    }
+
+    private struct HookSignature: Equatable {
+        let matcher: String?
+        let commands: Set<String>
+    }
+
+    private static func hookMatcherSignature(_ v: JSONValue) -> HookSignature? {
+        guard case .object(let obj) = v,
+              case .array(let inner) = obj["hooks"] else { return nil }
+
+        var commands = Set<String>()
+        for element in inner {
+            guard case .object(let eo) = element,
+                  case .string(let cmd) = eo["command"] else { return nil }
+            commands.insert(cmd)
+        }
+
+        let matcher: String?
+        switch obj["matcher"] {
+        case .some(.string(let s)): matcher = s
+        case .none: matcher = nil
+        default: return nil
+        }
+
+        return HookSignature(matcher: matcher, commands: commands)
     }
 }
