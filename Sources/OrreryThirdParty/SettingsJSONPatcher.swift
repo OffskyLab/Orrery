@@ -53,8 +53,32 @@ public enum SettingsJSONPatcher {
             return
         }
 
-        // Case 3: fallthrough — overwrite scalar / type mismatch.
+        // Case 3 (new): both sides are arrays → append-if-not-equal.
+        if case .array(var existingArr) = existing, case .array(let patchArr) = patch {
+            var appended: [JSONValue] = []
+            for element in patchArr {
+                if !existingArr.contains(where: { areEqual($0, element, keyPath: keyPath) }) {
+                    existingArr.append(element)
+                    appended.append(element)
+                }
+            }
+            target = .array(existingArr)
+            if !appended.isEmpty {
+                entries.append(.init(keyPath: keyPath,
+                                     before: .array(appendedElements: appended)))
+            }
+            return
+        }
+
+        // Case 4: fallthrough — overwrite scalar / type mismatch.
         target = patch
         entries.append(.init(keyPath: keyPath, before: .scalar(previous: existing)))
+    }
+
+    /// Array equality comparator. Defaults to deep-equal; task 9 adds the
+    /// hook-matcher special case.
+    internal static func areEqual(_ a: JSONValue, _ b: JSONValue,
+                                  keyPath: [String]) -> Bool {
+        return a == b
     }
 }
