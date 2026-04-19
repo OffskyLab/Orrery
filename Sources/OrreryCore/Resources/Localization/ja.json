@@ -214,5 +214,19 @@
   "which.abstract": "Print the config directory path for a tool in the active environment",
   "which.noActive": "No active environment. Run 'orrery use <name>' first.",
   "which.toolHelp": "Tool name: claude, codex, or gemini",
-  "which.unknownTool": "Unknown tool '{tool}'. Valid tools: claude, codex, gemini"
+  "which.unknownTool": "Unknown tool '{tool}'. Valid tools: claude, codex, gemini",
+  "thirdparty.abstract": "Install, uninstall, and list third-party add-ons for an environment",
+  "thirdparty.installAbstract": "Install a third-party add-on into an environment",
+  "thirdparty.installIdHelp": "Package id (e.g. cc-statusline)",
+  "thirdparty.installEnvHelp": "Target environment name",
+  "thirdparty.installRefHelp": "Override the manifest source ref (git branch/tag/sha)",
+  "thirdparty.installForceRefreshHelp": "Re-clone the source even if the cached copy already exists",
+  "thirdparty.installSuccess": "Installed {id} ({shortRef}) into env '{env}'. {fileCount} files copied, settings patched.",
+  "thirdparty.installReinstallNotice": "{id} already installed in '{env}' — reinstalling.",
+  "thirdparty.uninstallAbstract": "Remove a third-party add-on from an environment",
+  "thirdparty.uninstallSuccess": "Removed {id} from env '{env}'.",
+  "thirdparty.listAbstract": "List installed third-party add-ons for an environment",
+  "thirdparty.listNone": "No third-party add-ons installed in '{env}'.",
+  "thirdparty.listItem": "  {id}  {shortRef}  installed {date}",
+  "thirdparty.availableAbstract": "List third-party add-ons shipped with orrery"
 }

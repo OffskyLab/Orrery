@@ -214,5 +214,19 @@
   "which.abstract": "顯示目前環境中工具的設定目錄路徑",
   "which.noActive": "沒有啟用的環境。請先執行 'orrery use <name>'。",
   "which.toolHelp": "工具名稱：claude、codex 或 gemini",
-  "which.unknownTool": "未知工具 '{tool}'。可用工具：claude, codex, gemini"
+  "which.unknownTool": "未知工具 '{tool}'。可用工具：claude, codex, gemini",
+  "thirdparty.abstract": "安裝、移除、列出環境的第三方外掛",
+  "thirdparty.installAbstract": "把第三方外掛安裝到指定環境",
+  "thirdparty.installIdHelp": "套件 id（例如 cc-statusline）",
+  "thirdparty.installEnvHelp": "目標環境名稱",
+  "thirdparty.installRefHelp": "覆寫 manifest 的來源 ref（git branch/tag/sha）",
+  "thirdparty.installForceRefreshHelp": "即使 cache 已存在也強制重新 clone",
+  "thirdparty.installSuccess": "已將 {id}（{shortRef}）安裝到環境 '{env}'，複製 {fileCount} 個檔案並更新 settings。",
+  "thirdparty.installReinstallNotice": "'{env}' 已安裝 {id}，將先移除再重新安裝。",
+  "thirdparty.uninstallAbstract": "從環境移除第三方外掛",
+  "thirdparty.uninstallSuccess": "已從環境 '{env}' 移除 {id}。",
+  "thirdparty.listAbstract": "列出環境安裝的第三方外掛",
+  "thirdparty.listNone": "'{env}' 沒有安裝任何第三方外掛。",
+  "thirdparty.listItem": "  {id}  {shortRef}  安裝於 {date}",
+  "thirdparty.availableAbstract": "列出 orrery 內建支援的第三方外掛"
 }
