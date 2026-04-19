@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.4.1
+
+- **`activate.sh` self-heals after `brew upgrade`.** The generated script now carries a version stamp on the first line. On every new shell, `_orrery_init` compares the stamp against the installed binary version. If they differ — e.g. because `post_install` was silently skipped — it runs `orrery-bin setup` to regenerate and immediately re-sources the file, so the shell heals itself without any manual intervention.
+- **`orrery create` / `orrery tools add`: clone no longer copies account-specific data.** The blocklist expanded from 4 items to 20. Skipped: `cache/`, `agent-memory/`, `statsig/`, `stats-cache.json`, `telemetry/`, `usage-data/`, `mcp-needs-auth-cache.json`, `paste-cache/`, `shell-snapshots/`, `history.jsonl`, `file-history/`, `debug/`, `downloads/`, `plans/`, `tasks/`, `todos/`. Kept: `settings.json`, `commands/`, `skills/`, `plugins/`, `agents/`, `CLAUDE.md`, `statusline.sh`.
+- **Claude install command updated to native installer.** Changed from `npm install -g @anthropic-ai/claude-code` to `curl -fsSL https://claude.ai/install.sh | bash` (run via `sh -c` to handle the pipe). `installCommandDisplay` added for human-readable output in prompts and error messages.
+- **`ToolSetup` install errors now show the manual command.** `SetupError.installFailed` conforms to `LocalizedError`; on failure the message shows the exact command to run manually. The alternate-screen buffer (`\e[?1049h`/`l`) around `npm install` was removed — it was hiding npm's error output from the user.
+- **`OrreryVersion.current` single source of truth.** Version string previously duplicated in `OrreryCommand`, `MCPServer`, and `ShellFunctionGenerator` — now all reference one constant.
+
 ## v2.4.0
 
 - **Binary renamed `orrery` → `orrery-bin`.** The `orrery` command is now exclusively a shell function (defined in `~/.orrery/activate.sh`), removing the class of bugs where users accidentally invoked the binary in a shell that hadn't sourced the activation script. The binary itself is an implementation detail called by the shell function.

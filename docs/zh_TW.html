@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.4.0</div>
+  <div class="badge">v2.4.1</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1063,8 +1063,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.0</span>
+        <span class="changelog-ver">v2.4.1</span>
         <span class="changelog-new">最新</span>
+        <h3><code>activate.sh</code> 升級後自動修復 · clone 不再複製帳號資料 · Claude 原生安裝指令</h3>
+      </div>
+      <p class="changelog-body"><code>activate.sh</code> 第一行現在帶有版本戳記。每次開新 shell，<code>_orrery_init</code> 會比對戳記版本與安裝的 binary 版本。若不符（例如 <code>brew upgrade</code> 後 <code>post_install</code> 靜默跳過），會立即重新產生並 re-source — shell 不需要任何手動操作就能自我修復。</p>
+      <p class="changelog-body">Clone（<code>orrery create</code> / <code>orrery tools add</code> 複製設定時）不再帶走帳號相關資料。blocklist 從 4 項擴充至 20 項：跳過 <code>cache/</code>、<code>agent-memory/</code>、<code>statsig/</code>、<code>telemetry/</code>、<code>usage-data/</code>、<code>mcp-needs-auth-cache.json</code>、<code>paste-cache/</code>、<code>shell-snapshots/</code>、<code>history.jsonl</code>、<code>file-history/</code>、<code>debug/</code>、<code>downloads/</code>、<code>plans/</code>、<code>tasks/</code>、<code>todos/</code>。保留：<code>settings.json</code>、<code>commands/</code>、<code>skills/</code>、<code>plugins/</code>、<code>agents/</code>、<code>CLAUDE.md</code>、<code>statusline.sh</code>。</p>
+      <p class="changelog-body">Claude 安裝指令改為原生安裝腳本（<code>curl -fsSL https://claude.ai/install.sh | bash</code>）。安裝失敗時現在會顯示手動執行的完整指令，而不是 Swift enum case 名稱。安裝過程中遮蔽錯誤輸出的 alternate-screen buffer 已移除。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.0</span>
         <h3>Binary 改名 <code>orrery</code> → <code>orrery-bin</code> · rc 改用 lazy-bootstrap stub</h3>
       </div>
       <p class="changelog-body">使用者看到的 <code>orrery</code> 指令現在**完全**是 shell function — 真正的 binary 改名 <code>orrery-bin</code>，不再開放給使用者直接呼叫。這徹底解掉一個長期的坑：過去在沒有 source 過 <code>activate.sh</code> 的 shell 裡跑 <code>orrery use work</code>，binary 無法改父 shell 的環境變數，結果靜默失敗。現在這條路直接變成 <code>command not found</code>，明確且容易修復。</p>
