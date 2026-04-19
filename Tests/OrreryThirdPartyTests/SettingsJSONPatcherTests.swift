@@ -68,3 +68,34 @@ struct SettingsJSONPatcherObjectTests {
         #expect(entry?.before == .scalar(previous: .string("old")))
     }
 }
+
+@Suite("SettingsJSONPatcher — arrays (deep equal)")
+struct SettingsJSONPatcherArrayTests {
+    @Test("appends new elements, records them")
+    func appendsNewElements() throws {
+        var target: JSONValue = .object(["xs": .array([.number(1)])])
+        let patch: JSONValue = .object(["xs": .array([.number(1), .number(2)])])
+        let record = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let o) = target, case .array(let xs) = o["xs"] else {
+            Issue.record("expected xs array"); return
+        }
+        #expect(xs == [.number(1), .number(2)])
+        let entry = record.entries.first(where: { $0.keyPath == ["xs"] })
+        #expect(entry?.before == .array(appendedElements: [.number(2)]))
+    }
+
+    @Test("does not duplicate existing elements")
+    func noDuplicates() throws {
+        var target: JSONValue = .object(["xs": .array([.number(1), .number(2)])])
+        let patch: JSONValue = .object(["xs": .array([.number(1)])])
+        let record = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let o) = target, case .array(let xs) = o["xs"] else {
+            Issue.record("expected xs array"); return
+        }
+        #expect(xs == [.number(1), .number(2)])
+        let entry = record.entries.first(where: { $0.keyPath == ["xs"] })
+        #expect(entry == nil || entry?.before == .array(appendedElements: []))
+    }
+}
