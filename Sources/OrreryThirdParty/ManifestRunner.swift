@@ -74,11 +74,46 @@ public struct ManifestRunner: ThirdPartyRunner {
     }
 
     public func uninstall(packageID: String, from env: String) throws {
-        fatalError("implemented in task 18")
+        let claudeDir = try resolveClaudeDir(env: env)
+        let lockURL = lockFileURL(claudeDir: claudeDir, packageID: packageID)
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: lockURL.path) else {
+            throw ThirdPartyError.notInstalled(id: packageID)
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let record = try decoder.decode(InstallRecord.self,
+                                        from: Data(contentsOf: lockURL))
+
+        for patchRec in record.patchedSettings.reversed() {
+            try? PatchSettingsExecutor.rollback(record: patchRec, claudeDir: claudeDir)
+        }
+        for p in record.copiedFiles {
+            try? fm.removeItem(at: claudeDir.appendingPathComponent(p))
+        }
+        try? fm.removeItem(at: lockURL)
+        let thirdDir = claudeDir.appendingPathComponent(".thirdparty")
+        if let contents = try? fm.contentsOfDirectory(atPath: thirdDir.path),
+           contents.isEmpty {
+            try? fm.removeItem(at: thirdDir)
+        }
     }
 
     public func listInstalled(in env: String) throws -> [InstallRecord] {
-        fatalError("implemented in task 18")
+        let claudeDir = try resolveClaudeDir(env: env)
+        let thirdDir = claudeDir.appendingPathComponent(".thirdparty")
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: thirdDir.path) else {
+            return []
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return entries.compactMap { name in
+            guard name.hasSuffix(".lock.json") else { return nil }
+            let url = thirdDir.appendingPathComponent(name)
+            return try? decoder.decode(InstallRecord.self,
+                                       from: Data(contentsOf: url))
+        }
     }
 
     // MARK: - Helpers
