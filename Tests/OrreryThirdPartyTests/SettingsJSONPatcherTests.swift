@@ -31,3 +31,40 @@ struct SettingsJSONPatcherBasicsTests {
         #expect(record.entries[0].before == .scalar(previous: .string("old")))
     }
 }
+
+@Suite("SettingsJSONPatcher — objects")
+struct SettingsJSONPatcherObjectTests {
+    @Test("recursive merge only records added child keys")
+    func recursiveMergeRecordsAddedKeys() throws {
+        var target: JSONValue = .object([
+            "env": .object(["EXISTING": .string("value")])
+        ])
+        let patch: JSONValue = .object([
+            "env": .object(["NEW": .string("added")])
+        ])
+        let record = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        guard case .object(let out) = target,
+              case .object(let envObj) = out["env"] else {
+            Issue.record("expected env object"); return
+        }
+        #expect(envObj["EXISTING"] == .string("value"))
+        #expect(envObj["NEW"] == .string("added"))
+        let parentEntry = record.entries.first(where: { $0.keyPath == ["env"] })
+        #expect(parentEntry?.before == .object(addedKeys: ["NEW"]))
+    }
+
+    @Test("recursive merge overwriting an existing child is recorded as scalar")
+    func recursiveMergeOverwritesChildScalar() throws {
+        var target: JSONValue = .object([
+            "env": .object(["K": .string("old")])
+        ])
+        let patch: JSONValue = .object([
+            "env": .object(["K": .string("new")])
+        ])
+        let record = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+
+        let entry = record.entries.first(where: { $0.keyPath == ["env", "K"] })
+        #expect(entry?.before == .scalar(previous: .string("old")))
+    }
+}

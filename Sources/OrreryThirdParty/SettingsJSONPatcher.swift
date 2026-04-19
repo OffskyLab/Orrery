@@ -17,23 +17,44 @@ public enum SettingsJSONPatcher {
 
         var entries: [SettingsPatchRecord.Entry] = []
         for (key, patchValue) in patchObj {
-            let existing = targetObj[key]
-            let (merged, before) = mergeTop(existing: existing, patch: patchValue)
-            targetObj[key] = merged
-            entries.append(.init(keyPath: [key], before: before))
+            merge(keyPath: [key],
+                  target: &targetObj[key],
+                  patch: patchValue,
+                  entries: &entries)
         }
         target = .object(targetObj)
         return .init(file: file, entries: entries)
     }
 
-    /// Top-level merge for a single key. Placeholder implementation that only
-    /// handles `scalar overwrite` and `absent insert`; later tasks extend it
-    /// for objects, arrays, and the hook-matcher comparator.
-    private static func mergeTop(existing: JSONValue?, patch: JSONValue)
-    -> (JSONValue, SettingsPatchRecord.BeforeState) {
-        guard let existing else {
-            return (patch, .absent)
+    private static func merge(keyPath: [String],
+                              target: inout JSONValue?,
+                              patch: JSONValue,
+                              entries: inout [SettingsPatchRecord.Entry]) {
+        // Case 1: target absent → write patch, record .absent.
+        guard let existing = target else {
+            target = patch
+            entries.append(.init(keyPath: keyPath, before: .absent))
+            return
         }
-        return (patch, .scalar(previous: existing))
+
+        // Case 2: both sides are objects → recurse per child, track added keys.
+        if case .object(var existingObj) = existing, case .object(let patchObj) = patch {
+            var addedKeys: [String] = []
+            for (k, v) in patchObj {
+                if existingObj[k] == nil { addedKeys.append(k) }
+                var child: JSONValue? = existingObj[k]
+                merge(keyPath: keyPath + [k], target: &child, patch: v, entries: &entries)
+                existingObj[k] = child
+            }
+            target = .object(existingObj)
+            if !addedKeys.isEmpty {
+                entries.append(.init(keyPath: keyPath, before: .object(addedKeys: addedKeys)))
+            }
+            return
+        }
+
+        // Case 3: fallthrough — overwrite scalar / type mismatch.
+        target = patch
+        entries.append(.init(keyPath: keyPath, before: .scalar(previous: existing)))
     }
 }
