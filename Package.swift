@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "orrery-bin", targets: ["orrery-bin"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
+        .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
     ],
     dependencies: [
@@ -15,7 +16,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "orrery-bin",
-            dependencies: ["OrreryCore"],
+            dependencies: ["OrreryCore", "OrreryThirdParty"],
             path: "Sources/orrery"
         ),
         .target(
@@ -30,6 +31,12 @@ let package = Package(
             ],
             plugins: [.plugin(name: "L10nCodegen")]
         ),
+        .target(
+            name: "OrreryThirdParty",
+            dependencies: ["OrreryCore"],
+            path: "Sources/OrreryThirdParty",
+            resources: [.process("Manifests")]
+        ),
         .executableTarget(
             name: "L10nCodegenTool",
             path: "Plugins/L10nCodegenTool"
@@ -43,6 +50,11 @@ let package = Package(
             name: "OrreryTests",
             dependencies: ["OrreryCore"],
             path: "Tests/OrreryTests"
+        ),
+        .testTarget(
+            name: "OrreryThirdPartyTests",
+            dependencies: ["OrreryThirdParty"],
+            path: "Tests/OrreryThirdPartyTests"
         ),
     ]
 )
