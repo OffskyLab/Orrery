@@ -18,7 +18,12 @@ public struct ManifestRunner: ThirdPartyRunner {
         let claudeDir = try resolveClaudeDir(env: env)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: pkg.id)
 
-        // Task 19 adds: if lock exists → auto-uninstall.
+        // Already installed? Reinstall = uninstall + install (spec decision 7c-B).
+        if FileManager.default.fileExists(atPath: lockURL.path) {
+            FileHandle.standardError.write(Data(
+                "\(pkg.id) already installed — reinstalling.\n".utf8))
+            try uninstall(packageID: pkg.id, from: env)
+        }
 
         warnIfMissingNode()
 
