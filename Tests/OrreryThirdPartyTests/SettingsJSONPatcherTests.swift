@@ -195,3 +195,45 @@ struct SettingsJSONPatcherHookMatcherTests {
         #expect(arr.count == 1)
     }
 }
+
+@Suite("SettingsJSONPatcher — round trip")
+struct SettingsJSONPatcherRoundTripTests {
+    private func roundTripMatches(original: JSONValue, patch: JSONValue) throws {
+        var target = original
+        let record = try SettingsJSONPatcher.apply(patch: patch, to: &target)
+        try SettingsJSONPatcher.unapply(record: record, to: &target)
+        #expect(target == original)
+    }
+
+    @Test("scalar overwrite round-trip")
+    func scalarRoundTrip() throws {
+        try roundTripMatches(
+            original: .object(["model": .string("old")]),
+            patch: .object(["model": .string("new")])
+        )
+    }
+
+    @Test("object added-key round-trip")
+    func objectRoundTrip() throws {
+        try roundTripMatches(
+            original: .object(["env": .object(["A": .string("1")])]),
+            patch: .object(["env": .object(["B": .string("2")])])
+        )
+    }
+
+    @Test("array append round-trip")
+    func arrayRoundTrip() throws {
+        try roundTripMatches(
+            original: .object(["xs": .array([.number(1)])]),
+            patch: .object(["xs": .array([.number(2), .number(3)])])
+        )
+    }
+
+    @Test("absent root key round-trip")
+    func absentKeyRoundTrip() throws {
+        try roundTripMatches(
+            original: .object([:]),
+            patch: .object(["statusLine": .object(["type": .string("command")])])
+        )
+    }
+}
