@@ -1,0 +1,50 @@
+{
+  "id": "cc-statusline",
+  "displayName": "cc-statusline",
+  "description": "Full statusline dashboard for Claude Code.",
+  "source": {
+    "type": "git",
+    "url": "https://github.com/NYCU-Chung/cc-statusline",
+    "ref": "main"
+  },
+  "steps": [
+    { "type": "copyFile", "from": "statusline.js", "to": "statusline.js" },
+    { "type": "copyGlob", "from": "hooks/*.js", "toDir": "hooks" },
+    {
+      "type": "patchSettings",
+      "file": "settings.json",
+      "patch": {
+        "statusLine": {
+          "type": "command",
+          "command": "node <CLAUDE_DIR>/statusline.js",
+          "refreshInterval": 30
+        },
+        "hooks": {
+          "SubagentStart": [
+            { "matcher": ".*", "hooks": [{ "type": "command", "command": "node <CLAUDE_DIR>/hooks/subagent-tracker.js" }] }
+          ],
+          "SubagentStop": [
+            { "matcher": ".*", "hooks": [{ "type": "command", "command": "node <CLAUDE_DIR>/hooks/subagent-tracker.js" }] }
+          ],
+          "PreCompact": [
+            { "matcher": ".*", "hooks": [{ "type": "command", "command": "node <CLAUDE_DIR>/hooks/compact-monitor.js" }] }
+          ],
+          "UserPromptSubmit": [
+            {
+              "hooks": [
+                { "type": "command", "command": "node <CLAUDE_DIR>/hooks/message-tracker.js" },
+                { "type": "command", "command": "node <CLAUDE_DIR>/hooks/summary-updater.js" }
+              ]
+            }
+          ],
+          "Stop": [
+            { "matcher": "*", "hooks": [{ "type": "command", "command": "node <CLAUDE_DIR>/hooks/message-tracker.js" }] }
+          ],
+          "PostToolUse": [
+            { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "node <CLAUDE_DIR>/hooks/file-tracker.js" }] }
+          ]
+        }
+      }
+    }
+  ]
+}
