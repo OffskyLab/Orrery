@@ -7,11 +7,11 @@ import OrreryCore
 public struct VendoredSource: ThirdPartySourceFetcher {
     public init() {}
 
-    func fetch(source: ThirdPartySource,
-               cacheRoot: URL,
-               packageID: String,
-               refOverride: String?,
-               forceRefresh: Bool) throws -> (URL, String) {
+    public func fetch(source: ThirdPartySource,
+                      cacheRoot: URL,
+                      packageID: String,
+                      refOverride: String?,
+                      forceRefresh: Bool) throws -> (URL, String) {
         guard case .vendored(let path) = source else {
             throw ThirdPartyError.sourceFetchFailed(reason: "VendoredSource only supports vendored source")
         }
