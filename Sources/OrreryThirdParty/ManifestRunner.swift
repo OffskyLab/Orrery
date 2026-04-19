@@ -96,6 +96,17 @@ public struct ManifestRunner: ThirdPartyRunner {
         for p in record.copiedFiles {
             try? fm.removeItem(at: claudeDir.appendingPathComponent(p))
         }
+        // Prune any empty directories left by copyGlob steps.
+        let parentDirs = Set(record.copiedFiles.map {
+            (($0 as NSString).deletingLastPathComponent)
+        }).filter { !$0.isEmpty && $0 != "." }
+        for rel in parentDirs.sorted(by: { $0.count > $1.count }) {
+            let dir = claudeDir.appendingPathComponent(rel)
+            if let contents = try? fm.contentsOfDirectory(atPath: dir.path),
+               contents.isEmpty {
+                try? fm.removeItem(at: dir)
+            }
+        }
         try? fm.removeItem(at: lockURL)
         let thirdDir = claudeDir.appendingPathComponent(".thirdparty")
         if let contents = try? fm.contentsOfDirectory(atPath: thirdDir.path),
