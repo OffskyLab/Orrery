@@ -14,11 +14,11 @@ public struct GitSource: ThirdPartySourceFetcher {
         root.appendingPathComponent(packageID).appendingPathComponent("@\(sha)")
     }
 
-    func fetch(source: ThirdPartySource,
-               cacheRoot: URL,
-               packageID: String,
-               refOverride: String?,
-               forceRefresh: Bool) throws -> (URL, String) {
+    public func fetch(source: ThirdPartySource,
+                      cacheRoot: URL,
+                      packageID: String,
+                      refOverride: String?,
+                      forceRefresh: Bool) throws -> (URL, String) {
         guard case .git(let url, let manifestRef) = source else {
             throw ThirdPartyError.sourceFetchFailed(reason: "GitSource only supports git source")
         }
