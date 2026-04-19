@@ -1,10 +1,14 @@
 import ArgumentParser
 
+public enum OrreryVersion {
+    public static let current = "2.4.0"
+}
+
 public struct OrreryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "orrery",
         abstract: L10n.Orrery.abstract,
-        version: "2.4.0",
+        version: OrreryVersion.current,
         subcommands: [
             UpdateCommand.self,
             SetupCommand.self,

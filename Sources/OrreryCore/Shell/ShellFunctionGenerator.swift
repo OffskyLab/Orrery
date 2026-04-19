@@ -1,8 +1,7 @@
 public struct ShellFunctionGenerator {
-    public static func generate() -> String {
+    public static func generate(version: String = OrreryVersion.current) -> String {
         """
-        # orrery shell integration
-        # Usage: eval "$(orrery setup)"
+        # orrery shell integration — v\(version)
         # Supports: bash (~/.bashrc) and zsh (~/.zshrc)
 
         orrery() {
@@ -84,7 +83,21 @@ public struct ShellFunctionGenerator {
 
         _orrery_init() {
           local orrery_home="${ORRERY_HOME:-$HOME/.orrery}"
+          local activate_file="$orrery_home/activate.sh"
           local current_file="$orrery_home/current"
+
+          # Self-update: if the version stamp in activate.sh doesn't match the
+          # installed binary, regenerate and re-source so stale shells heal
+          # automatically (e.g. after `brew upgrade` when post_install was skipped).
+          local _stamped _binver
+          _stamped=$(command grep -m1 '^# orrery shell integration' "$activate_file" 2>/dev/null | command sed 's/.*— v//')
+          _binver=$(command orrery-bin --version 2>/dev/null | command awk '{print $NF}')
+          if [ -n "$_binver" ] && [ "$_stamped" != "$_binver" ]; then
+            command orrery-bin setup >/dev/null 2>&1 || true
+            [ -f "$activate_file" ] && . "$activate_file"
+            return
+          fi
+
           # Migrate pre-1.1.0: "default" was renamed to "origin"
           if [ "${ORRERY_ACTIVE_ENV:-}" = "default" ]; then
             export ORRERY_ACTIVE_ENV="origin"
