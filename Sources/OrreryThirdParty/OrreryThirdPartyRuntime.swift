@@ -6,6 +6,7 @@ import OrreryCore
 /// runner lands in a later task.
 public enum OrreryThirdPartyRuntime {
     public static func register() {
-        // Filled in when ManifestRunner exists.
+        ThirdPartyRuntime.makeRunner = { ManifestRunner() }
+        ThirdPartyRuntime.makeRegistry = { BuiltInRegistry() }
     }
 }

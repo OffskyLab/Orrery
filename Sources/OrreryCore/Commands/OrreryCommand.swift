@@ -39,6 +39,7 @@ public struct OrreryCommand: ParsableCommand {
             OriginCommand.self,
             UninstallCommand.self,
             AuthCommand.self,
+            ThirdPartyCommand.self,
         ]
     )
     public init() {}
