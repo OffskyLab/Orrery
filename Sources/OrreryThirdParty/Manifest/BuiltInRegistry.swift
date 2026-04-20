@@ -2,18 +2,20 @@ import Foundation
 import OrreryCore
 
 public struct BuiltInRegistry: ThirdPartyRegistry {
-    // Manifests are embedded as string literals so the binary is self-contained
-    // (no separate .bundle directory required after install).
-    // When adding a new add-on: paste its JSON here and add an entry to `table`.
+    // Map of package id → manifest resource name (without .json). When more
+    // add-ons ship, extend this table and add the matching Manifests/*.json.
     private static let table: [String: String] = [
-        "cc-statusline": ccStatuslineJSON,
+        "cc-statusline": "cc-statusline",
     ]
 
     public init() {}
 
     public func lookup(_ id: String) throws -> ThirdPartyPackage {
-        guard let json = Self.table[id],
-              let data = json.data(using: .utf8) else {
+        guard let resource = Self.table[id] else {
+            throw ThirdPartyError.packageNotFound(id: id)
+        }
+        guard let url = Bundle.module.url(forResource: resource, withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
             throw ThirdPartyError.packageNotFound(id: id)
         }
         return try ManifestParser.parse(data)

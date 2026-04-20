@@ -27,7 +27,8 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          tar -czf orrery-darwin-arm64.tar.gz -C dist orrery-bin
+          cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
+          tar -czf orrery-darwin-arm64.tar.gz -C dist .
       - uses: actions/upload-artifact@v4
         with:
           name: orrery-darwin-arm64
@@ -46,13 +47,15 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          tar -czf orrery-linux-x86_64.tar.gz -C dist orrery-bin
+          cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
+          tar -czf orrery-linux-x86_64.tar.gz -C dist .
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
+          cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
@@ -94,13 +97,15 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          tar -czf orrery-linux-arm64.tar.gz -C dist orrery-bin
+          cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
+          tar -czf orrery-linux-arm64.tar.gz -C dist .
       - name: Package deb
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
+          cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
