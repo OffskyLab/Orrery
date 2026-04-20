@@ -19,7 +19,7 @@ public struct ThirdPartyCommand: ParsableCommand {
         public var id: String
 
         @Option(name: .long, help: ArgumentHelp(L10n.Thirdparty.installEnvHelp))
-        public var env: String
+        public var env: String?
 
         @Option(name: .long, help: ArgumentHelp(L10n.Thirdparty.installRefHelp))
         public var ref: String?
@@ -30,16 +30,17 @@ public struct ThirdPartyCommand: ParsableCommand {
         public init() {}
 
         public func run() throws {
+            let resolvedEnv = try env ?? currentEnvOrThrow()
             let registry = try ThirdPartyRuntime.registry()
             let runner = try ThirdPartyRuntime.runner()
             let pkg = try registry.lookup(id)
-            let record = try runner.install(pkg, into: env,
+            let record = try runner.install(pkg, into: resolvedEnv,
                                             refOverride: ref, forceRefresh: forceRefresh)
             print(L10n.Thirdparty.installSuccess(
                 record.packageID,
                 String(record.resolvedRef.prefix(7)),
                 record.copiedFiles.count,
-                env
+                resolvedEnv
             ))
         }
     }
@@ -54,14 +55,15 @@ public struct ThirdPartyCommand: ParsableCommand {
         public var id: String
 
         @Option(name: .long, help: ArgumentHelp(L10n.Thirdparty.installEnvHelp))
-        public var env: String
+        public var env: String?
 
         public init() {}
 
         public func run() throws {
+            let resolvedEnv = try env ?? currentEnvOrThrow()
             let runner = try ThirdPartyRuntime.runner()
-            try runner.uninstall(packageID: id, from: env)
-            print(L10n.Thirdparty.uninstallSuccess(id, env))
+            try runner.uninstall(packageID: id, from: resolvedEnv)
+            print(L10n.Thirdparty.uninstallSuccess(id, resolvedEnv))
         }
     }
 
@@ -72,15 +74,16 @@ public struct ThirdPartyCommand: ParsableCommand {
         )
 
         @Option(name: .long, help: ArgumentHelp(L10n.Thirdparty.installEnvHelp))
-        public var env: String
+        public var env: String?
 
         public init() {}
 
         public func run() throws {
+            let resolvedEnv = try env ?? currentEnvOrThrow()
             let runner = try ThirdPartyRuntime.runner()
-            let records = try runner.listInstalled(in: env)
+            let records = try runner.listInstalled(in: resolvedEnv)
             if records.isEmpty {
-                print(L10n.Thirdparty.listNone(env))
+                print(L10n.Thirdparty.listNone(resolvedEnv))
                 return
             }
             let fmt = ISO8601DateFormatter()
@@ -103,4 +106,11 @@ public struct ThirdPartyCommand: ParsableCommand {
             for id in registry.listAvailable() { print(id) }
         }
     }
+}
+
+private func currentEnvOrThrow() throws -> String {
+    guard let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
+        throw ValidationError("No active environment. Use --env <env> or switch with `orrery use <env>`.")
+    }
+    return env
 }
