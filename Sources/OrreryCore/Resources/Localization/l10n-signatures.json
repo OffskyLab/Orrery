@@ -24,6 +24,49 @@
   {
     "path": [
       "Create",
+      "askInstallStatusline"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "installedStatusline"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "id",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Create",
+      "installStatuslineNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "installStatuslineYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
       "askSetupTool"
     ],
     "kind": "func",

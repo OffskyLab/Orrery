@@ -92,6 +92,21 @@ public struct CreateCommand: ParsableCommand {
         if !toolsNeedingLogin.isEmpty {
             ToolSetup.execLoginIfNeeded(tools: toolsNeedingLogin, store: store, envName: name)
         }
+
+        // Offer statusline install when Claude was set up interactively
+        let isInteractive = tool == nil
+        let claudeSetup = configs.contains { $0.tool == .claude }
+        if isInteractive && claudeSetup && Self.askInstallStatusline() {
+            do {
+                let registry = try ThirdPartyRuntime.registry()
+                let runner = try ThirdPartyRuntime.runner()
+                let pkg = try registry.lookup("cc-statusline")
+                let record = try runner.install(pkg, into: name, refOverride: nil, forceRefresh: false)
+                print(L10n.Create.installedStatusline(record.packageID, name))
+            } catch {
+                print("Could not install statusline: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Wizard
@@ -104,6 +119,15 @@ public struct CreateCommand: ParsableCommand {
             configs.append(ToolSetupRunner.runWizard(for: tool, store: store))
         }
         return configs
+    }
+
+    static func askInstallStatusline() -> Bool {
+        let selector = SingleSelect(
+            title: L10n.Create.askInstallStatusline,
+            options: [L10n.Create.installStatuslineYes, L10n.Create.installStatuslineNo],
+            selected: 1
+        )
+        return selector.run() == 0
     }
 
     static func askSetupTool(_ toolName: String, defaultYes: Bool) -> Bool {
