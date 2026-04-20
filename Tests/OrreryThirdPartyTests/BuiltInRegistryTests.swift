@@ -4,11 +4,11 @@ import Testing
 
 @Suite("BuiltInRegistry")
 struct BuiltInRegistryTests {
-    @Test("lookup cc-statusline succeeds")
+    @Test("lookup orrery-statusline succeeds")
     func lookupCCStatusline() throws {
         let reg = BuiltInRegistry()
-        let pkg = try reg.lookup("cc-statusline")
-        #expect(pkg.id == "cc-statusline")
+        let pkg = try reg.lookup("orrery-statusline")
+        #expect(pkg.id == "orrery-statusline")
         #expect(pkg.steps.count == 3)
     }
 
@@ -20,9 +20,9 @@ struct BuiltInRegistryTests {
         }
     }
 
-    @Test("listAvailable contains cc-statusline")
+    @Test("listAvailable contains orrery-statusline")
     func lists() {
         let reg = BuiltInRegistry()
-        #expect(reg.listAvailable().contains("cc-statusline"))
+        #expect(reg.listAvailable().contains("orrery-statusline"))
     }
 }
