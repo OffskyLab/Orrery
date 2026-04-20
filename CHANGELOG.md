@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.4.7
+
+- **`orrery create claude` prompts to install `orrery-statusline`.** After completing the Claude tool wizard, the `create` command now asks whether to install the statusline (default: yes). Answering yes runs `orrery thirdparty install orrery-statusline` automatically during environment creation.
+- **`orrery-statusline` replaces `cc-statusline`.** The built-in third-party registry entry is now `orrery-statusline`; `cc-statusline` has been removed.
+- **`orrery thirdparty install` shows the installed ref.** The success message now includes the manifest ref and resolved commit SHA, e.g. `orrery-statusline v0.2.2@470e718 (3 files) → myenv`.
+
 ## v2.4.6
 
 - **`orrery-statusline` thirdparty package.** New built-in package `orrery-statusline` — a lightweight Claude Code statusline showing Orrery environment name, working directory, git branch, 5h/7d quota bars, env path, and memory path. Install with `orrery thirdparty install orrery-statusline`. Quota and auth data reflect the active environment's account.
