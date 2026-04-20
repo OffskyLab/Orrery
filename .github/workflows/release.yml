@@ -47,9 +47,10 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
+          echo "=== .build/release contents ==="; ls -la .build/release/ | head -30
           BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
-          if [[ -z "$BUNDLE" ]]; then
-            echo "ERROR: OrreryThirdParty bundle not found. Contents:"; ls -la .build/release/; exit 1
+          if [ -z "$BUNDLE" ]; then
+            echo "ERROR: OrreryThirdParty bundle not found"; exit 1
           fi
           cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-x86_64.tar.gz -C dist .
@@ -102,9 +103,10 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
+          echo "=== .build/release contents ==="; ls -la .build/release/ | head -30
           BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
-          if [[ -z "$BUNDLE" ]]; then
-            echo "ERROR: OrreryThirdParty bundle not found. Contents:"; ls -la .build/release/; exit 1
+          if [ -z "$BUNDLE" ]; then
+            echo "ERROR: OrreryThirdParty bundle not found"; exit 1
           fi
           cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-arm64.tar.gz -C dist .
