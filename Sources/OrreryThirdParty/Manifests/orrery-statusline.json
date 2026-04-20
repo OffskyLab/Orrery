@@ -4,7 +4,7 @@
   "description": "Lightweight statusline for Claude Code showing Orrery env, directory, git branch, quotas, and memory path.",
   "source": {
     "type": "git",
-    "url": "https://github.com/OffskyLab/orrery-statusline",
+    "url": "https://github.com/OffskyLab/orrery-claude-statusline",
     "ref": "main"
   },
   "steps": [
