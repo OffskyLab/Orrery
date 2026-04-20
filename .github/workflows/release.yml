@@ -47,7 +47,7 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
           if [ -z "$BUNDLE" ]; then
             echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
@@ -59,7 +59,7 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
           [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
@@ -102,7 +102,7 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
           if [ -z "$BUNDLE" ]; then
             echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
@@ -114,7 +114,7 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
           [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
