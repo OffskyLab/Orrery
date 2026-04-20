@@ -47,7 +47,8 @@ public struct CreateCommand: ParsableCommand {
         //   unless those steps are also overridden by their own flags.
         // - No `--tool` runs the full wizard (yes/no per tool, then sub-wizard for each
         //   "yes"). Same per-step flag overrides apply.
-        let configs: [ToolSetupRunner.Config]
+        var configs: [ToolSetupRunner.Config]
+        var installStatusline = false
         if let toolFlag = tool {
             guard let t = Tool(rawValue: toolFlag) else {
                 throw ValidationError(L10n.Create.unknownTool(toolFlag))
@@ -61,7 +62,7 @@ public struct CreateCommand: ParsableCommand {
                 isolateMemoryOverride: isolateMemory
             )]
         } else {
-            configs = Self.runWizard(store: store)
+            (configs, installStatusline) = Self.runWizard(store: store)
         }
 
         // Create empty env — per-tool flags populated during apply()
@@ -93,10 +94,7 @@ public struct CreateCommand: ParsableCommand {
             ToolSetup.execLoginIfNeeded(tools: toolsNeedingLogin, store: store, envName: name)
         }
 
-        // Offer statusline install when Claude was set up interactively
-        let isInteractive = tool == nil
-        let claudeSetup = configs.contains { $0.tool == .claude }
-        if isInteractive && claudeSetup && Self.askInstallStatusline() {
+        if installStatusline {
             do {
                 let registry = try ThirdPartyRuntime.registry()
                 let runner = try ThirdPartyRuntime.runner()
@@ -112,13 +110,18 @@ public struct CreateCommand: ParsableCommand {
     // MARK: - Wizard
 
     /// Loop through all tools, asking setup/skip and running the per-tool wizard for each "setup".
-    static func runWizard(store: EnvironmentStore) -> [ToolSetupRunner.Config] {
+    /// Returns configs and whether the user chose to install cc-statusline (asked after Claude setup).
+    static func runWizard(store: EnvironmentStore) -> ([ToolSetupRunner.Config], installStatusline: Bool) {
         var configs: [ToolSetupRunner.Config] = []
+        var installStatusline = false
         for tool in Tool.allCases {
             guard askSetupTool(tool.rawValue, defaultYes: tool == .claude) else { continue }
             configs.append(ToolSetupRunner.runWizard(for: tool, store: store))
+            if tool == .claude {
+                installStatusline = askInstallStatusline()
+            }
         }
-        return configs
+        return (configs, installStatusline)
     }
 
     static func askInstallStatusline() -> Bool {
