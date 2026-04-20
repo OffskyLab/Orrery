@@ -36,9 +36,10 @@ public struct ThirdPartyCommand: ParsableCommand {
             let pkg = try registry.lookup(id)
             let record = try runner.install(pkg, into: resolvedEnv,
                                             refOverride: ref, forceRefresh: forceRefresh)
+            let shortRef = "\(record.manifestRef)@\(record.resolvedRef.prefix(7))"
             print(L10n.Thirdparty.installSuccess(
                 record.packageID,
-                String(record.resolvedRef.prefix(7)),
+                shortRef,
                 record.copiedFiles.count,
                 resolvedEnv
             ))
