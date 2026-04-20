@@ -47,8 +47,11 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
-          if [ -z "$BUNDLE" ]; then
+          if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
+            BUNDLE=.build/release/orrery_OrreryThirdParty.bundle
+          elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
+            BUNDLE=.build/release/orrery_OrreryThirdParty.resources
+          else
             echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
           cp -r "$BUNDLE" dist/
@@ -59,8 +62,11 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
-          [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
+          if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
+            cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
+          elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
+            cp -r .build/release/orrery_OrreryThirdParty.resources deb/usr/local/bin/
+          fi
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
@@ -102,8 +108,11 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
-          if [ -z "$BUNDLE" ]; then
+          if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
+            BUNDLE=.build/release/orrery_OrreryThirdParty.bundle
+          elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
+            BUNDLE=.build/release/orrery_OrreryThirdParty.resources
+          else
             echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
           cp -r "$BUNDLE" dist/
@@ -114,8 +123,11 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty*" -type d | head -1)
-          [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
+          if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
+            cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
+          elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
+            cp -r .build/release/orrery_OrreryThirdParty.resources deb/usr/local/bin/
+          fi
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
