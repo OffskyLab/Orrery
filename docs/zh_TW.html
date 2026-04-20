@@ -1063,8 +1063,16 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.3</span>
+        <span class="changelog-ver">v2.4.4</span>
         <span class="changelog-new">最新</span>
+        <h3>uninstall 移除 binary · thirdparty bundle 修正</h3>
+      </div>
+      <p class="changelog-body"><code>orrery uninstall</code> 現在也會刪除 <code>orrery-bin</code> binary，一個指令完整移除。<code>orrery thirdparty</code> 在全新安裝後的 fatal error 已修正：release tarball 和 deb 套件現在會同時打包 <code>orrery_OrreryThirdParty.bundle</code>。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.3</span>
         <h3><code>orrery thirdparty</code> · uninstall rc 殘留修復 · 動態更新通知</h3>
       </div>
       <p class="changelog-body">新增 <code>orrery thirdparty</code> 指令群組，管理第三方外掛套件：<code>install &lt;id&gt;</code>、<code>uninstall &lt;id&gt;</code>、<code>list</code>、<code>available</code>。套件從 Git 取得（支援本地 vendored cache 離線使用），透過宣告式 manifest 安裝至目前環境的工具設定目錄。<code>--env</code> 為選填，省略時預設使用目前的 active 環境。</p>

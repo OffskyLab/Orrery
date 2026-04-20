@@ -1078,8 +1078,16 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.3</span>
+        <span class="changelog-ver">v2.4.4</span>
         <span class="changelog-new">latest</span>
+        <h3>uninstall removes binary · thirdparty bundle fix</h3>
+      </div>
+      <p class="changelog-body"><code>orrery uninstall</code> now also deletes <code>orrery-bin</code> from its install location — complete removal in one command. The <code>orrery thirdparty</code> fatal error on fresh installs is fixed: <code>orrery_OrreryThirdParty.bundle</code> is now included alongside the binary in release tarballs and deb packages.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.3</span>
         <h3><code>orrery thirdparty</code> · uninstall rc cleanup fix · dynamic update notice</h3>
       </div>
       <p class="changelog-body">New <code>orrery thirdparty</code> subcommand group for managing third-party plugin packages: <code>install &lt;id&gt;</code>, <code>uninstall &lt;id&gt;</code>, <code>list</code>, and <code>available</code>. Packages are fetched from Git with a local vendored cache for offline use, installed into the active environment's tool config directory via a declarative manifest. <code>--env</code> is optional on all subcommands — defaults to the current active environment.</p>

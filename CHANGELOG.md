@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.4.4
+
+- **`orrery uninstall` removes the binary.** After clearing shell integration and restoring managed configs, uninstall now also deletes `orrery-bin` from its install location. Complete removal in one command.
+- **`orrery thirdparty` fatal error on install fixed.** The `OrreryThirdParty` resource bundle was missing from release tarballs and deb packages — only `orrery-bin` was packaged. CI now includes `orrery_OrreryThirdParty.bundle` alongside the binary; `install.sh` installs it to the same directory.
+
 ## v2.4.3
 
 - **`orrery thirdparty` command.** New subcommand group for managing third-party plugin packages: `install <id>`, `uninstall <id>`, `list`, and `available`. Packages are fetched from Git (with a local vendored cache for offline use) and installed into the active environment's tool config directory via a declarative manifest. `--env` is optional on all subcommands — defaults to the current active environment (`ORRERY_ACTIVE_ENV`).
