@@ -98,7 +98,7 @@ public struct CreateCommand: ParsableCommand {
             do {
                 let registry = try ThirdPartyRuntime.registry()
                 let runner = try ThirdPartyRuntime.runner()
-                let pkg = try registry.lookup("cc-statusline")
+                let pkg = try registry.lookup("orrery-statusline")
                 let record = try runner.install(pkg, into: name, refOverride: nil, forceRefresh: false)
                 print(L10n.Create.installedStatusline(record.packageID, name))
             } catch {

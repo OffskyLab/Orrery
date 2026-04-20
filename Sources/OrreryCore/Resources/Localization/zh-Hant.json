@@ -57,7 +57,7 @@
   "create.sessions.shared": "Session：共享",
   "create.installedStatusline": "已安裝 {id} 至環境「{name}」。",
   "create.installStatuslineNo": "跳過",
-  "create.installStatuslineYes": "安裝 cc-statusline",
+  "create.installStatuslineYes": "安裝 orrery-statusline",
   "create.setupToolNo": "跳過",
   "create.setupToolYes": "新增並設定",
   "create.toolHelp": "工具 (claude, codex, gemini)",

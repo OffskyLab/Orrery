@@ -57,7 +57,7 @@
   "create.sessions.shared": "Sessions: shared",
   "create.installedStatusline": "Installed {id} into environment '{name}'.",
   "create.installStatuslineNo": "Skip",
-  "create.installStatuslineYes": "Install cc-statusline",
+  "create.installStatuslineYes": "Install orrery-statusline",
   "create.setupToolNo": "Skip",
   "create.setupToolYes": "Add and set up",
   "create.toolHelp": "Tool (claude, codex, gemini)",
