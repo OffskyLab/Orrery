@@ -1,7 +1,7 @@
 import ArgumentParser
 
 public enum OrreryVersion {
-    public static let current = "2.4.5"
+    public static let current = "2.4.6"
 }
 
 public struct OrreryCommand: ParsableCommand {

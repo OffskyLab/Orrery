@@ -5,7 +5,8 @@ public struct BuiltInRegistry: ThirdPartyRegistry {
     // Map of package id → manifest resource name (without .json). When more
     // add-ons ship, extend this table and add the matching Manifests/*.json.
     private static let table: [String: String] = [
-        "cc-statusline": "cc-statusline",
+        "cc-statusline":      "cc-statusline",
+        "orrery-statusline":  "orrery-statusline",
     ]
 
     public init() {}

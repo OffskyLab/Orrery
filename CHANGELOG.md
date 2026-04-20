@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.4.6
+
+- **`orrery-statusline` thirdparty package.** New built-in package `orrery-statusline` — a lightweight Claude Code statusline showing Orrery environment name, working directory, git branch, 5h/7d quota bars, env path, and memory path. Install with `orrery thirdparty install orrery-statusline`. Quota and auth data reflect the active environment's account.
+
 ## v2.4.5
 
 - **`orrery thirdparty` works in the origin environment.** Installing or uninstalling packages while in `origin` previously crashed with "Environment 'origin' not found" because the store only searches `~/.orrery/envs/`. The runner now routes `origin` directly to `originConfigDir`, the correct storage path.
