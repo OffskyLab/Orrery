@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.4.5
+
+- **`orrery thirdparty` works in the origin environment.** Installing or uninstalling packages while in `origin` previously crashed with "Environment 'origin' not found" because the store only searches `~/.orrery/envs/`. The runner now routes `origin` directly to `originConfigDir`, the correct storage path.
+- **`install.sh` installs the resource bundle on Linux.** The script previously only copied `orrery_OrreryThirdParty.bundle` (macOS); Linux tarballs include `orrery_OrreryThirdParty.resources` instead, which was silently skipped. Both suffixes are now handled.
+
 ## v2.4.4
 
 - **`orrery uninstall` removes the binary.** After clearing shell integration and restoring managed configs, uninstall now also deletes `orrery-bin` from its install location. Complete removal in one command.
