@@ -135,6 +135,9 @@ public struct ManifestRunner: ThirdPartyRunner {
     // MARK: - Helpers
 
     private func resolveClaudeDir(env: String) throws -> URL {
+        if env == "origin" {
+            return store.originConfigDir(tool: .claude)
+        }
         do { _ = try store.envDir(for: env) }
         catch { throw ThirdPartyError.envNotFound(env) }
         return store.toolConfigDir(tool: .claude, environment: env)
