@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.4.1</div>
+  <div class="badge">v2.4.3</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -1078,8 +1078,17 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.1</span>
+        <span class="changelog-ver">v2.4.3</span>
         <span class="changelog-new">latest</span>
+        <h3><code>orrery thirdparty</code> · uninstall rc cleanup fix · dynamic update notice</h3>
+      </div>
+      <p class="changelog-body">New <code>orrery thirdparty</code> subcommand group for managing third-party plugin packages: <code>install &lt;id&gt;</code>, <code>uninstall &lt;id&gt;</code>, <code>list</code>, and <code>available</code>. Packages are fetched from Git with a local vendored cache for offline use, installed into the active environment's tool config directory via a declarative manifest. <code>--env</code> is optional on all subcommands — defaults to the current active environment.</p>
+      <p class="changelog-body"><code>orrery uninstall</code> now fully removes the lazy-bootstrap stub from your rc file. Previously the function body (<code>orrery() { … }</code>) was left behind after uninstall. Dynamic update notice: <code>_check-update</code> now fetches and caches a maintainer-controlled notice from the repo, shown alongside the "new version" line when applicable.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.1</span>
         <h3><code>activate.sh</code> self-heals on upgrade · clone skips account data · claude native installer</h3>
       </div>
       <p class="changelog-body"><code>activate.sh</code> now carries a version stamp on the first line. On every new shell, <code>_orrery_init</code> compares the stamp against the installed binary version. If they differ — e.g. because <code>post_install</code> was silently skipped after <code>brew upgrade</code> — it regenerates and re-sources the file immediately. Stale shells now heal without any manual intervention.</p>

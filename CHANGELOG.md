@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## v2.4.3
 
-- **Dynamic update notice.** When `orrery _check-update` detects a newer release, it now also fetches `docs/update-notice.md` from the repo's `main` branch and appends any matching message to the existing "new version available" line. Notices are filtered by an `applies-to:` frontmatter constraint (supports `<`, `<=`, `=`, `>=`, `>` with comma-separated AND), cached with HTTP `If-None-Match` at `$ORRERY_HOME/.update-notice-cache.json`, and served from cache on transient network failure. Failure is always silent — users never see errors from this path. Shipped with a dormant `docs/update-notice.md` (`applies-to: <0.0.1`) so maintainers can activate it by editing one file.
+- **`orrery thirdparty` command.** New subcommand group for managing third-party plugin packages: `install <id>`, `uninstall <id>`, `list`, and `available`. Packages are fetched from Git (with a local vendored cache for offline use) and installed into the active environment's tool config directory via a declarative manifest. `--env` is optional on all subcommands — defaults to the current active environment (`ORRERY_ACTIVE_ENV`).
+- **`orrery uninstall` fully removes the lazy-bootstrap stub.** The old line-filter left `orrery() { … }` behind after uninstall because it only caught the comment and `source` lines. The uninstaller now reuses the same block-stripping logic as `orrery setup`, which handles all three historic rc-file shapes correctly.
+- **Dynamic update notice.** When `orrery _check-update` detects a newer release, it also fetches `docs/update-notice.md` from the repo's `main` branch and appends any matching message to the "new version available" line. Notices are filtered by an `applies-to:` frontmatter constraint (supports `<`, `<=`, `=`, `>=`, `>` with comma-separated AND), cached with HTTP `If-None-Match`, and served from cache on transient network failure. Failure is always silent.
 
 ## v2.4.1
 

@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.4.1</div>
+  <div class="badge">v2.4.3</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -1063,8 +1063,17 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.1</span>
+        <span class="changelog-ver">v2.4.3</span>
         <span class="changelog-new">最新</span>
+        <h3><code>orrery thirdparty</code> · uninstall rc 殘留修復 · 動態更新通知</h3>
+      </div>
+      <p class="changelog-body">新增 <code>orrery thirdparty</code> 指令群組，管理第三方外掛套件：<code>install &lt;id&gt;</code>、<code>uninstall &lt;id&gt;</code>、<code>list</code>、<code>available</code>。套件從 Git 取得（支援本地 vendored cache 離線使用），透過宣告式 manifest 安裝至目前環境的工具設定目錄。<code>--env</code> 為選填，省略時預設使用目前的 active 環境。</p>
+      <p class="changelog-body"><code>orrery uninstall</code> 現在能完整移除 rc 檔中的 lazy-bootstrap stub。舊版只清除 comment 和 source 行，<code>orrery() { … }</code> 的函式本體會殘留。動態更新通知：<code>_check-update</code> 現在從 repo 取得並快取由維護者控制的通知訊息，符合條件時顯示於「有新版本」的訊息旁。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.1</span>
         <h3><code>activate.sh</code> 升級後自動修復 · clone 不再複製帳號資料 · Claude 原生安裝指令</h3>
       </div>
       <p class="changelog-body"><code>activate.sh</code> 第一行現在帶有版本戳記。每次開新 shell，<code>_orrery_init</code> 會比對戳記版本與安裝的 binary 版本。若不符（例如 <code>brew upgrade</code> 後 <code>post_install</code> 靜默跳過），會立即重新產生並 re-source — shell 不需要任何手動操作就能自我修復。</p>
