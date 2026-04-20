@@ -47,7 +47,11 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          if [[ -z "$BUNDLE" ]]; then
+            echo "ERROR: OrreryThirdParty bundle not found. Contents:"; ls -la .build/release/; exit 1
+          fi
+          cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-x86_64.tar.gz -C dist .
       - name: Package deb
         run: |
@@ -55,7 +59,8 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
@@ -97,7 +102,11 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          if [[ -z "$BUNDLE" ]]; then
+            echo "ERROR: OrreryThirdParty bundle not found. Contents:"; ls -la .build/release/; exit 1
+          fi
+          cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-arm64.tar.gz -C dist .
       - name: Package deb
         run: |
@@ -105,7 +114,8 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
+          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
           Version: ${tag}
