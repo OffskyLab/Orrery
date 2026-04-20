@@ -34,8 +34,7 @@ let package = Package(
         .target(
             name: "OrreryThirdParty",
             dependencies: ["OrreryCore"],
-            path: "Sources/OrreryThirdParty",
-            resources: [.process("Manifests")]
+            path: "Sources/OrreryThirdParty"
         ),
         .executableTarget(
             name: "L10nCodegenTool",
