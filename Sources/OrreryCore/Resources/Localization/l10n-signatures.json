@@ -1999,6 +1999,11 @@
   { "path": ["Uninstall", "aborted"],          "kind": "var", "parameters": [] },
   { "path": ["Uninstall", "done"],             "kind": "var", "parameters": [] },
   {
+    "path": ["Uninstall", "removedBinary"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "path", "type": "String" }]
+  },
+  {
     "path": ["Uninstall", "removedIntegration"],
     "kind": "func",
     "parameters": [{ "label": "_", "name": "path", "type": "String" }]

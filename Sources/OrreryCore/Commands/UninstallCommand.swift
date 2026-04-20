@@ -49,6 +49,14 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedIntegration(rcFile.path))
         }
 
+        // 3. Remove the orrery-bin binary
+        let binaryPath = CommandLine.arguments[0]
+        let binaryURL = URL(fileURLWithPath: binaryPath)
+        if FileManager.default.fileExists(atPath: binaryURL.path) {
+            try FileManager.default.removeItem(at: binaryURL)
+            stderrWrite(L10n.Uninstall.removedBinary(binaryURL.path))
+        }
+
         print(L10n.Uninstall.done)
     }
 }
