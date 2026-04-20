@@ -195,7 +195,7 @@ public struct SetupCommand: ParsableCommand {
 
     /// True when `text` contains at least one orrery-integration block in any
     /// of the known shapes.
-    private static func containsOrreryBlock(_ text: String) -> Bool {
+    static func containsOrreryBlock(_ text: String) -> Bool {
         text.contains("# orrery shell integration") || text.contains(#"eval "$(orrery setup)""#)
     }
 
@@ -205,7 +205,7 @@ public struct SetupCommand: ParsableCommand {
     ///   2. `eval "$(orrery setup)"`                                   (oldest)
     ///   3. `# orrery shell integration (lazy bootstrap)\norrery() { … }` (current)
     /// Any trailing blank lines left behind are collapsed by the caller.
-    private static func stripOrreryBlocks(_ text: String) -> String {
+    static func stripOrreryBlocks(_ text: String) -> String {
         let lines = text.components(separatedBy: "\n")
         var out: [String] = []
         var i = 0
