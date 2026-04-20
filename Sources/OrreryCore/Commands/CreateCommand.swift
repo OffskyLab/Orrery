@@ -128,7 +128,7 @@ public struct CreateCommand: ParsableCommand {
         let selector = SingleSelect(
             title: L10n.Create.askInstallStatusline,
             options: [L10n.Create.installStatuslineYes, L10n.Create.installStatuslineNo],
-            selected: 1
+            selected: 0
         )
         return selector.run() == 0
     }
