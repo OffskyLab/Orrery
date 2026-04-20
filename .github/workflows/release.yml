@@ -47,10 +47,9 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          echo "=== .build/release contents ==="; ls -la .build/release/ | head -30
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
           if [ -z "$BUNDLE" ]; then
-            echo "ERROR: OrreryThirdParty bundle not found"; exit 1
+            echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
           cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-x86_64.tar.gz -C dist .
@@ -60,7 +59,7 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
           [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
@@ -103,10 +102,9 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
-          echo "=== .build/release contents ==="; ls -la .build/release/ | head -30
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
           if [ -z "$BUNDLE" ]; then
-            echo "ERROR: OrreryThirdParty bundle not found"; exit 1
+            echo "ERROR: OrreryThirdParty bundle/resources not found"; ls -la .build/release/; exit 1
           fi
           cp -r "$BUNDLE" dist/
           tar -czf orrery-linux-arm64.tar.gz -C dist .
@@ -116,7 +114,7 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
-          BUNDLE=$(find .build/release -maxdepth 1 -name "*OrreryThirdParty.bundle" -type d | head -1)
+          BUNDLE=$(find .build/release -maxdepth 1 \( -name "*OrreryThirdParty.bundle" -o -name "*OrreryThirdParty.resources" \) -type d | head -1)
           [ -n "$BUNDLE" ] && cp -r "$BUNDLE" deb/usr/local/bin/
           cat > deb/DEBIAN/control <<CTRL
           Package: orrery
