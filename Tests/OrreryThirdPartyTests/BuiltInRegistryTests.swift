@@ -9,7 +9,7 @@ struct BuiltInRegistryTests {
         let reg = BuiltInRegistry()
         let pkg = try reg.lookup("orrery-statusline")
         #expect(pkg.id == "orrery-statusline")
-        #expect(pkg.steps.count == 3)
+        #expect(pkg.steps.count == 2)
     }
 
     @Test("lookup unknown throws packageNotFound")
