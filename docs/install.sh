@@ -101,6 +101,8 @@ else
     $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
     if [[ -d "$TMP_DIR/orrery_OrreryThirdParty.bundle" ]]; then
       $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.bundle" "$INSTALL_DIR/"
+    elif [[ -d "$TMP_DIR/orrery_OrreryThirdParty.resources" ]]; then
+      $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.resources" "$INSTALL_DIR/"
     fi
     info "Installed pre-built binary to $INSTALL_DIR/$BINARY_NAME"
   else
