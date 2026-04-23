@@ -2298,5 +2298,308 @@
     ],
     "kind": "var",
     "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "specHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "inputHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "outputHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "profileHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "toolHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "reviewHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "envHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "inputNotFound"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Spec",
+      "profileNotFound"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Spec",
+      "noToolAvailable"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Spec",
+      "generating"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Spec",
+      "reviewing"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Spec",
+      "generated"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": ["SpecRun", "abstract"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "specPathHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "modeHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "toolHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "resumeHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "timeoutHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "perCommandTimeoutHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "executeHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "strictPolicyHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "reviewHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "envHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "specNotFound"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "invalidMode"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "mode", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "missingAcceptanceSection"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "missingInterfaceContractSection"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "missingChangedFilesSection"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "missingImplementationStepsSection"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "sessionNotFound"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "id", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "delegateLaunchFailed"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "stderr", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "finalizeAbstract"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "sessionIdRequired"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "sessionIdHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "watchHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "includeLogHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "sinceTimestampHelp"],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": ["SpecRun", "unknownTool"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "modeNotImplemented"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "mode", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "verifyFreshSession"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "id", "type": "String" }
+    ]
+  },
+  {
+    "path": ["SpecRun", "policyBlockedSummary"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "count", "type": "Int" }
+    ]
   }
 ]

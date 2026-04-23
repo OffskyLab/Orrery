@@ -1,0 +1,309 @@
+It seems the write permission is being denied. Let me output the spec directly so you can review it:
+
+---
+
+# 版本號同步機制 + Magi 核心元件單元測試
+
+### 來源
+
+Magi 討論報告：Run ID `EE9A8DCD-AA7F-422C-8EE1-CC884384AFF1`（2026-04-17），三模型共識。
+議題：1) 版本號未同步處理流程 2) Magi 元件測試策略與優先順序。
+
+### 目標
+
+Orrery 版本號分散在 4+ 個檔案中（OrreryCommand.swift、MCPServer.swift、docs/index.html、docs/zh_TW.html），CHANGELOG 已記錄 v2.3.0 但其餘位置仍為 2.2.0，造成版本漂移。本任務將版本來源收斂為單一 `Version.swift` 常數檔（已存在但尚未被所有消費端引用），並新增 `VersionConsistencyTests.swift` 在 CI 層面自動防止版本漂移。同時為 Magi 子系統補上 P0–P2 單元測試（MagiResponseParser、MagiPromptBuilder、MagiRun models），以消除純函式元件中靜默失敗的風險。
+
+### 介面合約（Interface Contract）
+
+#### `OrreryVersion`（已存在，`Sources/OrreryCore/Version.swift`）
+
+```swift
+public enum OrreryVersion {
+    public static let current: String  // e.g. "2.3.0"
+}
+```
+
+- 零依賴（不 import ArgumentParser、不 import Foundation）
+- 所有需要版本字串的模組從此處讀取
+
+#### `OrreryCommand.configuration`（修改）
+
+```swift
+version: OrreryVersion.current  // 取代硬編碼 "2.2.0"
+```
+
+#### `MCPServer.currentVersion()`（修改）
+
+```swift
+private static func currentVersion() -> String {
+    OrreryVersion.current  // 取代硬編碼 "2.2.0"，解決 circular-dep 註解問題
+}
+```
+
+#### `VersionConsistencyTests`（新增）
+
+```swift
+@Suite("VersionConsistency")
+struct VersionConsistencyTests {
+    @Test("OrreryCommand version matches Version.swift")
+    @Test("CHANGELOG contains current version header")
+    @Test("docs/index.html badge contains current version")
+    @Test("docs/zh_TW.html badge contains current version")
+}
+```
+
+- 每個 test 讀取對應檔案或呼叫對應 API，assert 包含 `OrreryVersion.current`
+- docs badge 格式：`>vX.Y.Z</div>`
+- CHANGELOG 格式：`## vX.Y.Z`
+- MCPServer.currentVersion() 為 private，但引用 `OrreryVersion.current` 後為編譯期保證 [inferred]
+
+#### `MagiResponseParserTests`（新增）
+
+```swift
+@Suite("MagiResponseParser")
+struct MagiResponseParserTests {
+    // Strategy 1: JSON block parsing
+    @Test("parses valid JSON block")
+    @Test("picks last JSON block when multiple exist")
+    @Test("handles whitespace around JSON block")
+    @Test("returns nil for malformed JSON inside code fence")
+    @Test("returns nil for missing positions key")
+
+    // Strategy 2: Regex fallback
+    @Test("regex fallback extracts agree position")
+    @Test("regex fallback extracts disagree position")
+    @Test("regex fallback extracts conditional position")
+    @Test("regex fallback returns nil when subtopic not found")
+
+    // Strategy 3: Complete failure
+    @Test("returns nil positions and false for empty string")
+    @Test("returns nil positions and false for garbage input")
+}
+```
+
+- 輸入：`(rawOutput: String, subtopics: [String])`
+- 輸出：`(positions: [MagiPositionEntry]?, parseSuccess: Bool)`
+- JSON block 成功時 `parseSuccess == true`；regex fallback 時 `parseSuccess == false`
+- 完全失敗時 `positions == nil, parseSuccess == false`
+
+#### `MagiPromptBuilderTests`（新增）
+
+```swift
+@Suite("MagiPromptBuilder")
+struct MagiPromptBuilderTests {
+    @Test("round 1 prompt contains topic and subtopics")
+    @Test("round 1 prompt has no Previous Reasoning section")
+    @Test("round 2 prompt includes Previous Reasoning")
+    @Test("round 2 prompt includes Other Participants' Positions")
+    @Test("role injection adds Your Role section")
+    @Test("no role omits Your Role section")
+    @Test("Your Task section contains JSON format instructions")
+    @Test("collectOwnOutputs truncates at 8000 chars") [inferred]
+}
+```
+
+- `buildPrompt()` 是 pure function，snapshot-style 測試驗證段落存在性
+- 8000-char 截斷：當累計 raw output 超過 8000 字元且 rounds > 2 時，較早的 round 退化為 `[Summary]` 格式
+
+#### `MagiRunModelTests`（新增）
+
+```swift
+@Suite("MagiRunModels")
+struct MagiRunModelTests {
+    @Test("MagiPosition encode/decode round-trip")
+    @Test("MagiPositionEntry encode/decode round-trip")
+    @Test("MagiAgentResponse encode/decode with nil optionals")
+    @Test("MagiRun encode/decode round-trip")
+    @Test("ConsensusItem encode/decode round-trip")
+    @Test("FinalVerdict encode/decode round-trip")
+    @Test("MagiRolePreset balanced provides 3 roles")
+    @Test("MagiRolePreset adversarial provides 3 roles")
+    @Test("MagiRolePreset security provides 3 roles")
+}
+```
+
+- 所有 Codable model 的 encode → decode round-trip 一致性
+- Optional 欄位（role、votes、exitCode、stderrOutput、timedOut、duration、sessionId）為 nil 時仍可正確序列化
+
+### 改動檔案
+
+| File Path | Change Description |
+|---|---|
+| `Sources/OrreryCore/Commands/OrreryCommand.swift` | 將 `version: "2.2.0"` 改為 `version: OrreryVersion.current` |
+| `Sources/OrreryCore/MCP/MCPServer.swift` | `currentVersion()` 改為回傳 `OrreryVersion.current`，移除 circular-dep 註解 |
+| `docs/index.html` | badge 從 `v2.2.0` 更新為 `v2.3.0`（手動，未來可由 CI 驗證） |
+| `docs/zh_TW.html` | badge 從 `v2.2.0` 更新為 `v2.3.0`（手動，未來可由 CI 驗證） |
+| `Tests/OrreryTests/VersionConsistencyTests.swift` | **新增**：版本一致性測試，assert 所有已知版本位置匹配 `OrreryVersion.current` |
+| `Tests/OrreryTests/MagiResponseParserTests.swift` | **新增**：MagiResponseParser 的 11 個單元測試 |
+| `Tests/OrreryTests/MagiPromptBuilderTests.swift` | **新增**：MagiPromptBuilder 的 8 個單元測試 |
+| `Tests/OrreryTests/MagiRunModelTests.swift` | **新增**：Magi 資料模型的 9 個 Codable round-trip 測試 |
+
+### 實作步驟
+
+#### Step 1：修改 `Sources/OrreryCore/Commands/OrreryCommand.swift`
+
+1. 將第 7 行 `version: "2.2.0"` 替換為 `version: OrreryVersion.current`
+2. 不新增 import（`OrreryVersion` 與 `OrreryCommand` 同屬 `OrreryCore` module）
+
+#### Step 2：修改 `Sources/OrreryCore/MCP/MCPServer.swift`
+
+1. 將 `currentVersion()` 的回傳值從 `"2.2.0"` 替換為 `OrreryVersion.current`
+2. 移除函式上方的 `// Read from OrreryCommand would create a circular dep, just hardcode sync point` 註解（問題已解決）
+
+#### Step 3：更新 `docs/index.html`
+
+1. 將 `<div class="badge">v2.2.0</div>`（約第 580 行）替換為 `<div class="badge">v2.3.0</div>`
+2. 將 `<span class="changelog-ver">v2.2.0</span>`（約第 1009 行）替換為 `<span class="changelog-ver">v2.3.0</span>`
+
+#### Step 4：更新 `docs/zh_TW.html`
+
+1. 將 `<div class="badge">v2.2.0</div>`（約第 580 行）替換為 `<div class="badge">v2.3.0</div>`
+2. 將 `<span class="changelog-ver">v2.2.0</span>`（約第 994 行）替換為 `<span class="changelog-ver">v2.3.0</span>`
+
+#### Step 5：新增 `Tests/OrreryTests/VersionConsistencyTests.swift`
+
+1. `import Testing` + `@testable import OrreryCore` + `import Foundation`
+2. 建立 `@Suite("VersionConsistency") struct VersionConsistencyTests`
+3. Test: OrreryCommand version — `#expect(OrreryCommand.configuration.version == OrreryVersion.current)`
+4. Test: CHANGELOG — 讀取專案根目錄 `CHANGELOG.md`，`#expect(content.contains("## v\(OrreryVersion.current)"))`
+5. Test: docs/index.html — 讀取檔案，`#expect(content.contains(">v\(OrreryVersion.current)</div>"))`
+6. Test: docs/zh_TW.html — 同上
+7. 檔案路徑推導：使用 `#filePath` 從 `Tests/OrreryTests/` 向上兩層取得專案根目錄
+8. MCPServer.currentVersion() 為 private，但 Step 2 改為引用 `OrreryVersion.current` 後為編譯期保證 [inferred]
+
+#### Step 6：新增 `Tests/OrreryTests/MagiResponseParserTests.swift`
+
+1. `import Testing` + `@testable import OrreryCore`
+2. 建立 `@Suite("MagiResponseParser") struct MagiResponseParserTests`
+3. 有效 JSON block 測試：構造包含 ` ```json ... ``` ` 的字串，呼叫 `MagiResponseParser.parse()`，驗證 `parseSuccess == true`、`positions?.count == 1`、`positions?.first?.position == .agree`
+4. 多 JSON block 測試：輸入包含兩個 ` ```json``` ` block，驗證取最後一個的內容
+5. 空白邊界測試：JSON block 前後有多餘空白和換行，仍能正確解析
+6. 格式錯誤 JSON 測試：code fence 內是無效 JSON `{not valid}`，驗證 `parseSuccess == false`
+7. 缺少 positions key 測試：JSON 有效但 key 為 `"data"` 而非 `"positions"`，驗證 `positions == nil`
+8. Regex fallback agree 測試：不含 code fence，rawOutput 中包含 subtopic 文字後跟 `"agree"`，驗證 `parseSuccess == false` 且 `positions?.first?.position == .agree`
+9. Regex fallback disagree 測試：同上但關鍵字為 `"disagree"`
+10. Regex fallback conditional 測試：同上但關鍵字為 `"conditional"`
+11. Subtopic 不存在測試：subtopics 列表中的文字未出現在 rawOutput 中，驗證 `positions == nil`
+12. 空字串測試：`rawOutput: ""` → `(nil, false)`
+13. 亂碼測試：`rawOutput: "random garbage without structure"` → `(nil, false)`
+
+#### Step 7：新增 `Tests/OrreryTests/MagiPromptBuilderTests.swift`
+
+1. `import Testing` + `@testable import OrreryCore`
+2. 建立 `@Suite("MagiPromptBuilder") struct MagiPromptBuilderTests`
+3. Round 1 基本測試：`previousRounds: []`，驗證輸出包含 `"### Topic"`、`"### Sub-topics"`、`"### Your Task"`
+4. Round 1 無歷史測試：驗證輸出**不**包含 `"### Your Previous Reasoning"`
+5. Round 2 含歷史測試：構造一個含有單一 `MagiAgentResponse` 的 `MagiRound`（使用 `.claude` 作為 tool），以 `.codex` 作為 `targetTool` 呼叫 `buildPrompt()`，驗證輸出包含 `"### Your Previous Reasoning"` 和 `"### Other Participants' Positions"`
+6. 角色注入測試：傳入 `role: MagiRole(id: "test", label: "Tester", instruction: "Test all things")`，驗證輸出包含 `"### Your Role"` 和 `"Tester"`
+7. 無角色測試：`role: nil`，驗證輸出**不**包含 `"### Your Role"`
+8. Your Task 段落測試：驗證輸出包含 `` "```json" `` 和 `"positions"`（JSON 格式指示）
+9. 截斷邏輯測試：建構 3 個 round，每個 round 有一個 targetTool 的 response，rawOutput 各為 4000 字元長的字串（總計 12000 > 8000），驗證第一個 round 的輸出被退化為包含 `"[Summary]"` 的格式
+
+#### Step 8：新增 `Tests/OrreryTests/MagiRunModelTests.swift`
+
+1. `import Testing` + `@testable import OrreryCore` + `import Foundation`
+2. 建立 `@Suite("MagiRunModels") struct MagiRunModelTests`
+3. MagiPosition round-trip：encode `.agree` → decode → `#expect(decoded == .agree)`
+4. MagiPositionEntry round-trip：構造 `MagiPositionEntry(subtopic: "A", position: .agree, reasoning: "ok")` → encode → decode → 驗證所有欄位相等
+5. MagiAgentResponse round-trip（nil optionals）：`role: nil, votes: nil, exitCode: nil, stderrOutput: nil, timedOut: nil, duration: nil, sessionId: nil` → encode → decode → 驗證 nil 欄位仍為 nil
+6. MagiRun round-trip：構造完整實例（含 rounds、finalConsensus、finalVerdict、sessionMap）→ encode → decode → 驗證 `runId`、`topic`、`status`、`rounds.count`
+7. ConsensusItem round-trip：構造 `ConsensusItem(subtopic: "A", status: .agreed, positions: ["claude": .agree])` → encode → decode
+8. FinalVerdict round-trip：構造含 decisions + openQuestions + constraints → encode → decode → 驗證 `decisions.count`
+9. MagiRolePreset balanced 驗證 `roles.count == 3`
+10. MagiRolePreset adversarial 驗證 `roles.count == 3`
+11. MagiRolePreset security 驗證 `roles.count == 3`
+
+### 失敗路徑
+
+#### 版本一致性測試失敗（CI 阻擋）
+- 條件：任何版本位置的字串不匹配 `OrreryVersion.current`
+- `VersionConsistencyTests` 中的 `#expect` 失敗 → `swift test` exit code != 0 → release.yml 的 `verify-localization` job 失敗 → 阻擋 build 和 release
+- 可恢復：修正版本字串後重新 push tag
+
+#### 檔案讀取失敗（VersionConsistencyTests）[inferred]
+- 條件：test 中以 `#filePath` 推導的專案根目錄不正確（如 SPM build 路徑變更）
+- `try String(contentsOfFile:)` throw → test crash
+- 不可恢復於 CI：需修正路徑推導邏輯
+
+#### MagiResponseParser 解析失敗（靜默退化）
+- 正常流程：`parseJSONBlock()` 成功 → `(positions, true)`
+- Fallback：`parseJSONBlock()` return nil → `regexFallback()` 嘗試 → `(positions, false)`
+- 完全失敗：兩者皆 nil → `(nil, false)` → 呼叫端（`MagiOrchestrator`）記錄 `parseSuccess: false`，不中斷討論流程
+- **測試覆蓋此鏈路的每一段**
+
+#### MagiRun Codable 不相容（不可恢復）
+- 條件：修改 MagiRun struct 欄位但未維持 backward compatibility
+- `JSONDecoder().decode(MagiRun.self, from: oldData)` throw `DecodingError`
+- 影響：`--resume` 功能無法載入舊 run JSON
+- **本 task 不修改 MagiRun 結構，僅驗證現有結構的 round-trip**
+
+### 不改動的部分
+
+| 檔案/函式 | 原因 |
+|---|---|
+| `Sources/OrreryCore/Version.swift` | 已存在且正確（`current = "2.3.0"`），不需修改 |
+| `Sources/OrreryCore/Magi/MagiOrchestrator.swift` | P3 優先級，需先抽出 `MagiAgentRunner` 為 protocol 才能有效測試，延後至獨立 task |
+| `Sources/OrreryCore/Magi/MagiAgentRunner.swift` | 與 `Process`、`FileManager` 強耦合，本 task 不抽 protocol |
+| `Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift` | 不受版本同步或 Magi 測試影響 |
+| `Sources/OrreryCore/Commands/MagiCommand.swift` | CLI 定義不變 |
+| `Sources/OrreryCore/Storage/EnvironmentStore.swift` | 不受影響 |
+| `CHANGELOG.md` | 已正確記錄 v2.3.0，不需修改 |
+| `.github/workflows/release.yml` | 既有 `swift test` step 已足以執行 `VersionConsistencyTests`，不需額外修改 CI |
+| `Package.swift` | test target 已包含 `Tests/OrreryTests`，新增檔案會自動被發現 |
+
+**隱含行為變更**：
+- `OrreryCommand.configuration.version` 從硬編碼字串改為引用 `OrreryVersion.current`，行為不變但建立了編譯期耦合
+- `MCPServer.currentVersion()` 同上，MCP `initialize` 回應中的 version 值將自動跟隨 `OrreryVersion.current`
+
+### 驗收標準
+
+#### 功能合約
+
+- [ ] `OrreryCommand.configuration.version` 的值等於 `OrreryVersion.current`（`"2.3.0"`）
+- [ ] `MCPServer` 的 MCP `initialize` 回應中 `serverInfo.version` 為 `"2.3.0"`
+- [ ] `docs/index.html` 包含 `v2.3.0` badge
+- [ ] `docs/zh_TW.html` 包含 `v2.3.0` badge
+- [ ] `OrreryCommand.swift` 不再包含硬編碼版本字串
+- [ ] `MCPServer.swift` 不再包含硬編碼版本字串
+- [ ] `VersionConsistencyTests` 包含 ≥3 個 test，全部通過
+- [ ] `MagiResponseParserTests` 包含 ≥10 個 test，全部通過
+- [ ] `MagiPromptBuilderTests` 包含 ≥6 個 test，全部通過
+- [ ] `MagiRunModelTests` 包含 ≥6 個 Codable round-trip test，全部通過
+- [ ] 所有新增測試使用 Swift Testing framework（`@Suite`, `@Test`, `#expect`）
+- [ ] `swift test` 全部通過（含新增與既有測試）
+
+#### 測試指令
+
+```bash
+# 1. 編譯通過
+swift build 2>&1 | tail -3
+
+# 2. 全部測試通過
+swift test 2>&1 | tail -20
+
+# 3. 確認 OrreryCommand 不再硬編碼版本
+grep -n 'version:' Sources/OrreryCore/Commands/OrreryCommand.swift | grep -v OrreryVersion && echo "FAIL: hardcoded version" || echo "OK"
+
+# 4. 確認 MCPServer 不再硬編碼版本
+grep -n '"2.2.0"' Sources/OrreryCore/MCP/MCPServer.swift && echo "FAIL: hardcoded version" || echo "OK"
+
+# 5. 確認 docs badge 已更新
+grep 'v2.3.0' docs/index.html | head -1
+grep 'v2.3.0' docs/zh_TW.html | head -1
+
+# 6. 確認新測試檔案存在
+test -f Tests/OrreryTests/VersionConsistencyTests.swift && echo "OK" || echo "MISSING"
+test -f Tests/OrreryTests/MagiResponseParserTests.swift && echo "OK" || echo "MISSING"
+test -f Tests/OrreryTests/MagiPromptBuilderTests.swift && echo "OK" || echo "MISSING"
+test -f Tests/OrreryTests/MagiRunModelTests.swift && echo "OK" || echo "MISSING"
+
+# 7. 確認測試數量（至少 28 個新 test）
+swift test --list-tests 2>&1 | grep -cE 'VersionConsistency|MagiResponseParser|MagiPromptBuilder|MagiRunModel'
+
+# 8. MCP version 驗證
+echo -e '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' | swift run orrery mcp-server 2>/dev/null | head -1 | grep '"2.3.0"'
+```
+
+---
+
+Spec 已生成。需要我將它寫入 `docs/tasks/2026-04-17-version-sync-and-magi-tests.md` 嗎？（需要你授予寫入權限）
