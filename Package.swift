@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "orrery-bin", targets: ["orrery-bin"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
+        .library(name: "OrreryMagi", targets: ["OrreryMagi"]),
         .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
     ],
@@ -16,7 +17,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "orrery-bin",
-            dependencies: ["OrreryCore", "OrreryThirdParty"],
+            dependencies: ["OrreryCore", "OrreryMagi", "OrreryThirdParty"],
             path: "Sources/orrery"
         ),
         .target(
@@ -30,6 +31,14 @@ let package = Package(
                 "Resources/Localization/keys.md",
             ],
             plugins: [.plugin(name: "L10nCodegen")]
+        ),
+        .target(
+            name: "OrreryMagi",
+            dependencies: [
+                "OrreryCore",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            path: "Sources/OrreryMagi"
         ),
         .target(
             name: "OrreryThirdParty",
@@ -48,7 +57,7 @@ let package = Package(
         ),
         .testTarget(
             name: "OrreryTests",
-            dependencies: ["OrreryCore"],
+            dependencies: ["OrreryCore", "OrreryMagi"],
             path: "Tests/OrreryTests"
         ),
         .testTarget(

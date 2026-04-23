@@ -1,0 +1,45 @@
+{
+  "id": "2026-04-16-magi-parallelization",
+  "file": "docs/tasks/2026-04-16-magi-parallelization.md",
+  "title": "Orrery Magi 並行化與 Session 續接",
+  "status": "done",
+  "completed": "2026-04-16",
+  "created": "2026-04-16",
+  "depends_on": [
+    "2026-04-16-magi-mcp-slash-command"
+  ],
+  "discussion": "docs/discussions/2026-04-16-magi-parallelization.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Magi/MagiOrchestrator.swift",
+    "file:Sources/OrreryCore/Magi/MagiRun.swift",
+    "file:Sources/OrreryCore/Magi/MagiPromptBuilder.swift",
+    "file:Sources/OrreryCore/Helpers/SessionResolver.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Commands/MagiCommand.swift",
+    "file:Sources/OrreryCore/MCP/MCPServer.swift"
+  ],
+  "verification": [
+    "swift build 2>&1 | tail -5",
+    "time orrery magi 'test A; test B' --rounds 1",
+    "cat ~/.orrery/magi/*.json | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d.get('finalVerdict','MISSING'))\""
+  ],
+  "tags": [
+    "feature",
+    "performance"
+  ],
+  "status_history": [
+    {
+      "status": "ready",
+      "at": "2026-04-16T06:45:00Z"
+    },
+    {
+      "status": "in-progress",
+      "at": "2026-04-16T12:00:00Z",
+      "session": "pickup: magi parallelization + session resume"
+    },
+    {
+      "status": "done",
+      "at": "2026-04-16T15:50:00Z"
+    }
+  ]
+}

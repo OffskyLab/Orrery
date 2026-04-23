@@ -1,0 +1,28 @@
+{
+  "id": "2026-04-16-magi-mcp-slash-command",
+  "file": "docs/tasks/2026-04-16-magi-mcp-slash-command.md",
+  "title": "MCP 整合：新增 orrery_magi MCP tool 及 /orrery:magi slash command",
+  "status": "done",
+  "completed": "2026-04-16",
+  "created": "2026-04-16",
+  "depends_on": ["2026-04-15-magi-multi-model-discussion"],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-16-magi-mcp-slash-command.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/MCP/MCPServer.swift",
+    "file:Sources/OrreryCore/Commands/MCPSetupCommand.swift",
+    "file:Sources/OrreryCore/Commands/MagiCommand.swift"
+  ],
+  "verification": [
+    "swift build",
+    "swift run orrery mcp setup",
+    "test -f .claude/commands/orrery:magi.md",
+    "grep orrery_magi .claude/commands/orrery:magi.md"
+  ],
+  "tags": ["feature", "mcp"],
+  "status_history": [
+    {"status": "ready", "at": "2026-04-16T10:00:00Z"},
+    {"status": "in-progress", "at": "2026-04-16T11:00:00Z", "session": "pickup: magi MCP tool + slash command"},
+    {"status": "done", "at": "2026-04-16T11:15:00Z"}
+  ]
+}

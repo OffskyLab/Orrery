@@ -1,0 +1,70 @@
+{
+  "id": "2026-04-17-magi-extraction",
+  "file": "docs/tasks/2026-04-17-magi-extraction.md",
+  "title": "Magi Extraction: move Magi to OrreryMagi target + AgentExecutor protocol + package graph fix",
+  "status": "done",
+  "completed": "2026-04-22",
+  "created": "2026-04-17",
+  "depends_on": [
+    "2026-04-20-orrery-spec-implement-mvp"
+  ],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-17-magi-extraction.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Magi/MagiOrchestrator.swift",
+    "file:Sources/OrreryCore/Magi/MagiAgentRunner.swift",
+    "file:Sources/OrreryCore/Magi/MagiRun.swift",
+    "file:Sources/OrreryCore/Magi/MagiPromptBuilder.swift",
+    "file:Sources/OrreryCore/Magi/MagiResponseParser.swift",
+    "file:Sources/OrreryCore/Commands/MagiCommand.swift",
+    "file:Sources/OrreryCore/MCP/MCPServer.swift",
+    "file:Sources/OrreryCore/Helpers/SessionResolver.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Commands/SessionsCommand.swift",
+    "file:Sources/OrreryCore/Commands/OrreryCommand.swift",
+    "file:Package.swift"
+  ],
+  "verification": [
+    "swift build",
+    "swift test",
+    ".build/debug/orrery magi --help",
+    "echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}' | .build/debug/orrery mcp-server | grep orrery_magi",
+    "! grep -rn 'import OrreryMagi' Sources/OrreryCore/",
+    "test -f Sources/OrreryMagi/MagiOrchestrator.swift",
+    "test -f docs/CONTRACT-OrreryMagi.md"
+  ],
+  "tags": [
+    "refactor",
+    "magi",
+    "architecture",
+    "phase-1-modularization"
+  ],
+  "notes": [
+    "Unblocked by D16 of 2026-04-18-orrery-spec-mcp-tool discussion — Spec MVP now complete (2026-04-22)",
+    "D1-D15 + Gemini 9-ticket plan covers: extract SessionEntry DTO, make findScopedSessions public, introduce AgentExecutor protocol + ProcessAgentExecutor, move Magi/* to new OrreryMagi target, break OrreryCore→OrreryMagi cycle by moving MagiCommand to executable target, reorganize MCP tool registration, add CONTRACT-OrreryMagi.md",
+    "Phase 1 only — L10n stays shared (D9), Package.swift target is library but repo is single (D1); Phase 2 repo split deferred to 2026-07-01 Go/No-Go review (D15)",
+    "Important: SpecImplementRunner (completed 2026-04-22) also uses SessionResolver.findScopedSessions — making it public is non-breaking for it since SpecImplementRunner stays in OrreryCore"
+  ],
+  "status_history": [
+    {
+      "status": "deferred",
+      "at": "2026-04-19T00:00:00Z",
+      "note": "D16 of 2026-04-18-orrery-spec-mcp-tool: delay until Spec MVP ships"
+    },
+    {
+      "status": "ready",
+      "at": "2026-04-22T14:00:00Z",
+      "note": "Spec MVP completed; unblocking per D16 reverse dependency"
+    },
+    {
+      "status": "in-progress",
+      "at": "2026-04-22T14:00:01Z",
+      "session": "picking up Magi extraction T1: SessionEntry + typealias + findScopedSessions public"
+    },
+    {
+      "status": "done",
+      "at": "2026-04-22T22:50:00Z",
+      "note": "M1-M8 complete. 166 tests green. CONTRACT-OrreryMagi.md added with 2026-07-01 Go/No-Go anchor. MagiMCPTools extraction reviewed by gemini (PASS, bit-for-bit argv equivalence). User-facing behaviour unchanged."
+    }
+  ]
+}

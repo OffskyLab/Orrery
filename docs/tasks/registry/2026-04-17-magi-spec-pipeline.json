@@ -1,0 +1,29 @@
+{
+  "id": "2026-04-17-magi-spec-pipeline",
+  "file": "docs/tasks/2026-04-17-magi-spec-pipeline.md",
+  "title": "Magi Spec Pipeline：討論結果 → 結構化 Spec 自動產出",
+  "status": "done",
+  "completed": "2026-04-17",
+  "created": "2026-04-17",
+  "depends_on": ["2026-04-16-magi-roles-and-spec-pipeline"],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-17-magi-spec-pipeline.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Commands/MagiCommand.swift",
+    "file:Sources/OrreryCore/Magi/MagiOrchestrator.swift",
+    "file:Sources/OrreryCore/MCP/MCPServer.swift",
+    "file:Sources/OrreryCore/Commands/MCPSetupCommand.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift"
+  ],
+  "verification": [
+    "swift build",
+    "swift run orrery spec --help 2>&1 | grep profile",
+    "swift run orrery magi --help 2>&1 | grep spec"
+  ],
+  "tags": ["feature", "magi", "spec"],
+  "status_history": [
+    {"status": "ready", "at": "2026-04-17T17:10:00Z"},
+    {"status": "in-progress", "at": "2026-04-17T17:15:00Z", "session": "pickup: magi spec pipeline"},
+    {"status": "done", "at": "2026-04-17T17:45:00Z"}
+  ]
+}

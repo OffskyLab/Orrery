@@ -3,6 +3,31 @@ import Foundation
 /// Minimal MCP (Model Context Protocol) server over stdin/stdout JSON-RPC 2.0.
 public struct MCPServer {
 
+    private typealias ToolHandler = ([String: Any]) -> [String: Any]
+
+    private static let out = FileHandle.standardOutput
+    private static let err = FileHandle.standardError
+    private static nonisolated(unsafe) var extraToolSchemas: [[String: Any]] = []
+    private static nonisolated(unsafe) var extraToolHandlers: [String: ToolHandler] = [:]
+    private static let extraToolsLock = NSLock()
+
+    public static func registerTool(
+        schema: [String: Any],
+        handler: @escaping ([String: Any]) -> [String: Any]
+    ) {
+        guard let name = schema["name"] as? String, !name.isEmpty else { return }
+
+        extraToolsLock.lock()
+        defer { extraToolsLock.unlock() }
+
+        if let index = extraToolSchemas.firstIndex(where: { ($0["name"] as? String) == name }) {
+            extraToolSchemas[index] = schema
+        } else {
+            extraToolSchemas.append(schema)
+        }
+        extraToolHandlers[name] = handler
+    }
+
     public static func run() {
         log("Orrery MCP server starting")
 
@@ -54,7 +79,7 @@ public struct MCPServer {
     // MARK: - Tool definitions
 
     private static func toolDefinitions() -> [[String: Any]] {
-        [
+        let builtInTools: [[String: Any]] = [
             [
                 "name": "orrery_list",
                 "description": "List all Orrery environments",
@@ -118,34 +143,6 @@ public struct MCPServer {
                 "inputSchema": [
                     "type": "object",
                     "properties": [String: Any](),
-                    "additionalProperties": false
-                ]
-            ],
-            [
-                "name": "orrery_magi",
-                "description": "Start a multi-model discussion (Claude, Codex, Gemini) on a topic and produce a consensus report.",
-                "inputSchema": [
-                    "type": "object",
-                    "properties": [
-                        "topic": [
-                            "type": "string",
-                            "description": "Discussion topic. Use semicolons to separate sub-topics."
-                        ],
-                        "rounds": [
-                            "type": "integer",
-                            "description": "Maximum discussion rounds (default: 1 for MCP)"
-                        ],
-                        "tools": [
-                            "type": "array",
-                            "items": ["type": "string", "enum": ["claude", "codex", "gemini"]],
-                            "description": "Participating tools (default: all installed)"
-                        ],
-                        "environment": [
-                            "type": "string",
-                            "description": "Environment name (default: active environment)"
-                        ]
-                    ],
-                    "required": ["topic"],
                     "additionalProperties": false
                 ]
             ],
@@ -303,6 +300,8 @@ public struct MCPServer {
                 ]
             ],
         ]
+
+        return builtInTools + registeredToolSchemas()
     }
 
     // MARK: - Tool execution
@@ -335,22 +334,6 @@ public struct MCPServer {
 
         case "orrery_current":
             return execCommand(["orrery-bin", "current"])
-
-        case "orrery_magi":
-            guard let topic = arguments["topic"] as? String else {
-                return toolError("Missing required parameter: topic")
-            }
-            var args = ["orrery", "magi"]
-            let rounds = arguments["rounds"] as? Int ?? 1  // MCP 預設 1 輪
-            args += ["--rounds", String(rounds)]
-            if let env = arguments["environment"] as? String {
-                args += ["-e", env]
-            }
-            if let tools = arguments["tools"] as? [String] {
-                for tool in tools { args.append("--\(tool)") }
-            }
-            args.append(topic)
-            return execCommand(args)
 
         case "orrery_spec":
             guard let input = arguments["input"] as? String else {
@@ -449,13 +432,16 @@ public struct MCPServer {
             return writeMemory(content: content, append: append)
 
         default:
+            if let handler = registeredHandler(for: name) {
+                return handler(arguments)
+            }
             return toolError("Unknown tool: \(name)")
         }
     }
 
     // MARK: - Process execution
 
-    private static func execCommand(_ args: [String]) -> [String: Any] {
+    public static func execCommand(_ args: [String]) -> [String: Any] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = args
@@ -710,13 +696,25 @@ public struct MCPServer {
         send(response)
     }
 
-    private static func toolError(_ message: String) -> [String: Any] {
+    public static func toolError(_ message: String) -> [String: Any] {
         [
             "content": [
                 ["type": "text", "text": message]
             ],
             "isError": true
         ]
+    }
+
+    private static func registeredToolSchemas() -> [[String: Any]] {
+        extraToolsLock.lock()
+        defer { extraToolsLock.unlock() }
+        return extraToolSchemas
+    }
+
+    private static func registeredHandler(for name: String) -> ToolHandler? {
+        extraToolsLock.lock()
+        defer { extraToolsLock.unlock() }
+        return extraToolHandlers[name]
     }
 
     private static func send(_ dict: [String: Any]) {

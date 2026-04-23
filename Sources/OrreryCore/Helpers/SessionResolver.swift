@@ -33,7 +33,10 @@ public struct SessionResolver {
 
     // MARK: - Scoped session discovery (shared + active env only)
 
-    private static func findScopedSessions(
+    /// Discover sessions scoped to the active environment + shared sessions.
+    /// Public so that `OrreryMagi` (post-extraction) and other library
+    /// consumers can drive session-diff logic. See Magi extraction D3.
+    public static func findScopedSessions(
         tool: Tool,
         cwd: String,
         store: EnvironmentStore,

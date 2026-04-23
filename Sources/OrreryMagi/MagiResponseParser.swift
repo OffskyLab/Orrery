@@ -1,4 +1,5 @@
 import Foundation
+import OrreryCore
 
 public struct MagiResponseParser {
 

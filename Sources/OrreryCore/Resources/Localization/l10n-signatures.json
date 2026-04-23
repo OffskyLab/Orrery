@@ -2212,7 +2212,64 @@
   {
     "path": [
       "Magi",
+      "noSummarizeHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
       "outputHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "resumeHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "resuming"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "runId",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "roleAssigned"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "role",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "rolesHelp"
     ],
     "kind": "var",
     "parameters": []
@@ -2288,6 +2345,47 @@
         "label": "_",
         "name": "tool",
         "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "sessionIdNotFound"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Magi",
+      "summarizing"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Magi",
+      "timeoutWarning"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "seconds",
+        "type": "Int"
       }
     ]
   },

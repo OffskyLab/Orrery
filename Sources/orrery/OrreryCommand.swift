@@ -1,9 +1,16 @@
 import ArgumentParser
+import OrreryCore
+import OrreryMagi
 
 public enum OrreryVersion {
     public static let current = "2.5.0"
 }
 
+/// Root CLI command. Lives in the executable target so it can wire
+/// subcommands from both `OrreryCore` and `OrreryMagi` without creating
+/// a library-level dependency cycle (OrreryMagi already depends on
+/// OrreryCore; OrreryCore cannot depend back on OrreryMagi, so
+/// `MagiCommand.self` must be referenced from a layer that sees both).
 public struct OrreryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "orrery",
@@ -27,6 +34,9 @@ public struct OrreryCommand: ParsableCommand {
             ResumeCommand.self,
             DelegateCommand.self,
             MagiCommand.self,
+            SpecCommand.self,
+            SpecRunCommand.self,
+            SpecFinalizeCommand.self,
             SessionsCommand.self,
             MemoryCommand.self,
             MCPSetupCommand.self,
