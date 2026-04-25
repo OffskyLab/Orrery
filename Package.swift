@@ -58,7 +58,11 @@ let package = Package(
         .testTarget(
             name: "OrreryTests",
             dependencies: ["OrreryCore", "OrreryMagi"],
-            path: "Tests/OrreryTests"
+            path: "Tests/OrreryTests",
+            exclude: [
+                "Fixtures/minimal-implement-spec.md",
+                "Fixtures/sidecar/fake-sidecar.sh",
+            ]
         ),
         .testTarget(
             name: "OrreryThirdPartyTests",

@@ -44,7 +44,7 @@ public struct MagiCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
-        if let binary = MagiSidecar.resolve() {
+        if let binary = try MagiSidecar.resolveOrFallback() {
             var argv: [String] = []
             if claude { argv.append("--claude") }
             if codex { argv.append("--codex") }
@@ -58,6 +58,7 @@ public struct MagiCommand: ParsableCommand {
             if spec { argv.append("--spec") }
             argv.append(topic)
             try MagiSidecar.dispatch(binary, args: argv)
+            return
         }
 
         let store = EnvironmentStore.default

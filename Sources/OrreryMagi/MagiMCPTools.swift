@@ -2,11 +2,8 @@ import Foundation
 import OrreryCore
 
 public enum MagiMCPTools {
-    public static func register(on server: MCPServer.Type) {
-        let sidecar = MagiSidecar.resolve()
-        if sidecar != nil, sidecar?.mcpSchema == nil {
-            warn("failed to fetch MCP schema from sidecar; registering hardcoded fallback schema.")
-        }
+    public static func register(on server: MCPServer.Type) throws {
+        let sidecar = try MagiSidecar.resolveOrFallback()
         let schema = sidecar?.mcpSchema ?? hardcodedSchema
 
         server.registerTool(
@@ -35,37 +32,23 @@ public enum MagiMCPTools {
                 argv.append(topic)
 
                 if let binary = sidecar {
-                    let process = Process()
-                    process.executableURL = URL(fileURLWithPath: binary.path)
-                    process.arguments = argv
+                    let timeout: TimeInterval = 600
+                    let result = MagiSidecar.spawnAndCapture(
+                        binary: binary.path,
+                        args: argv,
+                        timeout: timeout
+                    )
 
-                    let outputPipe = Pipe()
-                    let errorPipe = Pipe()
-                    process.standardOutput = outputPipe
-                    process.standardError = errorPipe
-
-                    do {
-                        try process.run()
-                    } catch {
-                        return server.toolError("Failed to spawn orrery-magi: \(error.localizedDescription)")
+                    if result.timedOut {
+                        return server.toolError("orrery-magi timed out after \(Int(timeout))s")
                     }
 
-                    let output = String(
-                        data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
-                        encoding: .utf8
-                    ) ?? ""
-                    let errOutput = String(
-                        data: errorPipe.fileHandleForReading.readDataToEndOfFile(),
-                        encoding: .utf8
-                    ) ?? ""
-                    process.waitUntilExit()
-
-                    if process.terminationStatus != 0 {
-                        let message = output.isEmpty ? errOutput : output
+                    if result.exitCode != 0 {
+                        let message = result.stdout.isEmpty ? result.stderr : result.stdout
                         return server.toolError(message.trimmingCharacters(in: .whitespacesAndNewlines))
                     }
 
-                    let clean = output.replacingOccurrences(
+                    let clean = result.stdout.replacingOccurrences(
                         of: "\u{1B}\\[[0-9;]*m",
                         with: "",
                         options: .regularExpression

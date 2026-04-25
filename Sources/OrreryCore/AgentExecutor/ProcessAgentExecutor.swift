@@ -37,6 +37,7 @@ public final class ProcessAgentExecutor: AgentExecutor {
 
     public func execute(request: AgentExecutionRequest) throws -> AgentExecutionResult {
         let tool = request.tool
+        let env = ProcessInfo.processInfo.environment
 
         // Snapshot session IDs before launch — diff after exit yields
         // the delegate's native session id.
@@ -45,6 +46,11 @@ public final class ProcessAgentExecutor: AgentExecutor {
                 tool: tool, cwd: cwd, store: store,
                 activeEnvironment: activeEnvironment
             ).map(\.id)
+        )
+        debugLog(
+            "tool=\(tool.rawValue) cwd=\(cwd) ORRERY_HOME=\(env["ORRERY_HOME"] ?? "") "
+                + "ORRERY_ACTIVE_ENV=\(env["ORRERY_ACTIVE_ENV"] ?? "") "
+                + "pre_snapshot_count=\(preSnapshot.count)"
         )
 
         let startTime = Date()
@@ -147,6 +153,11 @@ public final class ProcessAgentExecutor: AgentExecutor {
             ).map(\.id)
         )
         let diff = postSnapshot.subtracting(preSnapshot)
+        debugLog(
+            "tool=\(tool.rawValue) cwd=\(cwd) ORRERY_HOME=\(env["ORRERY_HOME"] ?? "") "
+                + "ORRERY_ACTIVE_ENV=\(env["ORRERY_ACTIVE_ENV"] ?? "") "
+                + "post_snapshot_count=\(postSnapshot.count) diff_count=\(diff.count)"
+        )
         let sessionId = diff.count == 1 ? diff.first : nil
 
         // Preserve the Magi "session id not found" warning on stderr
@@ -175,5 +186,11 @@ public final class ProcessAgentExecutor: AgentExecutor {
         let proc = currentProcess
         lock.unlock()
         proc?.terminate()
+    }
+
+    private func debugLog(_ message: String) {
+        let value = ProcessInfo.processInfo.environment["ORRERY_MAGI_DEBUG"]?.lowercased()
+        guard value == "1" || value == "true" else { return }
+        FileHandle.standardError.write(Data("[orrery-magi-debug] \(message)\n".utf8))
     }
 }
