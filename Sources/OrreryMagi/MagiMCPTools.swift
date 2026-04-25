@@ -3,70 +3,129 @@ import OrreryCore
 
 public enum MagiMCPTools {
     public static func register(on server: MCPServer.Type) {
+        let sidecar = MagiSidecar.resolve()
+        if sidecar != nil, sidecar?.mcpSchema == nil {
+            warn("failed to fetch MCP schema from sidecar; registering hardcoded fallback schema.")
+        }
+        let schema = sidecar?.mcpSchema ?? hardcodedSchema
+
         server.registerTool(
-            schema: [
-                "name": "orrery_magi",
-                "description": "Start a multi-model discussion (Claude, Codex, Gemini) on a topic and produce a consensus report.",
-                "inputSchema": [
-                    "type": "object",
-                    "properties": [
-                        "topic": [
-                            "type": "string",
-                            "description": "Discussion topic. Use semicolons to separate sub-topics."
-                        ],
-                        "rounds": [
-                            "type": "integer",
-                            "description": "Maximum discussion rounds (default: 1 for MCP)"
-                        ],
-                        "tools": [
-                            "type": "array",
-                            "items": ["type": "string", "enum": ["claude", "codex", "gemini"]],
-                            "description": "Participating tools (default: all installed)"
-                        ],
-                        "environment": [
-                            "type": "string",
-                            "description": "Environment name (default: active environment)"
-                        ],
-                        "roles": [
-                            "type": "string",
-                            "description": "Role preset (balanced, adversarial, security) or comma-separated role IDs"
-                        ],
-                        "spec": [
-                            "type": "boolean",
-                            "description": "Generate a spec from the discussion result (default: false)"
-                        ]
-                    ],
-                    "required": ["topic"],
-                    "additionalProperties": false
-                ]
-            ],
+            schema: schema,
             handler: { arguments in
-                guard let topic = arguments["topic"] as? String else {
-                    return server.toolError("Missing required parameter: topic")
-                }
-
-                var args = ["orrery", "magi"]
+                var argv: [String] = []
                 let rounds = arguments["rounds"] as? Int ?? 1
-                args += ["--rounds", String(rounds)]
-
+                argv += ["--rounds", String(rounds)]
                 if let environment = arguments["environment"] as? String {
-                    args += ["-e", environment]
+                    argv += ["-e", environment]
                 }
                 if let tools = arguments["tools"] as? [String] {
                     for tool in tools {
-                        args.append("--\(tool)")
+                        argv.append("--\(tool)")
                     }
                 }
                 if let roles = arguments["roles"] as? String {
-                    args += ["--roles", roles]
+                    argv += ["--roles", roles]
                 }
                 if let spec = arguments["spec"] as? Bool, spec {
-                    args.append("--spec")
+                    argv.append("--spec")
+                }
+                guard let topic = arguments["topic"] as? String else {
+                    return server.toolError("Missing required parameter: topic")
+                }
+                argv.append(topic)
+
+                if let binary = sidecar {
+                    let process = Process()
+                    process.executableURL = URL(fileURLWithPath: binary.path)
+                    process.arguments = argv
+
+                    let outputPipe = Pipe()
+                    let errorPipe = Pipe()
+                    process.standardOutput = outputPipe
+                    process.standardError = errorPipe
+
+                    do {
+                        try process.run()
+                    } catch {
+                        return server.toolError("Failed to spawn orrery-magi: \(error.localizedDescription)")
+                    }
+
+                    let output = String(
+                        data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
+                        encoding: .utf8
+                    ) ?? ""
+                    let errOutput = String(
+                        data: errorPipe.fileHandleForReading.readDataToEndOfFile(),
+                        encoding: .utf8
+                    ) ?? ""
+                    process.waitUntilExit()
+
+                    if process.terminationStatus != 0 {
+                        let message = output.isEmpty ? errOutput : output
+                        return server.toolError(message.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+
+                    let clean = output.replacingOccurrences(
+                        of: "\u{1B}\\[[0-9;]*m",
+                        with: "",
+                        options: .regularExpression
+                    )
+
+                    return [
+                        "content": [
+                            ["type": "text", "text": clean.trimmingCharacters(in: .whitespacesAndNewlines)]
+                        ],
+                        "isError": false
+                    ]
                 }
 
-                args.append(topic)
-                return server.execCommand(args)
+                return server.execCommand(["orrery", "magi"] + argv)
             }
         )
+    }
+
+    /// Hardcoded fallback used when the sidecar binary is not present
+    /// or its --print-mcp-schema fails. Removed in Step 4.
+    internal static var hardcodedSchema: [String: Any] {
+        [
+            "name": "orrery_magi",
+            "description": "Start a multi-model discussion (Claude, Codex, Gemini) on a topic and produce a consensus report.",
+            "inputSchema": [
+                "type": "object",
+                "properties": [
+                    "topic": [
+                        "type": "string",
+                        "description": "Discussion topic. Use semicolons to separate sub-topics."
+                    ],
+                    "rounds": [
+                        "type": "integer",
+                        "description": "Maximum discussion rounds (default: 1 for MCP)"
+                    ],
+                    "tools": [
+                        "type": "array",
+                        "items": ["type": "string", "enum": ["claude", "codex", "gemini"]],
+                        "description": "Participating tools (default: all installed)"
+                    ],
+                    "environment": [
+                        "type": "string",
+                        "description": "Environment name (default: active environment)"
+                    ],
+                    "roles": [
+                        "type": "string",
+                        "description": "Role preset (balanced, adversarial, security) or comma-separated role IDs"
+                    ],
+                    "spec": [
+                        "type": "boolean",
+                        "description": "Generate a spec from the discussion result (default: false)"
+                    ]
+                ],
+                "required": ["topic"],
+                "additionalProperties": false
+            ]
+        ]
+    }
+
+    private static func warn(_ message: String) {
+        FileHandle.standardError.write(Data("[orrery-magi] \(message)\n".utf8))
     }
 }

@@ -44,6 +44,22 @@ public struct MagiCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
+        if let binary = MagiSidecar.resolve() {
+            var argv: [String] = []
+            if claude { argv.append("--claude") }
+            if codex { argv.append("--codex") }
+            if gemini { argv.append("--gemini") }
+            if let environment { argv += ["-e", environment] }
+            argv += ["--rounds", String(rounds)]
+            if let output { argv += ["--output", output] }
+            if let resume { argv += ["--resume", resume] }
+            if let roles { argv += ["--roles", roles] }
+            if noSummarize { argv.append("--no-summarize") }
+            if spec { argv.append("--spec") }
+            argv.append(topic)
+            try MagiSidecar.dispatch(binary, args: argv)
+        }
+
         let store = EnvironmentStore.default
         let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
 
