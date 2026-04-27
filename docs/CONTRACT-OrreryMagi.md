@@ -1,14 +1,15 @@
 # `OrreryMagi` — Public Surface Contract
 
-**Status**: Phase 1 (repo-internal modularization) — 2026-04-22
-**Go/No-Go review for Phase 2 (split to separate repo)**: **2026-07-01**
+**Status**: Phase 2 Step 4 (sidecar mandatory; in-process fallback removed) — 2026-04-27
+**Go/No-Go review for Phase 3 (independent repo release)**: **2026-07-01**
 
-This document is the authoritative contract between `OrreryMagi` and its
-consumers. It exists because the Magi extraction is a two-phase
-refactor: Phase 1 carved `OrreryMagi` out of `OrreryCore` inside the same
-repo; Phase 2 may promote it to an independent package. Anything listed
-here must stay stable through Phase 1 so Phase 2 is a non-event for
-external consumers.
+This document is the authoritative contract for the `OrreryMagi` library
+target shipped in this repo. After Phase 2 Step 4 the library is a thin
+shim: it exposes the `magi` CLI shell, the `orrery_magi` MCP tool, and
+the sidecar handshake — but it no longer contains in-process Magi
+orchestration. Orchestration ships in the sibling `orrery-magi`
+repository as a standalone binary, which this shim delegates to via
+subprocess.
 
 ---
 
@@ -99,18 +100,17 @@ third-party embedders once Phase 2 lands.
 ### MCP
 - `enum MagiMCPTools`
   - `static func register(on server: MCPServer.Type) throws` — registers
-    the `orrery_magi` MCP tool. Idempotent per process. Throws when the
-    sidecar handshake fails under `ORRERY_MAGI_STRICT=1` (see Sidecar
-    section). Non-strict callers may still receive a thrown error if
-    handshake validation surfaces a programmer-visible inconsistency.
+    the `orrery_magi` MCP tool. Idempotent per process. Throws
+    `MagiSidecarError` if the sidecar binary is missing or its
+    capabilities handshake fails. The schema served to MCP clients is
+    the live `--print-mcp-schema` output of the resolved sidecar.
 
-### Sidecar (Phase 2)
+### Sidecar
 
-The sidecar surface lets `OrreryMagi` delegate to an external
-`orrery-magi` binary instead of running Magi in-process. Handshake +
-versioning live here so Phase 4 (in-process fallback removal) and Phase
-5 (single-spawn capabilities) can land without touching `MagiCommand`
-or `MagiMCPTools`.
+`MagiSidecar` is the only execution path: there is no in-process
+fallback. `MagiCommand.run()` and `MagiMCPTools.register(on:)` both
+resolve and dispatch through this surface; failure to resolve is a
+hard error.
 
 - `enum MagiSidecarError: Error, CustomStringConvertible`
   - `.binaryNotFound`
@@ -126,12 +126,8 @@ or `MagiMCPTools`.
     the shim accepts.
   - `static let shimProtocolVersion: Int` — minimum `compatibility.shim_protocol`
     the shim requires from the sidecar.
-  - `static func isStrictMode() -> Bool` — reads `ORRERY_MAGI_STRICT`
-    (`"1"` / `"true"` enable strict mode).
-  - `static func resolveStrict() throws -> ResolvedBinary` — handshake
-    or throw; never falls back.
-  - `static func resolveOrFallback() throws -> ResolvedBinary?` —
-    handshake; throws under strict mode, returns `nil` otherwise.
+  - `static func resolve() throws -> ResolvedBinary` — handshake or
+    throw `MagiSidecarError`. The single resolution entry-point.
   - `static func dispatch(_ binary: ResolvedBinary, args: [String]) throws`
     — exec the sidecar inheriting parent stdio; throws `ArgumentParser.ExitCode`
     on non-zero subprocess exit. Propagates parent env + cwd.
@@ -139,28 +135,19 @@ or `MagiMCPTools`.
     capture stdout/stderr with watchdog timeout; safe against grandchild
     fd inheritance deadlocks.
 
-**Strict-mode environment variable** — `ORRERY_MAGI_STRICT=1` (or
-`true`) is part of this contract. CI uses it to assert the sidecar path
-is exercised; Phase 4 will rely on it being honored by every caller.
+**Binary lookup order** — `ORRERY_MAGI_PATH` env var → `$ORRERY_HOME/bin/orrery-magi`
+(default `~/.orrery/bin/orrery-magi`) → `which orrery-magi` on `PATH`.
+First match wins.
 
-### Orchestration model
-- `struct MagiRun` (+ nested: `MagiRound`, `MagiAgentResponse`,
-  `MagiPositionEntry`, `MagiVote`, `ConsensusItem`, `FinalVerdict`,
-  `VerdictDecision`). These are the on-disk JSON shapes of persisted
-  runs — the **persisted schema is part of this contract**; old files
-  must keep loading across refactors.
-- `enum MagiPosition` (`agree` / `disagree` / `conditional`).
-- `enum ConsensusStatus` (`agreed` / `majority` / `disputed` / `pending`).
-- `enum MagiRunStatus` (`inProgress` / `maxRoundsReached` / `converged`).
-- `struct MagiRole`, `enum MagiRolePreset` (`balanced` / `adversarial` / `security`).
+### Persisted run JSON
 
-### Entry points
-- `enum MagiOrchestrator`
-  - `static func run(topic:subtopics:tools:maxRounds:environment:store:outputPath:previousRunId:noSummarize:roles:) throws -> MagiRun`
-  - `static func generateReport(run: MagiRun) -> String`
-- `struct MagiPromptBuilder` — `static func buildPrompt(...)` (stable
-  only for internal orchestration use; not a primary API).
-- `struct MagiResponseParser` — `static func parse(rawOutput:subtopics:)`.
+Magi run output (written by the sidecar to
+`$ORRERY_HOME/<env>/magi/*.json`) is part of the cross-binary contract,
+**but its Swift type definition lives in the sibling `orrery-magi`
+repo**, not here. This shim does not deserialize it. Callers that
+inspect the persisted JSON should treat it as opaque or use
+`JSONSerialization` against documented top-level keys (`runId`,
+`sessionMap`, `rounds`, `finalVerdict`).
 
 ### Module metadata
 - `enum OrreryMagiModule`
@@ -185,14 +172,18 @@ rename changes.
 
 ## 2026-07-01 Go / No-Go review
 
-At or before 2026-07-01, evaluate whether `OrreryMagi` should be
-promoted to a separate repo (Phase 2). Criteria to consider:
+At or before 2026-07-01, evaluate whether the sibling `orrery-magi`
+repository should cut its first independent release (Phase 3) and
+become a recommended brew formula dependency. Criteria to consider:
 
-- Stability: has this contract held for ≥ 2 months without a break?
-- External demand: has anyone (other than `orrery`) tried to depend on
-  Magi directly?
-- Friction cost: are cross-target changes now disproportionately
-  expensive to ship in a single PR?
+- **Stability**: has this contract held for ≥ 2 months without a
+  break?
+- **Cross-binary version drift**: how often did Orrery and orrery-magi
+  need lockstep upgrades to stay compatible?
+- **Operational cost**: is the two-binary install (`orrery` + `orrery-magi`)
+  acceptable to users, or is `orrery magi` regularly hitting "binary
+  not found" errors in support reports?
 
-If ≥ 2 criteria are "yes", proceed to Phase 2 split. Otherwise defer
-and re-evaluate one release later.
+If ≥ 2 criteria are "yes", cut the orrery-magi v1.0.0 release and
+update the orrery brew formula to declare orrery-magi as a recommended
+dependency. Otherwise defer and re-evaluate one release later.

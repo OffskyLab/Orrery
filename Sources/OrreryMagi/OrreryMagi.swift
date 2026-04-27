@@ -1,20 +1,24 @@
 import Foundation
 import OrreryCore
 
-/// `OrreryMagi` — extracted Magi consensus library.
+/// `OrreryMagi` — sidecar shim library.
 ///
-/// Phase 1 (repo-internal modularization) of the Magi extraction plan:
-/// the multi-agent consensus logic (MagiOrchestrator / MagiRun /
-/// MagiPromptBuilder / MagiAgentRunner → ProcessAgentExecutor) moves
-/// into its own library target, depending on `OrreryCore` for shared
-/// primitives (Tool, EnvironmentStore, SessionResolver, L10n,
-/// AgentExecutor protocol).
+/// After Phase 2 Step 4, this target is a thin wrapper around the
+/// external `orrery-magi` binary. It exposes:
+///   - `MagiCommand` (the `orrery magi …` subcommand shell).
+///   - `MagiMCPTools.register(on:)` (the `orrery_magi` MCP tool, with
+///     the schema served from the sidecar's live capabilities).
+///   - `MagiSidecar` (binary lookup + capabilities handshake +
+///     dispatch primitives).
 ///
-/// Target is created in M4 as an empty scaffold; actual source moves
-/// happen in M5. See `docs/tasks/2026-04-17-magi-extraction.md`.
+/// All Magi orchestration (MagiOrchestrator / MagiRun /
+/// MagiPromptBuilder / MagiResponseParser / DTOs) ships in the sibling
+/// `orrery-magi` repository. See `docs/CONTRACT-OrreryMagi.md`.
 public enum OrreryMagiModule {
-    /// Semantic version of the library API surface. Bumped when the
-    /// public DTOs / orchestrator entry points change in a way that
-    /// would break external consumers (Phase 2 prep).
-    public static let apiVersion = "0.2.0"
+    /// Semantic version of the library API surface. Bumped on any
+    /// breaking change to `MagiCommand`, `MagiMCPTools`, or
+    /// `MagiSidecar`. 1.0.0 marks the Phase 2 Step 4 cut: removal of
+    /// in-process orchestration and collapse of the strict-mode API
+    /// to a single `resolve()` entry-point.
+    public static let apiVersion = "1.0.0"
 }

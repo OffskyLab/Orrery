@@ -2,6 +2,127 @@
 
 ## Unreleased
 
+- **BREAKING: `orrery-magi` is now a required runtime dependency.** The
+  `orrery magi` CLI and the `orrery_magi` MCP tool no longer fall back
+  to in-process Magi orchestration when the sidecar binary is missing —
+  they hard-fail with `exit 1` and a `brew install
+  offskylab/orrery/orrery-magi` hint. Install the sidecar via Homebrew
+  or place a binary at `~/.orrery/bin/orrery-magi`, on `PATH`, or via
+  the `ORRERY_MAGI_PATH` env var.
+- **Magi sidecar handshake hardening (Phase 2 Step 3.5 + Step 4).**
+  `MagiSidecar.resolve()` is now the single entry-point: it always
+  performs a strict capabilities + `--print-mcp-schema` handshake and
+  throws `MagiSidecarError` on any failure. Removed `resolveStrict`,
+  `resolveOrFallback`, `isStrictMode`, and the `ORRERY_MAGI_STRICT`
+  env var (their distinctions collapsed into the single resolve path).
+  `MagiMCPTools.register(on:)` now serves the live MCP schema from the
+  sidecar's `--print-mcp-schema` output; the hardcoded fallback schema
+  was removed.
+- **`OrreryMagi` library target shrinks to a sidecar shim.** The
+  in-process orchestration (`MagiOrchestrator`, `MagiPromptBuilder`,
+  `MagiResponseParser`, `MagiRun` and its DTOs) was removed from this
+  repo — it now ships exclusively in the sibling `orrery-magi`
+  repository as a standalone binary. The library target retains
+  `MagiCommand`, `MagiMCPTools`, `MagiSidecar`, and module metadata.
+  `OrreryMagiModule.apiVersion` bumped 0.1.0 → 1.0.0 to mark the cut.
+  See `docs/CONTRACT-OrreryMagi.md` for the new public surface.
+
+## v2.4.0 - 2026-04-22
+
+- **Internal refactor: extracted `OrreryMagi` library target.**  The Magi
+  multi-model consensus logic now lives in its own Swift Package target
+  (`Sources/OrreryMagi/`) depending on `OrreryCore`.  `MagiOrchestrator` /
+  `MagiRun` / `MagiPromptBuilder` / `MagiResponseParser` / `MagiCommand`
+  all moved.  `MagiAgentRunner` is gone — replaced by the new
+  `AgentExecutor` protocol + `ProcessAgentExecutor` conformance in
+  `OrreryCore/AgentExecutor/`, which Magi now consumes through the
+  protocol.  `MCPServer` exposes a `public static registerTool(schema:handler:)`
+  extension point; `orrery_magi` is registered from the executable
+  target via `MagiMCPTools.register(on: MCPServer.self)`.  Package graph
+  is `orrery → {OrreryCore, OrreryMagi}` and `OrreryMagi → OrreryCore`
+  (no cycle).  User-facing behaviour is unchanged: tool name, CLI flags,
+  MCP schema, slash commands, and persisted JSON shapes are all
+  identical.  See `docs/CONTRACT-OrreryMagi.md` for the public surface
+  contract and the 2026-07-01 Go/No-Go review anchor.
+- **`orrery spec-run --mode implement` + `orrery_spec_implement` MCP tool —
+  second phase of the spec pipeline.**  Takes a structured spec produced by
+  `orrery spec` and hands it to a delegate agent (claude-code / codex /
+  gemini) running in a *detached* subprocess.  Returns immediately with a
+  `session_id` + `status: "running"`; the delegate continues after the
+  orrery parent exits.  A wrapper shell owns the lifecycle — it enforces
+  `--timeout` via a background SIGTERM watchdog, redirects delegate
+  stdout/stderr to log files under `~/.orrery/spec-runs/`, and calls back
+  into a hidden `orrery _spec-finalize` subcommand once the delegate exits.
+  DI5 safety net rejects specs that are missing any of the four mandatory
+  headings (`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`) before any
+  subprocess is launched.
+- **`orrery spec-run --mode status` + `orrery_spec_status` MCP tool —
+  polling companion.**  Reads the persisted session JSON under
+  `~/.orrery/spec-runs/{id}.json` and returns a stable schema with
+  `status`, `progress`, `last_error`, and — when terminal — the full
+  `SpecRunResult`.  Supports `--include-log` to tail the progress jsonl
+  and `--since-timestamp` for incremental polling.  Suggested cadence
+  (documented in the tool description): first poll ~2s, then exponential
+  backoff `min(30s, prev * 1.5)`, settling at 30s for long runs.
+- **Session identity is orrery-owned (C2).**  The MCP `resume_session_id`
+  is always the orrery UUID returned by a prior implement call; the
+  delegate agent's native session id (claude-code / codex / gemini
+  session) is an internal detail captured by `_spec-finalize` via
+  `SessionResolver` snapshot-diff and stored in `SpecRunState.delegate_session_id`.
+  Clients never need to know the delegate id directly.
+- **Schema additions to `SpecRunResult`.**  Eight new fields (`status`,
+  `started_at`, `completed_at`, `touched_files`, `blocked_reason`,
+  `failed_step`, `child_session_ids`, `execution_graph`) are now always
+  present in the CLI and MCP output.  `verify` keeps working unchanged —
+  the new fields get safe defaults when populated by `SpecVerifyRunner`.
+  `child_session_ids` and `execution_graph` are DI3 reserves for future
+  parallel execution and have no runtime behaviour in the MVP.
+- **New slash commands.**  `orrery mcp setup` now also writes
+  `.claude/commands/orrery:spec-implement.md` and
+  `orrery:spec-status.md`, giving users `/orrery:spec-implement` and
+  `/orrery:spec-status` directly from the chat box.
+- **`pickup` skill moves to D13 phase 2.**  The spec-implement MCP tool
+  is now the canonical cross-client path; the local `pickup` skill
+  remains an offline preview.  Two more releases until `@deprecated`.
+- **Parser gains heredoc awareness.**  `SpecAcceptanceParser` now
+  recognises `<<EOF` / `<<'EOF'` / `<<"EOF"` / `<<-EOF` blocks inside
+  acceptance code fences and keeps the entire heredoc as a single
+  command — previously JSON-RPC bodies inside `cat <<'EOF' | ...` were
+  split line-by-line and mis-classified.
+- **`orrery spec-run --mode verify` + `orrery_spec_verify` MCP tool — MVP
+  of the spec implementation pipeline.**  Completes the `discuss → spec
+  → implement` loop by consuming the structured markdown produced by
+  `orrery spec` and verifying its `## 驗收標準` section.  Default mode
+  is dry-run (no shell executed, every acceptance command reported as
+  `skipped(dry-run)`); pass `--execute` to run sandboxed commands, and
+  `--strict-policy` to promote any `policy_blocked` command to a failure.
+  `--review` spawns an advisory `orrery magi --rounds 1` pass after a
+  clean verify, but never overrides the authoritative verify exit code.
+  All phases emit a single structured JSON object to stdout with stable
+  schema (including validation errors).  Only `verify` is implemented;
+  `plan` / `implement` / `run` throw `modeNotImplemented` until the next
+  release.
+- **Sandbox policy (`SpecSandboxPolicy`) for spec verification.**  Three
+  layers of defence: dry-run default, allowlist (word-boundary) +
+  blocklist (substring, evaluated first) on shell commands, and hard
+  runtime caps (60s per command, 600s overall, 1MB stdout per command
+  with `…[truncated]` marker).  Python snippets go through a regex-based
+  deny-list lint (Q8 tracks upgrading to a real AST check).
+- **`pickup` skill roadmap (D13 stage 1).**  The new MCP tool is now the
+  canonical, cross-client path for spec implementation; the local
+  `pickup` skill stays as an offline preview for humans, with no
+  behaviour divergence expected.  A `@deprecated` marker + MIGRATION
+  guide will land two releases from now, and the skill will be removed
+  one release after that.
+- **Task ordering (D17 of `docs/discussions/2026-04-18-orrery-spec-mcp-tool.md`).**
+  Spec MVP ships before the Magi extraction refactor.  New Swift files
+  are parked in `Sources/OrreryCore/Spec/` pending Phase 2 Magi
+  extraction, which will batch-migrate both `Magi/*` and `Spec/*` into
+  independent `OrreryMagi` / `OrrerySpec` targets.  `Package.swift` is
+  unchanged in this release.
+
+## v2.3.0
+
 - **`orrery magi` — multi-model discussion and consensus.**  New subcommand
   that lets Claude, Codex, and Gemini discuss a topic over multiple rounds
   and produce a structured consensus report.  Each round, models see their
