@@ -13,7 +13,7 @@ public enum MagiSidecarError: Error, CustomStringConvertible {
     public var description: String {
         switch self {
         case .binaryNotFound:
-            return "orrery-magi binary not found (checked ORRERY_MAGI_PATH, ~/.orrery/bin, PATH). ORRERY_MAGI_STRICT requires the sidecar to be installed."
+            return "orrery-magi binary not found (checked ORRERY_MAGI_PATH, ~/.orrery/bin, PATH). Install with: brew install offskylab/orrery/orrery-magi"
         case .capabilitiesFailed(let stderr):
             return "orrery-magi --capabilities failed: \(stderr)"
         case .capabilitiesInvalidJSON:
@@ -23,17 +23,17 @@ public enum MagiSidecarError: Error, CustomStringConvertible {
         case .shimProtocolIncompatible(let found, let required):
             return "orrery-magi compatibility.shim_protocol=\(found) < shim required=\(required). Upgrade orrery-magi."
         case .mcpSchemaFetchFailed:
-            return "orrery-magi --print-mcp-schema failed. ORRERY_MAGI_STRICT requires this to succeed."
+            return "orrery-magi --print-mcp-schema failed."
         }
     }
 }
 
-/// Detects + delegates to an external `orrery-magi` binary when
-/// available. During Phase 2 Step 3 the lookup is best-effort: if the
-/// binary is missing, the capabilities handshake fails, or any of the
-/// IPC errors out, callers fall back to the internal MagiCommand /
-/// MagiMCPTools path. Step 4 will tighten this once the fallback path
-/// is removed from the orrery binary itself.
+/// Detects + delegates to an external `orrery-magi` binary. Phase 2
+/// Step 4 removed the in-process fallback: `resolve()` now always
+/// throws `MagiSidecarError` if the sidecar is missing or its
+/// capabilities handshake fails. Install the sidecar via
+/// `brew install offskylab/orrery/orrery-magi` (or place a binary at
+/// `~/.orrery/bin/orrery-magi` / on `PATH` / via `ORRERY_MAGI_PATH`).
 public enum MagiSidecar {
 
     public struct ResolvedBinary {
@@ -68,20 +68,12 @@ public enum MagiSidecar {
     /// The shim's argv-construction protocol version.
     public static let shimProtocolVersion: Int = 1
 
-    public static func isStrictMode() -> Bool {
-        let value = ProcessInfo.processInfo.environment["ORRERY_MAGI_STRICT"]?.lowercased()
-        return value == "1" || value == "true"
-    }
-
-    public static func resolveStrict() throws -> ResolvedBinary {
-        guard let resolved = try resolveInternal(strict: true) else {
-            throw MagiSidecarError.binaryNotFound
-        }
-        return resolved
-    }
-
-    public static func resolveOrFallback() throws -> ResolvedBinary? {
-        try resolveInternal(strict: isStrictMode())
+    /// Resolve the sidecar binary and validate its capabilities.
+    /// Throws `MagiSidecarError` if the binary is missing, the
+    /// handshake fails, or its protocol versions fall outside the
+    /// shim's supported range.
+    public static func resolve() throws -> ResolvedBinary {
+        try resolveInternal()
     }
 
     /// Spawn the binary with the user's argv, wired through stdio,
@@ -191,41 +183,28 @@ public enum MagiSidecar {
 
     // MARK: - Private
 
-    private static func resolveInternal(strict: Bool) throws -> ResolvedBinary? {
+    private static func resolveInternal() throws -> ResolvedBinary {
         guard let path = findBinary() else {
-            if strict { throw MagiSidecarError.binaryNotFound }
-            return nil
+            throw MagiSidecarError.binaryNotFound
         }
 
-        let caps: [String: Any]
-        do {
-            caps = try capabilities(path: path, strict: strict)
-        } catch {
-            if strict { throw error }
-            return nil
-        }
+        let caps = try capabilities(path: path)
 
         let schemaVersion = caps["$schema_version"] as? Int ?? -1
         guard schemaVersion <= maxSchemaVersion, schemaVersion >= 0 else {
-            let error = MagiSidecarError.schemaVersionUnsupported(
+            throw MagiSidecarError.schemaVersionUnsupported(
                 found: schemaVersion,
                 max: maxSchemaVersion
             )
-            if strict { throw error }
-            warn("\(error) Falling back to internal Magi.")
-            return nil
         }
 
         let compatibility = caps["compatibility"] as? [String: Any]
         let protocolVersion = compatibility?["shim_protocol"] as? Int ?? -1
         guard protocolVersion >= shimProtocolVersion else {
-            let error = MagiSidecarError.shimProtocolIncompatible(
+            throw MagiSidecarError.shimProtocolIncompatible(
                 found: protocolVersion,
                 required: shimProtocolVersion
             )
-            if strict { throw error }
-            warn("\(error) Falling back to internal Magi.")
-            return nil
         }
 
         let tool = caps["tool"] as? [String: Any] ?? [:]
@@ -235,9 +214,7 @@ public enum MagiSidecar {
         case .success(let schema):
             return ResolvedBinary(path: path, version: version, mcpSchema: schema)
         case .failure:
-            if strict { throw MagiSidecarError.mcpSchemaFetchFailed }
-            warn("failed to fetch MCP schema from sidecar; registering hardcoded fallback schema.")
-            return ResolvedBinary(path: path, version: version, mcpSchema: nil)
+            throw MagiSidecarError.mcpSchemaFetchFailed
         }
     }
 
@@ -302,18 +279,12 @@ public enum MagiSidecar {
         return .success(json)
     }
 
-    private static func capabilities(path: String, strict: Bool) throws -> [String: Any] {
+    private static func capabilities(path: String) throws -> [String: Any] {
         switch runJSON(path: path, args: ["--capabilities"], timeout: 5) {
         case .success(let caps):
             return caps
         case .failure(let error):
-            if strict { throw error }
-            warn("\(error) Falling back to internal Magi.")
             throw error
         }
-    }
-
-    private static func warn(_ message: String) {
-        FileHandle.standardError.write(Data("[orrery-magi] \(message)\n".utf8))
     }
 }

@@ -116,79 +116,61 @@ final class MagiSidecarTests: XCTestCase {
         XCTAssertEqual(exitCode.rawValue, expected, file: file, line: line)
     }
 
-    func testResolveReturnsNilWhenNoBinary() throws {
+    func testResolveThrowsWhenBinaryMissing() throws {
         let tmp = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: tmp) }
 
         try withEnvironment([
-            "ORRERY_MAGI_STRICT": nil,
             "ORRERY_MAGI_PATH": nil,
             "ORRERY_HOME": tmp.path,
             "PATH": tmp.path
         ]) {
-            XCTAssertNil(try MagiSidecar.resolveOrFallback())
-        }
-    }
-
-    func testStrictModeThrowsWhenBinaryMissing() throws {
-        let tmp = try makeTempDir()
-        defer { try? FileManager.default.removeItem(at: tmp) }
-
-        try withEnvironment([
-            "ORRERY_MAGI_STRICT": "1",
-            "ORRERY_MAGI_PATH": nil,
-            "ORRERY_HOME": tmp.path,
-            "PATH": tmp.path
-        ]) {
-            XCTAssertThrowsError(try MagiSidecar.resolveOrFallback()) { error in
+            XCTAssertThrowsError(try MagiSidecar.resolve()) { error in
                 self.assertBinaryNotFound(error)
             }
         }
     }
 
-    func testStrictModeAcceptsCompatibleBinary() throws {
+    func testResolveAcceptsCompatibleBinary() throws {
         guard FileManager.default.isExecutableFile(atPath: adjacentBinary) else {
             throw XCTSkip("adjacent orrery-magi binary not built; run swift build there first")
         }
 
         try withEnvironment([
-            "ORRERY_MAGI_STRICT": "true",
             "ORRERY_MAGI_PATH": adjacentBinary
         ]) {
-            let resolved = try MagiSidecar.resolveStrict()
+            let resolved = try MagiSidecar.resolve()
             XCTAssertEqual(resolved.path, self.adjacentBinary)
             XCTAssertFalse(resolved.version.isEmpty)
             XCTAssertNotNil(resolved.mcpSchema)
         }
     }
 
-    func testStrictModeRejectsIncompatibleSchemaVersion() throws {
+    func testResolveRejectsIncompatibleSchemaVersion() throws {
         let tmp = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: tmp) }
         let fixture = try makeFixtureBinary(in: tmp)
 
         try withEnvironment([
-            "ORRERY_MAGI_STRICT": "1",
             "ORRERY_MAGI_PATH": fixture,
             "ORRERY_TEST_SIDECAR_MODE": "schema99"
         ]) {
-            XCTAssertThrowsError(try MagiSidecar.resolveStrict()) { error in
+            XCTAssertThrowsError(try MagiSidecar.resolve()) { error in
                 self.assertSchemaVersionUnsupported(error, found: 99)
             }
         }
     }
 
-    func testStrictModeRejectsIncompatibleShimProtocol() throws {
+    func testResolveRejectsIncompatibleShimProtocol() throws {
         let tmp = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: tmp) }
         let fixture = try makeFixtureBinary(in: tmp)
 
         try withEnvironment([
-            "ORRERY_MAGI_STRICT": "1",
             "ORRERY_MAGI_PATH": fixture,
             "ORRERY_TEST_SIDECAR_MODE": "shim0"
         ]) {
-            XCTAssertThrowsError(try MagiSidecar.resolveStrict()) { error in
+            XCTAssertThrowsError(try MagiSidecar.resolve()) { error in
                 self.assertShimProtocolIncompatible(error, found: 0)
             }
         }
@@ -265,7 +247,6 @@ final class MagiSidecarTests: XCTestCase {
         var env = ProcessInfo.processInfo.environment
         env["ORRERY_HOME"] = tmpHome.path
         env["ORRERY_MAGI_PATH"] = adjacentBinary
-        env["ORRERY_MAGI_STRICT"] = "1"
         process.environment = env
         process.standardInput = FileHandle.nullDevice
         let outPipe = Pipe()
@@ -287,10 +268,13 @@ final class MagiSidecarTests: XCTestCase {
             .filter { $0.pathExtension == "json" }
         let runFile = try XCTUnwrap(files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).last)
         let data = try Data(contentsOf: runFile)
-        let run = try JSONDecoder().decode(MagiRun.self, from: data)
+        let runJSON = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let sessionMap = runJSON["sessionMap"] as? [String: Any] ?? [:]
 
         XCTAssertGreaterThanOrEqual(
-            run.sessionMap?.count ?? 0,
+            sessionMap.count,
             2,
             "expected at least two session ids in sessionMap; stderr=\(stderr)"
         )

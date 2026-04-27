@@ -2,9 +2,15 @@ import Foundation
 import OrreryCore
 
 public enum MagiMCPTools {
+    /// Register the `orrery_magi` MCP tool. Phase 2 Step 4 removed the
+    /// in-process fallback: this throws if the sidecar binary cannot
+    /// be resolved, instead of silently registering a hardcoded schema
+    /// and routing to an `orrery magi` re-exec.
     public static func register(on server: MCPServer.Type) throws {
-        let sidecar = try MagiSidecar.resolveOrFallback()
-        let schema = sidecar?.mcpSchema ?? hardcodedSchema
+        let sidecar = try MagiSidecar.resolve()
+        guard let schema = sidecar.mcpSchema else {
+            throw MagiSidecarError.mcpSchemaFetchFailed
+        }
 
         server.registerTool(
             schema: schema,
@@ -31,84 +37,35 @@ public enum MagiMCPTools {
                 }
                 argv.append(topic)
 
-                if let binary = sidecar {
-                    let timeout: TimeInterval = 600
-                    let result = MagiSidecar.spawnAndCapture(
-                        binary: binary.path,
-                        args: argv,
-                        timeout: timeout
-                    )
+                let timeout: TimeInterval = 600
+                let result = MagiSidecar.spawnAndCapture(
+                    binary: sidecar.path,
+                    args: argv,
+                    timeout: timeout
+                )
 
-                    if result.timedOut {
-                        return server.toolError("orrery-magi timed out after \(Int(timeout))s")
-                    }
-
-                    if result.exitCode != 0 {
-                        let message = result.stdout.isEmpty ? result.stderr : result.stdout
-                        return server.toolError(message.trimmingCharacters(in: .whitespacesAndNewlines))
-                    }
-
-                    let clean = result.stdout.replacingOccurrences(
-                        of: "\u{1B}\\[[0-9;]*m",
-                        with: "",
-                        options: .regularExpression
-                    )
-
-                    return [
-                        "content": [
-                            ["type": "text", "text": clean.trimmingCharacters(in: .whitespacesAndNewlines)]
-                        ],
-                        "isError": false
-                    ]
+                if result.timedOut {
+                    return server.toolError("orrery-magi timed out after \(Int(timeout))s")
                 }
 
-                return server.execCommand(["orrery", "magi"] + argv)
+                if result.exitCode != 0 {
+                    let message = result.stdout.isEmpty ? result.stderr : result.stdout
+                    return server.toolError(message.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+
+                let clean = result.stdout.replacingOccurrences(
+                    of: "\u{1B}\\[[0-9;]*m",
+                    with: "",
+                    options: .regularExpression
+                )
+
+                return [
+                    "content": [
+                        ["type": "text", "text": clean.trimmingCharacters(in: .whitespacesAndNewlines)]
+                    ],
+                    "isError": false
+                ]
             }
         )
-    }
-
-    /// Hardcoded fallback used when the sidecar binary is not present
-    /// or its --print-mcp-schema fails. Removed in Step 4.
-    internal static var hardcodedSchema: [String: Any] {
-        [
-            "name": "orrery_magi",
-            "description": "Start a multi-model discussion (Claude, Codex, Gemini) on a topic and produce a consensus report.",
-            "inputSchema": [
-                "type": "object",
-                "properties": [
-                    "topic": [
-                        "type": "string",
-                        "description": "Discussion topic. Use semicolons to separate sub-topics."
-                    ],
-                    "rounds": [
-                        "type": "integer",
-                        "description": "Maximum discussion rounds (default: 1 for MCP)"
-                    ],
-                    "tools": [
-                        "type": "array",
-                        "items": ["type": "string", "enum": ["claude", "codex", "gemini"]],
-                        "description": "Participating tools (default: all installed)"
-                    ],
-                    "environment": [
-                        "type": "string",
-                        "description": "Environment name (default: active environment)"
-                    ],
-                    "roles": [
-                        "type": "string",
-                        "description": "Role preset (balanced, adversarial, security) or comma-separated role IDs"
-                    ],
-                    "spec": [
-                        "type": "boolean",
-                        "description": "Generate a spec from the discussion result (default: false)"
-                    ]
-                ],
-                "required": ["topic"],
-                "additionalProperties": false
-            ]
-        ]
-    }
-
-    private static func warn(_ message: String) {
-        FileHandle.standardError.write(Data("[orrery-magi] \(message)\n".utf8))
     }
 }

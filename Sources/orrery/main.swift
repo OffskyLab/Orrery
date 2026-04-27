@@ -15,8 +15,8 @@ private func runOrreryMain() throws {
         try MagiMCPTools.register(on: MCPServer.self)
     }
 
-    if firstArgument == "magi",
-       let binary = try MagiSidecar.resolveOrFallback() {
+    if firstArgument == "magi" {
+        let binary = try MagiSidecar.resolve()
         try MagiSidecar.dispatch(binary, args: Array(CommandLine.arguments.dropFirst(2)))
         Foundation.exit(0)
     }
