@@ -26,9 +26,6 @@
   `MagiCommand`, `MagiMCPTools`, `MagiSidecar`, and module metadata.
   `OrreryMagiModule.apiVersion` bumped 0.1.0 → 1.0.0 to mark the cut.
   See `docs/CONTRACT-OrreryMagi.md` for the new public surface.
-
-## v2.4.0 - 2026-04-22
-
 - **Internal refactor: extracted `OrreryMagi` library target.**  The Magi
   multi-model consensus logic now lives in its own Swift Package target
   (`Sources/OrreryMagi/`) depending on `OrreryCore`.  `MagiOrchestrator` /
@@ -120,9 +117,6 @@
   extraction, which will batch-migrate both `Magi/*` and `Spec/*` into
   independent `OrreryMagi` / `OrrerySpec` targets.  `Package.swift` is
   unchanged in this release.
-
-## v2.3.0
-
 - **`orrery magi` — multi-model discussion and consensus.**  New subcommand
   that lets Claude, Codex, and Gemini discuss a topic over multiple rounds
   and produce a structured consensus report.  Each round, models see their
