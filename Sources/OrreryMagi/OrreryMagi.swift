@@ -16,5 +16,5 @@ public enum OrreryMagiModule {
     /// Semantic version of the library API surface. Bumped when the
     /// public DTOs / orchestrator entry points change in a way that
     /// would break external consumers (Phase 2 prep).
-    public static let apiVersion = "0.1.0"
+    public static let apiVersion = "0.2.0"
 }

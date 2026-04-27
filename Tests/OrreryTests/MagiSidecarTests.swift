@@ -126,7 +126,7 @@ final class MagiSidecarTests: XCTestCase {
             "ORRERY_HOME": tmp.path,
             "PATH": tmp.path
         ]) {
-            XCTAssertNil(MagiSidecar.resolve())
+            XCTAssertNil(try MagiSidecar.resolveOrFallback())
         }
     }
 

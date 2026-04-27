@@ -98,8 +98,50 @@ third-party embedders once Phase 2 lands.
 
 ### MCP
 - `enum MagiMCPTools`
-  - `static func register(on server: MCPServer.Type)` — registers the
-    `orrery_magi` MCP tool. Idempotent per process.
+  - `static func register(on server: MCPServer.Type) throws` — registers
+    the `orrery_magi` MCP tool. Idempotent per process. Throws when the
+    sidecar handshake fails under `ORRERY_MAGI_STRICT=1` (see Sidecar
+    section). Non-strict callers may still receive a thrown error if
+    handshake validation surfaces a programmer-visible inconsistency.
+
+### Sidecar (Phase 2)
+
+The sidecar surface lets `OrreryMagi` delegate to an external
+`orrery-magi` binary instead of running Magi in-process. Handshake +
+versioning live here so Phase 4 (in-process fallback removal) and Phase
+5 (single-spawn capabilities) can land without touching `MagiCommand`
+or `MagiMCPTools`.
+
+- `enum MagiSidecarError: Error, CustomStringConvertible`
+  - `.binaryNotFound`
+  - `.capabilitiesFailed(stderr:)`
+  - `.capabilitiesInvalidJSON`
+  - `.schemaVersionUnsupported(found:max:)`
+  - `.shimProtocolIncompatible(found:required:)`
+  - `.mcpSchemaFetchFailed`
+- `enum MagiSidecar`
+  - `struct ResolvedBinary` — `path`, `version`, `mcpSchema: [String: Any]?`.
+  - `struct SpawnResult` — `stdout`, `stderr`, `exitCode`, `timedOut`.
+  - `static let maxSchemaVersion: Int` — highest capabilities `$schema_version`
+    the shim accepts.
+  - `static let shimProtocolVersion: Int` — minimum `compatibility.shim_protocol`
+    the shim requires from the sidecar.
+  - `static func isStrictMode() -> Bool` — reads `ORRERY_MAGI_STRICT`
+    (`"1"` / `"true"` enable strict mode).
+  - `static func resolveStrict() throws -> ResolvedBinary` — handshake
+    or throw; never falls back.
+  - `static func resolveOrFallback() throws -> ResolvedBinary?` —
+    handshake; throws under strict mode, returns `nil` otherwise.
+  - `static func dispatch(_ binary: ResolvedBinary, args: [String]) throws`
+    — exec the sidecar inheriting parent stdio; throws `ArgumentParser.ExitCode`
+    on non-zero subprocess exit. Propagates parent env + cwd.
+  - `static func spawnAndCapture(binary:args:timeout:) -> SpawnResult` —
+    capture stdout/stderr with watchdog timeout; safe against grandchild
+    fd inheritance deadlocks.
+
+**Strict-mode environment variable** — `ORRERY_MAGI_STRICT=1` (or
+`true`) is part of this contract. CI uses it to assert the sidecar path
+is exercised; Phase 4 will rely on it being honored by every caller.
 
 ### Orchestration model
 - `struct MagiRun` (+ nested: `MagiRound`, `MagiAgentResponse`,

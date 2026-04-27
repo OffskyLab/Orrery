@@ -73,10 +73,6 @@ public enum MagiSidecar {
         return value == "1" || value == "true"
     }
 
-    public static func resolve() -> ResolvedBinary? {
-        try? resolveOrFallback()
-    }
-
     public static func resolveStrict() throws -> ResolvedBinary {
         guard let resolved = try resolveInternal(strict: true) else {
             throw MagiSidecarError.binaryNotFound
