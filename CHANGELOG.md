@@ -1,5 +1,77 @@
 # Changelog
 
+## Unreleased
+
+- **`orrery spec-run --mode implement` + `orrery_spec_implement` MCP tool —
+  second phase of the spec pipeline.**  Takes a structured spec produced by
+  `orrery spec` and hands it to a delegate agent (claude-code / codex /
+  gemini) running in a *detached* subprocess.  Returns immediately with a
+  `session_id` + `status: "running"`; the delegate continues after the
+  orrery parent exits.  A wrapper shell owns the lifecycle — it enforces
+  `--timeout` via a background SIGTERM watchdog, redirects delegate
+  stdout/stderr to log files under `~/.orrery/spec-runs/`, and calls back
+  into a hidden `orrery _spec-finalize` subcommand once the delegate exits.
+  DI5 safety net rejects specs that are missing any of the four mandatory
+  headings (`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`) before any
+  subprocess is launched.
+- **`orrery spec-run --mode status` + `orrery_spec_status` MCP tool —
+  polling companion.**  Reads the persisted session JSON under
+  `~/.orrery/spec-runs/{id}.json` and returns a stable schema with
+  `status`, `progress`, `last_error`, and — when terminal — the full
+  `SpecRunResult`.  Supports `--include-log` to tail the progress jsonl
+  and `--since-timestamp` for incremental polling.  Suggested cadence
+  (documented in the tool description): first poll ~2s, then exponential
+  backoff `min(30s, prev * 1.5)`, settling at 30s for long runs.
+- **Session identity is orrery-owned (C2).**  The MCP `resume_session_id`
+  is always the orrery UUID returned by a prior implement call; the
+  delegate agent's native session id (claude-code / codex / gemini
+  session) is an internal detail captured by `_spec-finalize` via
+  `SessionResolver` snapshot-diff and stored in `SpecRunState.delegate_session_id`.
+  Clients never need to know the delegate id directly.
+- **Schema additions to `SpecRunResult`.**  Eight new fields (`status`,
+  `started_at`, `completed_at`, `touched_files`, `blocked_reason`,
+  `failed_step`, `child_session_ids`, `execution_graph`) are now always
+  present in the CLI and MCP output.  `verify` keeps working unchanged —
+  the new fields get safe defaults when populated by `SpecVerifyRunner`.
+  `child_session_ids` and `execution_graph` are DI3 reserves for future
+  parallel execution and have no runtime behaviour in the MVP.
+- **New slash commands.**  `orrery mcp setup` now also writes
+  `.claude/commands/orrery:spec-implement.md` and
+  `orrery:spec-status.md`, giving users `/orrery:spec-implement` and
+  `/orrery:spec-status` directly from the chat box.
+- **Parser gains heredoc awareness.**  `SpecAcceptanceParser` now
+  recognises `<<EOF` / `<<'EOF'` / `<<"EOF"` / `<<-EOF` blocks inside
+  acceptance code fences and keeps the entire heredoc as a single
+  command — previously JSON-RPC bodies inside `cat <<'EOF' | ...` were
+  split line-by-line and mis-classified.
+- **`orrery spec-run --mode verify` + `orrery_spec_verify` MCP tool — MVP
+  of the spec implementation pipeline.**  Completes the `discuss → spec
+  → implement` loop by consuming the structured markdown produced by
+  `orrery spec` and verifying its `## 驗收標準` section.  Default mode
+  is dry-run (no shell executed, every acceptance command reported as
+  `skipped(dry-run)`); pass `--execute` to run sandboxed commands, and
+  `--strict-policy` to promote any `policy_blocked` command to a failure.
+  All phases emit a single structured JSON object to stdout with stable
+  schema (including validation errors).  Only `verify` is implemented;
+  `plan` / `implement` / `run` throw `modeNotImplemented` until the next
+  release.
+- **Sandbox policy (`SpecSandboxPolicy`) for spec verification.**  Three
+  layers of defence: dry-run default, allowlist (word-boundary) +
+  blocklist (substring, evaluated first) on shell commands, and hard
+  runtime caps (60s per command, 600s overall, 1MB stdout per command
+  with `…[truncated]` marker).  Python snippets go through a regex-based
+  deny-list lint (Q8 tracks upgrading to a real AST check).
+- **`pickup` skill roadmap (D13 stage 1).**  The new MCP tool is now the
+  canonical, cross-client path for spec implementation; the local
+  `pickup` skill stays as an offline preview for humans, with no
+  behaviour divergence expected.  A `@deprecated` marker + MIGRATION
+  guide will land two releases from now, and the skill will be removed
+  one release after that.
+- **`DelegateProcessBuilder` gains `OutputMode`.**  New `.capture` mode
+  pipes stdout to a `Pipe` for programmatic reading. Existing
+  `.passthrough` behaviour is the default — no change to `delegate` or
+  other call sites.
+
 ## v2.6.2
 
 - **`/orrery:phantom` now installed by `orrery mcp setup` too.** v2.6.0–v2.6.1 only installed the slash command globally to `~/.claude/commands/`, which only Claude reads when `CLAUDE_CONFIG_DIR` is unset (i.e. only in the `origin` env). For non-origin envs, `CLAUDE_CONFIG_DIR` redirects user-level commands to the env's claude config dir, so the global file isn't found. `orrery mcp setup` now writes a project-local copy to `<project>/.claude/commands/orrery:phantom.md` (alongside the existing delegate/sessions/resume commands) — project-local commands are read regardless of `CLAUDE_CONFIG_DIR`, making `/orrery:phantom` available in any env where mcp setup has been run for the project.
@@ -9,6 +81,7 @@
 - **Fix `/orrery:phantom` failing under Claude Code's caffeinate wrapper.** Newer Claude Code builds re-exec under `caffeinate` to keep the system awake during long sessions, so the process tree becomes `supervisor → caffeinate → claude`. v2.6.0's trigger required `claude.ppid == supervisor` directly and silently fell through with "Could not find a running claude process under the phantom supervisor". The trigger now walks up the full parent chain to the supervisor and kills the outermost claude on the way, so any wrapper layer (caffeinate, future variants) is handled transparently.
 - **`install.sh`: strip macOS quarantine xattr + re-adhoc-sign before running setup.** Curl-pipe installs left `com.apple.quarantine` on `/usr/local/bin/orrery-bin`; macOS Gatekeeper SIGKILLs the binary on first launch with exit 137 ("Killed: 9"), which killed the post-install `orrery-bin setup` step. install.sh now does `xattr -c` + `codesign --force --sign -` after the binary lands in `/usr/local/bin`. Also fix the cosmetic "Orrery installed installed." message that fired when the SIGKILL'd `--version` probe fell back to the literal string `"installed"`.
 
+  
 ## v2.6.0
 
 - **Phantom env switching: `/orrery:phantom <env>` swaps the orrery environment without losing the Claude conversation.** `orrery run claude` is now phantom-supervised by default — when the slash command fires, Claude exits and the supervisor relaunches it with the new env active and `--resume <session-id>`, so the conversation continues uninterrupted across account switches. Opt out with `orrery run --non-phantom claude`.

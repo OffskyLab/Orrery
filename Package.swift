@@ -16,7 +16,11 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "orrery-bin",
-            dependencies: ["OrreryCore", "OrreryThirdParty"],
+            dependencies: [
+                "OrreryCore",
+                "OrreryThirdParty",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
             path: "Sources/orrery"
         ),
         .target(
@@ -49,7 +53,11 @@ let package = Package(
         .testTarget(
             name: "OrreryTests",
             dependencies: ["OrreryCore"],
-            path: "Tests/OrreryTests"
+            path: "Tests/OrreryTests",
+            exclude: [
+                "Fixtures/minimal-implement-spec.md",
+                "Fixtures/sidecar/fake-sidecar.sh",
+            ]
         ),
         .testTarget(
             name: "OrreryThirdPartyTests",

@@ -274,6 +274,36 @@ orrery create secure-env --isolate-sessions
 |---|---|
 | `orrery run -e <name> <command>` | 在指定環境中執行指令 |
 | `orrery delegate -e <name> "prompt"` | 委派任務給其他環境的 AI 工具 |
+| `orrery magi "<topic>"` | 啟動多模型討論並達成共識 |
+
+### 多模型討論（Magi）
+
+靈感來自《新世紀福音戰士》的 MAGI 系統——三台超級電腦各自獨立判斷後達成多數決。`orrery magi` 讓多個 AI 模型針對同一議題互相對話、反駁，經過多輪討論後產出結構化的共識報告。
+
+```bash
+# 所有已安裝的 tool 參與，3 輪討論（預設）
+orrery magi "新 API 該用 REST 還是 GraphQL？"
+
+# 只讓 Claude + Codex 參與，1 輪
+orrery magi --claude --codex --rounds 1 "tabs vs spaces"
+
+# 多個子議題（分號分隔）
+orrery magi "效能考量; 開發體驗; 維護成本"
+
+# 將報告存檔
+orrery magi --output report.md "該不該遷移到 Swift 6？"
+```
+
+| 選項 | 說明 |
+|---|---|
+| `--claude` / `--codex` / `--gemini` | 選擇參與的工具（預設：所有已安裝） |
+| `--rounds <N>` | 最大討論輪數（預設：3） |
+| `--output <path>` | 將 markdown 報告輸出至檔案 |
+| `-e <name>` | 使用指定環境 |
+
+至少需要 2 個已安裝的工具。每輪討論中，模型能看到自己前輪的完整推理過程，以及其他參與者的結構化立場摘要。最終共識採用確定性多數決：`agreed`（全數同意）、`majority`（≥2 同意）、`disputed`（≥2 反對）、`pending`（資料不足）。
+
+討論紀錄以 JSON 格式存於 `~/.orrery/magi/`，可供日後查閱。
 
 ### Origin 管理
 

@@ -25,6 +25,10 @@ public struct CheckUpdateCommand: ParsableCommand {
         }
     }
 
+    private static func currentVersion() -> String {
+        OrreryVersion.current
+    }
+
     private static func fetchLatestVersion() -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
