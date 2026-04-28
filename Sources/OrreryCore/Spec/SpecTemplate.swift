@@ -65,7 +65,7 @@ public enum BuiltinProfiles {
 
     public static let minimal = SpecTemplate(
         name: "minimal",
-        description: "Compact 4-section spec",
+        description: "Compact 5-section spec (spec-implement compatible)",
         sections: [
             SpecSection(
                 title: "目標",
@@ -74,6 +74,10 @@ public enum BuiltinProfiles {
             SpecSection(
                 title: "介面合約（Interface Contract）",
                 instruction: "Function signatures, input/output types, error types for each new or modified API.",
+                required: true),
+            SpecSection(
+                title: "改動檔案",
+                instruction: "Markdown table: | File Path | Change Description |. One row per changed file.",
                 required: true),
             SpecSection(
                 title: "實作步驟",
