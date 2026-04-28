@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.5.0
+
+- **`orrery install <id>` is now a top-level command.** The previous `orrery thirdparty install` is replaced by `orrery install`, matching `npm install` / `brew install` conventions. `uninstall`, `list`, and `available` remain under `orrery thirdparty` because the top-level slots are taken by orrery's own commands.
+- **`--url` overrides the manifest source URL.** `orrery install statusline --url https://github.com/me/my-fork` keeps the manifest's install steps (copy `statusline.js`, patch `settings.json`) but pulls source from a custom git repository.
+- **Statusline package renamed `orrery-statusline` → `statusline`.** The legacy id still resolves so existing lock files can be uninstalled, but it is hidden from `orrery thirdparty available`.
+- **`"ref": "latest"` resolves to the newest version tag.** GitSource now interprets `latest` by calling `git ls-remote --tags --refs --sort=-v:refname` and picking the topmost semver tag (with `versionsort.suffix=-` so `0.2.5` beats `0.2.5-rc1`). The bundled statusline manifest now uses `latest` instead of `main`, so each install pulls the newest release rather than tracking an unstable branch.
+- **`CODEX_HOME` for codex env isolation (was `CODEX_CONFIG_DIR`).** Codex CLI reads `CODEX_HOME`, not `CODEX_CONFIG_DIR` — the old variable was set but ignored, silently falling back to `~/.codex`. `orrery delegate --codex`, `orrery run -t codex`, and `orrery export` now correctly point Codex at the per-env config dir.
+
 ## v2.4.7
 
 - **`orrery create claude` prompts to install `orrery-statusline`.** After completing the Claude tool wizard, the `create` command now asks whether to install the statusline (default: yes). Answering yes runs `orrery thirdparty install orrery-statusline` automatically during environment creation.
