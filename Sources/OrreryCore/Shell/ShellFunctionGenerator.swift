@@ -39,7 +39,7 @@ public struct ShellFunctionGenerator {
                 eval "$(command orrery-bin _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
               fi
               if [ "$2" = "origin" ]; then
-                unset CLAUDE_CONFIG_DIR CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
+                unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
                 export ORRERY_ACTIVE_ENV="origin"
                 command orrery-bin _set-current origin 2>/dev/null || true
               else

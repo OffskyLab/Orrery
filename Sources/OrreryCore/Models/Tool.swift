@@ -8,7 +8,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
     public var envVarName: String {
         switch self {
         case .claude: return "CLAUDE_CONFIG_DIR"
-        case .codex:  return "CODEX_CONFIG_DIR"
+        case .codex:  return "CODEX_HOME"
         case .gemini: return "GEMINI_CONFIG_DIR"
         }
     }
