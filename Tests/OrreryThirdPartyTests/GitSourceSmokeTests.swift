@@ -6,7 +6,7 @@ import Foundation
 @Suite("GitSource — network smoke (opt-in)",
        .enabled(if: ProcessInfo.processInfo.environment["ORRERY_NETWORK_TESTS"] == "1"))
 struct GitSourceSmokeTests {
-    @Test("clones orrery-statusline main and finds statusline.js")
+    @Test("clones statusline at latest tag and finds statusline.js")
     func realClone() throws {
         let cacheRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("orrery-git-smoke-\(UUID().uuidString)")
@@ -14,9 +14,9 @@ struct GitSourceSmokeTests {
 
         let (dir, sha) = try GitSource().fetch(
             source: .git(url: "https://github.com/OffskyLab/orrery-claude-statusline",
-                         ref: "main"),
+                         ref: "latest"),
             cacheRoot: cacheRoot,
-            packageID: "orrery-statusline",
+            packageID: "statusline",
             refOverride: nil,
             forceRefresh: false
         )

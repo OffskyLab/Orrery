@@ -22,7 +22,10 @@ public struct GitSource: ThirdPartySourceFetcher {
         guard case .git(let url, let manifestRef) = source else {
             throw ThirdPartyError.sourceFetchFailed(reason: "GitSource only supports git source")
         }
-        let requestedRef = refOverride ?? manifestRef
+        var requestedRef = refOverride ?? manifestRef
+        if requestedRef == "latest" {
+            requestedRef = try resolveLatestTag(url: url)
+        }
         let sha = try resolveSHA(url: url, ref: requestedRef)
         let dir = cacheDir(root: cacheRoot, packageID: packageID, sha: sha)
 
@@ -36,6 +39,28 @@ public struct GitSource: ThirdPartySourceFetcher {
             try clone(url: url, ref: requestedRef, sha: sha, into: dir)
         }
         return (dir, sha)
+    }
+
+    /// Picks the newest version tag from the remote, sorted by semver (`-v:refname`).
+    /// Used when the manifest opts into auto-bumping by writing `"ref": "latest"`.
+    private func resolveLatestTag(url: String) throws -> String {
+        let out = try runGit(["-c", "versionsort.suffix=-",
+                              "ls-remote", "--tags", "--refs",
+                              "--sort=-v:refname", url])
+        // ls-remote output: "<sha>\t<refs/tags/NAME>\n". Strip the prefix and
+        // pick the first entry — the highest version after semver sort.
+        for line in out.split(separator: "\n") {
+            let parts = line.split(separator: "\t")
+            guard parts.count == 2 else { continue }
+            let refName = String(parts[1])
+            let prefix = "refs/tags/"
+            guard refName.hasPrefix(prefix) else { continue }
+            let tag = String(refName.dropFirst(prefix.count))
+            return tag
+        }
+        throw ThirdPartyError.sourceFetchFailed(
+            reason: "no version tags found at \(url) — cannot resolve `latest`"
+        )
     }
 
     private func resolveSHA(url: String, ref: String) throws -> String {

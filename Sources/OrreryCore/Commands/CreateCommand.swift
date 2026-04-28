@@ -98,7 +98,7 @@ public struct CreateCommand: ParsableCommand {
             do {
                 let registry = try ThirdPartyRuntime.registry()
                 let runner = try ThirdPartyRuntime.runner()
-                let pkg = try registry.lookup("orrery-statusline")
+                let pkg = try registry.lookup("statusline")
                 let record = try runner.install(pkg, into: name, refOverride: nil, forceRefresh: false)
                 print(L10n.Create.installedStatusline(record.packageID, name))
             } catch {
@@ -110,7 +110,7 @@ public struct CreateCommand: ParsableCommand {
     // MARK: - Wizard
 
     /// Loop through all tools, asking setup/skip and running the per-tool wizard for each "setup".
-    /// Returns configs and whether the user chose to install cc-statusline (asked after Claude setup).
+    /// Returns configs and whether the user chose to install statusline (asked after Claude setup).
     static func runWizard(store: EnvironmentStore) -> ([ToolSetupRunner.Config], installStatusline: Bool) {
         var configs: [ToolSetupRunner.Config] = []
         var installStatusline = false

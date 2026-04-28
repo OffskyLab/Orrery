@@ -25,7 +25,7 @@ struct EndToEndTests {
             try Data(name.utf8).write(to: hooks.appendingPathComponent(name))
         }
 
-        var pkg = try BuiltInRegistry().lookup("orrery-statusline")
+        var pkg = try BuiltInRegistry().lookup("statusline")
         pkg = ThirdPartyPackage(
             id: pkg.id, displayName: pkg.displayName,
             description: pkg.description,
@@ -35,7 +35,7 @@ struct EndToEndTests {
         let runner = ManifestRunner(store: store, fetcher: VendoredSource())
         _ = try runner.install(pkg, into: "dev",
                                refOverride: nil, forceRefresh: false)
-        try runner.uninstall(packageID: "orrery-statusline", from: "dev")
+        try runner.uninstall(packageID: "statusline", from: "dev")
 
         let after = snapshot(at: claudeDir)
         #expect(after == before)

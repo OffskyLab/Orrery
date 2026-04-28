@@ -16,6 +16,15 @@ public struct ThirdPartyPackage: Codable, Equatable, Sendable {
         self.source = source
         self.steps = steps
     }
+
+    /// Returns a copy with the git source URL swapped. No-op for non-git sources.
+    public func replacingGitURL(_ newURL: String) -> ThirdPartyPackage {
+        guard case .git(_, let ref) = source else { return self }
+        return ThirdPartyPackage(
+            id: id, displayName: displayName, description: description,
+            source: .git(url: newURL, ref: ref), steps: steps
+        )
+    }
 }
 
 public enum ThirdPartySource: Codable, Equatable, Sendable {

@@ -2051,14 +2051,14 @@
     "kind": "func",
     "parameters": [{ "label": "_", "name": "path", "type": "String" }]
   },
-  { "path": ["Thirdparty", "abstract"], "kind": "var", "parameters": [] },
-  { "path": ["Thirdparty", "installAbstract"], "kind": "var", "parameters": [] },
-  { "path": ["Thirdparty", "installIdHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Thirdparty", "installEnvHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Thirdparty", "installRefHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Thirdparty", "installForceRefreshHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "idHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "envHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "urlHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "refHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Install", "forceRefreshHelp"], "kind": "var", "parameters": [] },
   {
-    "path": ["Thirdparty", "installSuccess"],
+    "path": ["Install", "success"],
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "id", "type": "String" },
@@ -2067,14 +2067,9 @@
       { "label": "_", "name": "env", "type": "String" }
     ]
   },
-  {
-    "path": ["Thirdparty", "installReinstallNotice"],
-    "kind": "func",
-    "parameters": [
-      { "label": "_", "name": "id", "type": "String" },
-      { "label": "_", "name": "env", "type": "String" }
-    ]
-  },
+  { "path": ["Thirdparty", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["Thirdparty", "idHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Thirdparty", "envHelp"], "kind": "var", "parameters": [] },
   { "path": ["Thirdparty", "uninstallAbstract"], "kind": "var", "parameters": [] },
   {
     "path": ["Thirdparty", "uninstallSuccess"],

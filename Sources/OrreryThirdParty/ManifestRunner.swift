@@ -167,7 +167,7 @@ public struct ManifestRunner: ThirdPartyRunner {
         p.waitUntilExit()
         if p.terminationStatus != 0 {
             FileHandle.standardError.write(Data(
-                "warning: `node` not found on PATH. cc-statusline needs Node.js to run.\n".utf8
+                "warning: `node` not found on PATH. statusline needs Node.js to run.\n".utf8
             ))
         }
     }
