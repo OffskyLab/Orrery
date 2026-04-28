@@ -87,13 +87,12 @@ public struct SessionsCommand: ParsableCommand {
 
     // MARK: - Per-tool session discovery
 
-    public struct SessionEntry {
-        public let id: String
-        public let firstMessage: String
-        public let lastTime: Date?
-        public let userCount: Int
-        public var isActive: Bool = false
-    }
+    /// Source-compat alias — the real definition now lives at
+    /// `Sources/OrreryCore/Models/SessionEntry.swift` so it can be part of
+    /// the module's public surface for external library consumers.
+    /// Existing call sites referring to `SessionsCommand.SessionEntry`
+    /// continue to compile unchanged.
+    public typealias SessionEntry = OrreryCore.SessionEntry // same module, fully-qualified for clarity
 
     public static func findSessions(tool: Tool, cwd: String, store: EnvironmentStore) -> [SessionEntry] {
         switch tool {

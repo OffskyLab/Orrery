@@ -1,0 +1,72 @@
+{
+  "id": "2026-04-20-orrery-spec-implement-mvp",
+  "file": "docs/tasks/2026-04-20-orrery-spec-implement-mvp.md",
+  "title": "Orrery Spec Implement MCP Tool MVP：orrery_spec_implement + orrery_spec_status + _spec-finalize",
+  "status": "done",
+  "created": "2026-04-21",
+  "depends_on": [
+    "2026-04-18-orrery-spec-mcp-tool"
+  ],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-20-orrery-spec-implement-mvp.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Spec/SpecAcceptanceParser.swift",
+    "file:Sources/OrreryCore/Spec/SpecRunResult.swift",
+    "file:Sources/OrreryCore/Spec/SpecRunCommand.swift",
+    "file:Sources/OrreryCore/Spec/SpecVerifyRunner.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Helpers/SessionResolver.swift",
+    "file:Sources/OrreryCore/MCP/MCPServer.swift",
+    "file:Sources/OrreryCore/Commands/MCPSetupCommand.swift",
+    "file:Sources/OrreryCore/Commands/OrreryCommand.swift"
+  ],
+  "verification": [
+    "swift build",
+    "swift test --filter SpecAcceptanceParserTests",
+    "swift test --filter SpecProgressLogTests",
+    "swift test --filter SpecRunStateStoreTests",
+    "swift test --filter SpecPromptExtractorTests",
+    "swift test --filter SpecImplementRunnerTests",
+    "swift test --filter SpecFinalizeCommandTests",
+    "swift test --filter SpecRunStatusTests",
+    "swift test --filter SpecImplementCommandTests",
+    "swift test",
+    ".build/debug/orrery spec-run --mode implement docs/tasks/2026-04-20-orrery-spec-implement-mvp.md | python3 -c 'import sys,json; d=json.load(sys.stdin); assert d[\"status\"]==\"running\"; print(\"ok\")'"
+  ],
+  "tags": [
+    "feature",
+    "spec",
+    "mcp",
+    "async",
+    "delegate"
+  ],
+  "notes": [
+    "MVP scope: orrery_spec_implement + orrery_spec_status + _spec-finalize hidden subcommand; plan / composite run deferred",
+    "C1 detached lifecycle: wrapper bash + _spec-finalize hidden subcommand (finalize runs after orrery parent exits)",
+    "C2 session id identity: SpecRunState.delegateSessionId separates orrery UUID from delegate native id; diff via SessionResolver snapshot at finalize",
+    "C3 detached stdout routing: wrapper redirects delegate stdout/stderr to ~/.orrery/spec-runs/{id}.stdout.log / stderr.log",
+    "Phase 1 per D17: files in Sources/OrreryCore/Spec/; Package.swift untouched",
+    "Implement order: T1 → T2 → T3 → T4 → T5 (Step 6) → T6 (Step 5, extend result) → Step 6b (SpecFinalizeCommand) → Step 7 (CLI) → Step 7b (register) → Step 8 (MCP) → Step 9 (slash) → Step 10 (L10n) → Step 11 (tests) → Step 12 (CHANGELOG)",
+    "Spec updated 2026-04-21 after initial review: fixed C1 (detached lifecycle via wrapper + _spec-finalize), C2 (session id identity), C3 (detached stdout routing), H1-H5 misc, M1-M2 wording/scope",
+    "R2 review (2026-04-21): C1/C2/C3 architecture verified; 6 smaller gaps (G1-G8) patched — timeout now honored in detached mode via wrapper watchdog, session tool env, abs orrery path, finalize idempotency, log retention caveat, resume-fallback warning"
+  ],
+  "status_history": [
+    {
+      "status": "ready",
+      "at": "2026-04-21T02:17:13Z",
+      "note": "spec reviewed and drifts fixed (C1/C2/C3 architecture + H1-H5 + M1-M2)"
+    },
+    {
+      "status": "ready",
+      "at": "2026-04-21T03:15:04Z",
+      "note": "R2 review: fixed 6 more gaps (G1 detached timeout watchdog, G2 ORRERY_SPEC_TOOL env, G3 orreryBin abs path, G5 finalize idempotency, G7 log retention caveat, G8 resume silent-fallback warning)"
+    },
+    {
+      "status": "done",
+      "at": "2026-04-22T05:55:27Z",
+      "note": "all 13 tickets complete: T1 validateStructure, T2 SpecPromptExtractor, T3 SpecProgressLog, T4 SpecRunStateStore, T5 SpecRunResult extend, T6 SpecImplementRunner, T6b SpecFinalizeCommand, T7+T7b CLI+register, T8 MCP tools, T9 slash commands, T10 L10n, T11 tests, T12 CHANGELOG+fixture"
+    }
+  ],
+  "spec_updated_at": "2026-04-21",
+  "completed": "2026-04-22"
+}

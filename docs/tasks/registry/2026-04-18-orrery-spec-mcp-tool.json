@@ -1,0 +1,66 @@
+{
+  "id": "2026-04-18-orrery-spec-mcp-tool",
+  "file": "docs/tasks/2026-04-18-orrery-spec-mcp-tool.md",
+  "title": "Orrery Spec MCP Tool MVP：orrery_spec_verify 與 orrery spec-run CLI",
+  "status": "done",
+  "created": "2026-04-18",
+  "depends_on": [
+    "2026-04-17-magi-spec-pipeline"
+  ],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-18-orrery-spec-mcp-tool.md",
+  "preconditions": [
+    "file:Sources/OrreryCore/Spec/SpecCommand.swift",
+    "file:Sources/OrreryCore/Spec/SpecGenerator.swift",
+    "file:Sources/OrreryCore/Commands/OrreryCommand.swift",
+    "file:Sources/OrreryCore/MCP/MCPServer.swift",
+    "file:Sources/OrreryCore/Helpers/DelegateProcessBuilder.swift",
+    "file:Sources/OrreryCore/Resources/Localization/en.json",
+    "file:Sources/OrreryCore/Resources/Localization/zh-Hant.json",
+    "file:Sources/OrreryCore/Resources/Localization/ja.json"
+  ],
+  "verification": [
+    "swift build",
+    "swift test --filter SpecAcceptanceParserTests",
+    "swift test --filter SpecSandboxPolicyTests",
+    "swift test --filter SpecRunCommandTests",
+    "swift test",
+    ".build/debug/orrery spec-run --mode verify docs/tasks/2026-04-17-magi-extraction.md",
+    ".build/debug/orrery spec-run --mode plan docs/tasks/2026-04-17-magi-extraction.md ; echo \"exit=$?\"",
+    "echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}' | .build/debug/orrery mcp-server | grep orrery_spec_verify"
+  ],
+  "tags": [
+    "feature",
+    "spec",
+    "mcp",
+    "sandbox"
+  ],
+  "notes": [
+    "Phase 1 per D17: files placed in Sources/OrreryCore/Spec/ (暫放), Package.swift untouched",
+    "Phase 2 (Magi extraction, 2026-04-17-magi-extraction) will batch-migrate both Magi/* and Spec/* to independent targets",
+    "MVP scope: orrery_spec_verify only; implement/plan/run deferred to subsequent releases",
+    "Implementation order: T1 SpecAcceptanceParser → T2 SpecSandboxPolicy → T3 SpecRunResult → T4 SpecVerifyRunner → T5 SpecRunCommand → T6 OrreryCommand registration → T7 MCPServer → T8 L10n → T9 Tests → T10 CHANGELOG"
+  ],
+  "status_history": [
+    {
+      "status": "ready",
+      "at": "2026-04-19T00:00:00Z"
+    },
+    {
+      "status": "in-progress",
+      "at": "2026-04-19T00:01:00Z",
+      "session": "pickup: orrery spec mcp tool MVP"
+    },
+    {
+      "status": "done",
+      "at": "2026-04-19T15:32:41Z"
+    },
+    {
+      "status": "done",
+      "at": "2026-04-20T06:41:07Z",
+      "note": "spec updated: 3 drifts corrected (slash command, execCommand stdout preference, SpecRunResult.encode(to:) override)"
+    }
+  ],
+  "completed": "2026-04-19",
+  "spec_updated_at": "2026-04-20"
+}

@@ -20,116 +20,138 @@ public struct DelegateCommand: ParsableCommand {
     @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Delegate.envHelp))
     public var environment: String?
 
+    @Option(name: .long, help: ArgumentHelp(L10n.Delegate.resumeHelp))
+    public var resume: String?
+
+    @Flag(name: .long, help: ArgumentHelp(L10n.Delegate.sessionPickerHelp))
+    public var session: Bool = false
+
+    @Option(name: .long, help: ArgumentHelp(L10n.Delegate.sessionNameHelp))
+    public var sessionName: String?
+
     @Argument(help: ArgumentHelp(L10n.Delegate.promptHelp))
-    public var prompt: String
+    public var prompt: String?
 
     public init() {}
 
     public func run() throws {
-        let tool = resolvedTool()
-        let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-
         let store = EnvironmentStore.default
+        let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        let cwd = FileManager.default.currentDirectoryPath
 
-        // Build environment variables
-        var envVars: [String: String] = [:]
-        if let envName, envName != ReservedEnvironment.defaultName {
-            let env = try store.load(named: envName)
-            for t in env.tools {
-                envVars[t.envVarName] = store.toolConfigDir(tool: t, environment: envName).path
-            }
-            for (key, value) in env.env {
-                envVars[key] = value
-            }
-            // gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,
-            // so when delegating to gemini we override HOME to a per-env wrapper
-            // whose `.gemini` symlinks back to the env's gemini config.
-            if tool == .gemini, env.tools.contains(.gemini) {
-                try store.ensureGeminiHomeWrapper(envName: envName)
-                envVars["HOME"] = store.geminiHomeDir(environment: envName).path
-                // For API-key auth, gemini-cli's non-interactive validator
-                // only looks at `process.env.GEMINI_API_KEY` and won't fall
-                // through to its own Keychain/encrypted-file lookup. Pre-extract
-                // the stored key so `gemini -p` passes validation.
-                if envVars["GEMINI_API_KEY"] == nil,
-                   ProcessInfo.processInfo.environment["GEMINI_API_KEY"] == nil {
-                    let configDir = store.toolConfigDir(tool: .gemini, environment: envName)
-                    if let key = GeminiCredentials.loadAPIKey(configDir: configDir) {
-                        envVars["GEMINI_API_KEY"] = key
-                    }
+        // Validation: --session / --session-name / --resume are mutually exclusive
+        let sessionModes = [session, sessionName != nil, resume != nil].filter { $0 }.count
+        if sessionModes > 1 {
+            throw ValidationError(L10n.Delegate.sessionResumeExclusive)
+        }
+
+        // --- Picker mode: --session ---
+        if session {
+            let mapping = SessionMapping(store: store)
+            let all = mapping.allMappings(cwd: cwd)
+            let (name, entry) = try SessionPicker.pick(mappings: all, store: store, cwd: cwd)
+            let tool = Tool(rawValue: entry.tool) ?? .claude
+
+            // Picker mode: prompt can come from argument or interactive input
+            let userPrompt: String
+            if let p = prompt {
+                userPrompt = p
+            } else {
+                print("Prompt: ", terminator: "")
+                guard let line = readLine(), !line.isEmpty else {
+                    throw ValidationError(L10n.Delegate.sessionRequiresPrompt)
                 }
+                userPrompt = line
             }
+
+            try runNativeMappingPath(
+                sessionName: name, userPrompt: userPrompt,
+                tool: tool, envName: envName, store: store, cwd: cwd)
+            return
         }
 
-        var processEnv = ProcessInfo.processInfo.environment
-        // Strip inherited API key so the environment's own credentials take effect
-        if let envName, envName != ReservedEnvironment.defaultName {
-            processEnv.removeValue(forKey: "ANTHROPIC_API_KEY")
-        }
-        for (key, value) in envVars {
-            processEnv[key] = value
-        }
-        // Strip IPC variables to prevent child claude from hanging
-        processEnv.removeValue(forKey: "CLAUDECODE")
-        processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
-        processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
-        if let envName, envName == ReservedEnvironment.defaultName {
-            for t in Tool.allCases {
-                processEnv.removeValue(forKey: t.envVarName)
+        // --- Named session mode: --session-name <name> ---
+        if let sessionName = sessionName {
+            guard let userPrompt = prompt else {
+                throw ValidationError(L10n.Delegate.sessionRequiresPrompt)
             }
+            let mapping = SessionMapping(store: store)
+            let existing = mapping.load(name: sessionName, cwd: cwd)
+
+            // Auto tool inference: use tool from mapping if available, else from flag
+            let tool: Tool
+            if let entry = existing, let t = Tool(rawValue: entry.tool) {
+                tool = t
+            } else {
+                tool = resolvedTool()
+            }
+
+            try runNativeMappingPath(
+                sessionName: sessionName, userPrompt: userPrompt,
+                tool: tool, envName: envName, store: store, cwd: cwd)
+            return
         }
 
-        let command: [String]
-        switch tool {
-        case .claude: command = ["claude", "-p", prompt, "--allowedTools", "Bash"]
-        case .codex:  command = ["codex", "exec", prompt]
-        case .gemini: command = ["gemini", "-p", prompt]
+        // --- Native resume path (existing) ---
+        let tool = resolvedTool()
+        guard resume != nil || prompt != nil else {
+            throw ValidationError(L10n.Delegate.noPromptNoResume)
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = command
-        process.environment = processEnv
-        // Redirect stdin to /dev/null so the delegated tool doesn't wait for input
-        // it'll never use — `claude -p`, `codex exec`, and `gemini -p` all take the
-        // prompt as an arg. With inherited stdin, a non-TTY caller (another script,
-        // an SSH session without a pty, the MCP server) triggers Claude's
-        // "no stdin data received in 3s" warning and adds 3s latency.
-        process.standardInput = FileHandle.nullDevice
-
-        // Pipe stdout/stderr through readabilityHandler rather than inheriting
-        // FileHandle.standardOutput directly. When orrery is called as a Bash tool
-        // by Claude Code, our own stdout is a pipe whose buffer is ~64 KB. A
-        // delegate session (code review, long task) can easily emit more than that
-        // before it finishes. With inherited handles, write() in the child blocks
-        // once the buffer is full, waitUntilExit() never returns, and all three
-        // processes deadlock. Draining via readabilityHandler keeps the buffer clear.
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-
-        let outFH = FileHandle.standardOutput
-        let errFH = FileHandle.standardError
-        stdoutPipe.fileHandleForReading.readabilityHandler = { fh in
-            let data = fh.availableData
-            if !data.isEmpty { outFH.write(data) }
+        var sessionId: String?
+        if let resumeValue = resume {
+            let specifier = try SessionSpecifier(resumeValue)
+            let session = try SessionResolver.resolve(
+                specifier, tool: tool, cwd: cwd, store: store, activeEnvironment: envName)
+            sessionId = session.id
         }
-        stderrPipe.fileHandleForReading.readabilityHandler = { fh in
-            let data = fh.availableData
-            if !data.isEmpty { errFH.write(data) }
+
+        let builder = DelegateProcessBuilder(
+            tool: tool, prompt: prompt,
+            resumeSessionId: sessionId,
+            environment: envName, store: store)
+        let (process, _, _) = try builder.build()
+        try process.run()
+        process.waitUntilExit()
+        throw ExitCode(process.terminationStatus)
+    }
+
+    // MARK: - Unified native mapping path (all tools)
+
+    private func runNativeMappingPath(
+        sessionName: String, userPrompt: String,
+        tool: Tool, envName: String?, store: EnvironmentStore, cwd: String
+    ) throws {
+        let mapping = SessionMapping(store: store)
+        let existing = mapping.load(name: sessionName, cwd: cwd)
+
+        let resumeId: String?
+        if let entry = existing, entry.tool == tool.rawValue {
+            resumeId = entry.nativeSessionId
+        } else {
+            resumeId = nil
         }
+
+        let builder = DelegateProcessBuilder(
+            tool: tool, prompt: userPrompt,
+            resumeSessionId: resumeId,
+            environment: envName, store: store)
+        let (process, _, _) = try builder.build()
 
         try process.run()
         process.waitUntilExit()
 
-        stdoutPipe.fileHandleForReading.readabilityHandler = nil
-        stderrPipe.fileHandleForReading.readabilityHandler = nil
-        // Flush any remaining bytes after the handler is removed.
-        let remainingOut = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        if !remainingOut.isEmpty { outFH.write(remainingOut) }
-        let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        if !remainingErr.isEmpty { errFH.write(remainingErr) }
+        // Save/update mapping
+        let sessions = SessionsCommand.findSessions(tool: tool, cwd: cwd, store: store)
+            .sorted { ($0.lastTime ?? .distantPast) > ($1.lastTime ?? .distantPast) }
+        if let latest = sessions.first {
+            let entry = SessionMappingEntry(
+                tool: tool.rawValue,
+                nativeSessionId: latest.id,
+                lastUsed: ISO8601DateFormatter().string(from: Date()),
+                summary: String(latest.firstMessage.prefix(80)))
+            try? mapping.save(entry, name: sessionName, cwd: cwd)
+        }
 
         throw ExitCode(process.terminationStatus)
     }

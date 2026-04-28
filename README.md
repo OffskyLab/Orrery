@@ -274,6 +274,36 @@ orrery create secure-env --isolate-sessions
 |---|---|
 | `orrery run -e <name> <command>` | Run a command in a specific environment |
 | `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
+| `orrery magi "<topic>"` | Start a multi-model discussion and reach consensus |
+
+### Multi-Model Discussion (Magi)
+
+Inspired by the MAGI system from Neon Genesis Evangelion — three supercomputers that independently evaluate and reach majority decisions. `orrery magi` lets multiple AI models discuss a topic, challenge each other's reasoning, and produce a structured consensus report.
+
+```bash
+# All installed tools discuss, 3 rounds (default)
+orrery magi "Should we use REST or GraphQL for the new API?"
+
+# Only Claude + Codex, 1 round
+orrery magi --claude --codex --rounds 1 "tabs vs spaces"
+
+# Multiple sub-topics (semicolon-separated)
+orrery magi "Performance; Developer experience; Maintenance cost"
+
+# Save the report to a file
+orrery magi --output report.md "Should we migrate to Swift 6?"
+```
+
+| Option | Description |
+|---|---|
+| `--claude` / `--codex` / `--gemini` | Select participating tools (default: all installed) |
+| `--rounds <N>` | Maximum discussion rounds (default: 3) |
+| `--output <path>` | Write the markdown report to a file |
+| `-e <name>` | Use a specific environment |
+
+At least 2 tools must be installed. Each round, models see their own previous reasoning in full and a structured summary of other participants' positions. The final consensus report uses deterministic majority voting: `agreed` (all agree), `majority` (≥2 agree), `disputed` (≥2 disagree), or `pending` (insufficient data).
+
+Discussion runs are saved as JSON to `~/.orrery/magi/` for later reference.
 
 ### Origin management
 

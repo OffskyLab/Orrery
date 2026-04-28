@@ -1,0 +1,20 @@
+{
+  "id": "2026-04-14-delegate-managed-session",
+  "file": "docs/tasks/2026-04-14-delegate-managed-session.md",
+  "title": "delegate --session: hybrid managed session (Codex fallback)",
+  "status": "superseded",
+  "created": "2026-04-14",
+  "depends_on": ["2026-04-13-delegate-session"],
+  "supersedes": [],
+  "superseded_by": "2026-04-15-delegate-session-ux",
+  "reason": "Codex 實際支援 codex exec resume <id> <prompt>，fallback 架構不需要",
+  "discussion": "docs/discussions/2026-04-14-delegate-managed-session.md",
+  "preconditions": [],
+  "verification": [],
+  "tags": ["feature", "superseded"],
+  "status_history": [
+    {"status": "draft", "at": "2026-04-14T10:00:00Z"},
+    {"status": "ready", "at": "2026-04-14T10:30:00Z"},
+    {"status": "superseded", "at": "2026-04-15T00:00:00Z", "reason": "Codex supports resume+prompt natively"}
+  ]
+}

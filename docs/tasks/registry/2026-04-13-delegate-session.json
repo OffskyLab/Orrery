@@ -1,0 +1,21 @@
+{
+  "id": "2026-04-13-delegate-session",
+  "file": "docs/tasks/2026-04-13-delegate-session.md",
+  "title": "delegate --resume: native resume + SessionSpecifier + SessionResolver + DelegateProcessBuilder",
+  "status": "done",
+  "created": "2026-04-13",
+  "depends_on": [],
+  "supersedes": [],
+  "discussion": "docs/discussions/2026-04-13-delegate-session.md",
+  "preconditions": [],
+  "verification": [
+    "swift build"
+  ],
+  "tags": ["feature"],
+  "status_history": [
+    {"status": "draft", "at": "2026-04-13T10:00:00Z"},
+    {"status": "ready", "at": "2026-04-13T10:05:00Z"},
+    {"status": "in-progress", "at": "2026-04-14T08:00:00Z"},
+    {"status": "done", "at": "2026-04-14T12:00:00Z"}
+  ]
+}
