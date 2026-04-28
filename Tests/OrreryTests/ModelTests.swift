@@ -29,7 +29,7 @@ struct ToolTests {
     @Test("all tools have correct env var names")
     func envVarNames() {
         #expect(Tool.claude.envVarName == "CLAUDE_CONFIG_DIR")
-        #expect(Tool.codex.envVarName == "CODEX_CONFIG_DIR")
+        #expect(Tool.codex.envVarName == "CODEX_HOME")
         #expect(Tool.gemini.envVarName == "GEMINI_CONFIG_DIR")
     }
 
