@@ -1,7 +1,21 @@
 # Changelog
 
-## Unreleased
+## v2.6.0 - 2026-04-29
 
+- **`orrery delegate --resume <id|index>` — native session resume.** Accepts a
+  full session UUID, short prefix, or numeric index (matching the order shown
+  by `orrery sessions`) and forwards to the delegate tool's native resume
+  mechanism (`claude --resume`, `codex resume`, `gemini --resume`). Index
+  resolution is scoped to the active environment + tool, so the same numeric
+  "1" is unambiguous across runs.
+- **`orrery delegate --session` / `--session-name <name>` — managed session
+  picker + named resume.** Without a name, opens an interactive picker over
+  all managed sessions across tools and envs (tool icon, env name, last-used
+  time, first user message preview). With a name, resumes that mapping
+  directly and auto-infers the tool from the saved entry. Mappings persist in
+  `~/.orrery/sessions/mappings.json` and survive across machines via
+  orrery-sync. `--session` / `--session-name` / `--resume` are mutually
+  exclusive.
 - **`orrery spec-run --mode implement` + `orrery_spec_implement` MCP tool —
   second phase of the spec pipeline.**  Takes a structured spec produced by
   `orrery spec` and hands it to a delegate agent (claude-code / codex /

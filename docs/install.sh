@@ -7,6 +7,13 @@ BINARY_NAME="orrery-bin"
 OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
 
+# orrery-magi sidecar — required runtime dependency for `orrery magi`.
+# Installed under ~/.orrery/bin/ (user-scope, no sudo) where the orrery
+# shim looks for it second-priority after $ORRERY_MAGI_PATH.
+MAGI_REPO="OffskyLab/orrery-magi"
+MAGI_BINARY="orrery-magi"
+MAGI_DIR="$HOME/.orrery/bin"
+
 # Parse flags
 for arg in "$@"; do
   case "$arg" in
@@ -116,6 +123,53 @@ if [[ -e "$INSTALL_DIR/$OLD_BINARY_NAME" ]]; then
   info "Removing legacy binary at $INSTALL_DIR/$OLD_BINARY_NAME (users now go through the shell function)."
   $USE_SUDO rm -f "$INSTALL_DIR/$OLD_BINARY_NAME"
 fi
+
+# Install orrery-magi sidecar (required runtime dependency).
+install_magi_from_source() {
+  if ! command -v swift &>/dev/null; then
+    warn "Swift not found — orrery-magi not installed. \`orrery magi\` will hard-fail."
+    return 1
+  fi
+  info "Building orrery-magi from source (main branch)..."
+  git clone --depth 1 "https://github.com/${MAGI_REPO}.git" "$TMP_DIR/orrery-magi" --quiet
+  ( cd "$TMP_DIR/orrery-magi" && swift build -c release --quiet 2>&1 )
+  local built="$TMP_DIR/orrery-magi/.build/release/$MAGI_BINARY"
+  if [[ ! -f "$built" ]]; then
+    warn "orrery-magi build failed — \`orrery magi\` will hard-fail."
+    return 1
+  fi
+  mkdir -p "$MAGI_DIR"
+  cp "$built" "$MAGI_DIR/$MAGI_BINARY"
+  chmod +x "$MAGI_DIR/$MAGI_BINARY"
+  info "Built orrery-magi from source to $MAGI_DIR/$MAGI_BINARY"
+}
+
+install_magi() {
+  if [[ "$BUILD_FROM_SOURCE" == "true" ]]; then
+    install_magi_from_source
+    return
+  fi
+  local asset="orrery-magi-${os}-${arch}.tar.gz"
+  local url="https://github.com/${MAGI_REPO}/releases/latest/download/${asset}"
+  info "Downloading orrery-magi pre-built binary..."
+  if ! curl -fsSL -o "$TMP_DIR/$asset" "$url" 2>/dev/null; then
+    warn "orrery-magi pre-built binary not available for ${os}-${arch} — falling back to source build."
+    install_magi_from_source
+    return
+  fi
+  tar -xzf "$TMP_DIR/$asset" -C "$TMP_DIR"
+  if [[ ! -f "$TMP_DIR/$MAGI_BINARY" ]]; then
+    warn "orrery-magi tarball missing binary — falling back to source build."
+    install_magi_from_source
+    return
+  fi
+  mkdir -p "$MAGI_DIR"
+  cp "$TMP_DIR/$MAGI_BINARY" "$MAGI_DIR/$MAGI_BINARY"
+  chmod +x "$MAGI_DIR/$MAGI_BINARY"
+  info "Installed orrery-magi to $MAGI_DIR/$MAGI_BINARY"
+}
+
+install_magi
 
 # Verify
 if ! command -v "$BINARY_NAME" &>/dev/null; then
