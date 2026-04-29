@@ -28,8 +28,55 @@ public struct SetupCommand: ParsableCommand {
         // 2. Add source line to rc file
         Self.installShellIntegration(to: rcFile, activatePath: activateFile.path)
 
-        // 3. Offer origin takeover (interactive, skipped when /dev/tty unavailable)
+        // 3. Install global slash commands available in every project
+        Self.installGlobalSlashCommands()
+
+        // 4. Offer origin takeover (interactive, skipped when /dev/tty unavailable)
         Self.offerOriginTakeover()
+    }
+
+    /// Install slash commands that should be available in every project (not just
+    /// where `orrery mcp setup` has been run). Currently just `orrery:phantom`.
+    static func installGlobalSlashCommands() {
+        let claudeCommandsDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude")
+            .appendingPathComponent("commands")
+        do {
+            try FileManager.default.createDirectory(at: claudeCommandsDir, withIntermediateDirectories: true)
+        } catch {
+            stderrWrite(L10n.Setup.failedToWrite(claudeCommandsDir.path, error.localizedDescription))
+            return
+        }
+
+        let phantomMd = claudeCommandsDir.appendingPathComponent("orrery:phantom.md")
+        let phantomContent = """
+        ---
+        description: Switch orrery environment without restarting Claude
+        argument-hint: [env-name]
+        ---
+
+        # Phantom: switch orrery environment in-place
+
+        Switch the active orrery environment without losing the conversation. Claude exits and the orrery supervisor relaunches it with the new env active and `--resume`, so the conversation continues where it left off.
+
+        **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
+
+        ## What to do
+
+        Inspect `$ARGUMENTS`:
+
+        - **If `$ARGUMENTS` is non-empty** (a target env name): run `orrery-bin _phantom-trigger $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
+
+        - **If `$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger` (with no arguments) to get the list of available environments. Then ask the user which environment they want to switch to — present the list as choices. Once they answer, run `orrery-bin _phantom-trigger <chosen-env>`.
+
+        Do not narrate the relaunch — Claude will simply exit and reappear with the new env. The user's next message lands in the new env.
+        """
+        do {
+            try phantomContent.write(to: phantomMd, atomically: true, encoding: .utf8)
+            stderrWrite(L10n.Setup.installedSlashCommand(phantomMd.path))
+        } catch {
+            stderrWrite(L10n.Setup.failedToWrite(phantomMd.path, error.localizedDescription))
+        }
     }
 
     static func resolveShell(explicit: String?) throws -> String {

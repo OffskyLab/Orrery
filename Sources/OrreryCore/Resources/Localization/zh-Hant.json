@@ -235,5 +235,14 @@
   "thirdparty.listAbstract": "列出環境安裝的第三方外掛",
   "thirdparty.listNone": "'{env}' 沒有安裝任何第三方外掛。",
   "thirdparty.listItem": "  {id}  {shortRef}  安裝於 {date}",
-  "thirdparty.availableAbstract": "列出 orrery 內建支援的第三方外掛"
+  "thirdparty.availableAbstract": "列出 orrery 內建支援的第三方外掛",
+  "phantom.triggerAbstract": "內部：通知 phantom 監督下的 claude 切換環境後重啟（由 /orrery:phantom 呼叫）",
+  "phantom.notUnderPhantom": "目前不是在 phantom 監督下執行。請改用 'orrery run claude'（預設啟用 phantom）啟動 claude 才能就地切換環境。",
+  "phantom.claudeNotFound": "找不到 phantom 監督下的 claude 進程。",
+  "phantom.signalFailed": "通知 claude 結束失敗，已取消重啟。",
+  "phantom.availableHeader": "可用環境：",
+  "phantom.usageHint": "用法：/orrery:phantom <環境名稱>",
+  "phantom.switching": "切換到 '{env}'，將以 session {sessionPrefix} 接續對話…",
+  "phantom.switchingNoSession": "切換到 '{env}'（找不到可接續的 session — 將開新對話）…",
+  "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n"
 }

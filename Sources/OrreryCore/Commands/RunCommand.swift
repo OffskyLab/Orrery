@@ -5,7 +5,20 @@ public struct RunCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "run",
         abstract: L10n.Run.abstract,
-        discussion: "Example: orrery run -e work claude --resume <id>"
+        discussion: """
+        Examples:
+          orrery run -e work claude              # phantom-supervised (default for claude)
+          orrery run -e work claude --resume <id>
+          orrery run --non-phantom claude        # opt out: single-shot, no supervisor
+          orrery run -e work npm install         # non-claude: always single-shot
+
+        With phantom mode (the default for `claude`), Claude can switch orrery
+        environments mid-conversation via the /orrery:phantom slash command —
+        the supervisor relaunches Claude with the new env active and `--resume`
+        so the conversation continues uninterrupted.
+
+        --non-phantom is handled by the orrery shell function (not this binary).
+        """
     )
 
     @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Run.envHelp))

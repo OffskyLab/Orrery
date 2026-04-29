@@ -235,5 +235,14 @@
   "thirdparty.listAbstract": "List installed third-party add-ons for an environment",
   "thirdparty.listNone": "No third-party add-ons installed in '{env}'.",
   "thirdparty.listItem": "  {id}  {shortRef}  installed {date}",
-  "thirdparty.availableAbstract": "List third-party add-ons shipped with orrery"
+  "thirdparty.availableAbstract": "List third-party add-ons shipped with orrery",
+  "phantom.triggerAbstract": "Internal: signal phantom-supervised claude to relaunch under a different env (called by /orrery:phantom)",
+  "phantom.notUnderPhantom": "Not running under phantom supervision. Launch claude with 'orrery run claude' (phantom is on by default) to enable in-place env switching.",
+  "phantom.claudeNotFound": "Could not find a running claude process under the phantom supervisor.",
+  "phantom.signalFailed": "Failed to signal claude to exit. The relaunch was aborted.",
+  "phantom.availableHeader": "Available environments:",
+  "phantom.usageHint": "Usage: /orrery:phantom <env-name>",
+  "phantom.switching": "Switching to '{env}' and resuming session {sessionPrefix}…",
+  "phantom.switchingNoSession": "Switching to '{env}' (no session to resume — fresh conversation)…",
+  "setup.installedSlashCommand": "orrery: installed slash command at {path}\n"
 }
