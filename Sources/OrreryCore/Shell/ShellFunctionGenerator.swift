@@ -48,6 +48,10 @@ public struct ShellFunctionGenerator {
                 eval "$exports"
                 export ORRERY_ACTIVE_ENV="$2"
                 command orrery-bin _set-current "$2" 2>/dev/null || true
+                # Background quota refresh so `orrery list` shows fresh data
+                # next time. Double subshell hides the job notice from
+                # interactive shells, just like the update check above.
+                ( ( command orrery-bin quota refresh -e "$2" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
               fi
               printf "\(L10n.Use.switched)\\n" "$2"
               ;;
@@ -72,6 +76,104 @@ public struct ShellFunctionGenerator {
                   case "${_ans:-Y}" in
                     [Yy]*|"") orrery use "$_env_name" ;;
                   esac
+                fi
+              fi
+              ;;
+            run)
+              # Phantom mode is the default for `orrery run claude` — claude is
+              # launched under a supervisor loop that watches for a sentinel
+              # written by the /orrery:phantom slash command and relaunches with
+              # the new env active + --resume <session-id> so the conversation
+              # continues uninterrupted across env switches.
+              #
+              # The shell directly forks/execs claude (not Swift Process), so the
+              # controlling TTY is naturally inherited — no PTY plumbing.
+              #
+              # Usage:
+              #   orrery run [-e <env>] [--non-phantom] [--] <command> [args...]
+              #
+              # Non-claude commands and --non-phantom invocations fall through to
+              # `orrery-bin run` (single-shot execvp via Swift), preserving prior
+              # behavior for scripts and non-interactive callers.
+              shift
+              local _run_target=""
+              local _run_non_phantom=0
+              local _run_args=()
+              while [ $# -gt 0 ]; do
+                case "$1" in
+                  -e|--env)
+                    if [ -z "${2:-}" ]; then
+                      echo "orrery run: -e requires an environment name" >&2
+                      return 1
+                    fi
+                    _run_target="$2"
+                    shift 2
+                    ;;
+                  --non-phantom)
+                    _run_non_phantom=1
+                    shift
+                    ;;
+                  --)
+                    shift
+                    while [ $# -gt 0 ]; do _run_args+=("$1"); shift; done
+                    break
+                    ;;
+                  *)
+                    _run_args+=("$1")
+                    shift
+                    ;;
+                esac
+              done
+
+              # Reload positional params from the parsed args so we can index
+              # the first element via "$1" — bash and zsh disagree on whether
+              # ${arr[0]} or ${arr[1]} is the first element (zsh is 1-indexed
+              # by default), but $1 means the same thing in both.
+              set -- "${_run_args[@]}"
+
+              # Phantom mode only applies to `claude` — other commands have no
+              # session-resume semantics so a supervisor loop adds no value.
+              if [ $_run_non_phantom -eq 0 ] && [ "${1:-}" = "claude" ]; then
+                if [ -n "$_run_target" ]; then
+                  orrery use "$_run_target" || return $?
+                fi
+                local _phantom_sentinel="$_orrery_home/.phantom-sentinel"
+                rm -f "$_phantom_sentinel"
+                export ORRERY_PHANTOM_SHELL_PID=$$
+                # Drop the leading "claude" — `command claude` below adds it back.
+                shift
+                local _phantom_args=("$@")
+                # Strip claude IPC env vars defensively: if `orrery run claude` is
+                # ever invoked from inside another claude, these would leak in and
+                # make the child claude hang waiting for an MCP host.
+                unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH
+                while true; do
+                  command claude "${_phantom_args[@]}"
+                  [ -f "$_phantom_sentinel" ] || break
+                  local TARGET_ENV='' SESSION_ID=''
+                  . "$_phantom_sentinel"
+                  rm -f "$_phantom_sentinel"
+                  if [ -n "$TARGET_ENV" ]; then
+                    orrery use "$TARGET_ENV" || break
+                  fi
+                  # After a phantom switch, --resume <new-session-id> is the only
+                  # arg we want — the user's original flags don't carry over (they
+                  # may have included --resume themselves with a now-stale id).
+                  _phantom_args=()
+                  if [ -n "$SESSION_ID" ]; then
+                    _phantom_args=(--resume "$SESSION_ID")
+                  fi
+                done
+                unset ORRERY_PHANTOM_SHELL_PID
+              else
+                # Single-shot path: hand off to Swift's `orrery-bin run`, which
+                # execvp's the target directly. This branch covers --non-phantom,
+                # non-claude commands, and the empty-args case (Swift produces
+                # the canonical "no command specified" error).
+                if [ -n "$_run_target" ]; then
+                  command orrery-bin run -e "$_run_target" "$@"
+                else
+                  command orrery-bin run "$@"
                 fi
               fi
               ;;

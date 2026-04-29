@@ -2096,5 +2096,33 @@
       { "label": "_", "name": "date", "type": "String" }
     ]
   },
-  { "path": ["Thirdparty", "availableAbstract"], "kind": "var", "parameters": [] }
+  { "path": ["Thirdparty", "availableAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "triggerAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "notUnderPhantom"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "claudeNotFound"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "signalFailed"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "availableHeader"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "usageHint"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Phantom", "switching"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" },
+      { "label": "_", "name": "sessionPrefix", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Phantom", "switchingNoSession"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Setup", "installedSlashCommand"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  }
 ]

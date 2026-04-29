@@ -41,6 +41,7 @@ public struct OrreryCommand: ParsableCommand {
             AuthCommand.self,
             InstallCommand.self,
             ThirdPartyCommand.self,
+            PhantomTriggerCommand.self,
         ]
     )
     public init() {}
