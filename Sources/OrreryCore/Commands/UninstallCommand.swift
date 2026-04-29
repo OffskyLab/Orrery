@@ -57,6 +57,15 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedBinary(binaryURL.path))
         }
 
+        // 4. Remove the orrery-magi sidecar binary (installed under
+        //    ~/.orrery/bin/ by install.sh / Homebrew). Use try? — sidecar
+        //    removal failure must not block uninstall completion.
+        let magiURL = home.appendingPathComponent(".orrery/bin/orrery-magi")
+        if FileManager.default.fileExists(atPath: magiURL.path) {
+            try? FileManager.default.removeItem(at: magiURL)
+            stderrWrite(L10n.Uninstall.removedBinary(magiURL.path))
+        }
+
         print(L10n.Uninstall.done)
     }
 }

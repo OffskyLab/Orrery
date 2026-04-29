@@ -6,3 +6,8 @@
 .gemini/
 .mcp.json
 *.resolved
+
+# Internal design discussions and task tracking — kept locally for
+# reviewability, not part of the public repo.
+docs/discussions/
+docs/tasks/
