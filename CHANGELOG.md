@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.0
+
+- **Phantom env switching: `/orrery:phantom <env>` swaps the orrery environment without losing the Claude conversation.** `orrery run claude` is now phantom-supervised by default — when the slash command fires, Claude exits and the supervisor relaunches it with the new env active and `--resume <session-id>`, so the conversation continues uninterrupted across account switches. Opt out with `orrery run --non-phantom claude`.
+- **Implementation**: a shell supervisor loop in `activate.sh` directly fork/execs claude (no PTY plumbing), a hidden `_phantom-trigger` subcommand walks up its own parent chain to find the supervised claude (robust against claude's internal forking — it's a Bun-compiled Mach-O), discovers the active session id via `<CLAUDE_CONFIG_DIR>/projects/<encoded-cwd>/<id>.jsonl` highest mtime, and signals claude to exit. The slash command markdown is installed globally to `~/.claude/commands/orrery:phantom.md` by `orrery setup`, so it's available in every project regardless of whether `orrery mcp setup` was run there.
+
 ## v2.5.0
 
 - **`orrery install <id>` is now a top-level command.** The previous `orrery thirdparty install` is replaced by `orrery install`, matching `npm install` / `brew install` conventions. `uninstall`, `list`, and `available` remain under `orrery thirdparty` because the top-level slots are taken by orrery's own commands.
