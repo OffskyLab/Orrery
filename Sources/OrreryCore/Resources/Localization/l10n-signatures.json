@@ -2199,7 +2199,15 @@
     ]
   },
   {
-    "path": ["Setup", "installedSlashCommand"]
+    "path": ["Setup", "installedSlashCommand"],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
   },
   {
     "path": [
