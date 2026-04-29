@@ -859,6 +859,14 @@
               <span style="color:var(--muted)">接著：</span> orrery resume 1
             </div>
           </div>
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:phantom</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">中途切環境 — Claude 自動 <code>--resume</code> 接續對話</span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">啟動時用：</span> orrery run claude<br/>
+              <span style="color:var(--muted)">在 Claude 內：</span> /orrery:phantom work
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1063,8 +1071,17 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.4</span>
+        <span class="changelog-ver">v2.6</span>
         <span class="changelog-new">最新</span>
+        <h3>Phantom 環境切換：<code>/orrery:phantom &lt;env&gt;</code> 中途切 env</h3>
+      </div>
+      <p class="changelog-body"><code>orrery run claude</code> 現在預設啟用 phantom 監督。在 Claude 裡輸入 <code>/orrery:phantom &lt;env&gt;</code> 時，supervisor 會用新環境 + <code>--resume</code> 重啟 Claude，對話無縫接續，不用重開 terminal。要關掉 phantom 走單次模式：<code>orrery run --non-phantom claude</code>。Slash command 同時裝在全域（<code>~/.claude/commands/</code>，給 <code>origin</code>）和專案內（透過 <code>orrery mcp setup</code>）—— project-local 的 slash command 不受 <code>CLAUDE_CONFIG_DIR</code> 影響，所以非 origin 環境也能用。</p>
+      <p class="changelog-body"><code>install.sh</code> 在把 binary 放進 <code>/usr/local/bin</code> 之後會 strip macOS quarantine xattr 並重新 ad-hoc 簽章，修正 curl 安裝後 Gatekeeper <code>SIGKILL</code>（exit 137 / "Killed: 9"）導致 post-install <code>orrery setup</code> 步驟失敗的問題。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.4</span>
         <h3>uninstall 移除 binary · thirdparty bundle 修正</h3>
       </div>
       <p class="changelog-body"><code>orrery uninstall</code> 現在也會刪除 <code>orrery-bin</code> binary，一個指令完整移除。<code>orrery thirdparty</code> 在全新安裝後的 fatal error 已修正：release tarball 和 deb 套件現在會同時打包 <code>orrery_OrreryThirdParty.bundle</code>。</p>

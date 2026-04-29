@@ -860,6 +860,14 @@
               <span style="color:var(--muted)">then:</span> orrery resume 1
             </div>
           </div>
+          <div>
+            <code style="color:var(--accent2);font-size:.9rem">/orrery:phantom</code>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">Switch env mid-conversation — Claude relaunches with <code>--resume</code></span>
+            <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
+              <span style="color:var(--muted)">launch with:</span> orrery run claude<br/>
+              <span style="color:var(--muted)">then in Claude:</span> /orrery:phantom work
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1078,8 +1086,17 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.4.4</span>
+        <span class="changelog-ver">v2.6</span>
         <span class="changelog-new">latest</span>
+        <h3>Phantom env switching: <code>/orrery:phantom &lt;env&gt;</code> mid-conversation</h3>
+      </div>
+      <p class="changelog-body"><code>orrery run claude</code> is now phantom-supervised by default. When <code>/orrery:phantom &lt;env&gt;</code> fires from inside Claude, the supervisor relaunches Claude with the new env active and <code>--resume</code>, so the conversation continues uninterrupted across account switches. Opt out with <code>orrery run --non-phantom claude</code>. The slash command is installed both globally (<code>~/.claude/commands/</code>, for the <code>origin</code> env) and project-locally via <code>orrery mcp setup</code> — project-local commands are read regardless of <code>CLAUDE_CONFIG_DIR</code>, making phantom available under any non-origin env.</p>
+      <p class="changelog-body"><code>install.sh</code> now strips macOS quarantine xattr and re-adhoc-signs the binary after dropping it into <code>/usr/local/bin</code>, fixing Gatekeeper <code>SIGKILL</code> on first launch (exit 137 / "Killed: 9") that previously broke the post-install <code>orrery setup</code> step on curl-piped installs.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.4.4</span>
         <h3>uninstall removes binary · thirdparty bundle fix</h3>
       </div>
       <p class="changelog-body"><code>orrery uninstall</code> now also deletes <code>orrery-bin</code> from its install location — complete removal in one command. The <code>orrery thirdparty</code> fatal error on fresh installs is fixed: <code>orrery_OrreryThirdParty.bundle</code> is now included alongside the binary in release tarballs and deb packages.</p>
