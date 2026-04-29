@@ -132,6 +132,15 @@ public struct MCPSetupCommand: ParsableCommand {
             ```
             """
             try resumeContent.write(to: resumeMd, atomically: true, encoding: .utf8)
+
+            // Project-local copy of the phantom slash command. The global
+            // install at ~/.claude/commands/orrery:phantom.md only applies
+            // when CLAUDE_CONFIG_DIR is unset (origin env). For non-origin
+            // envs, project-local commands are read regardless of
+            // CLAUDE_CONFIG_DIR — this makes /orrery:phantom available in
+            // any project where `orrery mcp setup` has been run.
+            let phantomMd = commandsDir.appendingPathComponent("orrery:phantom.md")
+            try PhantomTriggerCommand.slashCommandMarkdown.write(to: phantomMd, atomically: true, encoding: .utf8)
         }
     }
 }
