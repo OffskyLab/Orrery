@@ -117,16 +117,30 @@ if [[ -e "$INSTALL_DIR/$OLD_BINARY_NAME" ]]; then
   $USE_SUDO rm -f "$INSTALL_DIR/$OLD_BINARY_NAME"
 fi
 
+# macOS Gatekeeper sanitization. Binaries that arrived via curl carry the
+# com.apple.quarantine xattr, and on first launch from /usr/local/bin the
+# kernel SIGKILLs them with exit 137 / "Killed: 9" — which kills the
+# `orrery-bin setup` step below before it can run. Homebrew handles this
+# internally; install.sh has to do it explicitly. No-op on Linux.
+if [[ "$os" == "darwin" ]]; then
+  $USE_SUDO xattr -c "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || true
+  $USE_SUDO codesign --force --sign - "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || true
+fi
+
 # Verify
 if ! command -v "$BINARY_NAME" &>/dev/null; then
   warn "$BINARY_NAME installed to $INSTALL_DIR but it's not in your PATH."
   warn "Add to your shell profile: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-VERSION=$($BINARY_NAME --version 2>/dev/null || echo "installed")
+VERSION=$($BINARY_NAME --version 2>/dev/null || true)
 
 echo ""
-info "Orrery ${VERSION} installed."
+if [[ -n "$VERSION" ]]; then
+  info "Orrery ${VERSION} installed."
+else
+  info "Orrery installed."
+fi
 echo ""
 
 # Auto-run setup — generates activate.sh, patches rc file with the
