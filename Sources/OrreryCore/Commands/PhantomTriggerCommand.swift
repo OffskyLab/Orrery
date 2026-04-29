@@ -23,6 +23,36 @@ public struct PhantomTriggerCommand: ParsableCommand {
 
     public init() {}
 
+    /// Source-of-truth markdown for the `/orrery:phantom` slash command. Both
+    /// `orrery setup` (global → `~/.claude/commands/`) and `orrery mcp setup`
+    /// (project-local → `<project>/.claude/commands/`) install this same
+    /// content. The project-local copy is what makes the slash command work
+    /// in non-origin envs, where `CLAUDE_CONFIG_DIR` redirects user-level
+    /// commands away from `~/.claude/commands/` — project-local lookups are
+    /// independent of `CLAUDE_CONFIG_DIR`.
+    public static let slashCommandMarkdown: String = """
+    ---
+    description: Switch orrery environment without restarting Claude
+    argument-hint: [env-name]
+    ---
+
+    # Phantom: switch orrery environment in-place
+
+    Switch the active orrery environment without losing the conversation. Claude exits and the orrery supervisor relaunches it with the new env active and `--resume`, so the conversation continues where it left off.
+
+    **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
+
+    ## What to do
+
+    Inspect `$ARGUMENTS`:
+
+    - **If `$ARGUMENTS` is non-empty** (a target env name): run `orrery-bin _phantom-trigger $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
+
+    - **If `$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger` (with no arguments) to get the list of available environments. Then ask the user which environment they want to switch to — present the list as choices. Once they answer, run `orrery-bin _phantom-trigger <chosen-env>`.
+
+    Do not narrate the relaunch — Claude will simply exit and reappear with the new env. The user's next message lands in the new env.
+    """
+
     public func run() throws {
         let supervisorPidStr = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
         guard let supervisorPidStr, let supervisorPid = Int32(supervisorPidStr) else {

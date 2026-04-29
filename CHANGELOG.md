@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.6.2
+
+- **`/orrery:phantom` now installed by `orrery mcp setup` too.** v2.6.0–v2.6.1 only installed the slash command globally to `~/.claude/commands/`, which only Claude reads when `CLAUDE_CONFIG_DIR` is unset (i.e. only in the `origin` env). For non-origin envs, `CLAUDE_CONFIG_DIR` redirects user-level commands to the env's claude config dir, so the global file isn't found. `orrery mcp setup` now writes a project-local copy to `<project>/.claude/commands/orrery:phantom.md` (alongside the existing delegate/sessions/resume commands) — project-local commands are read regardless of `CLAUDE_CONFIG_DIR`, making `/orrery:phantom` available in any env where mcp setup has been run for the project.
+
 ## v2.6.1
 
 - **Fix `/orrery:phantom` failing under Claude Code's caffeinate wrapper.** Newer Claude Code builds re-exec under `caffeinate` to keep the system awake during long sessions, so the process tree becomes `supervisor → caffeinate → claude`. v2.6.0's trigger required `claude.ppid == supervisor` directly and silently fell through with "Could not find a running claude process under the phantom supervisor". The trigger now walks up the full parent chain to the supervisor and kills the outermost claude on the way, so any wrapper layer (caffeinate, future variants) is handled transparently.
