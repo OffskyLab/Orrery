@@ -142,17 +142,29 @@ public struct PhantomTriggerCommand: ParsableCommand {
     /// claude in the trigger's ancestry isn't guaranteed to be a *direct*
     /// child of the supervisor shell — only an ancestor.
     ///
-    /// We pick the claude whose parent is the supervisor (correctly handles
-    /// nested-claude scenarios where an inner claude was launched from a
-    /// supervised outer one). If no such match exists, return nil so the
-    /// trigger errors out cleanly rather than killing the wrong process.
+    /// Why we don't require `claude.ppid == supervisor`: some Claude Code
+    /// setups wrap the binary with `caffeinate` to keep the system awake
+    /// during long sessions, so the tree looks like `supervisor → caffeinate
+    /// → claude`. We instead walk up until we either reach the supervisor
+    /// (good — return the innermost claude we passed) or run out of
+    /// ancestors (bad — return nil).
+    ///
+    /// We return the *outermost* claude in the chain (the one closest to the
+    /// supervisor). Killing it cascades down through any wrapper layers
+    /// (caffeinate, nested claudes) and lets the supervisor's `command
+    /// claude` line return so the loop can read the sentinel and relaunch.
     static func findClaudeAncestor(supervisorPid: Int32) -> Int32? {
         var pid = getppid()
+        var outermostClaude: Int32? = nil
         for _ in 0..<32 {
             guard pid > 1 else { break }
             guard let info = Self.readProcessInfo(pid: pid) else { break }
-            if info.comm == "claude" && info.ppid == supervisorPid {
-                return pid
+            if info.comm == "claude" {
+                // Overwrite as we walk up — keep the last (outermost) claude.
+                outermostClaude = pid
+            }
+            if pid == supervisorPid {
+                return outermostClaude
             }
             pid = info.ppid
         }

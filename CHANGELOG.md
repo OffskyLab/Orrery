@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.1
+
+- **Fix `/orrery:phantom` failing under Claude Code's caffeinate wrapper.** Newer Claude Code builds re-exec under `caffeinate` to keep the system awake during long sessions, so the process tree becomes `supervisor → caffeinate → claude`. v2.6.0's trigger required `claude.ppid == supervisor` directly and silently fell through with "Could not find a running claude process under the phantom supervisor". The trigger now walks up the full parent chain to the supervisor and kills the outermost claude on the way, so any wrapper layer (caffeinate, future variants) is handled transparently.
+- **`install.sh`: strip macOS quarantine xattr + re-adhoc-sign before running setup.** Curl-pipe installs left `com.apple.quarantine` on `/usr/local/bin/orrery-bin`; macOS Gatekeeper SIGKILLs the binary on first launch with exit 137 ("Killed: 9"), which killed the post-install `orrery-bin setup` step. install.sh now does `xattr -c` + `codesign --force --sign -` after the binary lands in `/usr/local/bin`. Also fix the cosmetic "Orrery installed installed." message that fired when the SIGKILL'd `--version` probe fell back to the literal string `"installed"`.
+
 ## v2.6.0
 
 - **Phantom env switching: `/orrery:phantom <env>` swaps the orrery environment without losing the Claude conversation.** `orrery run claude` is now phantom-supervised by default — when the slash command fires, Claude exits and the supervisor relaunches it with the new env active and `--resume <session-id>`, so the conversation continues uninterrupted across account switches. Opt out with `orrery run --non-phantom claude`.
