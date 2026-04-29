@@ -2,8 +2,6 @@
 
 ## Versioning
 
-- Orrery and orrery-sync share the same version number (e.g. both at 1.0.0).
-- When bumping version, update both repos together.
 - Version locations in this repo:
   - `Sources/OrreryCore/Commands/OrreryCommand.swift` — `version:` field
   - `Sources/OrreryCore/MCP/MCPServer.swift` — `currentVersion()` return value
