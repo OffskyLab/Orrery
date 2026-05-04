@@ -274,7 +274,11 @@ orrery create secure-env --isolate-sessions
 |---|---|
 | `orrery run -e <name> <command>` | Run a command in a specific environment |
 | `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
+| `orrery delegate --resume <id\|index> "prompt"` | Resume a native tool session (UUID, short prefix, or index from `orrery sessions`) |
+| `orrery delegate --session [<name>]` | Open a managed-session picker (or resume a named mapping if `<name>` is given) |
 | `orrery magi "<topic>"` | Start a multi-model discussion and reach consensus |
+| `orrery spec <discussion.md>` | Generate a structured implementation spec from a discussion report |
+| `orrery spec-run --mode {verify\|implement\|status} <spec.md>` | Verify a spec, implement it via a delegate agent, or poll status |
 
 ### Multi-Model Discussion (Magi)
 
@@ -305,6 +309,62 @@ At least 2 tools must be installed. Each round, models see their own previous re
 
 Discussion runs are saved as JSON to `~/.orrery/magi/` for later reference.
 
+### Delegate Sessions
+
+`orrery delegate` can resume the delegate tool's own conversation history, not just spawn a fresh one.
+
+```bash
+# Resume by short prefix of the native session UUID
+orrery delegate -e work --resume 4f2c "follow up on the earlier review"
+
+# Resume by index from `orrery sessions`
+orrery delegate -e work --resume 1 "..."
+
+# Open a picker over all managed sessions (across tools and envs)
+orrery delegate --session
+
+# Resume a named mapping (auto-infers tool from the saved entry)
+orrery delegate --session-name api-redesign "what about the migration plan?"
+```
+
+| Option | Description |
+|---|---|
+| `--resume <id\|index>` | Native session resume — UUID, short prefix, or 1-based index from `orrery sessions` |
+| `--session [<name>]` | Open the managed-session picker, or resume the mapping called `<name>` |
+| `--session-name <name>` | Resume the named mapping directly (alias of `--session <name>`) |
+
+Named mappings live in `~/.orrery/sessions/mappings.json` and sync across machines via [orrery-sync](https://github.com/OffskyLab/orrery-sync). The three flags are mutually exclusive.
+
+### Spec Pipeline
+
+A three-stage workflow for turning multi-model discussions into shipped code. The pipeline composes naturally with `orrery magi`: discuss → spec → verify → implement → poll.
+
+```bash
+# 1. Discuss a problem and save the consensus report
+orrery magi --output discussion.md "Should we replace REST with GraphQL?"
+
+# 2. Generate a structured spec from the discussion
+orrery spec discussion.md --output spec.md
+
+# 3. Dry-run the acceptance criteria (sandbox-safe)
+orrery spec-run --mode verify spec.md
+
+# 4. Hand the spec to a delegate agent in a detached subprocess
+orrery spec-run --mode implement spec.md
+# → returns a session_id immediately; the delegate keeps running
+
+# 5. Poll until done
+orrery spec-run --mode status --session-id <id>
+```
+
+| Mode | Behavior |
+|---|---|
+| `verify` | Parses `## 驗收標準` + `## 介面合約` and runs the acceptance commands. Default dry-run; `--execute` to actually run; `--strict-policy` to fail on policy_blocked. Bounded by a sandbox policy (60s/cmd, 600s overall, 1MB stdout/cmd). |
+| `implement` | Spawns a delegate agent in a detached subprocess that writes code per the spec's `## 介面合約` / `## 改動檔案` / `## 實作步驟` / `## 驗收標準` sections. Returns immediately with `session_id` + `status: "running"`; a wrapper shell handles timeout, log redirection, and finalization. |
+| `status` | Reads the persisted state under `~/.orrery/spec-runs/{id}.json` and returns `status` + `progress` + (when terminal) full result. Use `--include-log` to tail the progress jsonl, `--since-timestamp` for incremental polling. |
+
+The four mandatory headings (`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`) are checked statically before any subprocess launches — malformed specs are rejected upfront.
+
 ### Origin management
 
 | Command | Description |
@@ -331,7 +391,9 @@ Orrery integrates with Claude Code, Codex CLI, and Gemini CLI via [MCP](https://
 orrery mcp setup
 ```
 
-This registers Orrery as an MCP server and installs slash commands. Available tools:
+This registers Orrery as an MCP server and installs slash commands.
+
+**Built-in MCP tools** (handled in-process by `orrery-bin`):
 
 | Tool | Description |
 |---|---|
@@ -341,6 +403,32 @@ This registers Orrery as an MCP server and installs slash commands. Available to
 | `orrery_current` | Get the active environment |
 | `orrery_memory_read` | Read shared project memory |
 | `orrery_memory_write` | Write to shared project memory |
+| `orrery_spec_status` | Poll the status of an `orrery_spec_implement` session (reads local state file) |
+
+**Sidecar MCP tools** (registered dynamically when the optional `orrery-magi` sidecar is installed — auto-installed by `install.sh` and Homebrew):
+
+| Tool | Description |
+|---|---|
+| `orrery_magi` | Multi-model discussion → consensus report |
+| `orrery_spec` | Generate a spec from a discussion |
+| `orrery_spec_verify` | Verify a spec's acceptance criteria |
+| `orrery_spec_implement` | Hand a spec to a delegate agent (detached) |
+
+When the sidecar is missing or out of date, the spec MCP tools degrade gracefully — `orrery_magi` keeps working through a single-schema fallback, while the spec tools simply do not register.
+
+**Slash commands installed by `orrery mcp setup`** (available in any project where mcp setup has been run):
+
+| Slash command | Maps to |
+|---|---|
+| `/orrery:delegate` | `orrery_delegate` MCP tool with environment hints |
+| `/orrery:sessions` | `orrery sessions` |
+| `/orrery:resume` | `orrery resume <index>` |
+| `/orrery:phantom` | `_phantom-trigger` for in-session env switching |
+| `/orrery:magi` | `orrery_magi` (with a `/grill-me` pre-flight hint for product/scope topics) |
+| `/orrery:spec` | `orrery_spec` |
+| `/orrery:spec-verify` | `orrery_spec_verify` |
+| `/orrery:spec-implement` | `orrery_spec_implement` |
+| `/orrery:spec-status` | `orrery_spec_status` |
 
 **Shared memory**: All AI tools read and write to the same `MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
 
