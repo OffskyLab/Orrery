@@ -97,6 +97,12 @@ public struct DelegateProcessBuilder {
         if let envName, envName != ReservedEnvironment.defaultName {
             processEnv.removeValue(forKey: "ANTHROPIC_API_KEY")
         }
+        // Propagate the explicit -e <name> selection to the child via
+        // ORRERY_ACTIVE_ENV so any nested orrery / orrery-magi invocation
+        // resolves the same environment without re-parsing CLI flags.
+        if let envName {
+            processEnv["ORRERY_ACTIVE_ENV"] = envName
+        }
         for (key, value) in envVars {
             processEnv[key] = value
         }
