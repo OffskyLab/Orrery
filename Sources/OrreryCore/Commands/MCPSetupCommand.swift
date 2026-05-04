@@ -153,6 +153,13 @@ public struct MCPSetupCommand: ParsableCommand {
             Example: /orrery:magi Should we use REST or GraphQL for the new API?
             Example: /orrery:magi Performance; Developer experience; Maintenance cost
 
+            Pre-flight (recommended): If the topic touches product strategy, release
+            planning, scope boundaries, or carries unstated user constraints, run
+            `/grill-me` first to surface assumptions before the agents debate.
+            Multi-agent rounds built on wrong premises waste cycles.
+            Skip for purely technical lookups or when the user has already provided
+            complete framing.
+
             When this command is invoked, use the orrery_magi MCP tool with:
             - topic: "$ARGUMENTS"
             - rounds: 1 (default; use more rounds only if the user explicitly asks for deeper discussion)
