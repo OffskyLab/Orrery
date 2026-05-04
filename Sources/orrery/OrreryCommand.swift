@@ -7,9 +7,10 @@ public enum OrreryVersion {
 
 /// Root CLI command. Lives in the executable target.
 ///
-/// `orrery magi` is intercepted in `main.swift` and forwarded to the
-/// external `orrery-magi` sidecar binary before ArgumentParser sees
-/// it, so no `magi` subcommand is registered here.
+/// `orrery magi` / `spec` / `spec-run` / `_spec-finalize` are intercepted
+/// in `main.swift` and forwarded to the external `orrery-magi` sidecar
+/// binary before ArgumentParser sees them, so none of those subcommands are
+/// registered here.
 public struct OrreryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "orrery",
@@ -32,9 +33,6 @@ public struct OrreryCommand: ParsableCommand {
             RunCommand.self,
             ResumeCommand.self,
             DelegateCommand.self,
-            SpecCommand.self,
-            SpecRunCommand.self,
-            SpecFinalizeCommand.self,
             SessionsCommand.self,
             MemoryCommand.self,
             MCPSetupCommand.self,

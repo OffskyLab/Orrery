@@ -23,7 +23,7 @@ public enum MagiSidecarError: Error, CustomStringConvertible {
         case .shimProtocolIncompatible(let found, let required):
             return "orrery-magi compatibility.shim_protocol=\(found) < shim required=\(required). Upgrade orrery-magi."
         case .mcpSchemaFetchFailed:
-            return "orrery-magi --print-mcp-schema failed."
+            return "orrery-magi MCP schema fetch failed."
         }
     }
 }
@@ -39,12 +39,22 @@ public enum MagiSidecar {
     public struct ResolvedBinary {
         public let path: String
         public let version: String
-        public let mcpSchema: [String: Any]?
+        public let mcpSchemas: [[String: Any]]
+        public let multiToolSchemaStable: Bool
+        public let specRuntimeStable: Bool
 
-        public init(path: String, version: String, mcpSchema: [String: Any]?) {
+        public init(
+            path: String,
+            version: String,
+            mcpSchemas: [[String: Any]],
+            multiToolSchemaStable: Bool,
+            specRuntimeStable: Bool
+        ) {
             self.path = path
             self.version = version
-            self.mcpSchema = mcpSchema
+            self.mcpSchemas = mcpSchemas
+            self.multiToolSchemaStable = multiToolSchemaStable
+            self.specRuntimeStable = specRuntimeStable
         }
     }
 
@@ -207,15 +217,39 @@ public enum MagiSidecar {
             )
         }
 
+        let features = caps["features"] as? [String: Any] ?? [:]
+        let multiToolSchemaStable =
+            ((features["multi_tool_schema"] as? [String: Any])?["status"] as? String) == "stable"
+        let specRuntimeStable =
+            ((features["spec_runtime"] as? [String: Any])?["status"] as? String) == "stable"
+
         let tool = caps["tool"] as? [String: Any] ?? [:]
         let version = tool["version"] as? String ?? "?"
 
-        switch runJSON(path: path, args: ["--print-mcp-schema"], timeout: 5) {
-        case .success(let schema):
-            return ResolvedBinary(path: path, version: version, mcpSchema: schema)
-        case .failure:
-            throw MagiSidecarError.mcpSchemaFetchFailed
+        let mcpSchemas: [[String: Any]]
+        if multiToolSchemaStable {
+            switch runJSONArray(path: path, args: ["--print-mcp-schemas"], timeout: 5) {
+            case .success(let schemas):
+                mcpSchemas = schemas
+            case .failure:
+                throw MagiSidecarError.mcpSchemaFetchFailed
+            }
+        } else {
+            switch runJSON(path: path, args: ["--print-mcp-schema"], timeout: 5) {
+            case .success(let schema):
+                mcpSchemas = [schema]
+            case .failure:
+                throw MagiSidecarError.mcpSchemaFetchFailed
+            }
         }
+
+        return ResolvedBinary(
+            path: path,
+            version: version,
+            mcpSchemas: mcpSchemas,
+            multiToolSchemaStable: multiToolSchemaStable,
+            specRuntimeStable: specRuntimeStable
+        )
     }
 
     private static func findBinary() -> String? {
@@ -273,6 +307,31 @@ public enum MagiSidecar {
 
         guard let data = result.stdout.data(using: .utf8),
               let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return .failure(.capabilitiesInvalidJSON)
+        }
+
+        return .success(json)
+    }
+
+    static func runJSONArray(
+        path: String,
+        args: [String],
+        timeout: TimeInterval
+    ) -> Result<[[String: Any]], MagiSidecarError> {
+        let result = spawnAndCapture(binary: path, args: args, timeout: timeout)
+        let trimmedStderr = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        let stderr = trimmedStderr.isEmpty ? "unknown error" : trimmedStderr
+
+        if result.timedOut {
+            return .failure(.capabilitiesFailed(stderr: "timed out after \(Int(timeout))s"))
+        }
+
+        guard result.exitCode == 0 else {
+            return .failure(.capabilitiesFailed(stderr: stderr))
+        }
+
+        guard let data = result.stdout.data(using: .utf8),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else {
             return .failure(.capabilitiesInvalidJSON)
         }
 

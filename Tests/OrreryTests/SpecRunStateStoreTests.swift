@@ -8,9 +8,6 @@ final class SpecRunStateStoreTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // Pin rootDir to a scratch path so tests don't touch the user's
-        // real ~/.orrery/spec-runs/. Reuses the same ORRERY_HOME override
-        // that EnvironmentStore.default honours.
         tmpHome = FileManager.default.temporaryDirectory
             .appendingPathComponent("orrery-state-tests-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: tmpHome, withIntermediateDirectories: true)
@@ -31,13 +28,28 @@ final class SpecRunStateStoreTests: XCTestCase {
 
     private func makeState(
         id: String = UUID().uuidString,
-        status: String = "running"
+        status: String = "running",
+        version: Int = SpecRunStateContract.currentVersion
     ) -> SpecRunState {
-        SpecRunState.initial(sessionId: id, startedAt: "2026-04-21T00:00:00Z")
-            .with { $0.status = status }
+        SpecRunState(
+            version: version,
+            sessionId: id,
+            status: status,
+            startedAt: "2026-04-21T00:00:00Z",
+            updatedAt: "2026-04-21T00:00:00Z"
+        )
     }
 
-    // MARK: - Paths
+    private func writeStateFile(_ state: SpecRunState) throws {
+        try FileManager.default.createDirectory(
+            at: SpecRunStateStore.rootDir,
+            withIntermediateDirectories: true
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+        let data = try encoder.encode(state)
+        try data.write(to: SpecRunStateStore.statePath(sessionId: state.sessionId))
+    }
 
     func testRootDir_usesOrreryHomeOverride() {
         XCTAssertTrue(
@@ -49,37 +61,30 @@ final class SpecRunStateStoreTests: XCTestCase {
 
     func testSessionPaths_shareCommonStem() {
         let id = "abc-123"
-        XCTAssertEqual(SpecRunStateStore.statePath(sessionId: id).lastPathComponent,
-                       "abc-123.json")
-        XCTAssertEqual(SpecRunStateStore.progressLogPath(sessionId: id).lastPathComponent,
-                       "abc-123.progress.jsonl")
-        XCTAssertEqual(SpecRunStateStore.stdoutLogPath(sessionId: id).lastPathComponent,
-                       "abc-123.stdout.log")
-        XCTAssertEqual(SpecRunStateStore.stderrLogPath(sessionId: id).lastPathComponent,
-                       "abc-123.stderr.log")
+        XCTAssertEqual(SpecRunStateStore.statePath(sessionId: id).lastPathComponent, "abc-123.json")
+        XCTAssertEqual(SpecRunStateStore.progressLogPath(sessionId: id).lastPathComponent, "abc-123.progress.jsonl")
+        XCTAssertEqual(SpecRunStateStore.stdoutLogPath(sessionId: id).lastPathComponent, "abc-123.stdout.log")
+        XCTAssertEqual(SpecRunStateStore.stderrLogPath(sessionId: id).lastPathComponent, "abc-123.stderr.log")
     }
 
-    // MARK: - CRUD round-trip
-
-    func testWrite_createsRootDirAndFile() throws {
+    func testExists_reflectsStateFilePresence() throws {
         let state = makeState()
         XCTAssertFalse(SpecRunStateStore.exists(sessionId: state.sessionId))
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
+        try writeStateFile(state)
         XCTAssertTrue(SpecRunStateStore.exists(sessionId: state.sessionId))
     }
 
-    func testWrite_thenLoad_roundTripsAllFields() throws {
-        var state = makeState()
+    func testLoad_roundTripsAllFieldsFromPrewrittenFile() throws {
+        var state = makeState(status: "done")
         state.delegateSessionId = "delegate-native-abc"
         state.preSessionSnapshot = ["older-1", "older-2"]
         state.completedSteps = ["step-1", "step-2"]
         state.touchedFiles = ["Foo.swift", "Bar.swift"]
         state.diffSummary = "3 files changed"
         state.failedStep = "step-3"
-        state.childSessionIds = []
-        state.executionGraph = nil
         state.lastError = "compile error"
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
+
+        try writeStateFile(state)
 
         let loaded = try SpecRunStateStore.load(sessionId: state.sessionId)
         XCTAssertEqual(loaded, state)
@@ -90,45 +95,55 @@ final class SpecRunStateStoreTests: XCTestCase {
             try SpecRunStateStore.load(sessionId: "nonexistent-\(UUID().uuidString)")
         ) { err in
             let desc = String(describing: err)
-            XCTAssertTrue(desc.contains("not found") || desc.contains("找不到"),
-                          "expected sessionNotFound message, got: \(desc)")
+            XCTAssertTrue(desc.contains("not found") || desc.contains("找不到"))
         }
     }
 
-    func testUpdate_mutateChangesAreWritten_andUpdatedAtIsStamped() throws {
-        let state = makeState()
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
-
-        let original = try SpecRunStateStore.load(sessionId: state.sessionId)
-        // Ensure updatedAt changes — add brief sleep is too flaky, rely on ISO
-        // formatter granularity; since ISO8601DateFormatter is second-grain,
-        // we compare status change instead.
-        try SpecRunStateStore.update(sessionId: state.sessionId) { s in
-            s.status = "done"
-            s.completedAt = "2026-04-21T01:00:00Z"
+    func testLoad_legacyFileWithoutVersionDefaultsToOne() throws {
+        let sessionId = UUID().uuidString
+        try FileManager.default.createDirectory(
+            at: SpecRunStateStore.rootDir,
+            withIntermediateDirectories: true
+        )
+        let content = """
+        {
+          "session_id": "\(sessionId)",
+          "delegate_session_id": null,
+          "pre_session_snapshot": [],
+          "phase": "implement",
+          "status": "running",
+          "started_at": "2026-04-21T00:00:00Z",
+          "updated_at": "2026-04-21T00:00:00Z",
+          "completed_at": null,
+          "completed_steps": [],
+          "touched_files": [],
+          "diff_summary": null,
+          "blocked_reason": null,
+          "failed_step": null,
+          "child_session_ids": [],
+          "execution_graph": null,
+          "last_error": null
         }
-        let updated = try SpecRunStateStore.load(sessionId: state.sessionId)
-        XCTAssertEqual(updated.status, "done")
-        XCTAssertEqual(updated.completedAt, "2026-04-21T01:00:00Z")
-        // updatedAt should be rewritten to "now"; original.updatedAt was "2026-04-21T00:00:00Z"
-        XCTAssertNotEqual(updated.updatedAt, original.updatedAt)
-    }
+        """
+        try content.write(
+            to: SpecRunStateStore.statePath(sessionId: sessionId),
+            atomically: true,
+            encoding: .utf8
+        )
 
-    func testUpdate_missingFile_throws() {
-        XCTAssertThrowsError(try SpecRunStateStore.update(
-            sessionId: "nonexistent-\(UUID().uuidString)"
-        ) { $0.status = "done" })
+        let loaded = try SpecRunStateStore.load(sessionId: sessionId)
+        XCTAssertEqual(loaded.version, 1)
     }
-
-    // MARK: - JSON shape — snake_case keys + null Optionals
 
     func testJSON_usesSnakeCaseKeys() throws {
         let state = makeState()
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
+        try writeStateFile(state)
         let content = try String(
             contentsOf: SpecRunStateStore.statePath(sessionId: state.sessionId),
             encoding: .utf8
         )
+
+        XCTAssertTrue(content.contains("\"version\""))
         XCTAssertTrue(content.contains("\"session_id\""))
         XCTAssertTrue(content.contains("\"started_at\""))
         XCTAssertTrue(content.contains("\"completed_steps\""))
@@ -137,20 +152,17 @@ final class SpecRunStateStoreTests: XCTestCase {
         XCTAssertTrue(content.contains("\"execution_graph\""))
         XCTAssertTrue(content.contains("\"delegate_session_id\""))
         XCTAssertTrue(content.contains("\"pre_session_snapshot\""))
-        XCTAssertFalse(content.contains("\"sessionId\""),
-                       "Swift camelCase must not leak into JSON")
+        XCTAssertFalse(content.contains("\"sessionId\""))
     }
 
     func testJSON_nullOptionalsAppearExplicitly() throws {
         let state = makeState()
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
+        try writeStateFile(state)
         let content = try String(
             contentsOf: SpecRunStateStore.statePath(sessionId: state.sessionId),
             encoding: .utf8
         )
-        // completed_at / diff_summary / blocked_reason / failed_step / execution_graph
-        // / last_error / delegate_session_id are all nil in the initial state
-        // but must appear as explicit nulls.
+
         XCTAssertTrue(content.contains("\"completed_at\" : null") ||
                       content.contains("\"completed_at\": null") ||
                       content.contains("\"completed_at\":null"))
@@ -162,38 +174,13 @@ final class SpecRunStateStoreTests: XCTestCase {
                       content.contains("\"execution_graph\":null"))
     }
 
-    // MARK: - DI3 reserved fields round-trip
-
-    func testDI3ReservedFields_roundTripWithDefaults() throws {
-        let state = makeState()
-        XCTAssertEqual(state.childSessionIds, [])
-        XCTAssertNil(state.executionGraph)
-        try SpecRunStateStore.write(sessionId: state.sessionId, state: state)
-        let loaded = try SpecRunStateStore.load(sessionId: state.sessionId)
-        XCTAssertEqual(loaded.childSessionIds, [])
-        XCTAssertNil(loaded.executionGraph)
-    }
-
-    // MARK: - Isolation — different session_ids don't collide
-
     func testMultipleSessions_haveSeparateFiles() throws {
         let a = makeState()
-        var b = makeState()
-        b.status = "done"
-        try SpecRunStateStore.write(sessionId: a.sessionId, state: a)
-        try SpecRunStateStore.write(sessionId: b.sessionId, state: b)
+        let b = makeState(status: "done")
+        try writeStateFile(a)
+        try writeStateFile(b)
+
         XCTAssertEqual(try SpecRunStateStore.load(sessionId: a.sessionId).status, "running")
         XCTAssertEqual(try SpecRunStateStore.load(sessionId: b.sessionId).status, "done")
-    }
-}
-
-// MARK: - Test helper
-
-private extension SpecRunState {
-    /// Small fluent mutator for test fixtures.
-    func with(_ mutate: (inout SpecRunState) -> Void) -> SpecRunState {
-        var copy = self
-        mutate(&copy)
-        return copy
     }
 }
