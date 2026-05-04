@@ -16,39 +16,39 @@
   `~/.orrery/sessions/mappings.json` and survive across machines via
   orrery-sync. `--session` / `--session-name` / `--resume` are mutually
   exclusive.
-- **`orrery spec-run --mode implement` + `orrery_spec_implement` MCP tool —
-  second phase of the spec pipeline.**  Takes a structured spec produced by
-  `orrery spec` and hands it to a delegate agent (claude-code / codex /
-  gemini) running in a *detached* subprocess.  Returns immediately with a
-  `session_id` + `status: "running"`; the delegate continues after the
-  orrery parent exits.  A wrapper shell owns the lifecycle — it enforces
-  `--timeout` via a background SIGTERM watchdog, redirects delegate
-  stdout/stderr to log files under `~/.orrery/spec-runs/`, and calls back
-  into a hidden `orrery _spec-finalize` subcommand once the delegate exits.
-  DI5 safety net rejects specs that are missing any of the four mandatory
-  headings (`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`) before any
-  subprocess is launched.
-- **`orrery spec-run --mode status` + `orrery_spec_status` MCP tool —
-  polling companion.**  Reads the persisted session JSON under
-  `~/.orrery/spec-runs/{id}.json` and returns a stable schema with
-  `status`, `progress`, `last_error`, and — when terminal — the full
-  `SpecRunResult`.  Supports `--include-log` to tail the progress jsonl
-  and `--since-timestamp` for incremental polling.  Suggested cadence
-  (documented in the tool description): first poll ~2s, then exponential
-  backoff `min(30s, prev * 1.5)`, settling at 30s for long runs.
-- **Session identity is orrery-owned (C2).**  The MCP `resume_session_id`
-  is always the orrery UUID returned by a prior implement call; the
-  delegate agent's native session id (claude-code / codex / gemini
-  session) is an internal detail captured by `_spec-finalize` via
-  `SessionResolver` snapshot-diff and stored in `SpecRunState.delegate_session_id`.
-  Clients never need to know the delegate id directly.
-- **Schema additions to `SpecRunResult`.**  Eight new fields (`status`,
-  `started_at`, `completed_at`, `touched_files`, `blocked_reason`,
-  `failed_step`, `child_session_ids`, `execution_graph`) are now always
-  present in the CLI and MCP output.  `verify` keeps working unchanged —
-  the new fields get safe defaults when populated by `SpecVerifyRunner`.
-  `child_session_ids` and `execution_graph` are DI3 reserves for future
-  parallel execution and have no runtime behaviour in the MVP.
+- **Spec runtime moved to `orrery-magi` v1.1.0; `orrery-bin` is now a thin
+  forwarder.**  `orrery magi`, `orrery spec`, `orrery spec-run`, and the
+  hidden `orrery _spec-finalize` shim still work exactly as before, but
+  `main.swift` now intercepts those entrypoints and execs `orrery-magi`
+  transparently.  Homebrew and `install.sh` auto-install the sidecar, so
+  the move is user-visible only in the architecture.
+- **Spec MCP tools are now sidecar-forwarded at startup.**  `orrery-bin`
+  handshakes with `orrery-magi --capabilities`, then fetches tool schemas
+  with `--print-mcp-schemas` and registers live forwarders for
+  `orrery_magi`, `orrery_spec`, `orrery_spec_verify`, and
+  `orrery_spec_implement`.  `orrery_spec_status` stays inline in
+  `orrery-bin` because it only reads local state.  When paired with an
+  older `orrery-magi v1.0.0`, the shim degrades gracefully to the legacy
+  single-schema `--print-mcp-schema` path and only exposes `orrery_magi`.
+- **Public spec runtime writers were removed from `OrreryCore`; read-side
+  contracts remain.**  `SpecRunState`, `SpecRunStateReader`,
+  `SpecRunResult`, `SpecStatusResult`, `SpecRunStateContract`, and
+  `SpecRunStateError` remain public for status/result consumers.  The
+  mutable runner/writer implementation now lives solely in `orrery-magi`.
+- **Environment inheritance contract is now explicit: no filtering.**
+  `orrery` inherits all parent environment variables from the shell or MCP
+  transport, and `orrery-magi` inherits all environment variables from
+  `orrery`.  This release also fixes the explicit `delegate -e <env>`
+  propagation bug by always injecting `ORRERY_ACTIVE_ENV` into the child.
+- **Five runtime bugs fixed in the same release.**  Atomic state-file
+  writes no longer race, concurrent resume is guarded correctly, delegate
+  env propagation via `-e` works, CLI tests now target the real
+  `.build/debug/orrery-bin` path, and temporary state-file suffixes use a
+  UUID to avoid collisions.
+- **In-flight v2.6.x implement sessions still finalize after upgrade.**
+  The hidden `_spec-finalize` first-argument shim forwards to
+  `orrery-magi`, so detached wrapper scripts launched before upgrading can
+  still complete and write terminal state under v2.7.0.
 - **New slash commands.**  `orrery mcp setup` now also writes
   `.claude/commands/orrery:spec-implement.md` and
   `orrery:spec-status.md`, giving users `/orrery:spec-implement` and
@@ -58,29 +58,18 @@
   acceptance code fences and keeps the entire heredoc as a single
   command — previously JSON-RPC bodies inside `cat <<'EOF' | ...` were
   split line-by-line and mis-classified.
-- **`orrery spec-run --mode verify` + `orrery_spec_verify` MCP tool — MVP
-  of the spec implementation pipeline.**  Completes the `discuss → spec
-  → implement` loop by consuming the structured markdown produced by
-  `orrery spec` and verifying its `## 驗收標準` section.  Default mode
-  is dry-run (no shell executed, every acceptance command reported as
-  `skipped(dry-run)`); pass `--execute` to run sandboxed commands, and
-  `--strict-policy` to promote any `policy_blocked` command to a failure.
-  All phases emit a single structured JSON object to stdout with stable
-  schema (including validation errors).  Only `verify` is implemented;
-  `plan` / `implement` / `run` throw `modeNotImplemented` until the next
-  release.
+- **`orrery spec-run --mode verify` and `--mode implement` keep their
+  existing user-facing behaviour.**  `verify` still emits a structured JSON
+  result with dry-run-by-default sandboxing, and `implement` still returns
+  immediately with an orrery-owned `session_id` plus polling via
+  `orrery_spec_status`.  The difference in v2.7.0 is that the runtime now
+  executes inside `orrery-magi`, not in `OrreryCore`.
 - **Sandbox policy (`SpecSandboxPolicy`) for spec verification.**  Three
   layers of defence: dry-run default, allowlist (word-boundary) +
   blocklist (substring, evaluated first) on shell commands, and hard
   runtime caps (60s per command, 600s overall, 1MB stdout per command
   with `…[truncated]` marker).  Python snippets go through a regex-based
   deny-list lint (Q8 tracks upgrading to a real AST check).
-- **`pickup` skill roadmap (D13 stage 1).**  The new MCP tool is now the
-  canonical, cross-client path for spec implementation; the local
-  `pickup` skill stays as an offline preview for humans, with no
-  behaviour divergence expected.  A `@deprecated` marker + MIGRATION
-  guide will land two releases from now, and the skill will be removed
-  one release after that.
 - **`DelegateProcessBuilder` gains `OutputMode`.**  New `.capture` mode
   pipes stdout to a `Pipe` for programmatic reading. Existing
   `.passthrough` behaviour is the default — no change to `delegate` or
