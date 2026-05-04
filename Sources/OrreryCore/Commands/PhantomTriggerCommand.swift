@@ -204,6 +204,30 @@ public struct PhantomTriggerCommand: ParsableCommand {
     /// Read `(ppid, comm)` for a given pid via `ps`. `comm` is normalized to
     /// the basename so `/path/to/claude` becomes `claude`.
     static func readProcessInfo(pid: Int32) -> (ppid: Int32, comm: String)? {
+        #if canImport(Darwin)
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        var procInfo = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+
+        let result = mib.withUnsafeMutableBufferPointer { mibPtr in
+            withUnsafeMutablePointer(to: &procInfo) { infoPtr in
+                infoPtr.withMemoryRebound(to: CChar.self, capacity: size) { bytes in
+                    sysctl(mibPtr.baseAddress, 4, bytes, &size, nil, 0)
+                }
+            }
+        }
+
+        if result == 0, size > 0 {
+            let comm = withUnsafePointer(to: &procInfo.kp_proc.p_comm) { ptr in
+                String(cString: UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self))
+            }
+            let basename = (comm as NSString).lastPathComponent
+            if !basename.isEmpty {
+                return (procInfo.kp_eproc.e_ppid, basename)
+            }
+        }
+        #endif
+
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         proc.arguments = ["ps", "-p", String(pid), "-o", "ppid=,comm="]
