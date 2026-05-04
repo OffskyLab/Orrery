@@ -55,7 +55,6 @@ let package = Package(
             dependencies: ["OrreryCore"],
             path: "Tests/OrreryTests",
             exclude: [
-                "Fixtures/minimal-implement-spec.md",
                 "Fixtures/sidecar/fake-sidecar.sh",
             ]
         ),
