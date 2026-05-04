@@ -274,7 +274,11 @@ orrery create secure-env --isolate-sessions
 |---|---|
 | `orrery run -e <name> <command>` | 在指定環境中執行指令 |
 | `orrery delegate -e <name> "prompt"` | 委派任務給其他環境的 AI 工具 |
+| `orrery delegate --resume <id\|index> "prompt"` | 接續工具原生 session（UUID、短前綴、或 `orrery sessions` 中的編號） |
+| `orrery delegate --session [<name>]` | 開啟託管 session 選單（或 resume 指定的 mapping） |
 | `orrery magi "<topic>"` | 啟動多模型討論並達成共識 |
+| `orrery spec <discussion.md>` | 從討論報告產出結構化的實作規格 |
+| `orrery spec-run --mode {verify\|implement\|status} <spec.md>` | 驗證 spec、交給 delegate agent 實作、或查詢實作狀態 |
 
 ### 多模型討論（Magi）
 
@@ -305,6 +309,62 @@ orrery magi --output report.md "該不該遷移到 Swift 6？"
 
 討論紀錄以 JSON 格式存於 `~/.orrery/magi/`，可供日後查閱。
 
+### Delegate Session 接續
+
+`orrery delegate` 不只能新開 session，也能接續工具原生的對話歷史。
+
+```bash
+# 用 native session UUID 短前綴接續
+orrery delegate -e work --resume 4f2c "繼續剛剛的 review"
+
+# 用 `orrery sessions` 列出的編號接續
+orrery delegate -e work --resume 1 "..."
+
+# 開啟跨工具、跨環境的託管 session 選單
+orrery delegate --session
+
+# 直接接續指定名稱的 mapping（自動推導 tool）
+orrery delegate --session-name api-redesign "遷移計畫怎麼安排？"
+```
+
+| 選項 | 說明 |
+|---|---|
+| `--resume <id\|index>` | 原生 session 接續 — UUID、短前綴、或 `orrery sessions` 中以 1 為基的編號 |
+| `--session [<name>]` | 開啟託管 session 選單；給 `<name>` 則直接 resume 該 mapping |
+| `--session-name <name>` | 直接 resume 指定名稱的 mapping（等價 `--session <name>`） |
+
+具名 mapping 存於 `~/.orrery/sessions/mappings.json`，可透過 [orrery-sync](https://github.com/OffskyLab/orrery-sync) 跨機器同步。三個 flag 互斥。
+
+### Spec Pipeline（規格流水線）
+
+把多模型討論轉成可實作程式碼的三階段流程，跟 `orrery magi` 自然銜接：discuss → spec → verify → implement → poll。
+
+```bash
+# 1. 討論問題並輸出共識報告
+orrery magi --output discussion.md "REST 該不該換成 GraphQL？"
+
+# 2. 從討論產出結構化規格
+orrery spec discussion.md --output spec.md
+
+# 3. Dry-run 驗收條件（沙盒安全）
+orrery spec-run --mode verify spec.md
+
+# 4. 交給 delegate agent 在 detached 子程序實作
+orrery spec-run --mode implement spec.md
+# → 立即回傳 session_id；delegate 在背景持續執行
+
+# 5. 輪詢直到完成
+orrery spec-run --mode status --session-id <id>
+```
+
+| Mode | 行為 |
+|---|---|
+| `verify` | 解析 `## 驗收標準` + `## 介面合約` 並執行驗收命令。預設 dry-run；`--execute` 真的執行；`--strict-policy` 在 policy_blocked 時失敗。受沙盒政策保護（每命令 60s、整體 600s、單命令 stdout 1MB）。 |
+| `implement` | 在 detached 子程序中啟動 delegate agent，依 spec 的 `## 介面合約` / `## 改動檔案` / `## 實作步驟` / `## 驗收標準` 寫程式。立即回傳 `session_id` + `status: "running"`；wrapper shell 處理逾時、log 重導向與終結。 |
+| `status` | 讀 `~/.orrery/spec-runs/{id}.json` 持久化狀態，回傳 `status` + `progress`；終態時含完整結果。`--include-log` 附上 progress jsonl 尾端、`--since-timestamp` 做增量輪詢。 |
+
+四個必要小節（`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`）會在啟動子程序前先做靜態檢查，格式錯的 spec 會直接被擋下。
+
 ### Origin 管理
 
 | 指令 | 說明 |
@@ -331,7 +391,9 @@ Orrery 透過 [MCP](https://modelcontextprotocol.io/) 整合 Claude Code、Codex
 orrery mcp setup
 ```
 
-一行指令註冊 MCP server 並安裝 slash commands。可用的 MCP 工具：
+一行指令註冊 MCP server 並安裝 slash commands。
+
+**內建 MCP 工具**（由 `orrery-bin` in-process 處理）：
 
 | 工具 | 說明 |
 |---|---|
@@ -341,6 +403,32 @@ orrery mcp setup
 | `orrery_current` | 查看目前啟用的環境 |
 | `orrery_memory_read` | 讀取共享專案記憶 |
 | `orrery_memory_write` | 寫入共享專案記憶 |
+| `orrery_spec_status` | 輪詢 `orrery_spec_implement` session 狀態（直接讀本機 state file） |
+
+**Sidecar MCP 工具**（裝了選用的 `orrery-magi` sidecar 才會註冊；`install.sh` 與 Homebrew 會自動裝）：
+
+| 工具 | 說明 |
+|---|---|
+| `orrery_magi` | 多模型討論 → consensus 報告 |
+| `orrery_spec` | 從討論產出 spec |
+| `orrery_spec_verify` | 驗證 spec 的驗收條件 |
+| `orrery_spec_implement` | 將 spec 交給 detached delegate agent 實作 |
+
+當 sidecar 不存在或版本較舊時會優雅降級——`orrery_magi` 透過 single-schema fallback 仍可使用，spec 系列工具則不會註冊。
+
+**`orrery mcp setup` 寫入的 slash commands**（在跑過 mcp setup 的專案中可用）：
+
+| Slash 指令 | 對應功能 |
+|---|---|
+| `/orrery:delegate` | `orrery_delegate` MCP 工具（含環境提示） |
+| `/orrery:sessions` | `orrery sessions` |
+| `/orrery:resume` | `orrery resume <index>` |
+| `/orrery:phantom` | `_phantom-trigger`，不離開 session 切換環境 |
+| `/orrery:magi` | `orrery_magi`（含 `/grill-me` pre-flight 提示，給產品/scope 議題用） |
+| `/orrery:spec` | `orrery_spec` |
+| `/orrery:spec-verify` | `orrery_spec_verify` |
+| `/orrery:spec-implement` | `orrery_spec_implement` |
+| `/orrery:spec-status` | `orrery_spec_status` |
 
 **共享記憶**：所有 AI 工具讀寫同一份 `MEMORY.md`。Claude 儲存的知識，Codex 和 Gemini 也能存取，反之亦然。
 
