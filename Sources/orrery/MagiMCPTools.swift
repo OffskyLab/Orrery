@@ -14,8 +14,22 @@ public enum MagiMCPTools {
         case specImplement = "orrery_spec_implement"
     }
 
-    public static func register(on server: MCPServer.Type) throws {
-        let sidecar = try MagiSidecar.resolve()
+    /// Register sidecar-forwarded MCP tools (orrery_magi, orrery_spec,
+    /// orrery_spec_verify, orrery_spec_implement) plus the inline
+    /// orrery_spec_status handler. Best-effort: if the sidecar is missing
+    /// or its handshake fails, log to stderr and return — the built-in
+    /// MCP tools (orrery_list / sessions / delegate / current / memory_*)
+    /// are registered separately by MCPServer and stay functional.
+    public static func register(on server: MCPServer.Type) {
+        let sidecar: MagiSidecar.ResolvedBinary
+        do {
+            sidecar = try MagiSidecar.resolve()
+        } catch {
+            FileHandle.standardError.write(Data(
+                "[orrery mcp-server] orrery-magi sidecar unavailable; magi/spec MCP tools disabled. \(error)\n".utf8
+            ))
+            return
+        }
 
         for schema in sidecar.mcpSchemas {
             guard let name = schema["name"] as? String, name != "orrery_spec_status" else {
