@@ -2,7 +2,7 @@ import ArgumentParser
 import OrreryCore
 
 public enum OrreryVersion {
-    public static let current = "2.6.2"
+    public static let current = "2.7.0"
 }
 
 /// Root CLI command. Lives in the executable target.
