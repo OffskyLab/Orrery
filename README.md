@@ -414,7 +414,10 @@ This registers Orrery as an MCP server and installs slash commands.
 | `orrery_spec_verify` | Verify a spec's acceptance criteria |
 | `orrery_spec_implement` | Hand a spec to a delegate agent (detached) |
 
-When the sidecar is missing or out of date, the spec MCP tools degrade gracefully — `orrery_magi` keeps working through a single-schema fallback, while the spec tools simply do not register.
+**Sidecar absence or version mismatch:**
+
+- **MCP path** — graceful. If `orrery-magi` is missing, `orrery-bin mcp-server` still starts and exposes the 7 built-in tools above; the 4 sidecar tools just don't register and an install hint is written to stderr. If the sidecar is older (v1.0.0, no `features.multi_tool_schema`), it falls back to the legacy single-schema path and only `orrery_magi` registers among the sidecar set.
+- **CLI path** — hard-fail with install hint. `orrery magi` / `orrery spec` / `orrery spec-run` always require a resolvable v1.1.0+ sidecar; without one the command prints an install hint and exits non-zero. (`install.sh` and Homebrew pin a compatible sidecar, so this only happens after a manual downgrade.)
 
 **Slash commands installed by `orrery mcp setup`** (available in any project where mcp setup has been run):
 
