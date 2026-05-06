@@ -36,11 +36,26 @@
   `orrery_spec_implement`. `orrery_spec_status` stays inline in `orrery-bin`
   because it only reads local state via `SpecRunStateReader.load()` — no
   sidecar fork on every poll.
-- **Graceful degradation against an older sidecar.** When paired with
-  `orrery-magi v1.0.0` (or any sidecar that does not advertise
-  `features.multi_tool_schema`), the shim falls back to the legacy
-  single-schema `--print-mcp-schema` path and only exposes `orrery_magi`.
-  Spec MCP tools become unavailable but other MCP tools still work.
+- **Graceful degradation when the sidecar is missing or older.** Two
+  layers:
+  1. **MCP server startup is best-effort.** If `orrery-magi` cannot be
+     resolved, `orrery-bin mcp-server` logs an install hint to stderr
+     and starts anyway, exposing only the in-process built-in tools
+     (`orrery_list` / `orrery_sessions` / `orrery_delegate` /
+     `orrery_current` / `orrery_memory_read` / `orrery_memory_write`).
+     Pre-v2.7.0 behavior would `exit 1` and leave the AI tool with no
+     orrery MCP at all.
+  2. **Older sidecar without `features.multi_tool_schema`.** The shim
+     falls back to the legacy single-schema `--print-mcp-schema` path
+     and only exposes `orrery_magi`; spec MCP tools are not registered.
+- **Caveat: CLI `spec` / `spec-run` paths require a v1.1.0+ sidecar.**
+  `main.swift` forwards `orrery spec` / `orrery spec-run` /
+  `orrery _spec-finalize` unconditionally to the resolved sidecar; if
+  the sidecar is v1.0.0 (no spec subcommands) the user sees an
+  ArgumentParser error from orrery-magi rather than a friendly
+  unsupported-version message. `install.sh` and the Homebrew formula
+  pin v1.1.0 minimum so this is only reachable with a manually
+  downgraded `~/.orrery/bin/orrery-magi`.
 
 ### Slash commands (`orrery mcp setup`)
 

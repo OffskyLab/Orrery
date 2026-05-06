@@ -414,7 +414,10 @@ orrery mcp setup
 | `orrery_spec_verify` | 驗證 spec 的驗收條件 |
 | `orrery_spec_implement` | 將 spec 交給 detached delegate agent 實作 |
 
-當 sidecar 不存在或版本較舊時會優雅降級——`orrery_magi` 透過 single-schema fallback 仍可使用，spec 系列工具則不會註冊。
+**Sidecar 缺失或版本不符的處理：**
+
+- **MCP 路徑**——優雅降級。若 `orrery-magi` 不存在，`orrery-bin mcp-server` 仍會啟動並暴露上面 7 個內建工具；4 個 sidecar 工具不會註冊，stderr 會印出安裝提示。若 sidecar 較舊（v1.0.0，沒有 `features.multi_tool_schema`），會 fallback 到 legacy single-schema 路徑，sidecar 那組裡只有 `orrery_magi` 會註冊。
+- **CLI 路徑**——hard-fail 並提示安裝。`orrery magi` / `orrery spec` / `orrery spec-run` 一律需要一個可解析的 v1.1.0+ sidecar；找不到就印安裝提示並 exit non-zero。（`install.sh` 和 Homebrew 都鎖了相容版本，所以這只會發生在手動降版的情況。）
 
 **`orrery mcp setup` 寫入的 slash commands**（在跑過 mcp setup 的專案中可用）：
 
