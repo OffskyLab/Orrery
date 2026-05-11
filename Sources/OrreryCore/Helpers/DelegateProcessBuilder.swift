@@ -38,18 +38,26 @@ public struct DelegateProcessBuilder {
             command = ["claude", "--resume", id]
         case (.claude, nil, let p?):
             command = ["claude", "-p", p, "--allowedTools", "Bash"]
+        // `--skip-git-repo-check` (codex) and `--skip-trust` (gemini) bypass
+        // the CLIs' workspace-trust gates so orrery-spawned subprocesses
+        // succeed when invoked from non-git or untrusted directories — the
+        // caller (orrery magi / delegate / spec-run) has already accepted
+        // the workspace by explicitly invoking orrery there. Without these
+        // flags the CLIs exit early with stderr like "Not inside a trusted
+        // directory" (codex exit 1) or "Approval mode overridden" (gemini
+        // exit 55), producing empty agent responses in magi.
         case (.codex, let id?, let p?):
-            command = ["codex", "exec", "resume", id, p]
+            command = ["codex", "exec", "--skip-git-repo-check", "resume", id, p]
         case (.codex, let id?, nil):
-            command = ["codex", "exec", "resume", id]
+            command = ["codex", "exec", "--skip-git-repo-check", "resume", id]
         case (.codex, nil, let p?):
-            command = ["codex", "exec", p]
+            command = ["codex", "exec", "--skip-git-repo-check", p]
         case (.gemini, let id?, let p?):
-            command = ["gemini", "--resume", id, "-p", p]
+            command = ["gemini", "--skip-trust", "--resume", id, "-p", p]
         case (.gemini, let id?, nil):
-            command = ["gemini", "--resume", id]
+            command = ["gemini", "--skip-trust", "--resume", id]
         case (.gemini, nil, let p?):
-            command = ["gemini", "-p", p]
+            command = ["gemini", "--skip-trust", "-p", p]
         default:
             fatalError("unreachable: guard in DelegateCommand prevents both nil")
         }
