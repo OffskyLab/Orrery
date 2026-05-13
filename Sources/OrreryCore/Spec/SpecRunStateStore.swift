@@ -1,5 +1,4 @@
 import ArgumentParser
-import Darwin
 import Foundation
 
 /// Persistent state for one `orrery spec-run --mode implement` session.
