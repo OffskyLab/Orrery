@@ -130,21 +130,25 @@ public enum MagiSidecar {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        var stdoutData = Data()
-        var stderrData = Data()
-        let stdoutQueue = DispatchQueue(label: "orrery.magi.sidecar.stdout")
-        let stderrQueue = DispatchQueue(label: "orrery.magi.sidecar.stderr")
+        // nonisolated(unsafe) on stored properties is the SE-0414 mechanism
+        // for "I own the synchronization" — distinct from @unchecked Sendable.
+        // Safety is guaranteed by drainGroup.wait() below.
+        final class PipeResult: Sendable {
+            nonisolated(unsafe) var data = Data()
+        }
+        let stdoutResult = PipeResult()
+        let stderrResult = PipeResult()
         let drainGroup = DispatchGroup()
 
         drainGroup.enter()
-        stdoutQueue.async {
-            stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        DispatchQueue.global().async {
+            stdoutResult.data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             drainGroup.leave()
         }
 
         drainGroup.enter()
-        stderrQueue.async {
-            stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        DispatchQueue.global().async {
+            stderrResult.data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             drainGroup.leave()
         }
 
@@ -180,8 +184,8 @@ public enum MagiSidecar {
 
         let timedOut = (process.terminationReason == .uncaughtSignal && process.terminationStatus == 15)
             || !drainCompleted
-        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        let stdout = String(data: stdoutResult.data, encoding: .utf8) ?? ""
+        let stderr = String(data: stderrResult.data, encoding: .utf8) ?? ""
 
         return SpawnResult(
             stdout: stdout,
