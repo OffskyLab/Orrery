@@ -58,7 +58,7 @@ public enum MagiSidecar {
         }
     }
 
-    public struct SpawnResult {
+    public struct SpawnResult: Sendable {
         public let stdout: String
         public let stderr: String
         public let exitCode: Int32
