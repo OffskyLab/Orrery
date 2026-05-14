@@ -35,7 +35,7 @@ public final class ProcessAgentExecutor: AgentExecutor {
         self.activeEnvironment = activeEnvironment
     }
 
-    public func execute(request: AgentExecutionRequest) throws -> AgentExecutionResult {
+    public func execute(request: AgentExecutionRequest) async throws -> AgentExecutionResult {
         let tool = request.tool
         let env = ProcessInfo.processInfo.environment
 
@@ -73,48 +73,36 @@ public final class ProcessAgentExecutor: AgentExecutor {
             process.standardOutput = stdoutPipe
         }
 
-        // Start draining stdout/stderr on background threads BEFORE
-        // process.run() to avoid pipe backpressure deadlocks.
-        var stdoutData = Data()
-        var stderrData = Data()
-        let stdoutQueue = DispatchQueue(label: "orrery.executor.stdout.\(tool.rawValue)")
-        let stderrQueue = DispatchQueue(label: "orrery.executor.stderr.\(tool.rawValue)")
-        let stdoutGroup = DispatchGroup()
-        let stderrGroup = DispatchGroup()
-
-        stdoutGroup.enter()
-        stdoutQueue.async {
-            stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-            stdoutGroup.leave()
+        // Start draining stdout/stderr with detached tasks BEFORE process.run()
+        // to avoid pipe backpressure deadlocks. Task.detached prevents
+        // actor-isolation issues and lets reads run truly concurrently.
+        let stdoutReadTask = Task.detached {
+            stdoutPipe.fileHandleForReading.readDataToEndOfFile()
         }
-        stderrGroup.enter()
-        stderrQueue.async {
-            stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            stderrGroup.leave()
+        let stderrReadTask = Task.detached {
+            stderrPipe.fileHandleForReading.readDataToEndOfFile()
         }
 
-        // Schedule timeout termination. `timeout == 0` disables the
-        // watchdog — callers opt into "cancel externally or run forever".
-        let timeoutWork: DispatchWorkItem?
+        // Schedule timeout via a cancellable Task. `timeout == 0` disables it.
+        let timeoutTask: Task<Void, Never>?
         if request.timeout > 0 {
-            let work = DispatchWorkItem { [weak process] in
-                process?.terminate()
+            let timeout = request.timeout
+            timeoutTask = Task {
+                do {
+                    try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    process.terminate()
+                } catch { /* cancelled before firing */ }
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + request.timeout, execute: work)
-            timeoutWork = work
         } else {
-            timeoutWork = nil
+            timeoutTask = nil
         }
 
         // Publish the process reference so `cancel()` can find it.
-        lock.lock()
-        currentProcess = process
-        lock.unlock()
+        lock.withLock { currentProcess = process }
 
         defer {
-            lock.lock()
-            currentProcess = nil
-            lock.unlock()
+            lock.withLock { currentProcess = nil }
+            timeoutTask?.cancel()
         }
 
         // Launch. Re-throw POSIX errors verbatim so callers can inspect
@@ -122,28 +110,24 @@ public final class ProcessAgentExecutor: AgentExecutor {
         do {
             try process.run()
         } catch {
-            timeoutWork?.cancel()
-            // Close the read ends so the draining threads don't block
-            // forever on a process that never launched.
+            timeoutTask?.cancel()
+            // Close the read ends so the drain tasks don't block forever.
             try? stdoutPipe.fileHandleForReading.close()
             try? stderrPipe.fileHandleForReading.close()
+            _ = await (stdoutReadTask.value, stderrReadTask.value)
             throw error
         }
 
         process.waitUntilExit()
-        timeoutWork?.cancel()
-
-        // Wait for I/O threads to drain the pipes.
-        stdoutGroup.wait()
-        stderrGroup.wait()
+        timeoutTask?.cancel()
 
         let exitCode = process.terminationStatus
         // SIGTERM (15) from uncaughtSignal == our watchdog fired.
         let timedOut = (process.terminationReason == .uncaughtSignal && exitCode == 15)
         let duration = Date().timeIntervalSince(startTime)
 
-        let rawOutput = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderrOutput = String(data: stderrData, encoding: .utf8) ?? ""
+        let rawOutput = String(data: await stdoutReadTask.value, encoding: .utf8) ?? ""
+        let stderrOutput = String(data: await stderrReadTask.value, encoding: .utf8) ?? ""
 
         // Post-snapshot diff — exactly one new session id => that's ours.
         let postSnapshot = Set(
@@ -162,8 +146,6 @@ public final class ProcessAgentExecutor: AgentExecutor {
 
         // Preserve the Magi "session id not found" warning on stderr
         // when we expected one (clean exit, not timed out, but no diff).
-        // Callers that don't want this can suppress stderr at the Process
-        // layer — matches prior behavior.
         if sessionId == nil && !timedOut && exitCode == 0 {
             FileHandle.standardError.write(
                 Data((L10n.Magi.sessionIdNotFound(tool.rawValue) + "\n").utf8))
@@ -182,10 +164,7 @@ public final class ProcessAgentExecutor: AgentExecutor {
     }
 
     public func cancel() {
-        lock.lock()
-        let proc = currentProcess
-        lock.unlock()
-        proc?.terminate()
+        lock.withLock { currentProcess }?.terminate()
     }
 
     private func debugLog(_ message: String) {
