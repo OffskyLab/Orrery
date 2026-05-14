@@ -112,9 +112,67 @@ public enum MagiSidecar {
     }
 
     /// Spawn the binary with the given args and capture stdout/stderr
-    /// with a watchdog timeout. Shared by the handshake path and the
-    /// MCP tool handler to avoid pipe-drain deadlocks.
+    /// concurrently using async Tasks. Used for large output (tool forwarding).
     public static func spawnAndCapture(
+        binary: String,
+        args: [String],
+        timeout: TimeInterval
+    ) async -> SpawnResult {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: binary)
+        process.arguments = args
+        process.environment = ProcessInfo.processInfo.environment
+        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        let stdoutTask = Task.detached {
+            stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+        let stderrTask = Task.detached {
+            stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+
+        let timeoutTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                process.terminate()
+                try? stdoutPipe.fileHandleForReading.close()
+                try? stderrPipe.fileHandleForReading.close()
+            } catch { /* cancelled */ }
+        }
+
+        do {
+            try process.run()
+        } catch {
+            timeoutTask.cancel()
+            stdoutTask.cancel()
+            stderrTask.cancel()
+            return SpawnResult(stdout: "", stderr: "spawn failed: \(error.localizedDescription)",
+                               exitCode: -1, timedOut: false)
+        }
+
+        process.waitUntilExit()
+        timeoutTask.cancel()
+
+        let stdoutData = await stdoutTask.value
+        let stderrData = await stderrTask.value
+
+        let timedOut = process.terminationReason == .uncaughtSignal && process.terminationStatus == 15
+        return SpawnResult(
+            stdout: String(data: stdoutData, encoding: .utf8) ?? "",
+            stderr: String(data: stderrData, encoding: .utf8) ?? "",
+            exitCode: process.terminationStatus,
+            timedOut: timedOut
+        )
+    }
+
+    /// Spawn the binary synchronously with sequential pipe reads after waitUntilExit.
+    /// Safe for small output (--capabilities / --print-mcp-schemas << 64 KB pipe buffer).
+    private static func spawnSmall(
         binary: String,
         args: [String],
         timeout: TimeInterval
@@ -130,66 +188,28 @@ public enum MagiSidecar {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        // nonisolated(unsafe) on stored properties is the SE-0414 mechanism
-        // for "I own the synchronization" — distinct from @unchecked Sendable.
-        // Safety is guaranteed by drainGroup.wait() below.
-        final class PipeResult: Sendable {
-            nonisolated(unsafe) var data = Data()
-        }
-        let stdoutResult = PipeResult()
-        let stderrResult = PipeResult()
-        let drainGroup = DispatchGroup()
-
-        drainGroup.enter()
-        DispatchQueue.global().async {
-            stdoutResult.data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-            drainGroup.leave()
-        }
-
-        drainGroup.enter()
-        DispatchQueue.global().async {
-            stderrResult.data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            drainGroup.leave()
-        }
-
-        let timeoutWork = DispatchWorkItem { [weak process, stdoutPipe, stderrPipe] in
-            process?.terminate()
-            try? stdoutPipe.fileHandleForReading.close()
-            try? stderrPipe.fileHandleForReading.close()
-        }
+        let timeoutWork = DispatchWorkItem { process.terminate() }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutWork)
 
         do {
             try process.run()
         } catch {
             timeoutWork.cancel()
-            try? stdoutPipe.fileHandleForReading.close()
-            try? stderrPipe.fileHandleForReading.close()
-            return SpawnResult(
-                stdout: "",
-                stderr: "spawn failed: \(error.localizedDescription)",
-                exitCode: -1,
-                timedOut: false
-            )
+            return SpawnResult(stdout: "", stderr: "spawn failed: \(error.localizedDescription)",
+                               exitCode: -1, timedOut: false)
         }
 
         process.waitUntilExit()
         timeoutWork.cancel()
 
-        let drainCompleted = drainGroup.wait(timeout: .now() + 1.0) == .success
-        if !drainCompleted {
-            try? stdoutPipe.fileHandleForReading.close()
-            try? stderrPipe.fileHandleForReading.close()
-        }
+        // Sequential reads safe: --capabilities / --print-mcp-schemas output << 64 KB pipe buffer.
+        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
 
-        let timedOut = (process.terminationReason == .uncaughtSignal && process.terminationStatus == 15)
-            || !drainCompleted
-        let stdout = String(data: stdoutResult.data, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrResult.data, encoding: .utf8) ?? ""
-
+        let timedOut = process.terminationReason == .uncaughtSignal && process.terminationStatus == 15
         return SpawnResult(
-            stdout: stdout,
-            stderr: stderr,
+            stdout: String(data: stdoutData, encoding: .utf8) ?? "",
+            stderr: String(data: stderrData, encoding: .utf8) ?? "",
             exitCode: process.terminationStatus,
             timedOut: timedOut
         )
@@ -297,7 +317,7 @@ public enum MagiSidecar {
     }
 
     static func runJSON(path: String, args: [String], timeout: TimeInterval) -> Result<[String: Any], MagiSidecarError> {
-        let result = spawnAndCapture(binary: path, args: args, timeout: timeout)
+        let result = spawnSmall(binary: path, args: args, timeout: timeout)
         let trimmedStderr = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
         let stderr = trimmedStderr.isEmpty ? "unknown error" : trimmedStderr
 
@@ -322,7 +342,7 @@ public enum MagiSidecar {
         args: [String],
         timeout: TimeInterval
     ) -> Result<[[String: Any]], MagiSidecarError> {
-        let result = spawnAndCapture(binary: path, args: args, timeout: timeout)
+        let result = spawnSmall(binary: path, args: args, timeout: timeout)
         let trimmedStderr = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
         let stderr = trimmedStderr.isEmpty ? "unknown error" : trimmedStderr
 

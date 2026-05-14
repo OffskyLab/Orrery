@@ -1,24 +1,22 @@
 import Foundation
 
 /// Minimal MCP (Model Context Protocol) server over stdin/stdout JSON-RPC 2.0.
+@MainActor
 public struct MCPServer {
 
-    private typealias ToolHandler = ([String: Any]) -> [String: Any]
+    private typealias ToolHandler = @MainActor ([String: Any]) async -> [String: Any]
 
     private static let out = FileHandle.standardOutput
     private static let err = FileHandle.standardError
-    private static nonisolated(unsafe) var extraToolSchemas: [[String: Any]] = []
-    private static nonisolated(unsafe) var extraToolHandlers: [String: ToolHandler] = [:]
-    private static let extraToolsLock = NSLock()
+    @MainActor private static var extraToolSchemas: [[String: Any]] = []
+    @MainActor private static var extraToolHandlers: [String: ToolHandler] = [:]
 
+    @MainActor
     public static func registerTool(
         schema: [String: Any],
-        handler: @escaping ([String: Any]) -> [String: Any]
+        handler: @escaping @MainActor ([String: Any]) async -> [String: Any]
     ) {
         guard let name = schema["name"] as? String, !name.isEmpty else { return }
-
-        extraToolsLock.lock()
-        defer { extraToolsLock.unlock() }
 
         if let index = extraToolSchemas.firstIndex(where: { ($0["name"] as? String) == name }) {
             extraToolSchemas[index] = schema
@@ -28,7 +26,8 @@ public struct MCPServer {
         extraToolHandlers[name] = handler
     }
 
-    public static func run() {
+    @MainActor
+    public static func run() async {
         log("Orrery MCP server starting")
 
         while let line = readLine(strippingNewline: true) {
@@ -65,7 +64,7 @@ public struct MCPServer {
             case "tools/call":
                 let toolName = params["name"] as? String ?? ""
                 let args = params["arguments"] as? [String: Any] ?? [:]
-                let result = callTool(name: toolName, arguments: args)
+                let result = await callTool(name: toolName, arguments: args)
                 respond(id: id, result: result)
 
             default:
@@ -172,17 +171,18 @@ public struct MCPServer {
 
     // MARK: - Tool execution
 
-    private static func callTool(name: String, arguments: [String: Any]) -> [String: Any] {
+    @MainActor
+    private static func callTool(name: String, arguments: [String: Any]) async -> [String: Any] {
         switch name {
         case "orrery_list":
-            return execCommand(["orrery-bin", "list"])
+            return await execCommand(["orrery-bin", "list"])
 
         case "orrery_sessions":
             var args = ["orrery-bin", "sessions"]
             if let tool = arguments["tool"] as? String {
                 args.append("--\(tool)")
             }
-            return execCommand(args)
+            return await execCommand(args)
 
         case "orrery_delegate":
             guard let prompt = arguments["prompt"] as? String else {
@@ -196,10 +196,10 @@ public struct MCPServer {
                 args.append("--\(tool)")
             }
             args.append(prompt)
-            return execCommand(args)
+            return await execCommand(args)
 
         case "orrery_current":
-            return execCommand(["orrery-bin", "current"])
+            return await execCommand(["orrery-bin", "current"])
 
         case "orrery_memory_read":
             return readMemory()
@@ -213,7 +213,7 @@ public struct MCPServer {
 
         default:
             if let handler = registeredHandler(for: name) {
-                return handler(arguments)
+                return await handler(arguments)
             }
             return toolError("Unknown tool: \(name)")
         }
@@ -221,7 +221,8 @@ public struct MCPServer {
 
     // MARK: - Process execution
 
-    public static func execCommand(_ args: [String]) -> [String: Any] {
+    @MainActor
+    public static func execCommand(_ args: [String]) async -> [String: Any] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = args
@@ -243,28 +244,15 @@ public struct MCPServer {
         // the child → deadlock. Reading sequentially isn't enough either,
         // since whichever pipe we read second can fill while we're stuck
         // on the first.
-        let outBox = DataBox()
-        let errBox = DataBox()
-        let group = DispatchGroup()
-        let outHandle = pipe.fileHandleForReading
-        let errHandle = errPipe.fileHandleForReading
-
-        group.enter()
-        DispatchQueue.global().async {
-            outBox.set(outHandle.readDataToEndOfFile())
-            group.leave()
-        }
-        group.enter()
-        DispatchQueue.global().async {
-            errBox.set(errHandle.readDataToEndOfFile())
-            group.leave()
-        }
+        let stdoutTask = Task.detached { pipe.fileHandleForReading.readDataToEndOfFile() }
+        let errTask = Task.detached { errPipe.fileHandleForReading.readDataToEndOfFile() }
 
         process.waitUntilExit()
-        group.wait()
 
-        let output = String(data: outBox.snapshot, encoding: .utf8) ?? ""
-        let errOutput = String(data: errBox.snapshot, encoding: .utf8) ?? ""
+        let outputData = await stdoutTask.value
+        let errData = await errTask.value
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let errOutput = String(data: errData, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 {
             // Prefer stdout when it carries a structured payload (e.g.
@@ -485,15 +473,11 @@ public struct MCPServer {
         ]
     }
 
-    private static func registeredToolSchemas() -> [[String: Any]] {
-        extraToolsLock.lock()
-        defer { extraToolsLock.unlock() }
+    @MainActor private static func registeredToolSchemas() -> [[String: Any]] {
         return extraToolSchemas
     }
 
-    private static func registeredHandler(for name: String) -> ToolHandler? {
-        extraToolsLock.lock()
-        defer { extraToolsLock.unlock() }
+    @MainActor private static func registeredHandler(for name: String) -> ToolHandler? {
         return extraToolHandlers[name]
     }
 
@@ -513,21 +497,3 @@ public struct MCPServer {
     }
 }
 
-/// Mutable Data sink usable from concurrent `DispatchQueue.global().async`
-/// reads under Swift 6 strict concurrency.
-private final class DataBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value = Data()
-
-    func set(_ data: Data) {
-        lock.lock()
-        value = data
-        lock.unlock()
-    }
-
-    var snapshot: Data {
-        lock.lock()
-        defer { lock.unlock() }
-        return value
-    }
-}

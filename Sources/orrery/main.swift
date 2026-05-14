@@ -3,6 +3,7 @@ import Foundation
 import OrreryCore
 import OrreryThirdParty
 
+@MainActor
 private func runOrreryMain() throws {
     LegacyOrbitalMigration.runIfNeeded()
     OriginTakeoverBootstrap.runIfNeeded()
