@@ -31,7 +31,7 @@ final class AgentExecutorTests: XCTestCase {
             self.throwingLaunchError = throwingLaunchError
         }
 
-        func execute(request: AgentExecutionRequest) throws -> AgentExecutionResult {
+        func execute(request: AgentExecutionRequest) async throws -> AgentExecutionResult {
             lastRequest = request
             if let err = throwingLaunchError { throw err }
             return fixedResult
@@ -99,10 +99,10 @@ final class AgentExecutorTests: XCTestCase {
 
     // MARK: - Mock executor contract
 
-    func testMockExecute_receivesRequestVerbatim() throws {
+    func testMockExecute_receivesRequestVerbatim() async throws {
         let exec = MockAgentExecutor()
         let req = AgentExecutionRequest(tool: .claude, prompt: "hi", timeout: 10)
-        _ = try exec.execute(request: req)
+        _ = try await exec.execute(request: req)
         XCTAssertEqual(exec.lastRequest, req)
     }
 
@@ -113,19 +113,22 @@ final class AgentExecutorTests: XCTestCase {
         XCTAssertEqual(exec.cancelCount, 2)
     }
 
-    func testMockExecute_throwsLaunchError() {
+    func testMockExecute_throwsLaunchError() async {
         struct BoomError: Error {}
         let exec = MockAgentExecutor(throwingLaunchError: BoomError())
-        XCTAssertThrowsError(try exec.execute(request: .init(
-            tool: .claude, prompt: "p", timeout: 10
-        )))
+        do {
+            _ = try await exec.execute(request: .init(tool: .claude, prompt: "p", timeout: 10))
+            XCTFail("Expected BoomError to be thrown")
+        } catch {
+            XCTAssertTrue(error is BoomError)
+        }
     }
 
     // MARK: - Protocol polymorphism smoke
 
-    func testProtocolCanBeUsedPolymorphically() throws {
+    func testProtocolCanBeUsedPolymorphically() async throws {
         let exec: AgentExecutor = MockAgentExecutor()
-        let r = try exec.execute(request: .init(tool: .claude, prompt: "p", timeout: 5))
+        let r = try await exec.execute(request: .init(tool: .claude, prompt: "p", timeout: 5))
         XCTAssertEqual(r.rawOutput, "ok")
         XCTAssertEqual(r.sessionId, "mock-session")
     }
