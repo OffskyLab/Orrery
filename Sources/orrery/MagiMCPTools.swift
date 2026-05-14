@@ -20,6 +20,7 @@ public enum MagiMCPTools {
     /// or its handshake fails, log to stderr and return — the built-in
     /// MCP tools (orrery_list / sessions / delegate / current / memory_*)
     /// are registered separately by MCPServer and stay functional.
+    @MainActor
     public static func register(on server: MCPServer.Type) {
         let sidecar: MagiSidecar.ResolvedBinary
         do {
@@ -76,8 +77,9 @@ public enum MagiMCPTools {
         server: MCPServer.Type,
         name: String,
         sidecar: MagiSidecar.ResolvedBinary
-    ) -> ([String: Any]) -> [String: Any] {
-        return { arguments in
+    ) -> @MainActor ([String: Any]) async -> [String: Any] {
+        let binaryPath = sidecar.path  // capture only the Sendable String
+        return { @MainActor arguments in
             guard let tool = ForwardedTool(rawValue: name) else {
                 return server.toolError("Unknown tool: \(name)")
             }
@@ -125,8 +127,8 @@ public enum MagiMCPTools {
                 expectsJSON = true
             }
 
-            let result = MagiSidecar.spawnAndCapture(
-                binary: sidecar.path,
+            let result = await MagiSidecar.spawnAndCapture(
+                binary: binaryPath,
                 args: argv,
                 timeout: timeout
             )
@@ -154,8 +156,8 @@ public enum MagiMCPTools {
 
     private static func makeStatusInlineHandler(
         server: MCPServer.Type
-    ) -> ([String: Any]) -> [String: Any] {
-        return { arguments in
+    ) -> @MainActor ([String: Any]) async -> [String: Any] {
+        return { @MainActor arguments in
             guard let sessionId = arguments["session_id"] as? String else {
                 return server.toolError("Missing required parameter: session_id")
             }

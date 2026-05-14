@@ -11,7 +11,7 @@ public enum OrreryVersion {
 /// in `main.swift` and forwarded to the external `orrery-magi` sidecar
 /// binary before ArgumentParser sees them, so none of those subcommands are
 /// registered here.
-public struct OrreryCommand: ParsableCommand {
+public struct OrreryCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "orrery",
         abstract: L10n.Orrery.abstract,
