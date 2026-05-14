@@ -22,12 +22,12 @@ import Foundation
 /// `DelegateProcessBuilder` + `SessionResolver` machinery, which remains
 /// an internal implementation detail.
 public protocol AgentExecutor {
-    /// Run the delegate synchronously, respecting the request's timeout
+    /// Run the delegate asynchronously, respecting the request's timeout
     /// via an internal watchdog. Throws only for launch-level errors
     /// (POSIX EACCES / ENOENT / ETXTBSY etc.); subprocess-level failures
     /// are surfaced via `AgentExecutionResult.exitCode` and
     /// `AgentExecutionResult.timedOut`.
-    func execute(request: AgentExecutionRequest) throws -> AgentExecutionResult
+    func execute(request: AgentExecutionRequest) async throws -> AgentExecutionResult
 
     /// Best-effort cancellation. Safe to call before `execute` returns
     /// (sends SIGTERM to the inflight subprocess) or after (no-op).
