@@ -70,7 +70,7 @@ public struct AgentExecutionRequest: Equatable {
 
 // MARK: - Result
 
-public struct AgentExecutionResult: Equatable {
+public struct AgentExecutionResult: Equatable, Sendable {
     public let tool: Tool
     public let rawOutput: String
     public let stderrOutput: String
