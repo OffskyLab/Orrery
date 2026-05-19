@@ -66,4 +66,17 @@ struct EnvironmentStoreUserMemoryTests {
         #expect(!ClaudeHookInstaller().isInstalled(at: claudeDir))
         #expect(!CodexHookInstaller().isInstalled(at: codexDir))
     }
+
+    @Test("addTool installs user-memory hook on the new tool when shareUserMemory=true")
+    func addToolInstallsHook() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-addtoolhook-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let store = EnvironmentStore(homeURL: tmp)
+        var env = OrreryEnvironment(name: "e", tools: [], shareUserMemory: true)
+        try store.save(env)
+        try store.addTool(.claude, to: "e")
+        let claudeDir = store.toolConfigDir(tool: .claude, environment: "e")
+        #expect(ClaudeHookInstaller().isInstalled(at: claudeDir))
+    }
 }
