@@ -46,6 +46,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             OriginCommand.self,
             UninstallCommand.self,
             AuthCommand.self,
+            QuotaCommand.self,
             InstallCommand.self,
             ThirdPartyCommand.self,
             PhantomTriggerCommand.self,

@@ -2131,6 +2131,24 @@
     "kind": "func",
     "parameters": [{ "label": "_", "name": "path", "type": "String" }]
   },
+  { "path": ["Quota", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["Quota", "refreshAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Quota", "envHelp"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Quota", "notLoggedIn"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "env", "type": "String" }]
+  },
+  {
+    "path": ["Quota", "fetchFailed"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "error", "type": "String" }]
+  },
+  {
+    "path": ["Quota", "refreshedHeader"],
+    "kind": "func",
+    "parameters": [{ "label": "_", "name": "env", "type": "String" }]
+  },
   { "path": ["Install", "abstract"], "kind": "var", "parameters": [] },
   { "path": ["Install", "idHelp"], "kind": "var", "parameters": [] },
   { "path": ["Install", "envHelp"], "kind": "var", "parameters": [] },
