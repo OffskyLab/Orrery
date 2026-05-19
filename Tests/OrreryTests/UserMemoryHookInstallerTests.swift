@@ -105,3 +105,56 @@ struct ClaudeHookInstallerTests {
         #expect(!installer.isInstalled(at: tmpDir))
     }
 }
+
+@Suite("CodexHookInstaller")
+struct CodexHookInstallerTests {
+    let tmpDir: URL
+    init() throws {
+        tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-codexhook-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+    }
+
+    @Test("Codex installer targets hooks.json, not config.toml")
+    func codexTargetsHooksJSON() throws {
+        try CodexHookInstaller().install(at: tmpDir)
+        #expect(FileManager.default.fileExists(atPath: tmpDir.appendingPathComponent("hooks.json").path))
+        #expect(!FileManager.default.fileExists(atPath: tmpDir.appendingPathComponent("config.toml").path))
+    }
+
+    @Test("Codex installer is idempotent and removable")
+    func codexLifecycle() throws {
+        let installer = CodexHookInstaller()
+        try installer.install(at: tmpDir)
+        try installer.install(at: tmpDir)
+        #expect(installer.isInstalled(at: tmpDir))
+        try installer.remove(at: tmpDir)
+        #expect(!installer.isInstalled(at: tmpDir))
+    }
+}
+
+@Suite("GeminiHookInstaller")
+struct GeminiHookInstallerTests {
+    let tmpDir: URL
+    init() throws {
+        tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-geminihook-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+    }
+
+    @Test("Gemini installer targets settings.json in configDir")
+    func geminiTargetsSettings() throws {
+        try GeminiHookInstaller().install(at: tmpDir)
+        #expect(FileManager.default.fileExists(atPath: tmpDir.appendingPathComponent("settings.json").path))
+    }
+
+    @Test("Gemini installer is idempotent and removable")
+    func geminiLifecycle() throws {
+        let installer = GeminiHookInstaller()
+        try installer.install(at: tmpDir)
+        try installer.install(at: tmpDir)
+        #expect(installer.isInstalled(at: tmpDir))
+        try installer.remove(at: tmpDir)
+        #expect(!installer.isInstalled(at: tmpDir))
+    }
+}
