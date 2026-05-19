@@ -12,15 +12,30 @@ public struct OriginConfig: Codable, Sendable {
     /// Tools whose sessions are isolated (not symlinked to shared).
     /// Absent from the set → shared (default).
     public var isolatedSessionTools: Set<Tool>
+    public var shareUserMemory: Bool
 
     public init(
         isolateMemory: Bool = true,
         memoryStoragePath: String? = nil,
-        isolatedSessionTools: Set<Tool> = []
+        isolatedSessionTools: Set<Tool> = [],
+        shareUserMemory: Bool = true
     ) {
         self.isolateMemory = isolateMemory
         self.memoryStoragePath = memoryStoragePath
         self.isolatedSessionTools = isolatedSessionTools
+        self.shareUserMemory = shareUserMemory
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isolateMemory, memoryStoragePath, isolatedSessionTools, shareUserMemory
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? true
+        memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
+        isolatedSessionTools = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) ?? []
+        shareUserMemory = try c.decodeIfPresent(Bool.self, forKey: .shareUserMemory) ?? true
     }
 
     public func isolateSessions(for tool: Tool) -> Bool {

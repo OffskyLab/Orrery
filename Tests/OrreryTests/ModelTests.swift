@@ -46,3 +46,22 @@ struct ToolTests {
         #expect(Tool(rawValue: "unknown") == nil)
     }
 }
+
+@Suite("OriginConfig")
+struct OriginConfigTests {
+
+    @Test("OriginConfig.shareUserMemory defaults to true")
+    func originConfigShareUserMemoryDefault() {
+        let c = OriginConfig()
+        #expect(c.shareUserMemory == true)
+    }
+
+    @Test("OriginConfig decodes legacy JSON without shareUserMemory as enabled")
+    func originConfigLegacyDecodeShareUserMemory() throws {
+        let json = """
+        { "isolateMemory": false, "isolatedSessionTools": [] }
+        """.data(using: .utf8)!
+        let c = try JSONDecoder().decode(OriginConfig.self, from: json)
+        #expect(c.shareUserMemory == true)
+    }
+}
