@@ -32,6 +32,9 @@
   untouched.
 - A future `orrery memory user import` will help lift cross-project entries
   out of the project layer; not in this release.
+- If you use `orrery-sync`, add `~/.orrery/user/memory/fragments/` to your
+  watched-paths list to enable cross-machine sync of user memory. The fragment
+  format is identical to the project layer.
 
 ## v2.7.0 - 2026-04-29
 
