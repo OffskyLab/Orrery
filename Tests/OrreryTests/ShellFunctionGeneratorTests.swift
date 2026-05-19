@@ -30,4 +30,10 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("_orrery_init"))
         #expect(script.contains("current"))
     }
+
+    @Test("generated shell function calls _reconcile-user-memory-hooks")
+    func shellCallsReconcile() {
+        let out = ShellFunctionGenerator.generate(version: "9.9.9")
+        #expect(out.contains("_reconcile-user-memory-hooks"))
+    }
 }
