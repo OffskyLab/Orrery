@@ -55,6 +55,7 @@ public struct OrreryEnvironment: Codable, Sendable {
     /// Tools NOT in this set share sessions across envs (the default).
     public var isolatedSessionTools: Set<Tool>
     public var isolateMemory: Bool
+    public var shareUserMemory: Bool
     /// Custom storage root for memory. When set, MEMORY.md and fragments/ live here
     /// instead of the default ~/.orrery path. Useful for external wikis (e.g. Obsidian).
     public var memoryStoragePath: String?
@@ -69,6 +70,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         env: [String: String] = [:],
         isolatedSessionTools: Set<Tool> = [],
         isolateMemory: Bool = true,
+        shareUserMemory: Bool = true,
         memoryStoragePath: String? = nil
     ) {
         self.id = id
@@ -80,6 +82,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         self.env = env
         self.isolatedSessionTools = isolatedSessionTools
         self.isolateMemory = isolateMemory
+        self.shareUserMemory = shareUserMemory
         self.memoryStoragePath = memoryStoragePath
     }
 
@@ -95,6 +98,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         case isolatedSessionTools
         case isolateSessions  // legacy — decode only
         case isolateMemory, memoryStoragePath
+        case shareUserMemory
     }
 
     public init(from decoder: Decoder) throws {
@@ -117,6 +121,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         }
 
         isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
+        shareUserMemory = try c.decodeIfPresent(Bool.self, forKey: .shareUserMemory) ?? true
         memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
     }
 
@@ -131,6 +136,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         try c.encode(env, forKey: .env)
         try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
         try c.encode(isolateMemory, forKey: .isolateMemory)
+        try c.encode(shareUserMemory, forKey: .shareUserMemory)
         try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
     }
 }
