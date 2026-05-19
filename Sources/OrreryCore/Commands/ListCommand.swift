@@ -27,6 +27,9 @@ public struct ListCommand: ParsableCommand {
     private struct ToolRow {
         let name: String
         let suffix: String
+        /// Trailing info: last-used relative time (and quota in P2). Already
+        /// colorized; rendered after `suffix` with a `·` separator.
+        let usage: String
     }
 
     private struct EnvRow {
@@ -95,9 +98,13 @@ public struct ListCommand: ParsableCommand {
             let info = results[i]
             let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
             guard !suffix.isEmpty else { return nil }
+            let usage = Self.usageString(
+                store: store, tool: item.tool, envName: ReservedEnvironment.defaultName
+            )
             return ToolRow(
                 name: item.tool.rawValue,
-                suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model)
+                suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model),
+                usage: usage
             )
         }
 
@@ -117,9 +124,11 @@ public struct ListCommand: ParsableCommand {
                 let item = workItems[i]
                 let info = results[i]
                 let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+                let usage = Self.usageString(store: store, tool: item.tool, envName: pair.name)
                 return ToolRow(
                     name: item.tool.rawValue,
-                    suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model)
+                    suffix: Self.colorizeSuffix(suffix, email: info.email, plan: info.plan, model: info.model),
+                    usage: usage
                 )
             }
             let lastUsed = df.string(from: pair.env.lastUsed)
@@ -151,12 +160,51 @@ public struct ListCommand: ParsableCommand {
                 bodyLines = row.tools.map { tool in
                     let paddedName = tool.name + String(repeating: " ", count: max(0, toolWidth - tool.name.count))
                     let prefix = Self.colorize("  · \(paddedName)", code: "90")
-                    return tool.suffix.isEmpty ? prefix : "\(prefix)\(tool.suffix)"
+                    let body = tool.suffix.isEmpty ? prefix : "\(prefix)\(tool.suffix)"
+                    return tool.usage.isEmpty ? body : "\(body)  \(Self.colorize("·", code: "90")) \(tool.usage)"
                 }
             }
 
             return ([header] + bodyLines).joined(separator: "\n")
         }
+    }
+
+    /// Trailing per-tool info: last-used relative time + cached quota when
+    /// available. Returns "" when there is no signal worth rendering, so the
+    /// caller can skip the trailing `·`.
+    private static func usageString(store: EnvironmentStore, tool: Tool, envName: String) -> String {
+        var parts: [String] = []
+        if let last = store.lastUsed(tool: tool, environment: envName) {
+            parts.append(colorize(RelativeTime.ago(from: last), code: "38;5;245"))
+        }
+        if let q = quotaSummary(store: store, tool: tool, envName: envName) {
+            parts.append(q)
+        }
+        return parts.joined(separator: "  \(colorize("·", code: "90")) ")
+    }
+
+    /// Compact "5h X% / 7d Y%" string from cached quota. Only Claude has data
+    /// in P2 — other tools return nil. Tagged "(stale)" when fetchedAt is
+    /// older than 8h, matching statusline.js's TTL.
+    private static func quotaSummary(store: EnvironmentStore, tool: Tool, envName: String) -> String? {
+        guard tool == .claude else { return nil }
+        let cache = QuotaCache(homeURL: store.homeURL)
+        guard let snap = cache.load(envName: envName), let q = snap.claude else { return nil }
+        var bits: [String] = []
+        if let w = q.fiveHour  { bits.append("5h \(formatPct(w.utilization))") }
+        if let w = q.sevenDay  { bits.append("7d \(formatPct(w.utilization))") }
+        guard !bits.isEmpty else { return nil }
+        let stale = Date().timeIntervalSince(snap.fetchedAt) > 8 * 3600
+        let body = bits.joined(separator: " / ")
+        let colored = colorize(body, code: stale ? "90" : "38;5;108")
+        return stale ? "\(colored) \(colorize("(stale)", code: "90"))" : colored
+    }
+
+    private static func formatPct(_ percentage: Double) -> String {
+        let rounded = (percentage * 10).rounded() / 10
+        return rounded == rounded.rounded()
+            ? "\(Int(rounded))%"
+            : String(format: "%.1f%%", rounded)
     }
 
     private static func colorizeSuffix(_ suffix: String, email: String?, plan: String?, model: String?) -> String {
