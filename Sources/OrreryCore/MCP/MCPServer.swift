@@ -164,6 +164,15 @@ public struct MCPServer {
                     "additionalProperties": false
                 ]
             ],
+            [
+                "name": "orrery_user_memory_read",
+                "description": "Read the user-global Orrery memory. This memory follows you across all projects and all environments — use it for facts about who you are (the user), cross-project preferences, and tool/account references. Always read before writing to avoid overwriting existing knowledge. If pending sync fragments are present, consolidate them into MEMORY.md and write back with append=false.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [String: Any](),
+                    "additionalProperties": false
+                ]
+            ],
         ]
 
         return builtInTools + registeredToolSchemas()
@@ -210,6 +219,9 @@ public struct MCPServer {
             }
             let append = arguments["append"] as? Bool ?? true
             return writeMemory(content: content, append: append)
+
+        case "orrery_user_memory_read":
+            return readUserMemory()
 
         default:
             if let handler = registeredHandler(for: name) {
@@ -288,6 +300,38 @@ public struct MCPServer {
 
     private static func projectMemoryStore() -> MemoryStore {
         MemoryStore(directory: sharedMemoryDirectory())
+    }
+
+    private static func userMemoryStore() -> MemoryStore {
+        MemoryStore(directory: EnvironmentStore.default.userMemoryDir())
+    }
+
+    private static func readUserMemory() -> [String: Any] {
+        let store = userMemoryStore()
+        let result = (try? store.read()) ?? .init(memory: "", fragments: [])
+
+        var content = result.memory
+        if !result.fragments.isEmpty {
+            content += "\n\n---\n## Pending Memory Fragments (from sync)\n"
+            content += "The following fragments were synced from other machines and need to be integrated.\n"
+            content += "Please consolidate them into the memory above, then write back with append=false.\n"
+            content += "After integration, the fragment files will be cleaned up automatically.\n\n"
+            for f in result.fragments {
+                content += "### \(f.filename)\n"
+                content += f.content + "\n\n"
+            }
+        }
+
+        if content.isEmpty {
+            return [
+                "content": [["type": "text", "text": "(no user-global memory yet)"]],
+                "isError": false
+            ]
+        }
+        return [
+            "content": [["type": "text", "text": content]],
+            "isError": false
+        ]
     }
 
     /// Ensure the Orrery memory directory is symlinked into Claude's auto-memory location
