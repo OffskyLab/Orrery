@@ -1559,6 +1559,21 @@
   { "path": ["UserMemory", "actionEnable"], "kind": "var", "parameters": [] },
   { "path": ["UserMemory", "actionDisable"], "kind": "var", "parameters": [] },
   { "path": ["UserMemory", "actionExport"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "noActiveEnv"], "kind": "var", "parameters": [] },
+  {
+    "path": ["UserMemory", "enabled"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" }
+    ]
+  },
+  {
+    "path": ["UserMemory", "disabled"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" }
+    ]
+  },
   {
     "path": [
       "Orrery",
