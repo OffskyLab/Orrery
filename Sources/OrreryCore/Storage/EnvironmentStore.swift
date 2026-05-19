@@ -343,6 +343,46 @@ public struct EnvironmentStore: Sendable {
         try? fm.createSymbolicLink(at: memoryDirURL, withDestinationURL: targetDir)
     }
 
+    /// Install the user-memory SessionStart hook into each tool config dir of this env,
+    /// but only if `env.shareUserMemory == true`. Idempotent.
+    public func ensureUserMemoryHooks(for envName: String) throws {
+        let share: Bool
+        let tools: [Tool]
+        if envName == ReservedEnvironment.defaultName {
+            share = loadOriginConfig().shareUserMemory
+            tools = Tool.allCases.filter { isOriginManaged(tool: $0) }
+        } else {
+            let env = try load(named: envName)
+            share = env.shareUserMemory
+            tools = env.tools
+        }
+        guard share else { return }
+        for tool in tools {
+            let dir = (envName == ReservedEnvironment.defaultName)
+                ? originConfigDir(tool: tool)
+                : toolConfigDir(tool: tool, environment: envName)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try userMemoryHookInstaller(for: tool).install(at: dir)
+        }
+    }
+
+    /// Remove the managed hook entry from each tool config dir of this env.
+    public func removeUserMemoryHooks(for envName: String) throws {
+        let tools: [Tool]
+        if envName == ReservedEnvironment.defaultName {
+            tools = Tool.allCases.filter { isOriginManaged(tool: $0) }
+        } else {
+            tools = (try load(named: envName)).tools
+        }
+        for tool in tools {
+            let dir = (envName == ReservedEnvironment.defaultName)
+                ? originConfigDir(tool: tool)
+                : toolConfigDir(tool: tool, environment: envName)
+            guard FileManager.default.fileExists(atPath: dir.path) else { continue }
+            try userMemoryHookInstaller(for: tool).remove(at: dir)
+        }
+    }
+
     // MARK: - Origin management
 
     /// Storage directory for origin tool configs: `~/.orrery/origin/`
