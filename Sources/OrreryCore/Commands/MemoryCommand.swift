@@ -20,13 +20,13 @@ public struct MemoryCommand: ParsableCommand {
         let userDir = store.userMemoryDir()
         let userEnabled = currentEnvShareUserMemory(store: store, envName: envName)
 
-        print("Project memory: \(projectDir.path)")
-        print("User memory: \(userEnabled ? "enabled" : "disabled") (\(userDir.path))")
+        print(L10n.Memory.summaryProject(projectDir.path))
+        print(L10n.Memory.summaryUser(userEnabled, userDir.path))
         print("")
 
         let selector = SingleSelect(
-            title: "What would you like to manage?",
-            options: ["Project memory", "User memory"],
+            title: L10n.Memory.topLevelPrompt,
+            options: [L10n.Memory.manageProject, L10n.Memory.manageUser],
             selected: 0
         )
         switch selector.run() {
