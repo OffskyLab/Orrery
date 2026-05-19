@@ -83,6 +83,7 @@ orrery account use --codex --name "work"       # 把 codex 切到 work
 - 同時下兩個以上 → 報錯：「`--claude`、`--codex`、`--gemini` 三選一，預設 `--claude`」
 - `add` 沒帶 `--name` → 互動式 prompt 詢問名稱
 - `account use` 永遠作用在當前 active env（沒切就是 origin），這是兩種使用模式的橋樑
+- `account remove` 若該 account 仍被任何 env 引用 → **擋下**並列出引用方，要求使用者先在那些 env 切換或解除引用後再刪
 
 ### Env 命令（不變，語意更新）
 
@@ -173,6 +174,16 @@ Materialize 流程：
 
 遷移前先把 `~/.orrery/` 整個 copy 到 `~/.orrery-backup-<timestamp>/`，遷移失敗時可手動 rollback。對齊現有 `.repo-backup/` 慣例。
 
+### Phantom Supervisor
+
+遷移期間 phantom supervisor 必須暫停。如果偵測到正在執行的 supervisor，遷移流程應：
+
+1. 印出訊息要求使用者結束目前所有 phantom session
+2. 等待 supervisor lockfile 釋放，或在使用者確認後再繼續
+3. 遷移完成後 supervisor 可恢復
+
+避免遷移中途發生 env / account 切換造成 race condition。
+
 ### Edge Cases
 
 - **某 env 的某工具沒登入過** → `env.json` 的 `accounts.<tool>` 為 null，`orrery run <tool>` 時提示先 `orrery account add`
@@ -219,11 +230,6 @@ Materialize 流程：
 - **同時下多個 `--claude --codex`** 旗標：第一版報錯
 - **Account-level memory**：使用者要不同 memory 請開新 env
 - **Account 共用憑證的 server-side 額度合併**：不可能也不該做
-
-## 10. 開放問題
-
-- 遷移期間 phantom supervisor 是否要暫停？建議是。
-- `account remove` 仍被 env 引用時的行為：擋下並列出引用方（建議），還是強制刪除並設 null？
 
 ---
 
