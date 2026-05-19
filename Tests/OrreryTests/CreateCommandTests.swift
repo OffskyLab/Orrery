@@ -29,4 +29,39 @@ struct CreateCommandTests {
         let claudeDir = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(FileManager.default.fileExists(atPath: claudeDir.path))
     }
+
+    @Test("createEnvironment with shareUserMemory=false persists the flag")
+    func createPersistsShareUserMemoryFalse() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-create-shareuser-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let store = EnvironmentStore(homeURL: tmp)
+        try CreateCommand.createEnvironment(
+            name: "demo",
+            description: "",
+            tool: .claude,
+            isolateSessions: false,
+            isolateMemory: false,
+            shareUserMemory: false,
+            store: store
+        )
+        let env = try store.load(named: "demo")
+        #expect(env.shareUserMemory == false)
+    }
+
+    @Test("createEnvironment defaults shareUserMemory to true")
+    func createDefaultsShareUserMemory() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-create-default-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let store = EnvironmentStore(homeURL: tmp)
+        try CreateCommand.createEnvironment(
+            name: "demo",
+            description: "",
+            tool: .claude,
+            store: store
+        )
+        let env = try store.load(named: "demo")
+        #expect(env.shareUserMemory == true)
+    }
 }
