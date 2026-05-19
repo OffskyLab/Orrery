@@ -73,4 +73,45 @@ struct MemoryStoreTests {
         #expect(result.fragments.map(\.filename) == ["f-aaa-host.md", "f-bbb-host.md"])
         #expect(result.fragments[0].content == "frag-a-body")
     }
+
+    @Test("emit returns empty string when MEMORY.md is missing")
+    func emitMissing() throws {
+        let store = MemoryStore(directory: tmpDir)
+        #expect(try store.emit(maxBytes: 25_600) == "")
+    }
+
+    @Test("emit returns MEMORY.md content when small")
+    func emitSmall() throws {
+        let store = MemoryStore(directory: tmpDir)
+        // Seed MEMORY.md directly — `write()` would also produce a fragment as a side
+        // effect, which would alter emit's output. Same seeding technique as
+        // `emitWithFragments` / `readReturnsFragments`.
+        try "tiny memory".write(to: tmpDir.appendingPathComponent("MEMORY.md"), atomically: true, encoding: .utf8)
+        let out = try store.emit(maxBytes: 25_600)
+        #expect(out == "tiny memory")
+    }
+
+    @Test("emit appends pending fragments block")
+    func emitWithFragments() throws {
+        let store = MemoryStore(directory: tmpDir)
+        try store.write(content: "main", append: false)
+        let fragDir = tmpDir.appendingPathComponent("fragments")
+        try "fragbody".write(to: fragDir.appendingPathComponent("f-x-host.md"), atomically: true, encoding: .utf8)
+        let out = try store.emit(maxBytes: 25_600)
+        #expect(out.contains("main"))
+        #expect(out.contains("Pending Memory Fragments"))
+        #expect(out.contains("f-x-host.md"))
+        #expect(out.contains("fragbody"))
+    }
+
+    @Test("emit truncates at maxBytes and appends truncation hint")
+    func emitTruncates() throws {
+        let store = MemoryStore(directory: tmpDir)
+        let big = String(repeating: "x", count: 30_000)
+        try store.write(content: big, append: false)
+        let out = try store.emit(maxBytes: 100)
+        #expect(out.count > 100) // truncation hint adds bytes
+        #expect(out.contains("truncated"))
+        #expect(out.hasPrefix(String(repeating: "x", count: 100)))
+    }
 }

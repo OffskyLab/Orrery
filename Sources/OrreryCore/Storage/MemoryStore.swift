@@ -77,6 +77,27 @@ public struct MemoryStore: Sendable {
         }
     }
 
+    /// Produce the hook-stdout / read-tool output: MEMORY.md content optionally followed
+    /// by a "Pending Memory Fragments" block, truncated to `maxBytes`.
+    public func emit(maxBytes: Int) throws -> String {
+        let r = try read()
+        var output = r.memory
+        if !r.fragments.isEmpty {
+            output += "\n\n---\n## Pending Memory Fragments (from sync)\n"
+            output += "The following fragments were synced from other machines and need to be integrated.\n"
+            output += "Please consolidate them into the memory above, then write back with append=false.\n"
+            output += "After integration, the fragment files will be cleaned up automatically.\n\n"
+            for f in r.fragments {
+                output += "### \(f.filename)\n"
+                output += f.content + "\n\n"
+            }
+        }
+        let utf8Bytes = Array(output.utf8)
+        if utf8Bytes.count <= maxBytes { return output }
+        let truncated = String(decoding: utf8Bytes.prefix(maxBytes), as: UTF8.self)
+        return truncated + "\n\n(truncated — read full via orrery_user_memory_read)"
+    }
+
     private func writeFragment(content: String, action: String) throws {
         let fm = FileManager.default
         try fm.createDirectory(at: fragmentsDir, withIntermediateDirectories: true)
