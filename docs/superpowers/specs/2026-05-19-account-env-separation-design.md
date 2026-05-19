@@ -114,12 +114,34 @@ Symlink 是**持久**的，並非每次啟動才建。觸發時機有三：
 
 | 工具 | 平台 | 憑證形式 | Materialize 方式 |
 |------|------|---------|------------------|
-| Claude | macOS | Keychain item | Tool adapter：啟動前映射 Keychain entry |
+| Claude | macOS | Keychain item | Metadata-pointer：寫入 Claude 預期的 Keychain key |
 | Claude | Linux | `.credentials.json` | Symlink |
 | Codex | All | `auth.json` | Symlink |
 | Gemini | All | `oauth_creds.json` | Symlink |
 
 實作上有一層 `CredentialAdapter` protocol，每個工具 × 平台組合提供自己的實作。
+
+### macOS Keychain Materialize 細節（Metadata-pointer）
+
+每個 Claude account 在 macOS 上存一個 orrery 專屬的 Keychain item，並在 account dir 內以 metadata JSON 記錄對應關係：
+
+```
+~/.orrery/accounts/claude/work/
+  ├── metadata.json   # { "keychainItem": "Claude Code-orrery-<uuid>", "createdAt": "...", "displayName": "work" }
+  └── (no credential file — token 在 Keychain 內)
+```
+
+Materialize 流程：
+
+1. 讀 account dir 的 `metadata.json`，找出該 account 對應的 Keychain item key
+2. 從該 item 讀出 token，**複寫**到 Claude 預期讀取的 Keychain key（覆蓋上一個 active account 的內容）
+3. exec Claude
+
+設計取捨：
+
+- account rename 只改 metadata，**不**動 Keychain item naming
+- 「active token」位置是 mutable 的；不擔心多進程競爭，因為 `orrery run` 是序列化的入口
+- metadata.json 也是未來放 token 過期時間、user-friendly 顯示名、登入時間戳等資訊的位置
 
 ## 5. Sessions 與 Memory
 
@@ -200,7 +222,6 @@ Symlink 是**持久**的，並非每次啟動才建。觸發時機有三：
 
 ## 10. 開放問題
 
-- macOS Keychain item 命名規則：是否在 account dir 存一份 metadata JSON 即可，還是要設計可逆的 item naming convention？
 - 遷移期間 phantom supervisor 是否要暫停？建議是。
 - `account remove` 仍被 env 引用時的行為：擋下並列出引用方（建議），還是強制刪除並設 null？
 
