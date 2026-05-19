@@ -263,6 +263,14 @@ public struct EnvironmentStore: Sendable {
         sharedMemoryDir(projectKey: projectKey).appendingPathComponent(envName)
     }
 
+    /// User-global memory dir: `~/.orrery/user/memory/`.
+    /// Independent of any env or projectKey — same path for every project, every env.
+    public func userMemoryDir() -> URL {
+        homeURL
+            .appendingPathComponent("user")
+            .appendingPathComponent("memory")
+    }
+
     /// Returns the memory directory URL for the given env (nil = default/shared).
     /// Priority: custom memoryStoragePath > isolateMemory > shared default.
     /// The directory is symlinked into Claude's auto-memory dir so `MEMORY.md` +
