@@ -173,6 +173,25 @@ public struct MCPServer {
                     "additionalProperties": false
                 ]
             ],
+            [
+                "name": "orrery_user_memory_write",
+                "description": "Write or append to the user-global Orrery memory. This persists across all projects/envs. Use for: user role/preferences, cross-project feedback rules, tool/account references. Default is append; set append=false to rewrite (used after consolidating fragments).",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "content": [
+                            "type": "string",
+                            "description": "Markdown content to write to user-global memory"
+                        ],
+                        "append": [
+                            "type": "boolean",
+                            "description": "If true, append to existing memory. If false, overwrite. Default: true"
+                        ]
+                    ],
+                    "required": ["content"],
+                    "additionalProperties": false
+                ]
+            ],
         ]
 
         return builtInTools + registeredToolSchemas()
@@ -222,6 +241,13 @@ public struct MCPServer {
 
         case "orrery_user_memory_read":
             return readUserMemory()
+
+        case "orrery_user_memory_write":
+            guard let content = arguments["content"] as? String else {
+                return toolError("Missing required parameter: content")
+            }
+            let append = arguments["append"] as? Bool ?? true
+            return writeUserMemory(content: content, append: append)
 
         default:
             if let handler = registeredHandler(for: name) {
@@ -332,6 +358,20 @@ public struct MCPServer {
             "content": [["type": "text", "text": content]],
             "isError": false
         ]
+    }
+
+    private static func writeUserMemory(content: String, append: Bool) -> [String: Any] {
+        let store = userMemoryStore()
+        do {
+            try store.write(content: content, append: append)
+            let path = store.directory.appendingPathComponent("MEMORY.md").path
+            return [
+                "content": [["type": "text", "text": "User memory updated: \(path)"]],
+                "isError": false
+            ]
+        } catch {
+            return toolError("Failed to write user memory: \(error.localizedDescription)")
+        }
     }
 
     /// Ensure the Orrery memory directory is symlinked into Claude's auto-memory location
