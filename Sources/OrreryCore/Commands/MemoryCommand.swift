@@ -445,16 +445,51 @@ private func askMigrationChoiceToIsolated() -> Int {
     return selector.run()
 }
 
-private func applyMigration(merge: Bool, fromDir sourceDir: URL, toDir destDir: URL) throws {
+/// Migrate a memory directory's contents from `sourceDir` into `destDir`.
+///
+/// `MEMORY.md` is special: it's the canonical doc the AI agent auto-loads
+/// and reconciles, so migrating it would clobber dest. Instead we wrap the
+/// source content as a *fragment* under `destDir/fragments/`, which the
+/// agent picks up on the next `orrery_memory_read` and consolidates into
+/// the dest's `MEMORY.md`.
+///
+/// Everything else (user-curated `.md` files, subdirectories, existing
+/// fragments) is plain user data — we copy it across with skip-existing
+/// semantics so dest's existing files are never overwritten. Files that
+/// only live in source land in dest verbatim; collisions preserve dest
+/// silently. The source dir itself is left untouched (non-destructive,
+/// reversible if the user later switches back).
+///
+/// `merge=false` is a no-op — the caller chose "discard source" and will
+/// confirm separately.
+func applyMigration(merge: Bool, fromDir sourceDir: URL, toDir destDir: URL) throws {
     guard merge else { return }
 
     let fm = FileManager.default
-    let sourceFile = sourceDir.appendingPathComponent("MEMORY.md")
-    guard fm.fileExists(atPath: sourceFile.path),
-          let content = try? String(contentsOf: sourceFile, encoding: .utf8) else {
-        return
-    }
+    guard fm.fileExists(atPath: sourceDir.path) else { return }
 
+    try fm.createDirectory(at: destDir, withIntermediateDirectories: true)
+
+    let entries = (try? fm.contentsOfDirectory(atPath: sourceDir.path)) ?? []
+    for entry in entries {
+        let source = sourceDir.appendingPathComponent(entry)
+        let dest = destDir.appendingPathComponent(entry)
+
+        if entry == "MEMORY.md" {
+            if let content = try? String(contentsOf: source, encoding: .utf8) {
+                try writeMigrationFragment(content: content, toDir: destDir)
+            }
+        } else {
+            try copyTreeSkipExisting(from: source, to: dest)
+        }
+    }
+}
+
+/// Write `content` as a new fragment under `destDir/fragments/`. The
+/// frontmatter (id / peer / timestamp / action) is what the AI agent reads
+/// when consolidating fragments into `MEMORY.md` on the next read pass.
+func writeMigrationFragment(content: String, toDir destDir: URL) throws {
+    let fm = FileManager.default
     let fragmentsDir = destDir.appendingPathComponent("fragments")
     try fm.createDirectory(at: fragmentsDir, withIntermediateDirectories: true)
 
@@ -478,4 +513,31 @@ private func applyMigration(merge: Bool, fromDir sourceDir: URL, toDir destDir: 
         to: fragmentsDir.appendingPathComponent(filename),
         atomically: true, encoding: .utf8
     )
+}
+
+/// Recursively copy `source` into `dest`. Files that already exist at the
+/// destination are preserved (skip-existing). Used for non-canonical user
+/// data during memory migration — see `applyMigration` for the rationale.
+func copyTreeSkipExisting(from source: URL, to dest: URL) throws {
+    let fm = FileManager.default
+    var isDir: ObjCBool = false
+    guard fm.fileExists(atPath: source.path, isDirectory: &isDir) else { return }
+
+    if isDir.boolValue {
+        try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+        let children = (try? fm.contentsOfDirectory(atPath: source.path)) ?? []
+        for child in children {
+            try copyTreeSkipExisting(
+                from: source.appendingPathComponent(child),
+                to: dest.appendingPathComponent(child)
+            )
+        }
+    } else {
+        guard !fm.fileExists(atPath: dest.path) else { return }
+        try fm.createDirectory(
+            at: dest.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try fm.copyItem(at: source, to: dest)
+    }
 }
