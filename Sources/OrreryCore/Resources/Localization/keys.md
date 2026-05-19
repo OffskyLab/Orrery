@@ -182,6 +182,36 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `memory.storageResetHelp` | `--reset` flag help. |
 | `memory.storageSet` | Success after setting a custom path. `{path}`. |
 | `memory.storageStatus.custom` / `memory.storageStatus.default` | Status row. Optional-branch on whether the path is customized. `{path}`. |
+| `memory.summaryProject` | Recap line shown by the top-level `orrery memory` info / wizard intro: project memory path. `{path}` = MEMORY.md path. |
+| `memory.summaryUser.enabled` / `memory.summaryUser.disabled` | Recap line shown by `orrery memory` info: user memory status for the active env. Bool branch on whether user memory is enabled. `{path}` = user MEMORY.md path. |
+| `memory.topLevelPrompt` | Title for the top-level picker shown by bare `orrery memory` (project vs. user). |
+| `memory.manageProject` | Top-level picker option: manage project memory. |
+| `memory.manageUser` | Top-level picker option: manage user memory. |
+
+## userMemory — `orrery user-memory`
+
+User-global memory subcommand group: `orrery user-memory info / path / emit / export / enable / disable`.
+
+| Key | Context |
+| --- | --- |
+| `userMemory.abstract` | Parent command help for `orrery user-memory`. |
+| `userMemory.infoAbstract` | `user-memory info` sub-command help. |
+| `userMemory.pathAbstract` | `user-memory path` sub-command help. |
+| `userMemory.emitAbstract` | `user-memory emit` sub-command help. Hidden / internal — used by SessionStart hooks, not by humans. |
+| `userMemory.exportAbstract` | `user-memory export` sub-command help. |
+| `userMemory.exportOutputHelp` | `--output` flag help for `user-memory export`. Default file name `USER_MEMORY.md` is literal. |
+| `userMemory.enableAbstract` | `user-memory enable` sub-command help. |
+| `userMemory.disableAbstract` | `user-memory disable` sub-command help. |
+| `userMemory.statusPath` | Status row printed by `user-memory info`: path to user MEMORY.md. `{path}`. |
+| `userMemory.statusExists.present` / `userMemory.statusExists.absent` | Status row from `user-memory info`. Bool branch on file existence. `{size}` = bytes (only meaningful in the `present` branch). |
+| `userMemory.noMemory` | Shown by `user-memory export` when there is no user MEMORY.md to export. |
+| `userMemory.exported` | Success message from `user-memory export`. `{path}` = output file path. |
+| `userMemory.enabledInEnv.enabled` / `userMemory.enabledInEnv.disabled` | Status row from `user-memory info`. Bool branch on whether user memory is enabled in the active env. Both variants must read naturally — do **not** interpolate `true`/`false`. |
+| `userMemory.actionPrompt` | Title for the interactive action picker shown by bare `orrery user-memory`. |
+| `userMemory.actionInfo` | Action picker option: view info. |
+| `userMemory.actionEnable` | Action picker option: enable in this env. |
+| `userMemory.actionDisable` | Action picker option: disable in this env. |
+| `userMemory.actionExport` | Action picker option: export. |
 
 ## orrery — root command
 
