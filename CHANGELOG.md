@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.0.0] - 2026-05-19
+
+### Added
+- User-level memory layer at `~/.orrery/user/memory/`. Cross-project, cross-env
+  personal memory served via:
+  - SessionStart hooks installed automatically into each env's Claude / Codex /
+    Gemini config (controlled by per-env `shareUserMemory`, default enabled).
+  - MCP tools `orrery_user_memory_read` and `orrery_user_memory_write`.
+  - New CLI subcommands `orrery memory user info / path / emit / export /
+    enable / disable`.
+- Wizard question on env creation: "Enable user memory?" (default: yes).
+- `--no-user-memory` flag on `orrery create` to opt out from the CLI.
+
+### Changed
+- **BREAKING:** `orrery memory <info|export|isolate|share|storage>` renamed to
+  `orrery memory project <info|export|isolate|share|storage>`. No aliases.
+  Scripts must be updated.
+- Interactive `orrery memory` now lists both project and user memory states and
+  routes into the relevant submenu.
+
+### Internal
+- Introduced `MemoryStore` value type to share read/write/fragment logic
+  between project- and user-level memory.
+- New `UserMemoryHookInstaller` protocol with Claude / Codex / Gemini
+  implementations; internal `_reconcile-user-memory-hooks` command runs on
+  every `orrery use`.
+
+### Notes
+- Existing memories under `~/.orrery/shared/memory/{projectKey}/` are
+  untouched.
+- A future `orrery memory user import` will help lift cross-project entries
+  out of the project layer; not in this release.
+
 ## v2.7.0 - 2026-04-29
 
 ### Architecture
