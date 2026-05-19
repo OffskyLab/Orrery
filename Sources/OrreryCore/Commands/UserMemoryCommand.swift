@@ -75,6 +75,34 @@ public struct UserMemoryCommand: ParsableCommand {
         return try memStore.emit(maxBytes: 25_600)
     }
 
+    /// Set `shareUserMemory = true` for `envName` and install hooks.
+    public static func applyEnable(envName: String, store: EnvironmentStore) throws {
+        if envName == ReservedEnvironment.defaultName {
+            var c = store.loadOriginConfig()
+            c.shareUserMemory = true
+            try store.saveOriginConfig(c)
+        } else {
+            var env = try store.load(named: envName)
+            env.shareUserMemory = true
+            try store.save(env)
+        }
+        try store.ensureUserMemoryHooks(for: envName)
+    }
+
+    /// Set `shareUserMemory = false` for `envName` and remove hooks.
+    public static func applyDisable(envName: String, store: EnvironmentStore) throws {
+        if envName == ReservedEnvironment.defaultName {
+            var c = store.loadOriginConfig()
+            c.shareUserMemory = false
+            try store.saveOriginConfig(c)
+        } else {
+            var env = try store.load(named: envName)
+            env.shareUserMemory = false
+            try store.save(env)
+        }
+        try store.removeUserMemoryHooks(for: envName)
+    }
+
     public struct InfoSubcommand: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "info",
@@ -142,7 +170,6 @@ public struct UserMemoryCommand: ParsableCommand {
         }
     }
 
-    // Filled in by Task 15.
     public struct EnableSubcommand: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "enable",
@@ -150,7 +177,11 @@ public struct UserMemoryCommand: ParsableCommand {
         )
         public init() {}
         public func run() throws {
-            throw ValidationError("not yet implemented")
+            guard let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
+                throw ValidationError(L10n.UserMemory.noActiveEnv)
+            }
+            try UserMemoryCommand.applyEnable(envName: envName, store: .default)
+            print(L10n.UserMemory.enabled(envName))
         }
     }
 
@@ -161,7 +192,11 @@ public struct UserMemoryCommand: ParsableCommand {
         )
         public init() {}
         public func run() throws {
-            throw ValidationError("not yet implemented")
+            guard let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
+                throw ValidationError(L10n.UserMemory.noActiveEnv)
+            }
+            try UserMemoryCommand.applyDisable(envName: envName, store: .default)
+            print(L10n.UserMemory.disabled(envName))
         }
     }
 }
