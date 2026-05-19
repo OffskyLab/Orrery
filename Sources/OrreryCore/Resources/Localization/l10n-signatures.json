@@ -496,6 +496,38 @@
   },
   {
     "path": [
+      "Create",
+      "askShareUserMemory"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "shareUserMemoryYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "shareUserMemoryNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "userMemoryDisableHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
       "Current",
       "abstract"
     ],
@@ -1440,6 +1472,139 @@
       "present": "custom",
       "absent": "default"
     }
+  },
+  {
+    "path": [
+      "Memory",
+      "summaryProject"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Memory",
+      "summaryUser"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "enabled",
+        "type": "Bool"
+      },
+      {
+        "label": "_",
+        "name": "path",
+        "type": "String"
+      }
+    ],
+    "variants": {
+      "selector": "enabled",
+      "type": "bool",
+      "true": "enabled",
+      "false": "disabled"
+    }
+  },
+  {
+    "path": [
+      "Memory",
+      "topLevelPrompt"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "manageProject"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Memory",
+      "manageUser"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  { "path": ["UserMemory", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "infoAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "pathAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "emitAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "exportAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "exportOutputHelp"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "enableAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "disableAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": ["UserMemory", "statusPath"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  },
+  {
+    "path": ["UserMemory", "statusExists"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "exists", "type": "Bool" },
+      { "label": "_", "name": "size", "type": "Int" }
+    ],
+    "variants": {
+      "selector": "exists",
+      "type": "bool",
+      "true": "present",
+      "false": "absent"
+    }
+  },
+  { "path": ["UserMemory", "noMemory"], "kind": "var", "parameters": [] },
+  {
+    "path": ["UserMemory", "exported"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "path", "type": "String" }
+    ]
+  },
+  {
+    "path": ["UserMemory", "enabledInEnv"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "enabled", "type": "Bool" }
+    ],
+    "variants": {
+      "selector": "enabled",
+      "type": "bool",
+      "true": "enabled",
+      "false": "disabled"
+    }
+  },
+  { "path": ["UserMemory", "actionPrompt"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "actionInfo"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "actionEnable"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "actionDisable"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "actionExport"], "kind": "var", "parameters": [] },
+  { "path": ["UserMemory", "noActiveEnv"], "kind": "var", "parameters": [] },
+  {
+    "path": ["UserMemory", "enabled"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" }
+    ]
+  },
+  {
+    "path": ["UserMemory", "disabled"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "env", "type": "String" }
+    ]
   },
   {
     "path": [

@@ -164,6 +164,34 @@ public struct MCPServer {
                     "additionalProperties": false
                 ]
             ],
+            [
+                "name": "orrery_user_memory_read",
+                "description": "Read the user-global Orrery memory. This memory follows you across all projects and all environments — use it for facts about who you are (the user), cross-project preferences, and tool/account references. Always read before writing to avoid overwriting existing knowledge. If pending sync fragments are present, consolidate them into MEMORY.md and write back with append=false.",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [String: Any](),
+                    "additionalProperties": false
+                ]
+            ],
+            [
+                "name": "orrery_user_memory_write",
+                "description": "Write or append to the user-global Orrery memory. This persists across all projects/envs. Use for: user role/preferences, cross-project feedback rules, tool/account references. Default is append; set append=false to rewrite (used after consolidating fragments).",
+                "inputSchema": [
+                    "type": "object",
+                    "properties": [
+                        "content": [
+                            "type": "string",
+                            "description": "Markdown content to write to user-global memory"
+                        ],
+                        "append": [
+                            "type": "boolean",
+                            "description": "If true, append to existing memory. If false, overwrite. Default: true"
+                        ]
+                    ],
+                    "required": ["content"],
+                    "additionalProperties": false
+                ]
+            ],
         ]
 
         return builtInTools + registeredToolSchemas()
@@ -210,6 +238,16 @@ public struct MCPServer {
             }
             let append = arguments["append"] as? Bool ?? true
             return writeMemory(content: content, append: append)
+
+        case "orrery_user_memory_read":
+            return readUserMemory()
+
+        case "orrery_user_memory_write":
+            guard let content = arguments["content"] as? String else {
+                return toolError("Missing required parameter: content")
+            }
+            let append = arguments["append"] as? Bool ?? true
+            return writeUserMemory(content: content, append: append)
 
         default:
             if let handler = registeredHandler(for: name) {
@@ -286,54 +324,53 @@ public struct MCPServer {
         return EnvironmentStore.default.memoryDir(projectKey: projectKey, envName: envName)
     }
 
-    private static func sharedMemoryFile() -> URL {
-        sharedMemoryDirectory().appendingPathComponent("MEMORY.md")
+    private static func projectMemoryStore() -> MemoryStore {
+        MemoryStore(directory: sharedMemoryDirectory())
     }
 
-    private static func fragmentsDirectory() -> URL {
-        sharedMemoryDirectory().appendingPathComponent("fragments")
+    private static func userMemoryStore() -> MemoryStore {
+        MemoryStore(directory: EnvironmentStore.default.userMemoryDir())
     }
 
-    private static func peerName() -> String {
-        ProcessInfo.processInfo.hostName
-            .replacingOccurrences(of: ".local", with: "")
-    }
+    private static func readUserMemory() -> [String: Any] {
+        let store = userMemoryStore()
+        let result = (try? store.read()) ?? .init(memory: "", fragments: [])
 
-    private static func writeFragment(content: String, action: String) {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let peer = peerName()
-        let id = UUID().uuidString.prefix(8).lowercased()
-        let filename = "f-\(id)-\(peer).md"
-
-        let body = """
-        ---
-        id: f-\(id)
-        peer: \(peer)
-        timestamp: \(timestamp)
-        action: \(action)
-        ---
-
-        \(content)
-        """
-
-        do {
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-            try body.write(to: dir.appendingPathComponent(filename),
-                           atomically: true, encoding: .utf8)
-        } catch {
-            log("Failed to write fragment: \(error.localizedDescription)")
+        var content = result.memory
+        if !result.fragments.isEmpty {
+            content += "\n\n---\n## Pending Memory Fragments (from sync)\n"
+            content += "The following fragments were synced from other machines and need to be integrated.\n"
+            content += "Please consolidate them into the memory above, then write back with append=false.\n"
+            content += "After integration, the fragment files will be cleaned up automatically.\n\n"
+            for f in result.fragments {
+                content += "### \(f.filename)\n"
+                content += f.content + "\n\n"
+            }
         }
+
+        if content.isEmpty {
+            return [
+                "content": [["type": "text", "text": "(no user-global memory yet)"]],
+                "isError": false
+            ]
+        }
+        return [
+            "content": [["type": "text", "text": content]],
+            "isError": false
+        ]
     }
 
-    /// Remove all fragment files after consolidation.
-    private static func cleanupFragments() {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return }
-        for file in files where file.hasSuffix(".md") {
-            try? fm.removeItem(at: dir.appendingPathComponent(file))
+    private static func writeUserMemory(content: String, append: Bool) -> [String: Any] {
+        let store = userMemoryStore()
+        do {
+            try store.write(content: content, append: append)
+            let path = store.directory.appendingPathComponent("MEMORY.md").path
+            return [
+                "content": [["type": "text", "text": "User memory updated: \(path)"]],
+                "isError": false
+            ]
+        } catch {
+            return toolError("Failed to write user memory: \(error.localizedDescription)")
         }
     }
 
@@ -356,87 +393,41 @@ public struct MCPServer {
 
     private static func readMemory() -> [String: Any] {
         ensureClaudeSymlink()
-        let file = sharedMemoryFile()
-        var content = ""
-        if FileManager.default.fileExists(atPath: file.path),
-           let existing = try? String(contentsOf: file, encoding: .utf8) {
-            content = existing
-        }
+        let store = projectMemoryStore()
+        let result = (try? store.read()) ?? .init(memory: "", fragments: [])
 
-        // Check for pending fragments from other peers
-        let fragments = pendingFragments()
-        if !fragments.isEmpty {
+        var content = result.memory
+        if !result.fragments.isEmpty {
             content += "\n\n---\n## Pending Memory Fragments (from sync)\n"
             content += "The following fragments were synced from other machines and need to be integrated.\n"
             content += "Please consolidate them into the memory above, then write back with append=false.\n"
             content += "After integration, the fragment files will be cleaned up automatically.\n\n"
-            for fragment in fragments {
-                content += "### \(fragment.filename)\n"
-                content += fragment.content + "\n\n"
+            for f in result.fragments {
+                content += "### \(f.filename)\n"
+                content += f.content + "\n\n"
             }
         }
 
         if content.isEmpty {
             return [
-                "content": [
-                    ["type": "text", "text": "(no shared memory yet)"]
-                ],
+                "content": [["type": "text", "text": "(no shared memory yet)"]],
                 "isError": false
             ]
         }
-
         return [
-            "content": [
-                ["type": "text", "text": content]
-            ],
+            "content": [["type": "text", "text": content]],
             "isError": false
         ]
     }
 
-    private struct Fragment {
-        let filename: String
-        let content: String
-    }
-
-    private static func pendingFragments() -> [Fragment] {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: dir.path) else { return [] }
-        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return [] }
-
-        return files
-            .filter { $0.hasSuffix(".md") }
-            .sorted()
-            .compactMap { filename -> Fragment? in
-                let path = dir.appendingPathComponent(filename)
-                guard let content = try? String(contentsOf: path, encoding: .utf8) else { return nil }
-                return Fragment(filename: filename, content: content)
-            }
-    }
-
     private static func writeMemory(content: String, append: Bool) -> [String: Any] {
         ensureClaudeSymlink()
-        let file = sharedMemoryFile()
-        let fm = FileManager.default
-        let dir = file.deletingLastPathComponent()
+        let store = projectMemoryStore()
         do {
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-
-            if append && fm.fileExists(atPath: file.path) {
-                let existing = try String(contentsOf: file, encoding: .utf8)
-                try (existing + "\n" + content).write(to: file, atomically: true, encoding: .utf8)
-            } else {
-                try content.write(to: file, atomically: true, encoding: .utf8)
-                // Overwrite means consolidation — clean up integrated fragments
-                cleanupFragments()
-            }
-
-            writeFragment(content: content, action: append ? "append" : "overwrite")
-
+            try store.write(content: content, append: append)
+            let path = store.directory.appendingPathComponent("MEMORY.md").path
             return [
-                "content": [
-                    ["type": "text", "text": "Memory updated: \(file.path)"]
-                ],
+                "content": [["type": "text", "text": "Memory updated: \(path)"]],
                 "isError": false
             ]
         } catch {

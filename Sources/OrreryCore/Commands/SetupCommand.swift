@@ -164,7 +164,20 @@ public struct SetupCommand: ParsableCommand {
             }
         }
 
+        // --- User memory (cross-project) — asked once for the whole origin ---
+        let userMemoryPicker = SingleSelect(
+            title: L10n.Create.askShareUserMemory,
+            options: [L10n.Create.shareUserMemoryYes, L10n.Create.shareUserMemoryNo],
+            selected: 0   // default: enable (recommended)
+        )
+        config.shareUserMemory = userMemoryPicker.run() == 0
+
         try? store.saveOriginConfig(config)
+
+        // Install user-memory hooks for the origin's managed tools.
+        // ensureUserMemoryHooks gates on config.shareUserMemory internally,
+        // so this is a no-op when the user opted out.
+        try? store.ensureUserMemoryHooks(for: ReservedEnvironment.defaultName)
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {

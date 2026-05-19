@@ -29,6 +29,9 @@ public struct CreateCommand: ParsableCommand {
     @Flag(name: .long, help: ArgumentHelp(L10n.Create.isolateMemoryHelp))
     public var isolateMemory: Bool = false
 
+    @Flag(name: .long, inversion: .prefixedNo, help: ArgumentHelp(L10n.Create.userMemoryDisableHelp))
+    public var userMemory: Bool = true
+
     public init() {}
 
     public func run() throws {
@@ -49,6 +52,7 @@ public struct CreateCommand: ParsableCommand {
         //   "yes"). Same per-step flag overrides apply.
         var configs: [ToolSetupRunner.Config]
         var installStatusline = false
+        let shareUserMemoryDefault: Bool
         if let toolFlag = tool {
             guard let t = Tool(rawValue: toolFlag) else {
                 throw ValidationError(L10n.Create.unknownTool(toolFlag))
@@ -61,8 +65,17 @@ public struct CreateCommand: ParsableCommand {
                 isolateSessionsOverride: isolateSessions,
                 isolateMemoryOverride: isolateMemory
             )]
+            // Explicit-tool path skips the interactive wizard, so the user-memory
+            // preference comes from the (default-true) --user-memory/--no-user-memory flag.
+            shareUserMemoryDefault = userMemory
         } else {
-            (configs, installStatusline) = Self.runWizard(store: store)
+            let wizardResult = Self.runWizard(store: store)
+            configs = wizardResult.0
+            installStatusline = wizardResult.1
+            // --no-user-memory takes precedence over the wizard answer: if the
+            // user explicitly passed --no-user-memory (userMemory == false),
+            // honor that; otherwise use whatever the wizard returned.
+            shareUserMemoryDefault = userMemory ? wizardResult.2 : false
         }
 
         // Create empty env — per-tool flags populated during apply()
@@ -105,13 +118,23 @@ public struct CreateCommand: ParsableCommand {
                 print("Could not install statusline: \(error.localizedDescription)")
             }
         }
+
+        // Persist the resolved shareUserMemory flag on the saved env and
+        // install user-memory hooks when enabled.
+        var saved = try store.load(named: name)
+        saved.shareUserMemory = shareUserMemoryDefault
+        try store.save(saved)
+        if shareUserMemoryDefault {
+            try? store.ensureUserMemoryHooks(for: name)
+        }
     }
 
     // MARK: - Wizard
 
     /// Loop through all tools, asking setup/skip and running the per-tool wizard for each "setup".
-    /// Returns configs and whether the user chose to install statusline (asked after Claude setup).
-    static func runWizard(store: EnvironmentStore) -> ([ToolSetupRunner.Config], installStatusline: Bool) {
+    /// Returns configs, whether the user chose to install statusline (asked after Claude setup),
+    /// and whether to enable the cross-project user-memory layer.
+    static func runWizard(store: EnvironmentStore) -> ([ToolSetupRunner.Config], installStatusline: Bool, shareUserMemory: Bool) {
         var configs: [ToolSetupRunner.Config] = []
         var installStatusline = false
         for tool in Tool.allCases {
@@ -121,13 +144,23 @@ public struct CreateCommand: ParsableCommand {
                 installStatusline = askInstallStatusline()
             }
         }
-        return (configs, installStatusline)
+        let shareUserMemory = askShareUserMemory()
+        return (configs, installStatusline, shareUserMemory)
     }
 
     static func askInstallStatusline() -> Bool {
         let selector = SingleSelect(
             title: L10n.Create.askInstallStatusline,
             options: [L10n.Create.installStatuslineYes, L10n.Create.installStatuslineNo],
+            selected: 0
+        )
+        return selector.run() == 0
+    }
+
+    static func askShareUserMemory() -> Bool {
+        let selector = SingleSelect(
+            title: L10n.Create.askShareUserMemory,
+            options: [L10n.Create.shareUserMemoryYes, L10n.Create.shareUserMemoryNo],
             selected: 0
         )
         return selector.run() == 0
@@ -150,13 +183,15 @@ public struct CreateCommand: ParsableCommand {
         tool: Tool,
         isolateSessions: Bool = false,
         isolateMemory: Bool = false,
+        shareUserMemory: Bool = true,
         store: EnvironmentStore
     ) throws {
         let env = OrreryEnvironment(
             name: name,
             description: description,
             isolatedSessionTools: isolateSessions ? [tool] : [],
-            isolateMemory: isolateMemory
+            isolateMemory: isolateMemory,
+            shareUserMemory: shareUserMemory
         )
         try store.save(env)
         try store.addTool(tool, to: name)
@@ -166,6 +201,10 @@ public struct CreateCommand: ParsableCommand {
                 .replacingOccurrences(of: "/", with: "-")
             let claudeConfigDir = store.toolConfigDir(tool: .claude, environment: name)
             store.linkOrreryMemory(projectKey: projectKey, envName: name, claudeConfigDir: claudeConfigDir)
+        }
+
+        if shareUserMemory {
+            try store.ensureUserMemoryHooks(for: name)
         }
     }
 }

@@ -5,7 +5,7 @@ public struct MemoryCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "memory",
         abstract: L10n.Memory.abstract,
-        subcommands: [InfoSubcommand.self, ExportSubcommand.self, IsolateSubcommand.self, ShareSubcommand.self, StorageSubcommand.self]
+        subcommands: [ProjectSubcommand.self, UserMemoryCommand.self]
     )
 
     public init() {}
@@ -15,114 +15,46 @@ public struct MemoryCommand: ParsableCommand {
         let projectKey = FileManager.default.currentDirectoryPath
             .replacingOccurrences(of: "/", with: "-")
         let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
 
-        let isIsolated: Bool
-        let storagePath: String?
-        if let envName, envName == ReservedEnvironment.defaultName {
-            let config = store.loadOriginConfig()
-            isIsolated = config.isolateMemory
-            storagePath = config.memoryStoragePath
-        } else if let envName, let env = try? store.load(named: envName) {
-            isIsolated = env.isolateMemory
-            storagePath = env.memoryStoragePath
-        } else {
-            isIsolated = false
-            storagePath = nil
-        }
+        let projectDir = store.memoryDir(projectKey: projectKey, envName: envName)
+        let userDir = store.userMemoryDir()
+        let userEnabled = currentEnvShareUserMemory(store: store, envName: envName)
 
-        // Show current status
-        print(L10n.Memory.statusMode(isIsolated))
-        print(L10n.Memory.statusPath(memoryDir.path))
-        print(L10n.Memory.storageStatus(storagePath))
+        print(L10n.Memory.summaryProject(projectDir.path))
+        print(L10n.Memory.summaryUser(userEnabled, userDir.path))
         print("")
 
-        // Build action menu based on current state
-        var options: [String] = [L10n.Memory.actionInfo, L10n.Memory.actionExport]
-        var canToggle = false
-        var canStorage = false
-        if envName != nil {
-            options.append(isIsolated ? L10n.Memory.actionShare : L10n.Memory.actionIsolate)
-            options.append(L10n.Memory.actionStorage)
-            canToggle = true
-            canStorage = true
-        }
-
-        let selector = SingleSelect(title: L10n.Memory.settingsPrompt, options: options, selected: 0)
-        let choice = selector.run()
-
-        switch choice {
+        let selector = SingleSelect(
+            title: L10n.Memory.topLevelPrompt,
+            options: [L10n.Memory.manageProject, L10n.Memory.manageUser],
+            selected: 0
+        )
+        switch selector.run() {
         case 0:
-            var info = InfoSubcommand()
-            try info.run()
+            var p = MemoryCommand.ProjectSubcommand()
+            try p.run()
         case 1:
-            var export = ExportSubcommand()
-            try export.run()
-        case 2 where canToggle:
-            if isIsolated {
-                var share = ShareSubcommand()
-                try share.run()
-            } else {
-                var isolate = IsolateSubcommand()
-                try isolate.run()
-            }
-        case 3 where canStorage:
-            var storage = StorageSubcommand()
-            try storage.run()
+            var u = UserMemoryCommand()
+            try u.run()
         default:
             break
         }
     }
 
-    // MARK: - Info
+    // MARK: - Project subgroup
 
-    public struct InfoSubcommand: ParsableCommand {
+    public struct ProjectSubcommand: ParsableCommand {
         public static let configuration = CommandConfiguration(
-            commandName: "info",
-            abstract: L10n.Memory.infoAbstract
+            commandName: "project",
+            abstract: L10n.Memory.abstract,
+            subcommands: [
+                InfoSubcommand.self,
+                ExportSubcommand.self,
+                IsolateSubcommand.self,
+                ShareSubcommand.self,
+                StorageSubcommand.self,
+            ]
         )
-
-        @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
-        public var environment: String?
-
-        public init() {}
-
-        public func run() throws {
-            let store = EnvironmentStore.default
-            let projectKey = FileManager.default.currentDirectoryPath
-                .replacingOccurrences(of: "/", with: "-")
-            let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
-            let memoryFile = memoryDir.appendingPathComponent("MEMORY.md")
-
-            let isIsolated: Bool
-            if let envName, envName != ReservedEnvironment.defaultName,
-               let env = try? store.load(named: envName) {
-                isIsolated = env.isolateMemory
-            } else {
-                isIsolated = false
-            }
-
-            let fm = FileManager.default
-            let exists = fm.fileExists(atPath: memoryFile.path)
-            let size = (try? fm.attributesOfItem(atPath: memoryFile.path)[.size] as? Int) ?? 0
-
-            print(L10n.Memory.statusMode(isIsolated))
-            print(L10n.Memory.statusPath(memoryDir.path))
-            print(L10n.Memory.statusExists(exists, size))
-        }
-    }
-
-    // MARK: - Export
-
-    public struct ExportSubcommand: ParsableCommand {
-        public static let configuration = CommandConfiguration(
-            commandName: "export",
-            abstract: L10n.Memory.exportAbstract
-        )
-
-        @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Memory.outputHelp))
-        public var output: String?
 
         public init() {}
 
@@ -131,56 +63,201 @@ public struct MemoryCommand: ParsableCommand {
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
             let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            let memoryFile = store.memoryDir(projectKey: projectKey, envName: envName)
-                .appendingPathComponent("MEMORY.md")
+            let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
 
-            guard FileManager.default.fileExists(atPath: memoryFile.path) else {
-                print(L10n.Memory.noMemory)
-                return
+            let isIsolated: Bool
+            let storagePath: String?
+            if let envName, envName == ReservedEnvironment.defaultName {
+                let config = store.loadOriginConfig()
+                isIsolated = config.isolateMemory
+                storagePath = config.memoryStoragePath
+            } else if let envName, let env = try? store.load(named: envName) {
+                isIsolated = env.isolateMemory
+                storagePath = env.memoryStoragePath
+            } else {
+                isIsolated = false
+                storagePath = nil
             }
 
-            let content = try String(contentsOf: memoryFile, encoding: .utf8)
-            let outputPath = output ?? "MEMORY.md"
-            let outputURL = URL(fileURLWithPath: outputPath)
-            try content.write(to: outputURL, atomically: true, encoding: .utf8)
-            print(L10n.Memory.exported(outputURL.path))
+            // Show current status
+            print(L10n.Memory.statusMode(isIsolated))
+            print(L10n.Memory.statusPath(memoryDir.path))
+            print(L10n.Memory.storageStatus(storagePath))
+            print("")
+
+            // Build action menu based on current state
+            var options: [String] = [L10n.Memory.actionInfo, L10n.Memory.actionExport]
+            var canToggle = false
+            var canStorage = false
+            if envName != nil {
+                options.append(isIsolated ? L10n.Memory.actionShare : L10n.Memory.actionIsolate)
+                options.append(L10n.Memory.actionStorage)
+                canToggle = true
+                canStorage = true
+            }
+
+            let selector = SingleSelect(title: L10n.Memory.settingsPrompt, options: options, selected: 0)
+            let choice = selector.run()
+
+            switch choice {
+            case 0:
+                var info = InfoSubcommand()
+                try info.run()
+            case 1:
+                var export = ExportSubcommand()
+                try export.run()
+            case 2 where canToggle:
+                if isIsolated {
+                    var share = ShareSubcommand()
+                    try share.run()
+                } else {
+                    var isolate = IsolateSubcommand()
+                    try isolate.run()
+                }
+            case 3 where canStorage:
+                var storage = StorageSubcommand()
+                try storage.run()
+            default:
+                break
+            }
         }
-    }
 
-    // MARK: - Isolate
+        // MARK: - Info
 
-    public struct IsolateSubcommand: ParsableCommand {
-        public static let configuration = CommandConfiguration(
-            commandName: "isolate",
-            abstract: L10n.Memory.isolateAbstract
-        )
+        public struct InfoSubcommand: ParsableCommand {
+            public static let configuration = CommandConfiguration(
+                commandName: "info",
+                abstract: L10n.Memory.infoAbstract
+            )
 
-        @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
-        public var environment: String?
+            @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
+            public var environment: String?
 
-        public init() {}
+            public init() {}
 
-        public func run() throws {
-            let envName = environment
-                ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            guard let envName else {
-                throw ValidationError(L10n.Memory.noActiveEnv)
+            public func run() throws {
+                let store = EnvironmentStore.default
+                let projectKey = FileManager.default.currentDirectoryPath
+                    .replacingOccurrences(of: "/", with: "-")
+                let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                let memoryDir = store.memoryDir(projectKey: projectKey, envName: envName)
+                let memoryFile = memoryDir.appendingPathComponent("MEMORY.md")
+
+                let isIsolated: Bool
+                if let envName, envName != ReservedEnvironment.defaultName,
+                   let env = try? store.load(named: envName) {
+                    isIsolated = env.isolateMemory
+                } else {
+                    isIsolated = false
+                }
+
+                let fm = FileManager.default
+                let exists = fm.fileExists(atPath: memoryFile.path)
+                let size = (try? fm.attributesOfItem(atPath: memoryFile.path)[.size] as? Int) ?? 0
+
+                print(L10n.Memory.statusMode(isIsolated))
+                print(L10n.Memory.statusPath(memoryDir.path))
+                print(L10n.Memory.statusExists(exists, size))
             }
+        }
 
-            let store = EnvironmentStore.default
-            let projectKey = FileManager.default.currentDirectoryPath
-                .replacingOccurrences(of: "/", with: "-")
+        // MARK: - Export
 
-            if envName == ReservedEnvironment.defaultName {
-                var config = store.loadOriginConfig()
-                guard !config.isolateMemory else {
+        public struct ExportSubcommand: ParsableCommand {
+            public static let configuration = CommandConfiguration(
+                commandName: "export",
+                abstract: L10n.Memory.exportAbstract
+            )
+
+            @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Memory.outputHelp))
+            public var output: String?
+
+            public init() {}
+
+            public func run() throws {
+                let store = EnvironmentStore.default
+                let projectKey = FileManager.default.currentDirectoryPath
+                    .replacingOccurrences(of: "/", with: "-")
+                let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                let memoryFile = store.memoryDir(projectKey: projectKey, envName: envName)
+                    .appendingPathComponent("MEMORY.md")
+
+                guard FileManager.default.fileExists(atPath: memoryFile.path) else {
+                    print(L10n.Memory.noMemory)
+                    return
+                }
+
+                let content = try String(contentsOf: memoryFile, encoding: .utf8)
+                let outputPath = output ?? "MEMORY.md"
+                let outputURL = URL(fileURLWithPath: outputPath)
+                try content.write(to: outputURL, atomically: true, encoding: .utf8)
+                print(L10n.Memory.exported(outputURL.path))
+            }
+        }
+
+        // MARK: - Isolate
+
+        public struct IsolateSubcommand: ParsableCommand {
+            public static let configuration = CommandConfiguration(
+                commandName: "isolate",
+                abstract: L10n.Memory.isolateAbstract
+            )
+
+            @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
+            public var environment: String?
+
+            public init() {}
+
+            public func run() throws {
+                let envName = environment
+                    ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                guard let envName else {
+                    throw ValidationError(L10n.Memory.noActiveEnv)
+                }
+
+                let store = EnvironmentStore.default
+                let projectKey = FileManager.default.currentDirectoryPath
+                    .replacingOccurrences(of: "/", with: "-")
+
+                if envName == ReservedEnvironment.defaultName {
+                    var config = store.loadOriginConfig()
+                    guard !config.isolateMemory else {
+                        print(L10n.Memory.alreadyIsolated)
+                        return
+                    }
+                    let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+                    let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                    print(L10n.Memory.migrationWarning(sharedDir.path, isolatedDir.path))
+                    print("")
+                    let choice = askMigrationChoiceToIsolated()
+                    if choice == 1 {
+                        stdoutWrite(L10n.Memory.discardConfirm)
+                        let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                        guard confirm == "y" || confirm == "yes" else {
+                            print(L10n.Memory.aborted)
+                            return
+                        }
+                    }
+                    try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
+                    config.isolateMemory = true
+                    try store.saveOriginConfig(config)
+                    print(L10n.Memory.migrationDone(envName, true))
+                    return
+                }
+
+                var env = try store.load(named: envName)
+
+                guard !env.isolateMemory else {
                     print(L10n.Memory.alreadyIsolated)
                     return
                 }
-                let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+
+                let sharedDir = store.memoryDir(projectKey: projectKey, envName: nil)
                 let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+
                 print(L10n.Memory.migrationWarning(sharedDir.path, isolatedDir.path))
                 print("")
+
                 let choice = askMigrationChoiceToIsolated()
                 if choice == 1 {
                     stdoutWrite(L10n.Memory.discardConfirm)
@@ -190,78 +267,78 @@ public struct MemoryCommand: ParsableCommand {
                         return
                     }
                 }
+
                 try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
-                config.isolateMemory = true
-                try store.saveOriginConfig(config)
+
+                env.isolateMemory = true
+                try store.save(env)
                 print(L10n.Memory.migrationDone(envName, true))
-                return
             }
+        }
 
-            var env = try store.load(named: envName)
+        // MARK: - Share
 
-            guard !env.isolateMemory else {
-                print(L10n.Memory.alreadyIsolated)
-                return
-            }
+        public struct ShareSubcommand: ParsableCommand {
+            public static let configuration = CommandConfiguration(
+                commandName: "share",
+                abstract: L10n.Memory.shareAbstract
+            )
 
-            let sharedDir = store.memoryDir(projectKey: projectKey, envName: nil)
-            let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+            @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
+            public var environment: String?
 
-            print(L10n.Memory.migrationWarning(sharedDir.path, isolatedDir.path))
-            print("")
+            public init() {}
 
-            let choice = askMigrationChoiceToIsolated()
-            if choice == 1 {
-                stdoutWrite(L10n.Memory.discardConfirm)
-                let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
-                guard confirm == "y" || confirm == "yes" else {
-                    print(L10n.Memory.aborted)
+            public func run() throws {
+                let envName = environment
+                    ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                guard let envName else {
+                    throw ValidationError(L10n.Memory.noActiveEnv)
+                }
+
+                let store = EnvironmentStore.default
+                let projectKey = FileManager.default.currentDirectoryPath
+                    .replacingOccurrences(of: "/", with: "-")
+
+                if envName == ReservedEnvironment.defaultName {
+                    var config = store.loadOriginConfig()
+                    guard config.isolateMemory else {
+                        print(L10n.Memory.alreadyShared)
+                        return
+                    }
+                    let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+                    let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+                    print(L10n.Memory.migrationWarning(isolatedDir.path, sharedDir.path))
+                    print("")
+                    let choice = askMigrationChoiceToShared()
+                    if choice == 1 {
+                        stdoutWrite(L10n.Memory.discardConfirm)
+                        let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
+                        guard confirm == "y" || confirm == "yes" else {
+                            print(L10n.Memory.aborted)
+                            return
+                        }
+                    }
+                    try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
+                    config.isolateMemory = false
+                    try store.saveOriginConfig(config)
+                    print(L10n.Memory.migrationDone(envName, false))
                     return
                 }
-            }
 
-            try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
+                var env = try store.load(named: envName)
 
-            env.isolateMemory = true
-            try store.save(env)
-            print(L10n.Memory.migrationDone(envName, true))
-        }
-    }
-
-    // MARK: - Share
-
-    public struct ShareSubcommand: ParsableCommand {
-        public static let configuration = CommandConfiguration(
-            commandName: "share",
-            abstract: L10n.Memory.shareAbstract
-        )
-
-        @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
-        public var environment: String?
-
-        public init() {}
-
-        public func run() throws {
-            let envName = environment
-                ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            guard let envName else {
-                throw ValidationError(L10n.Memory.noActiveEnv)
-            }
-
-            let store = EnvironmentStore.default
-            let projectKey = FileManager.default.currentDirectoryPath
-                .replacingOccurrences(of: "/", with: "-")
-
-            if envName == ReservedEnvironment.defaultName {
-                var config = store.loadOriginConfig()
-                guard config.isolateMemory else {
+                guard env.isolateMemory else {
                     print(L10n.Memory.alreadyShared)
                     return
                 }
-                let isolatedDir = store.isolatedMemoryDir(projectKey: projectKey, envName: envName)
+
+                let isolatedDir = store.memoryDir(projectKey: projectKey, envName: envName)
                 let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+
                 print(L10n.Memory.migrationWarning(isolatedDir.path, sharedDir.path))
                 print("")
+
                 let choice = askMigrationChoiceToShared()
                 if choice == 1 {
                     stdoutWrite(L10n.Memory.discardConfirm)
@@ -271,109 +348,89 @@ public struct MemoryCommand: ParsableCommand {
                         return
                     }
                 }
+
                 try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
-                config.isolateMemory = false
-                try store.saveOriginConfig(config)
+
+                env.isolateMemory = false
+                try store.save(env)
                 print(L10n.Memory.migrationDone(envName, false))
-                return
             }
+        }
 
-            var env = try store.load(named: envName)
+        // MARK: - Storage
 
-            guard env.isolateMemory else {
-                print(L10n.Memory.alreadyShared)
-                return
-            }
+        public struct StorageSubcommand: ParsableCommand {
+            public static let configuration = CommandConfiguration(
+                commandName: "storage",
+                abstract: L10n.Memory.storageAbstract
+            )
 
-            let isolatedDir = store.memoryDir(projectKey: projectKey, envName: envName)
-            let sharedDir = store.sharedMemoryDir(projectKey: projectKey)
+            @Argument(help: ArgumentHelp(L10n.Memory.storagePathHelp))
+            public var path: String?
 
-            print(L10n.Memory.migrationWarning(isolatedDir.path, sharedDir.path))
-            print("")
+            @Flag(name: .long, help: ArgumentHelp(L10n.Memory.storageResetHelp))
+            public var reset: Bool = false
 
-            let choice = askMigrationChoiceToShared()
-            if choice == 1 {
-                stdoutWrite(L10n.Memory.discardConfirm)
-                let confirm = readLine()?.lowercased().trimmingCharacters(in: .whitespaces) ?? ""
-                guard confirm == "y" || confirm == "yes" else {
-                    print(L10n.Memory.aborted)
+            @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
+            public var environment: String?
+
+            public init() {}
+
+            public func run() throws {
+                let envName = environment
+                    ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                guard let envName else {
+                    throw ValidationError(L10n.Memory.noActiveEnv)
+                }
+
+                let store = EnvironmentStore.default
+
+                if envName == ReservedEnvironment.defaultName {
+                    var config = store.loadOriginConfig()
+                    if reset {
+                        config.memoryStoragePath = nil
+                        try store.saveOriginConfig(config)
+                        print(L10n.Memory.storageReset)
+                        return
+                    }
+                    guard let path else {
+                        print(L10n.Memory.storageStatus(config.memoryStoragePath))
+                        return
+                    }
+                    try applyStoragePath(path, currentEnvName: envName, store: store,
+                        getPath: { config.memoryStoragePath },
+                        setPath: { config.memoryStoragePath = $0; try store.saveOriginConfig(config) })
                     return
                 }
-            }
 
-            try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
+                var env = try store.load(named: envName)
 
-            env.isolateMemory = false
-            try store.save(env)
-            print(L10n.Memory.migrationDone(envName, false))
-        }
-    }
-
-    // MARK: - Storage
-
-    public struct StorageSubcommand: ParsableCommand {
-        public static let configuration = CommandConfiguration(
-            commandName: "storage",
-            abstract: L10n.Memory.storageAbstract
-        )
-
-        @Argument(help: ArgumentHelp(L10n.Memory.storagePathHelp))
-        public var path: String?
-
-        @Flag(name: .long, help: ArgumentHelp(L10n.Memory.storageResetHelp))
-        public var reset: Bool = false
-
-        @Option(name: .shortAndLong, help: "Environment name (defaults to ORRERY_ACTIVE_ENV)")
-        public var environment: String?
-
-        public init() {}
-
-        public func run() throws {
-            let envName = environment
-                ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-            guard let envName else {
-                throw ValidationError(L10n.Memory.noActiveEnv)
-            }
-
-            let store = EnvironmentStore.default
-
-            if envName == ReservedEnvironment.defaultName {
-                var config = store.loadOriginConfig()
                 if reset {
-                    config.memoryStoragePath = nil
-                    try store.saveOriginConfig(config)
+                    env.memoryStoragePath = nil
+                    try store.save(env)
                     print(L10n.Memory.storageReset)
                     return
                 }
+
                 guard let path else {
-                    print(L10n.Memory.storageStatus(config.memoryStoragePath))
+                    print(L10n.Memory.storageStatus(env.memoryStoragePath))
                     return
                 }
+
                 try applyStoragePath(path, currentEnvName: envName, store: store,
-                    getPath: { config.memoryStoragePath },
-                    setPath: { config.memoryStoragePath = $0; try store.saveOriginConfig(config) })
-                return
+                    getPath: { env.memoryStoragePath },
+                    setPath: { env.memoryStoragePath = $0; try store.save(env) })
             }
-
-            var env = try store.load(named: envName)
-
-            if reset {
-                env.memoryStoragePath = nil
-                try store.save(env)
-                print(L10n.Memory.storageReset)
-                return
-            }
-
-            guard let path else {
-                print(L10n.Memory.storageStatus(env.memoryStoragePath))
-                return
-            }
-
-            try applyStoragePath(path, currentEnvName: envName, store: store,
-                getPath: { env.memoryStoragePath },
-                setPath: { env.memoryStoragePath = $0; try store.save(env) })
         }
     }
+}
+
+private func currentEnvShareUserMemory(store: EnvironmentStore, envName: String?) -> Bool {
+    guard let envName else { return true }
+    if envName == ReservedEnvironment.defaultName {
+        return store.loadOriginConfig().shareUserMemory
+    }
+    return (try? store.load(named: envName))?.shareUserMemory ?? true
 }
 
 private func applyStoragePath(

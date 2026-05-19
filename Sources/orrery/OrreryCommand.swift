@@ -2,7 +2,7 @@ import ArgumentParser
 import OrreryCore
 
 public enum OrreryVersion {
-    public static let current = "2.7.0"
+    public static let current = "3.0.0"
 }
 
 /// Root CLI command. Lives in the executable target.
@@ -42,6 +42,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             SetCurrentCommand.self,
             CheckUpdateCommand.self,
             LinkMemoryCommand.self,
+            ReconcileUserMemoryHooksCommand.self,
             SyncCommand.self,
             OriginCommand.self,
             UninstallCommand.self,

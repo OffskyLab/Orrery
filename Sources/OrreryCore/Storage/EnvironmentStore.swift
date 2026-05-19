@@ -131,6 +131,10 @@ public struct EnvironmentStore: Sendable {
             env.tools.append(tool)
             try save(env)
         }
+
+        if env.shareUserMemory {
+            try? userMemoryHookInstaller(for: tool).install(at: toolDir)
+        }
     }
 
     /// Ensures shared session symlinks exist for a tool in the given environment.
@@ -263,6 +267,14 @@ public struct EnvironmentStore: Sendable {
         sharedMemoryDir(projectKey: projectKey).appendingPathComponent(envName)
     }
 
+    /// User-global memory dir: `~/.orrery/user/memory/`.
+    /// Independent of any env or projectKey — same path for every project, every env.
+    public func userMemoryDir() -> URL {
+        homeURL
+            .appendingPathComponent("user")
+            .appendingPathComponent("memory")
+    }
+
     /// Returns the memory directory URL for the given env (nil = default/shared).
     /// Priority: custom memoryStoragePath > isolateMemory > shared default.
     /// The directory is symlinked into Claude's auto-memory dir so `MEMORY.md` +
@@ -333,6 +345,46 @@ public struct EnvironmentStore: Sendable {
         try? fm.createDirectory(at: memoryDirURL.deletingLastPathComponent(),
                                 withIntermediateDirectories: true)
         try? fm.createSymbolicLink(at: memoryDirURL, withDestinationURL: targetDir)
+    }
+
+    /// Install the user-memory SessionStart hook into each tool config dir of this env,
+    /// but only if `env.shareUserMemory == true`. Idempotent.
+    public func ensureUserMemoryHooks(for envName: String) throws {
+        let share: Bool
+        let tools: [Tool]
+        if envName == ReservedEnvironment.defaultName {
+            share = loadOriginConfig().shareUserMemory
+            tools = Tool.allCases.filter { isOriginManaged(tool: $0) }
+        } else {
+            let env = try load(named: envName)
+            share = env.shareUserMemory
+            tools = env.tools
+        }
+        guard share else { return }
+        for tool in tools {
+            let dir = (envName == ReservedEnvironment.defaultName)
+                ? originConfigDir(tool: tool)
+                : toolConfigDir(tool: tool, environment: envName)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try userMemoryHookInstaller(for: tool).install(at: dir)
+        }
+    }
+
+    /// Remove the managed hook entry from each tool config dir of this env.
+    public func removeUserMemoryHooks(for envName: String) throws {
+        let tools: [Tool]
+        if envName == ReservedEnvironment.defaultName {
+            tools = Tool.allCases.filter { isOriginManaged(tool: $0) }
+        } else {
+            tools = (try load(named: envName)).tools
+        }
+        for tool in tools {
+            let dir = (envName == ReservedEnvironment.defaultName)
+                ? originConfigDir(tool: tool)
+                : toolConfigDir(tool: tool, environment: envName)
+            guard FileManager.default.fileExists(atPath: dir.path) else { continue }
+            try userMemoryHookInstaller(for: tool).remove(at: dir)
+        }
     }
 
     // MARK: - Origin management

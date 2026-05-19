@@ -21,6 +21,33 @@ struct OrreryEnvironmentTests {
         #expect(decoded.tools == [.claude, .codex])
         #expect(decoded.env["ANTHROPIC_API_KEY"] == "sk-test")
     }
+
+    @Test("OrreryEnvironment.shareUserMemory defaults to true")
+    func envShareUserMemoryDefault() {
+        let e = OrreryEnvironment(name: "x")
+        #expect(e.shareUserMemory == true)
+    }
+
+    @Test("OrreryEnvironment legacy JSON decodes shareUserMemory=true")
+    func envLegacyDecodeShareUserMemory() throws {
+        let json = """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "name": "x",
+          "description": "",
+          "createdAt": "2026-01-01T00:00:00Z",
+          "lastUsed": "2026-01-01T00:00:00Z",
+          "tools": [],
+          "env": {},
+          "isolatedSessionTools": [],
+          "isolateMemory": false
+        }
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let e = try decoder.decode(OrreryEnvironment.self, from: json)
+        #expect(e.shareUserMemory == true)
+    }
 }
 
 @Suite("Tool")
@@ -44,5 +71,24 @@ struct ToolTests {
     func initFromString() {
         #expect(Tool(rawValue: "claude") == .claude)
         #expect(Tool(rawValue: "unknown") == nil)
+    }
+}
+
+@Suite("OriginConfig")
+struct OriginConfigTests {
+
+    @Test("OriginConfig.shareUserMemory defaults to true")
+    func originConfigShareUserMemoryDefault() {
+        let c = OriginConfig()
+        #expect(c.shareUserMemory == true)
+    }
+
+    @Test("OriginConfig decodes legacy JSON without shareUserMemory as enabled")
+    func originConfigLegacyDecodeShareUserMemory() throws {
+        let json = """
+        { "isolateMemory": false, "isolatedSessionTools": [] }
+        """.data(using: .utf8)!
+        let c = try JSONDecoder().decode(OriginConfig.self, from: json)
+        #expect(c.shareUserMemory == true)
     }
 }

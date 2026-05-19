@@ -79,4 +79,19 @@ struct SetupCommandTests {
         #expect(content.contains("# orrery shell integration (lazy bootstrap)"))
         #expect(content.contains("export FOO=bar"))
     }
+
+    @Test("origin setup with shareUserMemory=false skips hook installation")
+    func originSkipsWhenDisabled() throws {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-origin-su-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let store = EnvironmentStore(homeURL: tmp)
+        try store.saveOriginConfig(OriginConfig(shareUserMemory: false))
+        // Pre-create a Claude config dir as if takeover had happened
+        let claudeDir = store.originConfigDir(tool: .claude)
+        try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        // ensureUserMemoryHooks reads OriginConfig.shareUserMemory and short-circuits
+        try store.ensureUserMemoryHooks(for: ReservedEnvironment.defaultName)
+        #expect(!ClaudeHookInstaller().isInstalled(at: claudeDir))
+    }
 }
