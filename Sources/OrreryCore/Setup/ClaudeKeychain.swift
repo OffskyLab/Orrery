@@ -38,6 +38,100 @@ public enum ClaudeKeychain {
         return dir.appendingPathComponent(".credentials.json")
     }
 
+    /// OAuth access token from the Claude credential store, used by anything
+    /// that hits an authenticated endpoint (`/api/oauth/usage` etc.). Returns
+    /// nil when the credential isn't present or doesn't expose the token.
+    /// Does NOT refresh expired tokens — see `validAccessToken(for:)`.
+    public static func accessToken(for configDir: String?) -> String? {
+        loadCredential(for: configDir)?.accessToken
+    }
+
+    /// Returns a non-expired access token, refreshing via the platform OAuth
+    /// endpoint when needed. The refreshed token is written back to the
+    /// credential store so subsequent calls (and concurrent claude-code
+    /// processes) see the new value. Returns nil only when the credential is
+    /// missing entirely; throws on refresh failure.
+    public static func validAccessToken(for configDir: String?) throws -> String? {
+        guard let credential = loadCredential(for: configDir) else { return nil }
+        // 60s skew — refresh slightly early so a request started just before
+        // expiry doesn't race the clock.
+        let nowMS = Int64(Date().timeIntervalSince1970 * 1000)
+        if credential.expiresAt > nowMS + 60_000 {
+            return credential.accessToken
+        }
+        let refreshed = try ClaudeOAuthRefresh.refresh(
+            refreshToken: credential.refreshToken,
+            scopes: credential.scopes
+        )
+        let updated = ClaudeCredential(
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            expiresAt: nowMS + Int64(refreshed.expiresIn) * 1000,
+            scopes: refreshed.scope.split(separator: " ").map(String.init),
+            extras: credential.extras
+        )
+        try saveCredential(updated, for: configDir)
+        return refreshed.accessToken
+    }
+
+    /// Parsed view of `claudeAiOauth` JSON — the subset orrery needs plus an
+    /// opaque bag of fields claude-code maintains (subscriptionType,
+    /// rateLimitTier, clientId, etc.) so we can write the JSON back without
+    /// dropping anything.
+    public struct ClaudeCredential {
+        public let accessToken: String
+        public let refreshToken: String
+        public let expiresAt: Int64
+        public let scopes: [String]
+        /// Other keys present in `claudeAiOauth` that we round-trip verbatim.
+        public let extras: [String: Any]
+
+        public init(accessToken: String, refreshToken: String, expiresAt: Int64,
+                    scopes: [String], extras: [String: Any]) {
+            self.accessToken = accessToken
+            self.refreshToken = refreshToken
+            self.expiresAt = expiresAt
+            self.scopes = scopes
+            self.extras = extras
+        }
+    }
+
+    public static func loadCredential(for configDir: String?) -> ClaudeCredential? {
+        guard let json = loadCredentialJSON(for: configDir),
+              let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var oauth = obj["claudeAiOauth"] as? [String: Any],
+              let access = oauth.removeValue(forKey: "accessToken") as? String,
+              !access.isEmpty,
+              let refresh = oauth.removeValue(forKey: "refreshToken") as? String,
+              let expiresAt = oauth.removeValue(forKey: "expiresAt") as? NSNumber
+        else { return nil }
+        let scopes = (oauth.removeValue(forKey: "scopes") as? [String]) ?? []
+        return ClaudeCredential(
+            accessToken: access,
+            refreshToken: refresh,
+            expiresAt: expiresAt.int64Value,
+            scopes: scopes,
+            extras: oauth
+        )
+    }
+
+    /// Write the credential back. Preserves the surrounding JSON shape
+    /// (`{"claudeAiOauth": {...}}`) and round-trips `extras`.
+    public static func saveCredential(_ credential: ClaudeCredential, for configDir: String?) throws {
+        var oauth: [String: Any] = credential.extras
+        oauth["accessToken"]  = credential.accessToken
+        oauth["refreshToken"] = credential.refreshToken
+        oauth["expiresAt"]    = credential.expiresAt
+        oauth["scopes"]       = credential.scopes
+        let envelope: [String: Any] = ["claudeAiOauth": oauth]
+        let data = try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys])
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw ClaudeUsageError.transport(URLError(.cannotDecodeContentData))
+        }
+        try writeCredentialJSON(json, for: configDir)
+    }
+
     /// Look up the Claude account email (from `.claude.json`) and plan (from the credential
     /// store) for a given config dir. Pass `nil` for origin (unset CLAUDE_CONFIG_DIR).
     public static func accountInfo(for configDir: String?) -> ToolAuth.AccountInfo {
@@ -93,6 +187,24 @@ public enum ClaudeKeychain {
         let url = credentialsFile(for: configDir)
         guard let data = try? Data(contentsOf: url) else { return nil }
         return String(data: data, encoding: .utf8)
+        #endif
+    }
+
+    /// Counterpart to `loadCredentialJSON`. macOS: writes via `security
+    /// add-generic-password -U` (-U upserts). Linux: writes the same JSON to
+    /// `.credentials.json` with mode 0600.
+    private static func writeCredentialJSON(_ json: String, for configDir: String?) throws {
+        #if os(macOS)
+        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        guard addPassword(service: service(for: configDir), account: account, password: json) else {
+            throw ClaudeUsageError.transport(URLError(.cannotWriteToFile))
+        }
+        #else
+        let url = credentialsFile(for: configDir)
+        let fm = FileManager.default
+        try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(json.utf8).write(to: url, options: .atomic)
+        try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         #endif
     }
 
