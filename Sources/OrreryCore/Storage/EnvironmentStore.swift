@@ -131,6 +131,10 @@ public struct EnvironmentStore: Sendable {
             env.tools.append(tool)
             try save(env)
         }
+
+        if env.shareUserMemory {
+            try? userMemoryHookInstaller(for: tool).install(at: toolDir)
+        }
     }
 
     /// Ensures shared session symlinks exist for a tool in the given environment.
