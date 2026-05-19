@@ -496,6 +496,38 @@
   },
   {
     "path": [
+      "Create",
+      "askShareUserMemory"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "shareUserMemoryYes"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "shareUserMemoryNo"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Create",
+      "userMemoryDisableHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
       "Current",
       "abstract"
     ],
