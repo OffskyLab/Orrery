@@ -286,55 +286,8 @@ public struct MCPServer {
         return EnvironmentStore.default.memoryDir(projectKey: projectKey, envName: envName)
     }
 
-    private static func sharedMemoryFile() -> URL {
-        sharedMemoryDirectory().appendingPathComponent("MEMORY.md")
-    }
-
-    private static func fragmentsDirectory() -> URL {
-        sharedMemoryDirectory().appendingPathComponent("fragments")
-    }
-
-    private static func peerName() -> String {
-        ProcessInfo.processInfo.hostName
-            .replacingOccurrences(of: ".local", with: "")
-    }
-
-    private static func writeFragment(content: String, action: String) {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        let timestamp = ISO8601DateFormatter().string(from: Date())
-        let peer = peerName()
-        let id = UUID().uuidString.prefix(8).lowercased()
-        let filename = "f-\(id)-\(peer).md"
-
-        let body = """
-        ---
-        id: f-\(id)
-        peer: \(peer)
-        timestamp: \(timestamp)
-        action: \(action)
-        ---
-
-        \(content)
-        """
-
-        do {
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-            try body.write(to: dir.appendingPathComponent(filename),
-                           atomically: true, encoding: .utf8)
-        } catch {
-            log("Failed to write fragment: \(error.localizedDescription)")
-        }
-    }
-
-    /// Remove all fragment files after consolidation.
-    private static func cleanupFragments() {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return }
-        for file in files where file.hasSuffix(".md") {
-            try? fm.removeItem(at: dir.appendingPathComponent(file))
-        }
+    private static func projectMemoryStore() -> MemoryStore {
+        MemoryStore(directory: sharedMemoryDirectory())
     }
 
     /// Ensure the Orrery memory directory is symlinked into Claude's auto-memory location
@@ -356,87 +309,41 @@ public struct MCPServer {
 
     private static func readMemory() -> [String: Any] {
         ensureClaudeSymlink()
-        let file = sharedMemoryFile()
-        var content = ""
-        if FileManager.default.fileExists(atPath: file.path),
-           let existing = try? String(contentsOf: file, encoding: .utf8) {
-            content = existing
-        }
+        let store = projectMemoryStore()
+        let result = (try? store.read()) ?? .init(memory: "", fragments: [])
 
-        // Check for pending fragments from other peers
-        let fragments = pendingFragments()
-        if !fragments.isEmpty {
+        var content = result.memory
+        if !result.fragments.isEmpty {
             content += "\n\n---\n## Pending Memory Fragments (from sync)\n"
             content += "The following fragments were synced from other machines and need to be integrated.\n"
             content += "Please consolidate them into the memory above, then write back with append=false.\n"
             content += "After integration, the fragment files will be cleaned up automatically.\n\n"
-            for fragment in fragments {
-                content += "### \(fragment.filename)\n"
-                content += fragment.content + "\n\n"
+            for f in result.fragments {
+                content += "### \(f.filename)\n"
+                content += f.content + "\n\n"
             }
         }
 
         if content.isEmpty {
             return [
-                "content": [
-                    ["type": "text", "text": "(no shared memory yet)"]
-                ],
+                "content": [["type": "text", "text": "(no shared memory yet)"]],
                 "isError": false
             ]
         }
-
         return [
-            "content": [
-                ["type": "text", "text": content]
-            ],
+            "content": [["type": "text", "text": content]],
             "isError": false
         ]
     }
 
-    private struct Fragment {
-        let filename: String
-        let content: String
-    }
-
-    private static func pendingFragments() -> [Fragment] {
-        let dir = fragmentsDirectory()
-        let fm = FileManager.default
-        guard fm.fileExists(atPath: dir.path) else { return [] }
-        guard let files = try? fm.contentsOfDirectory(atPath: dir.path) else { return [] }
-
-        return files
-            .filter { $0.hasSuffix(".md") }
-            .sorted()
-            .compactMap { filename -> Fragment? in
-                let path = dir.appendingPathComponent(filename)
-                guard let content = try? String(contentsOf: path, encoding: .utf8) else { return nil }
-                return Fragment(filename: filename, content: content)
-            }
-    }
-
     private static func writeMemory(content: String, append: Bool) -> [String: Any] {
         ensureClaudeSymlink()
-        let file = sharedMemoryFile()
-        let fm = FileManager.default
-        let dir = file.deletingLastPathComponent()
+        let store = projectMemoryStore()
         do {
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-
-            if append && fm.fileExists(atPath: file.path) {
-                let existing = try String(contentsOf: file, encoding: .utf8)
-                try (existing + "\n" + content).write(to: file, atomically: true, encoding: .utf8)
-            } else {
-                try content.write(to: file, atomically: true, encoding: .utf8)
-                // Overwrite means consolidation — clean up integrated fragments
-                cleanupFragments()
-            }
-
-            writeFragment(content: content, action: append ? "append" : "overwrite")
-
+            try store.write(content: content, append: append)
+            let path = store.directory.appendingPathComponent("MEMORY.md").path
             return [
-                "content": [
-                    ["type": "text", "text": "Memory updated: \(file.path)"]
-                ],
+                "content": [["type": "text", "text": "Memory updated: \(path)"]],
                 "isError": false
             ]
         } catch {
