@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.0.0] - 2026-05-19
+## v3.0.0
 
 ### Added
 - User-level memory layer at `~/.orrery/user/memory/`. Cross-project, cross-env
