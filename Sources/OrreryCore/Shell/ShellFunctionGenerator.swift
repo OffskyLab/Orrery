@@ -41,12 +41,14 @@ public struct ShellFunctionGenerator {
               if [ "$2" = "origin" ]; then
                 unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
                 export ORRERY_ACTIVE_ENV="origin"
+                command orrery-bin _reconcile-user-memory-hooks 2>/dev/null || true
                 command orrery-bin _set-current origin 2>/dev/null || true
               else
                 local exports
                 exports=$(command orrery-bin _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
                 eval "$exports"
                 export ORRERY_ACTIVE_ENV="$2"
+                command orrery-bin _reconcile-user-memory-hooks 2>/dev/null || true
                 command orrery-bin _set-current "$2" 2>/dev/null || true
                 # Background quota refresh so `orrery list` shows fresh data
                 # next time. Double subshell hides the job notice from
@@ -215,6 +217,8 @@ public struct ShellFunctionGenerator {
               orrery use "$env_name" >/dev/null 2>&1 || true
             fi
           fi
+          # Reconcile user-memory SessionStart hooks for the active env.
+          command orrery-bin _reconcile-user-memory-hooks 2>/dev/null || true
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
           command orrery-bin _link-memory 2>/dev/null || true
         }

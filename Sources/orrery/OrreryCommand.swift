@@ -42,6 +42,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             SetCurrentCommand.self,
             CheckUpdateCommand.self,
             LinkMemoryCommand.self,
+            ReconcileUserMemoryHooksCommand.self,
             SyncCommand.self,
             OriginCommand.self,
             UninstallCommand.self,
