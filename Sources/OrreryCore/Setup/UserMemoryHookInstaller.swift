@@ -121,3 +121,38 @@ public struct ClaudeHookInstaller: UserMemoryHookInstaller {
         JSONHookEditor(settingsFile: configDir.appendingPathComponent("settings.json")).isInstalled()
     }
 }
+
+public struct CodexHookInstaller: UserMemoryHookInstaller {
+    public init() {}
+    public func install(at configDir: URL) throws {
+        try JSONHookEditor(settingsFile: configDir.appendingPathComponent("hooks.json")).install()
+    }
+    public func remove(at configDir: URL) throws {
+        try JSONHookEditor(settingsFile: configDir.appendingPathComponent("hooks.json")).remove()
+    }
+    public func isInstalled(at configDir: URL) -> Bool {
+        JSONHookEditor(settingsFile: configDir.appendingPathComponent("hooks.json")).isInstalled()
+    }
+}
+
+public struct GeminiHookInstaller: UserMemoryHookInstaller {
+    public init() {}
+    public func install(at configDir: URL) throws {
+        try JSONHookEditor(settingsFile: configDir.appendingPathComponent("settings.json")).install()
+    }
+    public func remove(at configDir: URL) throws {
+        try JSONHookEditor(settingsFile: configDir.appendingPathComponent("settings.json")).remove()
+    }
+    public func isInstalled(at configDir: URL) -> Bool {
+        JSONHookEditor(settingsFile: configDir.appendingPathComponent("settings.json")).isInstalled()
+    }
+}
+
+/// Returns the installer for `tool`. Add new tools here as they gain SessionStart support.
+public func userMemoryHookInstaller(for tool: Tool) -> UserMemoryHookInstaller {
+    switch tool {
+    case .claude:  return ClaudeHookInstaller()
+    case .codex:   return CodexHookInstaller()
+    case .gemini:  return GeminiHookInstaller()
+    }
+}
