@@ -17,6 +17,51 @@ public struct UserMemoryCommand: ParsableCommand {
 
     public init() {}
 
+    public func run() throws {
+        let store = EnvironmentStore.default
+        let dir = store.userMemoryDir()
+        let memoryFile = dir.appendingPathComponent("MEMORY.md")
+        let fm = FileManager.default
+        let exists = fm.fileExists(atPath: memoryFile.path)
+        let size = (try? fm.attributesOfItem(atPath: memoryFile.path)[.size] as? Int) ?? 0
+
+        let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        let enabled: Bool = {
+            guard let envName else { return true }
+            if envName == ReservedEnvironment.defaultName {
+                return store.loadOriginConfig().shareUserMemory
+            }
+            return (try? store.load(named: envName))?.shareUserMemory ?? true
+        }()
+
+        print("Path: \(dir.path)")
+        print("MEMORY.md exists: \(exists), size: \(size) bytes")
+        print("Enabled in this env: \(enabled)")
+        print("")
+
+        let selector = SingleSelect(
+            title: "User memory action:",
+            options: ["Info", "Enable in this env", "Disable in this env", "Export"],
+            selected: 0
+        )
+        switch selector.run() {
+        case 0:
+            var i = InfoSubcommand()
+            try i.run()
+        case 1:
+            var e = EnableSubcommand()
+            try e.run()
+        case 2:
+            var d = DisableSubcommand()
+            try d.run()
+        case 3:
+            var x = ExportSubcommand()
+            try x.run()
+        default:
+            break
+        }
+    }
+
     /// Pure helper used by tests and EmitSubcommand. Returns what would be printed
     /// to stdout by `orrery memory user emit`. Capped at 25_600 bytes.
     public static func emit(store: EnvironmentStore) throws -> String {
