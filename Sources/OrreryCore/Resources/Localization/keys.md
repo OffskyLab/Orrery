@@ -18,6 +18,9 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.addCreated` | Success after adding an account. `{tool}` = tool name; `{name}` = display name. |
 | `account.addEmptyName` | Validation error when an empty name is entered. |
 | `account.addNameHelp` | `--name` flag help text for `account add`. |
+| `account.flagClaudeHelp` | `--claude` flag help text for `account add` (and other account sub-commands). |
+| `account.flagCodexHelp` | `--codex` flag help text for `account add` (and other account sub-commands). |
+| `account.flagGeminiHelp` | `--gemini` flag help text for `account add` (and other account sub-commands). |
 | `account.addNamePrompt` | Interactive prompt asking the user to enter a display name. Trailing space is load-bearing. |
 | `account.addToolsTooMany` | Error when more than one of `--claude`, `--codex`, `--gemini` is given. Flag names are literal identifiers — do not translate. |
 | `account.listAbstract` | Sub-command help for `orrery account list`. |

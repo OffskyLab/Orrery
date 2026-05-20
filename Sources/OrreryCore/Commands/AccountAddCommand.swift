@@ -7,9 +7,9 @@ public struct AccountAddCommand: ParsableCommand {
         abstract: L10n.Account.addAbstract
     )
 
-    @Flag(name: .long) public var claude: Bool = false
-    @Flag(name: .long) public var codex: Bool = false
-    @Flag(name: .long) public var gemini: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagClaudeHelp)) public var claude: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagCodexHelp)) public var codex: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagGeminiHelp)) public var gemini: Bool = false
 
     @Option(name: .long, help: ArgumentHelp(L10n.Account.addNameHelp))
     public var name: String?
@@ -41,7 +41,7 @@ public struct AccountAddCommand: ParsableCommand {
     }
 
     /// --claude / --codex / --gemini 三選一，預設 .claude。多選則拋錯。
-    static func resolveTool(claude: Bool, codex: Bool, gemini: Bool) throws -> Tool {
+    internal static func resolveTool(claude: Bool, codex: Bool, gemini: Bool) throws -> Tool {
         let count = [claude, codex, gemini].filter { $0 }.count
         if count > 1 {
             throw ValidationError(L10n.Account.addToolsTooMany)
