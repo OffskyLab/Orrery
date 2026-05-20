@@ -74,4 +74,61 @@ struct FilesystemCredentialAdapterTests {
         let dest = try FileManager.default.destinationOfSymbolicLink(atPath: symlink.path)
         #expect(dest == newCreds.path)
     }
+
+    @Test("materialize throws when source credential is absent")
+    func throwsWhenSourceMissing() throws {
+        let account = Account(tool: .codex, displayName: "no-creds")
+        try accountStore.save(account)   // metadata only, no auth.json written
+
+        let targetDir = tmpDir.appendingPathComponent("target-missing")
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
+
+        let adapter = FilesystemCredentialAdapter(tool: .codex)
+        #expect(throws: FilesystemCredentialAdapter.Error.self) {
+            try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        }
+        // no dangling symlink left behind
+        let target = targetDir.appendingPathComponent("auth.json")
+        #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: target.path)) == nil)
+    }
+
+    @Test("materialize replaces a regular file at target")
+    func replacesRegularFile() throws {
+        let account = Account(tool: .codex, displayName: "rf")
+        try accountStore.save(account)
+        let creds = accountStore.accountDir(id: account.id, tool: .codex)
+            .appendingPathComponent("auth.json")
+        try "{}".data(using: .utf8)!.write(to: creds)
+
+        let targetDir = tmpDir.appendingPathComponent("target-regularfile")
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
+        // pre-existing regular file sitting where the symlink should go
+        let target = targetDir.appendingPathComponent("auth.json")
+        try "old-direct-write".data(using: .utf8)!.write(to: target)
+
+        let adapter = FilesystemCredentialAdapter(tool: .codex)
+        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+
+        let attrs = try FileManager.default.attributesOfItem(atPath: target.path)
+        #expect(attrs[.type] as? FileAttributeType == .typeSymbolicLink)
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: target.path) == creds.path)
+    }
+
+    @Test("materialize symlinks gemini oauth_creds.json")
+    func materializeGemini() throws {
+        let account = Account(tool: .gemini, displayName: "g")
+        try accountStore.save(account)
+        let creds = accountStore.accountDir(id: account.id, tool: .gemini)
+            .appendingPathComponent("oauth_creds.json")
+        try "{}".data(using: .utf8)!.write(to: creds)
+
+        let targetDir = tmpDir.appendingPathComponent("target-gemini")
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
+
+        let adapter = FilesystemCredentialAdapter(tool: .gemini)
+        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+
+        let target = targetDir.appendingPathComponent("oauth_creds.json")
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: target.path) == creds.path)
+    }
 }
