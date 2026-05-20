@@ -9,6 +9,7 @@ public struct AccountCommand: ParsableCommand {
             AccountListCommand.self,
             AccountShowCommand.self,
             AccountUseCommand.self,
+            AccountRemoveCommand.self,
         ]
     )
 

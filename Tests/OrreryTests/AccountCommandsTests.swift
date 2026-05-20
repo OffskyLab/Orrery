@@ -298,4 +298,55 @@ struct AccountCommandsAllTests {
             }
         }
     }
+
+    // MARK: AccountRemoveCommand
+
+    @Suite("AccountRemoveCommand")
+    struct AccountRemoveTests {
+        init() {}
+
+        @Test("removesUnreferenced: removes account that is not pinned to any env")
+        func removesUnreferenced() throws {
+            try withIsolatedHome {
+                let acct = Account(tool: .claude, displayName: "to-delete")
+                try AccountStore.default.save(acct)
+
+                let cmd = try AccountRemoveCommand.parse(["--name", "to-delete"])
+                try cmd.run()
+
+                let accounts = try AccountStore.default.list(tool: .claude)
+                #expect(!accounts.contains { $0.displayName == "to-delete" })
+            }
+        }
+
+        @Test("blocksWhenReferenced: throws ValidationError when account is pinned to an env")
+        func blocksWhenReferenced() throws {
+            try withIsolatedHome {
+                let acct = Account(tool: .claude, displayName: "in-use")
+                try AccountStore.default.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginConfig()
+                origin.setAccount(acct.id, for: .claude)
+                try EnvironmentStore.default.saveOriginConfig(origin)
+
+                let cmd = try AccountRemoveCommand.parse(["--name", "in-use"])
+                #expect(throws: ValidationError.self) {
+                    try cmd.run()
+                }
+
+                let accounts = try AccountStore.default.list(tool: .claude)
+                #expect(accounts.contains { $0.displayName == "in-use" })
+            }
+        }
+
+        @Test("notFound: throws ValidationError when account does not exist")
+        func notFound() throws {
+            try withIsolatedHome {
+                let cmd = try AccountRemoveCommand.parse(["--name", "ghost"])
+                #expect(throws: ValidationError.self) {
+                    try cmd.run()
+                }
+            }
+        }
+    }
 }
