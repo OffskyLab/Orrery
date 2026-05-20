@@ -148,6 +148,19 @@ public enum ClaudeKeychain {
         )
     }
 
+    /// 刪除指定 service 的 Keychain item。回傳成功與否（best effort）。
+    @discardableResult
+    public static func deleteKeychainItem(service: String) -> Bool {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = ["delete-generic-password", "-s", service, "-a", currentUserAccount]
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        do { try proc.run() } catch { return false }
+        proc.waitUntilExit()
+        return proc.terminationStatus == 0
+    }
+
     /// 讀回某 service 的 password（測試 / 內部用）。
     static func password(forService service: String) -> String? {
         findPassword(service: service, account: currentUserAccount)
