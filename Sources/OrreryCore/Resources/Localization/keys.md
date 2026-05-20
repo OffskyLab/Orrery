@@ -9,6 +9,33 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 
 ---
 
+## account — `orrery account` command family
+
+| Key | Context |
+| --- | --- |
+| `account.abstract` | Root command help for `orrery account`. |
+| `account.addAbstract` | Sub-command help for `orrery account add`. |
+| `account.addCreated` | Success after adding an account. `{tool}` = tool name; `{name}` = display name. |
+| `account.addEmptyName` | Validation error when an empty name is entered. |
+| `account.addNameHelp` | `--name` flag help text for `account add`. |
+| `account.addNamePrompt` | Interactive prompt asking the user to enter a display name. Trailing space is load-bearing. |
+| `account.addToolsTooMany` | Error when more than one of `--claude`, `--codex`, `--gemini` is given. Flag names are literal identifiers — do not translate. |
+| `account.listAbstract` | Sub-command help for `orrery account list`. |
+| `account.listEmpty` | Shown when no accounts exist yet. Command `orrery account add` is literal. |
+| `account.listRow` | One row in the account list. `{name}` = display name; `{id}` = account UUID. |
+| `account.listToolHeader` | Section header per tool in the list output. `{tool}` = tool name. |
+| `account.removeAbstract` | Sub-command help for `orrery account remove`. |
+| `account.removeNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. |
+| `account.removeRemoved` | Success after removing an account. `{tool}` = tool name; `{name}` = display name. |
+| `account.removeStillReferenced` | Error when the account is still pinned by one or more envs. `{name}` = display name; `{envs}` = comma-joined env names. |
+| `account.showAbstract` | Sub-command help for `orrery account show`. |
+| `account.showActiveEnv` | Header line showing the active env name. `{name}` = env name. |
+| `account.showRowPinned` | One row when a tool has an account pinned. `{tool}` = tool name; `{name}` = account display name. |
+| `account.showRowUnpinned` | One row when a tool has no account pinned. `{tool}` = tool name. |
+| `account.useAbstract` | Sub-command help for `orrery account use`. |
+| `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
+| `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = env name. |
+
 ## create — `orrery create` wizard
 
 | Key | Context |
