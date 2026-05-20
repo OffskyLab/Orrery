@@ -152,9 +152,13 @@ public enum ClaudeKeychain {
     static func password(forService service: String) -> String? {
         findPassword(service: service, account: currentUserAccount)
     }
-    #endif
 
-    #if os(macOS)
+    /// 把 password 寫入指定 service（覆蓋現有）。回傳成功與否。
+    @discardableResult
+    static func setPassword(_ password: String, service: String) -> Bool {
+        addPassword(service: service, account: currentUserAccount, password: password)
+    }
+
     private static func findPassword(service: String, account: String) -> String? {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
