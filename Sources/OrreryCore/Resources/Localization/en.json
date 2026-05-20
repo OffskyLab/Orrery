@@ -337,6 +337,7 @@
   "thirdparty.listItem": "  {id}  {shortRef}  installed {date}",
   "thirdparty.availableAbstract": "List third-party add-ons shipped with orrery",
   "phantom.triggerAbstract": "Internal: signal phantom-supervised claude to relaunch under a different env (called by /orrery:phantom)",
+  "phantom.accountTriggerAbstract": "Switch a tool's account within the current phantom session.",
   "phantom.notUnderPhantom": "Not running under phantom supervision. Launch claude with 'orrery run claude' (phantom is on by default) to enable in-place env switching.",
   "phantom.claudeNotFound": "Could not find a running claude process under the phantom supervisor.",
   "phantom.signalFailed": "Failed to signal claude to exit. The relaunch was aborted.",
