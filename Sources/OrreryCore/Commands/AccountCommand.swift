@@ -8,6 +8,7 @@ public struct AccountCommand: ParsableCommand {
             AccountAddCommand.self,
             AccountListCommand.self,
             AccountShowCommand.self,
+            AccountUseCommand.self,
         ]
     )
 

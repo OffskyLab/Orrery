@@ -211,4 +211,77 @@ struct AccountCommandsAllTests {
             }
         }
     }
+
+    // MARK: AccountUseCommand
+
+    @Suite("AccountUseCommand")
+    struct AccountUseTests {
+        init() {}
+
+        @Test("pinsToOrigin: pins claude account to origin when ORRERY_ACTIVE_ENV is unset")
+        func pinsToOrigin() throws {
+            try withIsolatedHome {
+                // Ensure ORRERY_ACTIVE_ENV is unset
+                let savedEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                unsetenv("ORRERY_ACTIVE_ENV")
+                defer {
+                    if let saved = savedEnv { setenv("ORRERY_ACTIVE_ENV", saved, 1) }
+                }
+
+                let acct = Account(tool: .claude, displayName: "work")
+                try AccountStore.default.save(acct)
+
+                let cmd = try AccountUseCommand.parse(["--name", "work"])
+                try cmd.run()
+
+                let pinned = EnvironmentStore.default.loadOriginConfig().account(for: .claude)
+                #expect(pinned == acct.id)
+            }
+        }
+
+        @Test("pinsToNamedEnv: pins account to named env without touching origin")
+        func pinsToNamedEnv() throws {
+            try withIsolatedHome {
+                let envStore = EnvironmentStore.default
+
+                // Create the named env
+                try envStore.save(OrreryEnvironment(name: "work-env"))
+
+                // Create the account
+                let acct = Account(tool: .claude, displayName: "personal")
+                try AccountStore.default.save(acct)
+
+                // Set ORRERY_ACTIVE_ENV to the named env
+                setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
+                defer { unsetenv("ORRERY_ACTIVE_ENV") }
+
+                let cmd = try AccountUseCommand.parse(["--name", "personal"])
+                try cmd.run()
+
+                // Named env should have the pin
+                let loadedEnv = try envStore.load(named: "work-env")
+                #expect(loadedEnv.account(for: .claude) == acct.id)
+
+                // Origin should be untouched
+                let originPin = envStore.loadOriginConfig().account(for: .claude)
+                #expect(originPin == nil)
+            }
+        }
+
+        @Test("notFound: throws when account does not exist")
+        func notFound() throws {
+            try withIsolatedHome {
+                let savedEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+                unsetenv("ORRERY_ACTIVE_ENV")
+                defer {
+                    if let saved = savedEnv { setenv("ORRERY_ACTIVE_ENV", saved, 1) }
+                }
+
+                let cmd = try AccountUseCommand.parse(["--name", "ghost"])
+                #expect(throws: (any Error).self) {
+                    try cmd.run()
+                }
+            }
+        }
+    }
 }
