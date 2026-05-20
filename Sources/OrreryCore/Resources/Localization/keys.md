@@ -40,6 +40,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.useAbstract` | Sub-command help for `orrery account use`. |
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
 | `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = env name. |
+| `account.loginManualHint` | Hint shown before launching a tool that has no scriptable login subcommand (e.g. Claude) so the user can complete login interactively. `{tool}` = tool name; `{dir}` = temporary staging config dir path. `/login` is a literal command — do not translate. |
 
 ## create — `orrery create` wizard
 
