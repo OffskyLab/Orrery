@@ -132,3 +132,107 @@ struct FilesystemCredentialAdapterTests {
         #expect(try FileManager.default.destinationOfSymbolicLink(atPath: target.path) == creds.path)
     }
 }
+
+@Suite("CredentialAdapter factory")
+struct CredentialAdapterFactoryTests {
+    @Test("returns FilesystemCredentialAdapter for codex")
+    func codexUsesFilesystem() {
+        #expect(CredentialAdapters.adapter(for: .codex) is FilesystemCredentialAdapter)
+    }
+
+    @Test("returns FilesystemCredentialAdapter for gemini")
+    func geminiUsesFilesystem() {
+        #expect(CredentialAdapters.adapter(for: .gemini) is FilesystemCredentialAdapter)
+    }
+
+    #if os(macOS)
+    @Test("returns KeychainCredentialAdapter for claude on macOS")
+    func claudeUsesKeychain() {
+        #expect(CredentialAdapters.adapter(for: .claude) is KeychainCredentialAdapter)
+    }
+    #else
+    @Test("returns FilesystemCredentialAdapter for claude on non-macOS")
+    func claudeUsesFilesystem() {
+        #expect(CredentialAdapters.adapter(for: .claude) is FilesystemCredentialAdapter)
+    }
+    #endif
+}
+
+#if os(macOS)
+@Suite("KeychainCredentialAdapter (macOS)", .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil))
+struct KeychainCredentialAdapterTests {
+    var tmpDir: URL!
+    var accountStore: AccountStore!
+
+    init() throws {
+        tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-kc-adapter-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        accountStore = AccountStore(homeURL: tmpDir)
+    }
+
+    @Test("materialize copies token to the config-dir-derived service")
+    func materializeCopies() throws {
+        let accountID = UUID().uuidString
+        let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+        let account = Account(id: accountID, tool: .claude, displayName: "test-mac",
+                              keychainItem: orreryService)
+        try accountStore.save(account)
+
+        #expect(ClaudeKeychain.storePassword("dummy-token", forOrreryAccount: accountID))
+
+        let targetConfigDir = tmpDir.appendingPathComponent("claude-config")
+        let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
+        defer {
+            _ = KeychainTestSupport.delete(service: orreryService)
+            _ = KeychainTestSupport.delete(service: targetService)
+        }
+
+        let adapter = KeychainCredentialAdapter()
+        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
+
+        #expect(ClaudeKeychain.password(forService: targetService) == "dummy-token")
+    }
+
+    @Test("materialize throws when orrery keychain item is absent")
+    func throwsWhenAbsent() throws {
+        let accountID = UUID().uuidString
+        let account = Account(id: accountID, tool: .claude, displayName: "ghost",
+                              keychainItem: ClaudeKeychain.serviceName(forOrreryAccount: accountID))
+        try accountStore.save(account)
+        let adapter = KeychainCredentialAdapter()
+        #expect(throws: KeychainCredentialAdapter.Error.self) {
+            try adapter.materialize(account: account,
+                                    targetConfigDir: tmpDir.appendingPathComponent("c"),
+                                    accountStore: accountStore)
+        }
+    }
+
+    @Test("materialize throws for non-claude tool")
+    func throwsWrongTool() throws {
+        let account = Account(tool: .codex, displayName: "x")
+        try accountStore.save(account)
+        let adapter = KeychainCredentialAdapter()
+        #expect(throws: KeychainCredentialAdapter.Error.self) {
+            try adapter.materialize(account: account,
+                                    targetConfigDir: tmpDir.appendingPathComponent("c"),
+                                    accountStore: accountStore)
+        }
+    }
+}
+
+enum KeychainTestSupport {
+    @discardableResult
+    static func delete(service: String) -> Int32 {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        proc.arguments = ["delete-generic-password", "-s", service, "-a", account]
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        try? proc.run()
+        proc.waitUntilExit()
+        return proc.terminationStatus
+    }
+}
+#endif
