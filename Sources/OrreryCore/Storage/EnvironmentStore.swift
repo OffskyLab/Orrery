@@ -13,14 +13,7 @@ public struct EnvironmentStore: Sendable {
     }
 
     public static var `default`: EnvironmentStore {
-        let home: URL
-        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
-            home = URL(fileURLWithPath: custom)
-        } else {
-            home = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".orrery")
-        }
-        return EnvironmentStore(homeURL: home)
+        EnvironmentStore(homeURL: orreryHomeURL())
     }
 
     private var envsURL: URL { homeURL.appendingPathComponent("envs") }
