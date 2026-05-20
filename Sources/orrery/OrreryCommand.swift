@@ -1,10 +1,6 @@
 import ArgumentParser
 import OrreryCore
 
-public enum OrreryVersion {
-    public static let current = "2.7.0"
-}
-
 /// Root CLI command. Lives in the executable target.
 ///
 /// `orrery magi` / `spec` / `spec-run` / `_spec-finalize` are intercepted

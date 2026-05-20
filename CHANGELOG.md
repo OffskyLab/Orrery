@@ -1,5 +1,42 @@
 # Changelog
 
+## v2.8.0 - 2026-05-20
+
+### Added
+
+- **Accounts pool — switch AI tool accounts without managing environments.**
+  Tool credentials (Claude / Codex / Gemini) now live in a shared pool at
+  `~/.orrery/accounts/<tool>/<id>/`, decoupled from environments. New users who
+  only need to rotate between accounts no longer have to learn the environment
+  model.
+- **`orrery account` command family:**
+  - `orrery account add [--claude|--codex|--gemini] --name <name>` — register a
+    new account and run the tool's login flow.
+  - `orrery account list [--claude|--codex|--gemini]` — list accounts in the pool.
+  - `orrery account show` — show which account each tool has pinned in the
+    active environment.
+  - `orrery account use [--tool] --name <name>` — pin an account to the active
+    environment (origin by default).
+  - `orrery account remove [--tool] --name <name>` — remove an account; blocked
+    if any environment still references it.
+- **`/orrery:phantom account <tool> <name>`** — switch a tool's account
+  mid-conversation inside a phantom-supervised Claude session, without leaving
+  the current environment.
+
+### Changed
+
+- Environments now reference accounts by id (`OrreryEnvironment.accounts`)
+  rather than owning credentials directly. `orrery run` materializes the pinned
+  account's credentials for the tool just before launch.
+
+### Migration
+
+- On first run, orrery automatically migrates existing per-environment
+  credentials into the accounts pool (deduplicating shared credentials). A full
+  backup of `~/.orrery/` is taken first, to `~/.orrery-backup-<timestamp>/`.
+- If you run phantom-supervised Claude sessions, exit them before the first run
+  of v2.8.0 so the migration is not disturbed.
+
 ## v2.7.0 - 2026-04-29
 
 ### Architecture
