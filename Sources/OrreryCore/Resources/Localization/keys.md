@@ -35,6 +35,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.showActiveEnv` | Header line showing the active env name. `{name}` = env name. |
 | `account.showRowPinned` | One row when a tool has an account pinned. `{tool}` = tool name; `{name}` = account display name. |
 | `account.showRowUnpinned` | One row when a tool has no account pinned. `{tool}` = tool name. |
+| `account.nameSelectorHelp` | `--name` option help text shared by `account use` (and `account remove`). |
 | `account.useAbstract` | Sub-command help for `orrery account use`. |
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
 | `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = env name. |

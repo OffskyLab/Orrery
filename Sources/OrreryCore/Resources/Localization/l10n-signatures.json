@@ -11,6 +11,7 @@
   },
   { "path": ["Account", "addEmptyName"], "kind": "var", "parameters": [] },
   { "path": ["Account", "addNameHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "nameSelectorHelp"], "kind": "var", "parameters": [] },
   { "path": ["Account", "flagClaudeHelp"], "kind": "var", "parameters": [] },
   { "path": ["Account", "flagCodexHelp"], "kind": "var", "parameters": [] },
   { "path": ["Account", "flagGeminiHelp"], "kind": "var", "parameters": [] },
