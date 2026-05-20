@@ -48,7 +48,9 @@ public struct OriginConfig: Codable, Sendable {
         try c.encode(isolateMemory, forKey: .isolateMemory)
         try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
         try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
-        try c.encode(accounts, forKey: .accounts)
+        if !accounts.isEmpty {
+            try c.encode(accounts, forKey: .accounts)
+        }
     }
 }
 
@@ -147,11 +149,29 @@ public struct OrreryEnvironment: Codable, Sendable {
         try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
         try c.encode(isolateMemory, forKey: .isolateMemory)
         try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
-        try c.encode(accounts, forKey: .accounts)
+        if !accounts.isEmpty {
+            try c.encode(accounts, forKey: .accounts)
+        }
     }
 }
 
 extension OrreryEnvironment {
+    /// 取得指定工具釘住的 account id。
+    public func account(for tool: Tool) -> AccountID? {
+        accounts[tool.rawValue]
+    }
+
+    /// 設定（或以 nil 清除）指定工具釘住的 account。
+    public mutating func setAccount(_ id: AccountID?, for tool: Tool) {
+        if let id {
+            accounts[tool.rawValue] = id
+        } else {
+            accounts.removeValue(forKey: tool.rawValue)
+        }
+    }
+}
+
+extension OriginConfig {
     /// 取得指定工具釘住的 account id。
     public func account(for tool: Tool) -> AccountID? {
         accounts[tool.rawValue]

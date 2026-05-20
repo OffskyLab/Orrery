@@ -163,4 +163,15 @@ struct EnvironmentAccountsTests {
         let refs = try store.envsReferencing(accountID: "origin-acct", tool: .claude)
         #expect(refs.contains(ReservedEnvironment.defaultName))
     }
+
+    @Test("empty accounts is omitted from env.json")
+    func emptyAccountsOmitted() throws {
+        let env = OrreryEnvironment(name: "noacct")
+        try store.save(env)
+        let envsDir = tmpDir.appendingPathComponent("envs")
+        let idDir = try FileManager.default.contentsOfDirectory(atPath: envsDir.path).first!
+        let jsonURL = envsDir.appendingPathComponent(idDir).appendingPathComponent("env.json")
+        let raw = try String(contentsOf: jsonURL, encoding: .utf8)
+        #expect(!raw.contains("\"accounts\""))
+    }
 }
