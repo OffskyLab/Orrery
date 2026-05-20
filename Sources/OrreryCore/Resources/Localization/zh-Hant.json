@@ -21,6 +21,7 @@
   "account.showActiveEnv": "目前 env：{name}",
   "account.showRowPinned": "  {tool}：{name}",
   "account.showRowUnpinned": "  {tool}：（尚未釘住帳號）",
+  "account.nameSelectorHelp": "帳號名稱。",
   "account.useAbstract": "把帳號釘到目前 env（預設 origin）。",
   "account.useNotFound": "{tool} 中找不到帳號「{name}」。執行 'orrery account list --{tool}' 查看可用清單。",
   "account.usePinned": "已將 {tool} 帳號「{name}」釘到 env「{env}」。",

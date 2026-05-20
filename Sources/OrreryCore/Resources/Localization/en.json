@@ -21,6 +21,7 @@
   "account.showActiveEnv": "Active env: {name}",
   "account.showRowPinned": "  {tool}: {name}",
   "account.showRowUnpinned": "  {tool}: (no account pinned)",
+  "account.nameSelectorHelp": "Name of the account.",
   "account.useAbstract": "Pin an account to the active env (origin by default).",
   "account.useNotFound": "No account '{name}' for {tool}. Run 'orrery account list --{tool}' to see options.",
   "account.usePinned": "Pinned {tool} account '{name}' to env '{env}'.",
