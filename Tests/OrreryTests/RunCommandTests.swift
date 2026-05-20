@@ -2,27 +2,6 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-// MARK: - Isolation helpers (mirrored from AccountCommandsTests)
-
-private func makeRunCmdTempHome() throws -> URL {
-    let tmp = FileManager.default.temporaryDirectory
-        .appendingPathComponent("orrery-run-cmd-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
-    return tmp
-}
-
-/// Run body with a fresh isolated ORRERY_HOME directory, cleaning up afterwards.
-private func withIsolatedHome(_ body: () throws -> Void) throws {
-    let tmpDir = try makeRunCmdTempHome()
-    let saved = ProcessInfo.processInfo.environment["ORRERY_HOME"]
-    setenv("ORRERY_HOME", tmpDir.path, 1)
-    defer {
-        if let saved { setenv("ORRERY_HOME", saved, 1) } else { unsetenv("ORRERY_HOME") }
-        try? FileManager.default.removeItem(at: tmpDir)
-    }
-    try body()
-}
-
 // MARK: - RunCommand.prepareMaterialize tests
 
 @Suite("RunCommand.prepareMaterialize", .serialized)
@@ -83,6 +62,23 @@ struct RunCommandPrepareMaterializeTests {
             // prepareMaterialize must throw because the account load fails
             #expect(throws: (any Error).self) {
                 try RunCommand.prepareMaterialize(tool: .codex, envName: "work")
+            }
+        }
+    }
+
+    // NOTE: The origin happy-path (materializing a real credential) is intentionally
+    // NOT tested here. The origin target is the user's real environment (~/.codex,
+    // real Keychain entries) and must never be mutated or read by automated tests.
+
+    @Test("origin: throws when origin pins a missing account")
+    func originPinnedAccountMissingThrows() throws {
+        try withIsolatedHome {
+            var origin = EnvironmentStore.default.loadOriginConfig()
+            origin.setAccount("ghost-origin-id", for: .codex)
+            try EnvironmentStore.default.saveOriginConfig(origin)
+
+            #expect(throws: (any Error).self) {
+                try RunCommand.prepareMaterialize(tool: .codex, envName: nil)
             }
         }
     }
