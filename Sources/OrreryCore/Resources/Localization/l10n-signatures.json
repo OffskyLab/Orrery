@@ -2295,6 +2295,7 @@
   },
   { "path": ["Thirdparty", "availableAbstract"], "kind": "var", "parameters": [] },
   { "path": ["Phantom", "triggerAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "accountTriggerAbstract"], "kind": "var", "parameters": [] },
   { "path": ["Phantom", "notUnderPhantom"], "kind": "var", "parameters": [] },
   { "path": ["Phantom", "claudeNotFound"], "kind": "var", "parameters": [] },
   { "path": ["Phantom", "signalFailed"], "kind": "var", "parameters": [] },
