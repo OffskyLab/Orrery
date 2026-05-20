@@ -38,7 +38,12 @@ public struct AccountAddCommand: ParsableCommand {
         try AccountStore.default.save(account)
 
         if !skipLogin {
-            try AccountLoginFlow.run(account: account)
+            do {
+                try AccountLoginFlow.run(account: account)
+            } catch {
+                try? AccountStore.default.delete(id: account.id, tool: account.tool)
+                throw error
+            }
         }
 
         print(L10n.Account.addCreated(tool.rawValue, displayName))

@@ -58,7 +58,7 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         switch self {
         case .claude: return nil
         case .codex:  return ["codex", "login"]
-        case .gemini: return nil
+        case .gemini: return ["gemini", "auth", "login"]
         }
     }
 
