@@ -49,6 +49,11 @@ public struct RunCommand: ParsableCommand {
             }
         }
 
+        // Materialize the pinned account's credentials for the tool being launched.
+        if let tool = Tool(rawValue: command[0]) {
+            try Self.prepareMaterialize(tool: tool, envName: envName)
+        }
+
         // Run the command
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -85,5 +90,36 @@ public struct RunCommand: ParsableCommand {
         // If execvp returns, it failed
         perror("execvp")
         throw ExitCode.failure
+    }
+}
+
+extension RunCommand {
+    /// 啟動工具前：依當前 env / origin 的 pin 把憑證 materialize 到工具會讀的位置。
+    /// envName == nil 或 "origin" 視為 origin。
+    static func prepareMaterialize(tool: Tool, envName: String?) throws {
+        let envStore = EnvironmentStore.default
+        let acctStore = AccountStore.default
+
+        let pinnedID: AccountID?
+        let configDir: String?
+        if let envName, envName != ReservedEnvironment.defaultName {
+            let env = try envStore.load(named: envName)
+            pinnedID = env.account(for: tool)
+            configDir = envStore.toolConfigDir(tool: tool, environment: envName).path
+        } else {
+            // origin: 工具執行時 config-dir env var 是 unset 的，
+            // 所以傳 nil — adapter 會對應到工具預設位置 / 預設 Keychain service。
+            pinnedID = envStore.loadOriginConfig().account(for: tool)
+            configDir = nil
+        }
+
+        guard let id = pinnedID else {
+            // 沒釘 account — 不阻擋啟動，讓工具自己處理「未登入」。
+            return
+        }
+
+        let account = try acctStore.load(id: id, tool: tool)
+        try CredentialAdapters.adapter(for: tool).materialize(
+            account: account, configDir: configDir, accountStore: acctStore)
     }
 }
