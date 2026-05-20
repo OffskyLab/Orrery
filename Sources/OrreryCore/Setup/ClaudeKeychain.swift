@@ -112,6 +112,48 @@ public enum ClaudeKeychain {
         return oauthAccount["emailAddress"] as? String
     }
 
+    // MARK: - orrery account Keychain helpers (macOS)
+
+    #if os(macOS)
+    /// orrery account 專屬的 Keychain service name。
+    public static func serviceName(forOrreryAccount accountID: String) -> String {
+        "Claude Code-orrery-\(accountID)"
+    }
+
+    private static var currentUserAccount: String {
+        ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+    }
+
+    /// 該 service 下是否存在 Keychain item（有 password 即視為存在）。
+    public static func keychainItemExists(service: String) -> Bool {
+        findPassword(service: service, account: currentUserAccount) != nil
+    }
+
+    /// 把 srcService 的 password 複寫到 dstService（覆蓋現有）。回傳成功與否。
+    @discardableResult
+    public static func copyKeychainItem(from srcService: String, to dstService: String) -> Bool {
+        guard let pw = findPassword(service: srcService, account: currentUserAccount) else {
+            return false
+        }
+        return addPassword(service: dstService, account: currentUserAccount, password: pw)
+    }
+
+    /// 把 password 寫入 orrery account 專屬 service（建立帳號 / 測試用）。回傳成功與否。
+    @discardableResult
+    public static func storePassword(_ password: String, forOrreryAccount accountID: String) -> Bool {
+        addPassword(
+            service: serviceName(forOrreryAccount: accountID),
+            account: currentUserAccount,
+            password: password
+        )
+    }
+
+    /// 讀回某 service 的 password（測試 / 內部用）。
+    static func password(forService service: String) -> String? {
+        findPassword(service: service, account: currentUserAccount)
+    }
+    #endif
+
     #if os(macOS)
     private static func findPassword(service: String, account: String) -> String? {
         let proc = Process()
