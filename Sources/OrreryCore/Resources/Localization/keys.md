@@ -16,6 +16,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.abstract` | Root command help for `orrery account`. |
 | `account.addAbstract` | Sub-command help for `orrery account add`. |
 | `account.addCreated` | Success after adding an account. `{tool}` = tool name; `{name}` = display name. |
+| `account.addDuplicateName` | Validation error when adding an account whose display name already exists for the same tool. `{name}` = display name; `{tool}` = tool name. |
 | `account.addEmptyName` | Validation error when an empty name is entered. |
 | `account.addNameHelp` | `--name` flag help text for `account add`. |
 | `account.flagClaudeHelp` | `--claude` flag help text for `account add` (and other account sub-commands). |

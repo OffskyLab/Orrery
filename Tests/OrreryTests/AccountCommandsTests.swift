@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import ArgumentParser
 @testable import OrreryCore
 
 // MARK: - Isolation helpers
@@ -112,6 +113,19 @@ struct AccountCommandsAllTests {
             }
         }
         #endif
+
+        @Test("rejects a duplicate display name for the same tool")
+        func rejectsDuplicateName() throws {
+            try withIsolatedHome {
+                try AccountAddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                // second add with the same name + tool must throw
+                #expect(throws: ValidationError.self) {
+                    try AccountAddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                }
+                // a same-name account under a DIFFERENT tool is still allowed
+                try AccountAddCommand.parse(["--codex", "--name", "dup", "--skip-login"]).run()
+            }
+        }
     }
 
     // MARK: AccountListCommand
@@ -278,7 +292,7 @@ struct AccountCommandsAllTests {
                 }
 
                 let cmd = try AccountUseCommand.parse(["--name", "ghost"])
-                #expect(throws: (any Error).self) {
+                #expect(throws: ValidationError.self) {
                     try cmd.run()
                 }
             }
