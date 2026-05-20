@@ -1,4 +1,101 @@
 [
+  { "path": ["Account", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "addAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "addCreated"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" }
+    ]
+  },
+  { "path": ["Account", "addEmptyName"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "addNameHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "addNamePrompt"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "addToolsTooMany"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "listAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "listEmpty"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "listRow"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "id", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "listToolHeader"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  { "path": ["Account", "removeAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "removeNotFound"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "removeRemoved"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "removeStillReferenced"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "envs", "type": "String" }
+    ]
+  },
+  { "path": ["Account", "showAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "showActiveEnv"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "showRowPinned"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "showRowUnpinned"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  { "path": ["Account", "useAbstract"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "useNotFound"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "usePinned"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "env", "type": "String" }
+    ]
+  },
   {
     "path": [
       "Create",
