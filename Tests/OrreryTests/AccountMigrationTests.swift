@@ -144,6 +144,41 @@ struct AccountMigrationTests {
         #expect(try envStore.load(named: "beta").account(for: .codex) == id)
     }
 
+    @Test("re-running after partial failure produces no duplicates")
+    func rerunAfterPartialFailureIsIdempotent() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+
+        let envStore = EnvironmentStore(homeURL: home)
+        let env = OrreryEnvironment(name: "rerun", tools: [.codex])
+        try envStore.save(env)
+
+        let codexDir = envStore.toolConfigDir(tool: .codex, environment: "rerun")
+        try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)
+        let credentialContent = Data(#"{"token":"rerun-codex-secret"}"#.utf8)
+        try credentialContent.write(to: codexDir.appendingPathComponent("auth.json"))
+
+        // First run — env gets pinned, pool gets 1 account.
+        try AccountMigration.runIfNeeded(homeURL: home)
+
+        let acctStore = AccountStore(homeURL: home)
+        let firstAccounts = try acctStore.list(tool: .codex)
+        #expect(firstAccounts.count == 1)
+        let firstID = try #require(firstAccounts.first?.id)
+        #expect(try envStore.load(named: "rerun").account(for: .codex) == firstID)
+
+        // Simulate partial-failure retry: delete the flag.
+        let flagURL = home.appendingPathComponent(AccountMigration.flagFileName)
+        try FileManager.default.removeItem(at: flagURL)
+
+        // Second run — must be a no-op: no duplicate account, same pinned id.
+        try AccountMigration.runIfNeeded(homeURL: home)
+
+        let secondAccounts = try acctStore.list(tool: .codex)
+        #expect(secondAccounts.count == 1)
+        #expect(try envStore.load(named: "rerun").account(for: .codex) == firstID)
+    }
+
     @Test("takes a backup before migrating a non-empty home")
     func takesBackupBeforeMigrating() throws {
         let (home, cleanup) = makeTempHome()

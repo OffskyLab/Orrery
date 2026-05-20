@@ -71,7 +71,7 @@ public enum AccountMigration {
         // 2. Migrate origin + every named env, every tool.
         for tool in Tool.allCases {
             try migrateOrigin(tool: tool, envStore: envStore, acctStore: acctStore)
-            for envName in (try? envStore.listNames()) ?? [] {
+            for envName in try envStore.listNames() {
                 try migrateEnv(envName: envName, tool: tool, envStore: envStore, acctStore: acctStore)
             }
         }
@@ -89,8 +89,9 @@ public enum AccountMigration {
     private static func backup(homeURL: URL) throws {
         let ts = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "-")
+        let suffix = String(UUID().uuidString.prefix(8))
         let backupURL = homeURL.deletingLastPathComponent()
-            .appendingPathComponent(".orrery-backup-\(ts)")
+            .appendingPathComponent(".orrery-backup-\(ts)-\(suffix)")
         do {
             try FileManager.default.copyItem(at: homeURL, to: backupURL)
         } catch {
@@ -107,14 +108,17 @@ public enum AccountMigration {
         envStore: EnvironmentStore,
         acctStore: AccountStore
     ) throws {
+        // Skip if already pinned (idempotent re-run).
+        var config = envStore.loadOriginConfig()
+        guard config.account(for: tool) == nil else { return }
+
         let configDir = envStore.originConfigDir(tool: tool)
-        guard let credential = extractCredential(tool: tool, configDir: configDir) else {
+        guard let credential = extractCredential(tool: tool, configDir: configDir, isOrigin: true) else {
             return  // tool never logged in for origin — nothing to migrate
         }
         let id = try resolveOrCreateAccount(
             credential: credential, tool: tool, scopeName: "origin", acctStore: acctStore
         )
-        var config = envStore.loadOriginConfig()
         config.setAccount(id, for: tool)
         try envStore.saveOriginConfig(config)
     }
@@ -126,14 +130,17 @@ public enum AccountMigration {
         envStore: EnvironmentStore,
         acctStore: AccountStore
     ) throws {
+        // Skip if already pinned (idempotent re-run).
+        var env = try envStore.load(named: envName)
+        guard env.account(for: tool) == nil else { return }
+
         let configDir = envStore.toolConfigDir(tool: tool, environment: envName)
-        guard let credential = extractCredential(tool: tool, configDir: configDir) else {
+        guard let credential = extractCredential(tool: tool, configDir: configDir, isOrigin: false) else {
             return  // tool never logged in for this env — nothing to migrate
         }
         let id = try resolveOrCreateAccount(
             credential: credential, tool: tool, scopeName: envName, acctStore: acctStore
         )
-        var env = try envStore.load(named: envName)
         env.setAccount(id, for: tool)
         try envStore.save(env)
     }
@@ -142,10 +149,19 @@ public enum AccountMigration {
 
     /// A credential is opaque bytes — file contents for file-based tools, or the
     /// macOS Keychain password (as UTF-8 bytes) for macOS Claude.
-    private static func extractCredential(tool: Tool, configDir: URL) -> Data? {
+    ///
+    /// - Parameter isOrigin: `true` when extracting the origin scope's credential.
+    ///   On macOS, origin's Claude credential was written by Claude with
+    ///   `CLAUDE_CONFIG_DIR` unset, so its Keychain service is `service(for: nil)`.
+    ///   Named-env credentials use `service(for: configDir.path)` instead.
+    private static func extractCredential(tool: Tool, configDir: URL, isOrigin: Bool) -> Data? {
         #if os(macOS)
         if tool == .claude {
-            let service = ClaudeKeychain.service(for: configDir.path)
+            // Origin: CLAUDE_CONFIG_DIR was unset → bare "Claude Code-credentials".
+            // Named env: CLAUDE_CONFIG_DIR was set to the env's tool dir.
+            let service = isOrigin
+                ? ClaudeKeychain.service(for: nil)
+                : ClaudeKeychain.service(for: configDir.path)
             guard let password = ClaudeKeychain.password(forService: service) else { return nil }
             return Data(password.utf8)
         }
@@ -154,7 +170,12 @@ public enum AccountMigration {
             FilesystemCredentialAdapter.credentialFileName(for: tool)
         )
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
-        return try? Data(contentsOf: file)
+        if let data = try? Data(contentsOf: file) { return data }
+        // File exists but could not be read — warn and treat as absent.
+        FileHandle.standardError.write(Data(
+            "orrery migration: warning: could not read credential at \(file.path)\n".utf8
+        ))
+        return nil
     }
 
     /// Reads the stored credential of an existing pool account for content comparison.
