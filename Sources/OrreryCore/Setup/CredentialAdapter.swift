@@ -10,7 +10,4 @@ public protocol CredentialAdapter: Sendable {
         targetConfigDir: URL,
         accountStore: AccountStore
     ) throws
-
-    /// 從 account 池讀回顯示用的帳號資訊（email/plan 等），失敗回 nil。
-    func accountInfo(account: Account, accountStore: AccountStore) -> ToolAuth.AccountInfo?
 }
