@@ -1,7 +1,11 @@
 import Foundation
 
 public struct FilesystemCredentialAdapter: CredentialAdapter {
-    public let tool: Tool
+    public enum Error: Swift.Error {
+        case missingCredential(tool: Tool, accountID: String, expectedPath: String)
+    }
+
+    let tool: Tool
 
     public init(tool: Tool) {
         self.tool = tool
@@ -26,14 +30,23 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
             .appendingPathComponent(credentialFileName)
         let target = targetConfigDir.appendingPathComponent(credentialFileName)
 
-        // 冪等：若 symlink 已指向正確位置，直接 return
+        // 來源憑證必須存在於 pool。否則 materialize 沒有意義，
+        // clear error 勝過建立 dangling symlink 讓工具稍後爆出無關錯誤。
+        guard fm.fileExists(atPath: source.path) else {
+            throw Error.missingCredential(
+                tool: tool, accountID: account.id, expectedPath: source.path
+            )
+        }
+
+        // 冪等：若 symlink 已指向正確位置，直接 return。
         if let existing = try? fm.destinationOfSymbolicLink(atPath: target.path),
            existing == source.path {
             return
         }
 
-        // 移除任何既有的 target（檔案或舊 symlink，含 broken symlink）
-        if fm.fileExists(atPath: target.path) || (try? fm.destinationOfSymbolicLink(atPath: target.path)) != nil {
+        // 移除任何既有的 target（regular file 或舊 symlink，含 broken symlink）。
+        if fm.fileExists(atPath: target.path)
+            || (try? fm.destinationOfSymbolicLink(atPath: target.path)) != nil {
             try fm.removeItem(at: target)
         }
 
