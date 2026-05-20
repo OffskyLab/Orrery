@@ -22,6 +22,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             InitCommand.self,
             UseCommand.self,
             CreateCommand.self,
+            AccountCommand.self,
             DeleteCommand.self,
             RenameCommand.self,
             ListCommand.self,
