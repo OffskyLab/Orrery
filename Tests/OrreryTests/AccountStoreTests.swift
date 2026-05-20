@@ -27,6 +27,7 @@ struct AccountModelTests {
         #expect(decoded.tool == .claude)
         #expect(decoded.displayName == "work")
         #expect(decoded.keychainItem == "Claude Code-orrery-550e8400")
+        #expect(decoded.createdAt == account.createdAt)
     }
 
     @Test("keychainItem optional for non-macOS-claude accounts")

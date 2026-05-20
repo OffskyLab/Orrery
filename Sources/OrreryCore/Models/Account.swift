@@ -5,10 +5,10 @@ public typealias AccountID = String
 /// 跨 env 共用的工具憑證 pool 中的一筆。
 /// 持久化於 `~/.orrery/accounts/<tool>/<id>/metadata.json`。
 public struct Account: Codable, Sendable, Equatable {
-    public var id: AccountID
+    public let id: AccountID
     public var tool: Tool
     public var displayName: String
-    public var createdAt: Date
+    public let createdAt: Date
 
     /// macOS Claude 專用：對應的 Keychain item 名稱。
     /// 其他工具 / 平台組合為 nil。
