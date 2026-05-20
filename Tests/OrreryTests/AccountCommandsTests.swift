@@ -3,27 +3,6 @@ import Foundation
 import ArgumentParser
 @testable import OrreryCore
 
-// MARK: - Isolation helpers
-
-private func makeTempHome() throws -> URL {
-    let tmp = FileManager.default.temporaryDirectory
-        .appendingPathComponent("orrery-acct-cmd-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
-    return tmp
-}
-
-/// Run body with a fresh isolated ORRERY_HOME directory, cleaning up afterwards.
-private func withIsolatedHome(_ body: () throws -> Void) throws {
-    let tmpDir = try makeTempHome()
-    let saved = ProcessInfo.processInfo.environment["ORRERY_HOME"]
-    setenv("ORRERY_HOME", tmpDir.path, 1)
-    defer {
-        if let saved { setenv("ORRERY_HOME", saved, 1) } else { unsetenv("ORRERY_HOME") }
-        try? FileManager.default.removeItem(at: tmpDir)
-    }
-    try body()
-}
-
 // MARK: - stdout capture helper
 
 /// Redirect stdout to a temp file, run body, restore stdout, and return output.
