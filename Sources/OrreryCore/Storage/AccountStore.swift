@@ -13,20 +13,20 @@ public struct AccountStore: Sendable {
     }
 
     public static var `default`: AccountStore {
-        AccountStore(homeURL: EnvironmentStore.default.homeURL)
+        AccountStore(homeURL: orreryHomeURL())
     }
 
     // MARK: - Paths
 
-    public func accountsRoot() -> URL {
+    func accountsRoot() -> URL {
         homeURL.appendingPathComponent("accounts")
     }
 
-    public func toolDir(_ tool: Tool) -> URL {
+    func toolDir(_ tool: Tool) -> URL {
         accountsRoot().appendingPathComponent(tool.rawValue)
     }
 
-    public func accountDir(id: AccountID, tool: Tool) -> URL {
+    func accountDir(id: AccountID, tool: Tool) -> URL {
         toolDir(tool).appendingPathComponent(id)
     }
 
@@ -61,8 +61,18 @@ public struct AccountStore: Sendable {
         let dir = toolDir(tool)
         guard FileManager.default.fileExists(atPath: dir.path) else { return [] }
         let ids = try FileManager.default.contentsOfDirectory(atPath: dir.path)
-        return ids.compactMap { try? load(id: $0, tool: tool) }
-            .sorted { $0.displayName < $1.displayName }
+            .filter { !$0.hasPrefix(".") }
+        return ids.compactMap { id -> Account? in
+            do {
+                return try load(id: id, tool: tool)
+            } catch {
+                FileHandle.standardError.write(
+                    Data("orrery: warning: skipping unreadable account '\(id)' for \(tool.rawValue): \(error)\n".utf8)
+                )
+                return nil
+            }
+        }
+        .sorted { $0.displayName < $1.displayName }
     }
 
     public func listAll() throws -> [Tool: [Account]] {
