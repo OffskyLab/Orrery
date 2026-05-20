@@ -24,6 +24,10 @@ public struct AccountAddCommand: ParsableCommand {
         let tool = try AccountAddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let displayName = try resolveName()
 
+        if try AccountStore.default.findByDisplayName(displayName, tool: tool) != nil {
+            throw ValidationError(L10n.Account.addDuplicateName(displayName, tool.rawValue))
+        }
+
         var account = Account(tool: tool, displayName: displayName)
         #if os(macOS)
         if tool == .claude {

@@ -9,6 +9,14 @@
       { "label": "_", "name": "name", "type": "String" }
     ]
   },
+  {
+    "path": ["Account", "addDuplicateName"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
   { "path": ["Account", "addEmptyName"], "kind": "var", "parameters": [] },
   { "path": ["Account", "addNameHelp"], "kind": "var", "parameters": [] },
   { "path": ["Account", "nameSelectorHelp"], "kind": "var", "parameters": [] },
