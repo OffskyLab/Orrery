@@ -453,7 +453,9 @@ public struct EnvironmentStore: Sendable {
 
 extension EnvironmentStore {
     /// 列出所有 env（含 origin）中釘住指定 account 的 env 名稱。
-    /// 任一 env.json 解碼失敗會直接拋出 — 安全檢查寧可 fail-closed。
+    /// 注意：listNames() 會靜默跳過無法解碼的 env.json，因此嚴重損壞、
+    /// 連列舉都失敗的 env 不會出現在掃描結果中。掃描過程中（listNames 之後）
+    /// 才發生的 decode 失敗則會拋出。
     public func envsReferencing(accountID: AccountID, tool: Tool) throws -> [String] {
         var names: [String] = []
         for name in try listNames() {

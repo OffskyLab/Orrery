@@ -339,6 +339,24 @@ struct AccountCommandsAllTests {
             }
         }
 
+        @Test("blocks removal when a named env references the account")
+        func blocksWhenNamedEnvReferences() throws {
+            try withIsolatedHome {
+                let acct = Account(tool: .claude, displayName: "named-ref")
+                try AccountStore.default.save(acct)
+
+                var env = OrreryEnvironment(name: "work-env")
+                env.setAccount(acct.id, for: .claude)
+                try EnvironmentStore.default.save(env)
+
+                #expect(throws: ValidationError.self) {
+                    try AccountRemoveCommand.parse(["--name", "named-ref"]).run()
+                }
+                // account must still be in the pool
+                #expect(try AccountStore.default.findByDisplayName("named-ref", tool: .claude) != nil)
+            }
+        }
+
         @Test("notFound: throws ValidationError when account does not exist")
         func notFound() throws {
             try withIsolatedHome {
