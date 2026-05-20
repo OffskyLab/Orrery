@@ -6,6 +6,12 @@ import OrreryThirdParty
 @MainActor
 private func runOrreryMain() throws {
     LegacyOrbitalMigration.runIfNeeded()
+    // v2→v3 account-pool migration. Runs after the orbital→orrery move (so any
+    // freshly-migrated envs are included) and before origin takeover / any
+    // subcommand touches the stores. A throw here (e.g. backup failure or an
+    // active phantom session) aborts the whole invocation — intentional: it is
+    // safer to stop than to migrate credentials unsafely.
+    try AccountMigration.runIfNeeded(homeURL: orreryHomeURL())
     OriginTakeoverBootstrap.runIfNeeded()
     OrreryThirdPartyRuntime.register()
 
