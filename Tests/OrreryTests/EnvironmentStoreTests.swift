@@ -76,3 +76,91 @@ struct EnvironmentStoreTests {
         #expect(path.path.hasPrefix(envsURL.path))
     }
 }
+
+@Suite("EnvironmentStore.accounts")
+struct EnvironmentAccountsTests {
+    var tmpDir: URL!
+    var store: EnvironmentStore!
+
+    init() throws {
+        tmpDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-env-accts-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        store = EnvironmentStore(homeURL: tmpDir)
+    }
+
+    @Test("env.json round-trips accounts field")
+    func roundTripAccounts() throws {
+        var env = OrreryEnvironment(name: "work")
+        env.accounts = ["claude": "acct-123", "codex": "acct-456"]
+        try store.save(env)
+        let loaded = try store.load(named: "work")
+        #expect(loaded.accounts["claude"] == "acct-123")
+        #expect(loaded.accounts["codex"] == "acct-456")
+        #expect(loaded.accounts["gemini"] == nil)
+    }
+
+    @Test("default empty accounts")
+    func defaultEmpty() throws {
+        let env = OrreryEnvironment(name: "empty")
+        try store.save(env)
+        let loaded = try store.load(named: "empty")
+        #expect(loaded.accounts.isEmpty)
+    }
+
+    @Test("decodes legacy env.json without accounts key")
+    func legacyDecode() throws {
+        let json = """
+        {"id":"x","name":"old","description":"","createdAt":"2026-01-01T00:00:00Z","lastUsed":"2026-01-01T00:00:00Z","tools":[],"env":{},"isolatedSessionTools":[],"isolateMemory":false}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let env = try decoder.decode(OrreryEnvironment.self, from: Data(json.utf8))
+        #expect(env.accounts.isEmpty)
+    }
+
+    @Test("decodes legacy origin config.json without accounts key")
+    func legacyOriginDecode() throws {
+        let json = """
+        {"isolateMemory":true,"isolatedSessionTools":[]}
+        """
+        let decoder = JSONDecoder()
+        let cfg = try decoder.decode(OriginConfig.self, from: Data(json.utf8))
+        #expect(cfg.accounts.isEmpty)
+    }
+
+    @Test("account(for:) and setAccount(_:for:) helpers")
+    func helpers() throws {
+        var env = OrreryEnvironment(name: "h")
+        env.setAccount("a1", for: .claude)
+        #expect(env.account(for: .claude) == "a1")
+        env.setAccount(nil, for: .claude)
+        #expect(env.account(for: .claude) == nil)
+    }
+
+    @Test("envsReferencing returns envs that pin given account")
+    func envsReferencing() throws {
+        var work = OrreryEnvironment(name: "work")
+        work.accounts["claude"] = "shared-acct"
+        try store.save(work)
+        var play = OrreryEnvironment(name: "play")
+        play.accounts["claude"] = "shared-acct"
+        play.accounts["codex"] = "other"
+        try store.save(play)
+        var lonely = OrreryEnvironment(name: "lonely")
+        lonely.accounts["codex"] = "different"
+        try store.save(lonely)
+
+        let refs = try store.envsReferencing(accountID: "shared-acct", tool: .claude)
+        #expect(Set(refs) == ["work", "play"])
+    }
+
+    @Test("envsReferencing includes origin when origin pins the account")
+    func envsReferencingOrigin() throws {
+        var origin = store.loadOriginConfig()
+        origin.accounts["claude"] = "origin-acct"
+        try store.saveOriginConfig(origin)
+        let refs = try store.envsReferencing(accountID: "origin-acct", tool: .claude)
+        #expect(refs.contains(ReservedEnvironment.defaultName))
+    }
+}
