@@ -9,7 +9,7 @@ public struct KeychainCredentialAdapter: CredentialAdapter {
 
     public func materialize(
         account: Account,
-        targetConfigDir: URL,
+        configDir: String?,
         accountStore: AccountStore
     ) throws {
         // tool 守衛：防止直接以錯誤 tool 的 Account 建構誤用。
@@ -25,7 +25,7 @@ public struct KeychainCredentialAdapter: CredentialAdapter {
         }
 
         // Claude 啟動時用 CLAUDE_CONFIG_DIR 推導它要讀的 Keychain service。
-        let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
+        let targetService = ClaudeKeychain.service(for: configDir)
 
         // 冪等：target service 已是正確 token 就不重寫。
         if ClaudeKeychain.password(forService: targetService) == sourceToken {

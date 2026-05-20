@@ -22,9 +22,10 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
 
     public func materialize(
         account: Account,
-        targetConfigDir: URL,
+        configDir: String?,
         accountStore: AccountStore
     ) throws {
+        let targetConfigDir: URL = configDir.map { URL(fileURLWithPath: $0) } ?? tool.defaultConfigDir
         let fm = FileManager.default
         let source = accountStore.accountDir(id: account.id, tool: tool)
             .appendingPathComponent(credentialFileName)

@@ -27,7 +27,7 @@ struct FilesystemCredentialAdapterTests {
         try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
         let adapter = FilesystemCredentialAdapter(tool: .codex)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
 
         let symlinked = targetDir.appendingPathComponent("auth.json")
         let attrs = try FileManager.default.attributesOfItem(atPath: symlinked.path)
@@ -48,8 +48,8 @@ struct FilesystemCredentialAdapterTests {
         try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
         let adapter = FilesystemCredentialAdapter(tool: .codex)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
         // must not throw on the second call
     }
 
@@ -69,7 +69,7 @@ struct FilesystemCredentialAdapterTests {
         try FileManager.default.createSymbolicLink(at: symlink, withDestinationURL: staleTarget)
 
         let adapter = FilesystemCredentialAdapter(tool: .codex)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
 
         let dest = try FileManager.default.destinationOfSymbolicLink(atPath: symlink.path)
         #expect(dest == newCreds.path)
@@ -85,7 +85,7 @@ struct FilesystemCredentialAdapterTests {
 
         let adapter = FilesystemCredentialAdapter(tool: .codex)
         #expect(throws: FilesystemCredentialAdapter.Error.self) {
-            try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+            try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
         }
         // no dangling symlink left behind
         let target = targetDir.appendingPathComponent("auth.json")
@@ -107,7 +107,7 @@ struct FilesystemCredentialAdapterTests {
         try "old-direct-write".data(using: .utf8)!.write(to: target)
 
         let adapter = FilesystemCredentialAdapter(tool: .codex)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
 
         let attrs = try FileManager.default.attributesOfItem(atPath: target.path)
         #expect(attrs[.type] as? FileAttributeType == .typeSymbolicLink)
@@ -126,7 +126,7 @@ struct FilesystemCredentialAdapterTests {
         try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
         let adapter = FilesystemCredentialAdapter(tool: .gemini)
-        try adapter.materialize(account: account, targetConfigDir: targetDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetDir.path, accountStore: accountStore)
 
         let target = targetDir.appendingPathComponent("oauth_creds.json")
         #expect(try FileManager.default.destinationOfSymbolicLink(atPath: target.path) == creds.path)
@@ -189,7 +189,7 @@ struct KeychainCredentialAdapterTests {
         }
 
         let adapter = KeychainCredentialAdapter()
-        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
 
         #expect(ClaudeKeychain.password(forService: targetService) == "dummy-token")
     }
@@ -203,7 +203,7 @@ struct KeychainCredentialAdapterTests {
         let adapter = KeychainCredentialAdapter()
         #expect(throws: KeychainCredentialAdapter.Error.self) {
             try adapter.materialize(account: account,
-                                    targetConfigDir: tmpDir.appendingPathComponent("c"),
+                                    configDir: tmpDir.appendingPathComponent("c").path,
                                     accountStore: accountStore)
         }
     }
@@ -215,7 +215,7 @@ struct KeychainCredentialAdapterTests {
         let adapter = KeychainCredentialAdapter()
         #expect(throws: KeychainCredentialAdapter.Error.self) {
             try adapter.materialize(account: account,
-                                    targetConfigDir: tmpDir.appendingPathComponent("c"),
+                                    configDir: tmpDir.appendingPathComponent("c").path,
                                     accountStore: accountStore)
         }
     }
@@ -237,8 +237,8 @@ struct KeychainCredentialAdapterTests {
         }
 
         let adapter = KeychainCredentialAdapter()
-        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
-        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
+        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
         #expect(ClaudeKeychain.password(forService: targetService) == "tok-idem")
     }
 }
