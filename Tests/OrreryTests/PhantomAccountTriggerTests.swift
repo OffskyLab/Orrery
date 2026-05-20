@@ -37,14 +37,13 @@ struct PhantomAccountTriggerTests {
         }
     }
 
-    // MARK: - Argument parsing / tool resolution
+    // MARK: - Phantom guard fires before tool resolution
 
-    @Test("multiple tool flags are rejected (throws at run)")
-    func multipleToolFlagsRejected() throws {
-        // The phantom guard fires before tool resolution, so regardless of
-        // which error surfaces first the command must throw. This test simply
-        // asserts that the command throws under any conditions with conflicting
-        // flags when no supervisor is present.
+    @Test("throws not-under-phantom even with conflicting tool flags")
+    func throwsNotUnderPhantomEvenWithConflictingToolFlags() throws {
+        // ORRERY_PHANTOM_SHELL_PID is unset, so the phantom guard throws before
+        // tool resolution ever runs. This test confirms the not-under-phantom
+        // error surfaces even when conflicting tool flags are also passed.
         try withIsolatedHome {
             let saved = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
             unsetenv("ORRERY_PHANTOM_SHELL_PID")

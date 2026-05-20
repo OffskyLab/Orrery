@@ -46,7 +46,7 @@ public struct PhantomTriggerCommand: ParsableCommand {
 
     Inspect `$ARGUMENTS`:
 
-    - **If `$ARGUMENTS` starts with `account`** (e.g. `account claude work`, `account --codex personal`, `account work`): the user wants to switch a tool's account within the current env.
+    - **If `$ARGUMENTS` starts with `account`** (e.g. `account claude work`, `account codex personal`, `account work`): the user wants to switch a tool's account within the current env.
       - Parse the tool (`claude` by default) and account name from the rest of `$ARGUMENTS`.
       - If the account name is missing, ask the user which account they want to switch to before proceeding.
       - Run `orrery-bin _phantom-trigger-account --<tool> --name <account-name>` (e.g. `orrery-bin _phantom-trigger-account --claude --name work`).
