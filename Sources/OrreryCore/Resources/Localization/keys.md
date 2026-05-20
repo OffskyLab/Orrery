@@ -256,6 +256,20 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `sessions.abstract` | Command help. |
 | `sessions.noSessions` | Shown when no sessions exist for the project. |
 
+## phantom — `/orrery:phantom` trigger commands
+
+| Key | Context |
+| --- | --- |
+| `phantom.triggerAbstract` | Hidden command help for `_phantom-trigger`. |
+| `phantom.accountTriggerAbstract` | Hidden command help for `_phantom-trigger-account`. Shown in `--help` for the internal subcommand. |
+| `phantom.notUnderPhantom` | Error when the trigger runs outside a phantom-supervised session. References `orrery run claude` — keep literal. |
+| `phantom.claudeNotFound` | Error when the claude process can't be located in the process tree. |
+| `phantom.signalFailed` | Error when SIGTERM delivery fails. |
+| `phantom.availableHeader` | Header printed before the env list (no-arg invocation). |
+| `phantom.usageHint` | Usage hint appended after the env list. `/orrery:phantom` is a literal slash command name. |
+| `phantom.switching` | Printed when switching to a named env with a known session. `{env}` = env name; `{sessionPrefix}` = first 8 chars of session id. |
+| `phantom.switchingNoSession` | Printed when switching to an env with no active session. `{env}` = env name. |
+
 ## setup — `orrery setup` (shell integration install)
 
 | Key | Context |
