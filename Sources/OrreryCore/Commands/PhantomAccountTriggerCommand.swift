@@ -78,6 +78,8 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
 
         // SIGTERM claude so the supervisor relaunches it.
         if kill(claudePid, SIGTERM) != 0 {
+            // Signal failed (race with claude exiting) — pull the sentinel back
+            // so it doesn't fire on the next manual claude launch.
             try? FileManager.default.removeItem(at: PhantomTriggerCommand.sentinelURL(store: store))
             throw ValidationError(L10n.Phantom.signalFailed)
         }
