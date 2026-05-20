@@ -453,15 +453,16 @@ public struct EnvironmentStore: Sendable {
 
 extension EnvironmentStore {
     /// 列出所有 env（含 origin）中釘住指定 account 的 env 名稱。
+    /// 任一 env.json 解碼失敗會直接拋出 — 安全檢查寧可 fail-closed。
     public func envsReferencing(accountID: AccountID, tool: Tool) throws -> [String] {
         var names: [String] = []
         for name in try listNames() {
-            if let env = try? load(named: name),
-               env.account(for: tool) == accountID {
+            let env = try load(named: name)
+            if env.account(for: tool) == accountID {
                 names.append(name)
             }
         }
-        if loadOriginConfig().accounts[tool.rawValue] == accountID {
+        if loadOriginConfig().account(for: tool) == accountID {
             names.append(ReservedEnvironment.defaultName)
         }
         return names
