@@ -2,6 +2,8 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
+// .serialized is required because the tests mutate the global ORRERY_HOME via
+// withIsolatedHome and must not run concurrently within the suite.
 @Suite("AccountLoginFlow.importFrom", .serialized)
 struct AccountLoginFlowTests {
 
@@ -99,6 +101,35 @@ struct AccountLoginFlowTests {
         }
     }
     #endif
+
+    @Test("importFrom overwrites an existing pooled credential with a new one")
+    func importFromOverwritesExistingCredential() throws {
+        try withIsolatedHome {
+            let store = AccountStore.default
+            let account = Account(tool: .codex, displayName: "overwrite-test")
+            try store.save(account)
+
+            // First import: {"v":1}
+            let stagingDir1 = makeStagingDir()
+            defer { try? FileManager.default.removeItem(at: stagingDir1) }
+            try #"{\"v\":1}"#.data(using: .utf8)!
+                .write(to: stagingDir1.appendingPathComponent("auth.json"))
+            try AccountLoginFlow.importFrom(stagingDir: stagingDir1, into: account)
+
+            // Second import: {"v":2}
+            let stagingDir2 = makeStagingDir()
+            defer { try? FileManager.default.removeItem(at: stagingDir2) }
+            let payload2 = #"{"v":2}"#
+            try payload2.data(using: .utf8)!
+                .write(to: stagingDir2.appendingPathComponent("auth.json"))
+            try AccountLoginFlow.importFrom(stagingDir: stagingDir2, into: account)
+
+            let imported = store.accountDir(id: account.id, tool: .codex)
+                .appendingPathComponent("auth.json")
+            let content = try String(contentsOf: imported, encoding: .utf8)
+            #expect(content == payload2)
+        }
+    }
 
     // MARK: - Helpers
 
