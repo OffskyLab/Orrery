@@ -450,3 +450,20 @@ public struct EnvironmentStore: Sendable {
         }
     }
 }
+
+extension EnvironmentStore {
+    /// 列出所有 env（含 origin）中釘住指定 account 的 env 名稱。
+    public func envsReferencing(accountID: AccountID, tool: Tool) throws -> [String] {
+        var names: [String] = []
+        for name in try listNames() {
+            if let env = try? load(named: name),
+               env.account(for: tool) == accountID {
+                names.append(name)
+            }
+        }
+        if loadOriginConfig().accounts[tool.rawValue] == accountID {
+            names.append(ReservedEnvironment.defaultName)
+        }
+        return names
+    }
+}

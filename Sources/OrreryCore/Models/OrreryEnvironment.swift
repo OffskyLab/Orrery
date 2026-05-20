@@ -12,19 +12,43 @@ public struct OriginConfig: Codable, Sendable {
     /// Tools whose sessions are isolated (not symlinked to shared).
     /// Absent from the set → shared (default).
     public var isolatedSessionTools: Set<Tool>
+    /// 每個工具釘住的 account id。Key 為 Tool.rawValue。
+    public var accounts: [String: AccountID]
 
     public init(
         isolateMemory: Bool = true,
         memoryStoragePath: String? = nil,
-        isolatedSessionTools: Set<Tool> = []
+        isolatedSessionTools: Set<Tool> = [],
+        accounts: [String: AccountID] = [:]
     ) {
         self.isolateMemory = isolateMemory
         self.memoryStoragePath = memoryStoragePath
         self.isolatedSessionTools = isolatedSessionTools
+        self.accounts = accounts
     }
 
     public func isolateSessions(for tool: Tool) -> Bool {
         isolatedSessionTools.contains(tool)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case isolateMemory, memoryStoragePath, isolatedSessionTools, accounts
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? true
+        memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
+        isolatedSessionTools = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) ?? []
+        accounts = try c.decodeIfPresent([String: AccountID].self, forKey: .accounts) ?? [:]
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(isolateMemory, forKey: .isolateMemory)
+        try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
+        try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
+        try c.encode(accounts, forKey: .accounts)
     }
 }
 
@@ -43,6 +67,8 @@ public struct OrreryEnvironment: Codable, Sendable {
     /// Custom storage root for memory. When set, MEMORY.md and fragments/ live here
     /// instead of the default ~/.orrery path. Useful for external wikis (e.g. Obsidian).
     public var memoryStoragePath: String?
+    /// 每個工具釘住的 account id。Key 為 Tool.rawValue。沒釘 = key 不存在。
+    public var accounts: [String: AccountID]
 
     public init(
         id: String = UUID().uuidString,
@@ -54,7 +80,8 @@ public struct OrreryEnvironment: Codable, Sendable {
         env: [String: String] = [:],
         isolatedSessionTools: Set<Tool> = [],
         isolateMemory: Bool = true,
-        memoryStoragePath: String? = nil
+        memoryStoragePath: String? = nil,
+        accounts: [String: AccountID] = [:]
     ) {
         self.id = id
         self.name = name
@@ -66,6 +93,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         self.isolatedSessionTools = isolatedSessionTools
         self.isolateMemory = isolateMemory
         self.memoryStoragePath = memoryStoragePath
+        self.accounts = accounts
     }
 
     /// Whether sessions for `tool` are isolated in this env.
@@ -80,6 +108,7 @@ public struct OrreryEnvironment: Codable, Sendable {
         case isolatedSessionTools
         case isolateSessions  // legacy — decode only
         case isolateMemory, memoryStoragePath
+        case accounts
     }
 
     public init(from decoder: Decoder) throws {
@@ -103,6 +132,7 @@ public struct OrreryEnvironment: Codable, Sendable {
 
         isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
         memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
+        accounts = try c.decodeIfPresent([String: AccountID].self, forKey: .accounts) ?? [:]
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -117,5 +147,22 @@ public struct OrreryEnvironment: Codable, Sendable {
         try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
         try c.encode(isolateMemory, forKey: .isolateMemory)
         try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
+        try c.encode(accounts, forKey: .accounts)
+    }
+}
+
+extension OrreryEnvironment {
+    /// 取得指定工具釘住的 account id。
+    public func account(for tool: Tool) -> AccountID? {
+        accounts[tool.rawValue]
+    }
+
+    /// 設定（或以 nil 清除）指定工具釘住的 account。
+    public mutating func setAccount(_ id: AccountID?, for tool: Tool) {
+        if let id {
+            accounts[tool.rawValue] = id
+        } else {
+            accounts.removeValue(forKey: tool.rawValue)
+        }
     }
 }
