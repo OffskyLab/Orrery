@@ -26,6 +26,7 @@
   "account.useAbstract": "Pin an account to the active env (origin by default).",
   "account.useNotFound": "No account '{name}' for {tool}. Run 'orrery account list --{tool}' to see options.",
   "account.usePinned": "Pinned {tool} account '{name}' to env '{env}'.",
+  "account.loginManualHint": "Launching {tool} in a temporary login workspace ({dir}). Run /login to sign in, then exit the tool to finish.",
   "origin.abstract": "Manage origin environment takeover (status / takeover / release)",
   "origin.alreadyManaged": "{tool} is already managed by Orrery.",
   "origin.alreadyUnmanaged": "{tool} is not managed by Orrery.",

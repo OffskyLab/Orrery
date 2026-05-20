@@ -26,6 +26,7 @@
   "account.useAbstract": "アカウントをアクティブな env にピン留めします（デフォルト：origin）。",
   "account.useNotFound": "{tool} にアカウント「{name}」が見つかりません。'orrery account list --{tool}' を実行して選択肢を確認してください。",
   "account.usePinned": "{tool} アカウント「{name}」を env「{env}」にピン留めしました。",
+  "account.loginManualHint": "一時的なログイン用ワークスペース（{dir}）で {tool} を起動します。/login でサインインし、完了したらツールを終了してください。",
   "origin.abstract": "Manage origin environment takeover (status / takeover / release)",
   "origin.alreadyManaged": "{tool} is already managed by Orrery.",
   "origin.alreadyUnmanaged": "{tool} is not managed by Orrery.",

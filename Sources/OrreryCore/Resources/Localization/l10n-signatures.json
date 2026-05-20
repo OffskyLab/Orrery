@@ -109,6 +109,14 @@
     ]
   },
   {
+    "path": ["Account", "loginManualHint"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "dir", "type": "String" }
+    ]
+  },
+  {
     "path": [
       "Create",
       "abstract"
