@@ -2,6 +2,7 @@
   "account.abstract": "AIツールのアカウント（認証情報）を管理します。",
   "account.addAbstract": "ツール用の新しいアカウントを追加します。",
   "account.addCreated": "{tool} アカウント「{name}」を作成しました。",
+  "account.addDuplicateName": "{tool} にはすでに「{name}」という名前のアカウントが存在します。",
   "account.addEmptyName": "アカウント名を空にすることはできません。",
   "account.addNameHelp": "このアカウントの表示名。",
   "account.flagClaudeHelp": "Claude アカウントプールを対象にします（デフォルト）。",

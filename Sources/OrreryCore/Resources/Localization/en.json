@@ -2,6 +2,7 @@
   "account.abstract": "Manage AI tool accounts (credentials).",
   "account.addAbstract": "Add a new account for a tool.",
   "account.addCreated": "Created {tool} account '{name}'.",
+  "account.addDuplicateName": "An account named '{name}' already exists for {tool}.",
   "account.addEmptyName": "Account name cannot be empty.",
   "account.addNameHelp": "Display name for this account.",
   "account.flagClaudeHelp": "Target the Claude account pool (default).",

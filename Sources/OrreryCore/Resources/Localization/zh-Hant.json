@@ -2,6 +2,7 @@
   "account.abstract": "管理 AI 工具帳號（憑證）。",
   "account.addAbstract": "為工具新增帳號。",
   "account.addCreated": "已建立 {tool} 帳號「{name}」。",
+  "account.addDuplicateName": "{tool} 已有名為「{name}」的帳號。",
   "account.addEmptyName": "帳號名稱不能為空。",
   "account.addNameHelp": "此帳號的顯示名稱。",
   "account.flagClaudeHelp": "操作 Claude 帳號池（預設）。",
