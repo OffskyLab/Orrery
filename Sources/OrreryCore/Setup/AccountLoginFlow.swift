@@ -9,6 +9,8 @@ public enum AccountLoginFlow {
         case missingKeychainItem
         /// The login subprocess exited non-zero.
         case toolExitedNonZero(status: Int32)
+        /// The user cancelled the login (e.g. Ctrl-C / SIGINT).
+        case loginCancelled
 
         public var errorDescription: String? {
             switch self {
@@ -19,6 +21,8 @@ public enum AccountLoginFlow {
                 return "Account is missing its Keychain item name; cannot import the credential."
             case .toolExitedNonZero(let status):
                 return "Login command exited with status \(status)."
+            case .loginCancelled:
+                return "Login was cancelled."
             }
         }
     }
@@ -120,6 +124,9 @@ public enum AccountLoginFlow {
         process.waitUntilExit()
 
         guard process.terminationStatus == 0 else {
+            if process.terminationReason == .uncaughtSignal {
+                throw LoginError.loginCancelled
+            }
             throw LoginError.toolExitedNonZero(status: process.terminationStatus)
         }
     }
