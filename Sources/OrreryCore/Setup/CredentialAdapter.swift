@@ -11,3 +11,21 @@ public protocol CredentialAdapter: Sendable {
         accountStore: AccountStore
     ) throws
 }
+
+/// Factory：依工具 + 平台選擇 CredentialAdapter 實作。
+public enum CredentialAdapters {
+    public static func adapter(for tool: Tool) -> any CredentialAdapter {
+        switch tool {
+        case .claude:
+            #if os(macOS)
+            return KeychainCredentialAdapter()
+            #else
+            return FilesystemCredentialAdapter(tool: .claude)
+            #endif
+        case .codex:
+            return FilesystemCredentialAdapter(tool: .codex)
+        case .gemini:
+            return FilesystemCredentialAdapter(tool: .gemini)
+        }
+    }
+}
