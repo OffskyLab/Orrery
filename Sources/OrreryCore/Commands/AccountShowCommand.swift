@@ -15,10 +15,17 @@ public struct AccountShowCommand: ParsableCommand {
 
         let activeEnvName: String
         let pins: [String: AccountID]
-        if let current = try envStore.current(),
-           current != ReservedEnvironment.defaultName {
-            activeEnvName = current
-            pins = (try? envStore.load(named: current))?.accounts ?? [:]
+        let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
+            activeEnvName = activeEnv
+            var resolved: [String: AccountID] = [:]
+            do {
+                resolved = try envStore.load(named: activeEnvName).accounts
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "orrery: warning: could not load env '\(activeEnvName)': \(error)\n".utf8))
+            }
+            pins = resolved
         } else {
             activeEnvName = ReservedEnvironment.defaultName
             pins = envStore.loadOriginConfig().accounts

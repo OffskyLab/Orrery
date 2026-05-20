@@ -38,6 +38,7 @@ func captureStdout(_ body: () throws -> Void) throws -> String {
     let savedFD = dup(fileno(stdout))
     fflush(stdout)
     let capFD = open(tmpPath, O_WRONLY | O_TRUNC)
+    precondition(capFD != -1, "captureStdout: open failed: \(String(cString: strerror(errno)))")
     dup2(capFD, fileno(stdout))
     close(capFD)
     defer {
@@ -137,6 +138,8 @@ struct AccountCommandsAllTests {
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("work"))
                 #expect(output.contains("personal"))
+                #expect(output.contains("claude"))
+                #expect(output.contains("codex"))
             }
         }
 
@@ -180,6 +183,31 @@ struct AccountCommandsAllTests {
                 let cmd = try AccountShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("pinned-account"))
+            }
+        }
+
+        @Test("ORRERY_ACTIVE_ENV named env: shows env name and pinned account")
+        func activeEnvVarNamedEnv() throws {
+            try withIsolatedHome {
+                let envStore = EnvironmentStore.default
+                let acctStore = AccountStore.default
+
+                // Create account and a named env, then pin the account in that env
+                let acct = Account(tool: .claude, displayName: "env-pinned-account")
+                try acctStore.save(acct)
+
+                var env = OrreryEnvironment(name: "work-env")
+                env.accounts["claude"] = acct.id
+                try envStore.save(env)
+
+                // Set ORRERY_ACTIVE_ENV to the named env
+                setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
+                defer { unsetenv("ORRERY_ACTIVE_ENV") }
+
+                let cmd = try AccountShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("work-env"))
+                #expect(output.contains("env-pinned-account"))
             }
         }
     }
