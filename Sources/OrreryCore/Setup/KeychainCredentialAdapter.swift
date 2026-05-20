@@ -12,20 +12,27 @@ public struct KeychainCredentialAdapter: CredentialAdapter {
         targetConfigDir: URL,
         accountStore: AccountStore
     ) throws {
+        // tool 守衛：防止直接以錯誤 tool 的 Account 建構誤用。
+        // （CredentialAdapters factory 永遠配對正確，這層是 belt-and-suspenders。）
         guard account.tool == .claude else {
             throw Error.wrongTool(got: account.tool)
         }
         guard let orreryService = account.keychainItem else {
             throw Error.missingKeychainItem(accountID: account.id)
         }
-        guard ClaudeKeychain.keychainItemExists(service: orreryService) else {
+        guard let sourceToken = ClaudeKeychain.password(forService: orreryService) else {
             throw Error.missingCredential(accountID: account.id, service: orreryService)
         }
 
         // Claude 啟動時用 CLAUDE_CONFIG_DIR 推導它要讀的 Keychain service。
         let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
 
-        guard ClaudeKeychain.copyKeychainItem(from: orreryService, to: targetService) else {
+        // 冪等：target service 已是正確 token 就不重寫。
+        if ClaudeKeychain.password(forService: targetService) == sourceToken {
+            return
+        }
+
+        guard ClaudeKeychain.setPassword(sourceToken, service: targetService) else {
             throw Error.keychainCopyFailed(from: orreryService, to: targetService)
         }
     }

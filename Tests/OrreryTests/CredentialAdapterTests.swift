@@ -219,6 +219,28 @@ struct KeychainCredentialAdapterTests {
                                     accountStore: accountStore)
         }
     }
+
+    @Test("materialize is idempotent — second call is a safe no-op")
+    func idempotent() throws {
+        let accountID = UUID().uuidString
+        let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+        let account = Account(id: accountID, tool: .claude, displayName: "idem",
+                              keychainItem: orreryService)
+        try accountStore.save(account)
+        #expect(ClaudeKeychain.storePassword("tok-idem", forOrreryAccount: accountID))
+
+        let targetConfigDir = tmpDir.appendingPathComponent("claude-config-idem")
+        let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
+        defer {
+            _ = KeychainTestSupport.delete(service: orreryService)
+            _ = KeychainTestSupport.delete(service: targetService)
+        }
+
+        let adapter = KeychainCredentialAdapter()
+        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
+        try adapter.materialize(account: account, targetConfigDir: targetConfigDir, accountStore: accountStore)
+        #expect(ClaudeKeychain.password(forService: targetService) == "tok-idem")
+    }
 }
 
 enum KeychainTestSupport {
