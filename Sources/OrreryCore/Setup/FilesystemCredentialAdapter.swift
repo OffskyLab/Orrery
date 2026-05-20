@@ -12,7 +12,9 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
     }
 
     /// 該工具憑證檔在 account dir / target dir 的相對檔名。
-    private var credentialFileName: String {
+    /// `internal static` 讓 `AccountMigration` 可重用同一份對應表，
+    /// 不必複製一份容易走樣的 mapping。
+    static func credentialFileName(for tool: Tool) -> String {
         switch tool {
         case .codex: return "auth.json"
         case .gemini: return "oauth_creds.json"
@@ -27,9 +29,10 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
     ) throws {
         let targetConfigDir: URL = configDir.map { URL(fileURLWithPath: $0) } ?? tool.defaultConfigDir
         let fm = FileManager.default
+        let fileName = Self.credentialFileName(for: tool)
         let source = accountStore.accountDir(id: account.id, tool: tool)
-            .appendingPathComponent(credentialFileName)
-        let target = targetConfigDir.appendingPathComponent(credentialFileName)
+            .appendingPathComponent(fileName)
+        let target = targetConfigDir.appendingPathComponent(fileName)
 
         // 來源憑證必須存在於 pool。否則 materialize 沒有意義，
         // clear error 勝過建立 dangling symlink 讓工具稍後爆出無關錯誤。
