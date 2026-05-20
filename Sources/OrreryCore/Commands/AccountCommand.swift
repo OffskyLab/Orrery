@@ -6,6 +6,8 @@ public struct AccountCommand: ParsableCommand {
         abstract: L10n.Account.abstract,
         subcommands: [
             AccountAddCommand.self,
+            AccountListCommand.self,
+            AccountShowCommand.self,
         ]
     )
 
