@@ -121,35 +121,50 @@ struct AccountRefreshInfoTests {
     }
 }
 
-// MARK: - AccountListCommand lazy backfill
+// MARK: - RunCommand.prepareSyncBack refresh-and-save
 
-@Suite("AccountListCommand lazy backfill", .serialized)
-struct AccountListLazyBackfillTests {
+@Suite("RunCommand.prepareSyncBack refresh-and-save", .serialized)
+struct RunCommandPrepareSyncBackInfoTests {
 
-    @Test("codex account in pool gets email/plan saved after `account list`")
-    func codexLazyBackfill() throws {
+    @Test("codex: prepareSyncBack populates email and plan from auth.json JWT")
+    func codexSyncBackRefreshesAccountInfo() throws {
         try withIsolatedHome {
-            let store = AccountStore.default
-            let acct = Account(tool: .codex, displayName: "backfill-codex")
-            try store.save(acct)
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+
+            // 1. Create a codex account with nil email/plan in the pool.
+            var acct = Account(tool: .codex, displayName: "sb-codex")
+            try acctStore.save(acct)
             #expect(acct.email == nil)
             #expect(acct.plan == nil)
 
-            // Place an auth.json carrying claims.
+            // 2. Seed the pool dir with an auth.json containing a JWT with
+            //    email and plan claims (mirrors the codexFromJWT fixture shape).
             let jwt = makeJWT(
-                payload: #"{"email":"lazy@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"team"}}"#
+                payload: #"{"email":"syncback@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"pro"}}"#
             )
-            let poolDir = store.accountDir(id: acct.id, tool: .codex)
+            let poolDir = acctStore.accountDir(id: acct.id, tool: .codex)
             try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
                 .write(to: poolDir.appendingPathComponent("auth.json"))
 
-            let cmd = try AccountListCommand.parse(["--codex"])
-            _ = try captureStdout { try cmd.run() }
+            // 3. Create a named env that pins this account and set ORRERY_ACTIVE_ENV.
+            var env = OrreryEnvironment(name: "sb-env")
+            env.setAccount(acct.id, for: .codex)
+            try envStore.save(env)
 
-            // Read back from disk — the stored Account should now have the fields.
-            let reloaded = try store.load(id: acct.id, tool: .codex)
-            #expect(reloaded.email == "lazy@example.com")
-            #expect(reloaded.plan == "team")
+            // Ensure the env config dir exists (prepareMaterialize / syncBack expects
+            // the dir to be present for codex's symlink adapter).
+            let configDir = envStore.toolConfigDir(tool: .codex, environment: "sb-env")
+            try FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+
+            // 4. Call prepareSyncBack — for codex the adapter is a no-op (symlink),
+            //    but the refresh-and-save that follows IS the load-bearing work.
+            try RunCommand.prepareSyncBack(tool: .codex, envName: "sb-env")
+
+            // 5. Re-load from the store and assert that email/plan are now populated.
+            let reloaded = try acctStore.load(id: acct.id, tool: .codex)
+            #expect(reloaded.email == "syncback@example.com")
+            #expect(reloaded.plan == "pro")
         }
     }
 }
