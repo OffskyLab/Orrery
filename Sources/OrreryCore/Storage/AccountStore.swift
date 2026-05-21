@@ -3,7 +3,6 @@ import Foundation
 public struct AccountStore: Sendable {
     public enum Error: Swift.Error {
         case accountNotFound(id: String, tool: Tool)
-        case invalidAccountName(String)
     }
 
     public let homeURL: URL
