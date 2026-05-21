@@ -23,7 +23,7 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
-        let tool = try AccountAddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
+        let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let displayName = try resolveName()
 
         if try AccountStore.default.findByDisplayName(displayName, tool: tool) != nil {
