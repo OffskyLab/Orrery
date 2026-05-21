@@ -41,7 +41,7 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
             throw ValidationError(L10n.Phantom.notUnderPhantom)
         }
 
-        let tool = try AccountAddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
+        let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let store = EnvironmentStore.default
 
         // Resolve the account to switch to — fail fast BEFORE signalling claude

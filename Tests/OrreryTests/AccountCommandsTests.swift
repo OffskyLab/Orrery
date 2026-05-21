@@ -40,9 +40,9 @@ func captureStdout(_ body: () throws -> Void) throws -> String {
 @Suite("AccountCommands", .serialized)
 struct AccountCommandsAllTests {
 
-    // MARK: AccountAddCommand
+    // MARK: AddCommand
 
-    @Suite("AccountAddCommand")
+    @Suite("AddCommand")
     struct AccountAddTests {
         init() {}
 
@@ -50,7 +50,7 @@ struct AccountCommandsAllTests {
         func multipleToolFlags() throws {
             try withIsolatedHome {
                 #expect(throws: (any Error).self) {
-                    try AccountAddCommand.resolveTool(claude: true, codex: true, gemini: false)
+                    try AddCommand.resolveTool(claude: true, codex: true, gemini: false)
                 }
             }
         }
@@ -58,7 +58,7 @@ struct AccountCommandsAllTests {
         @Test("defaults to claude when no tool flag is set")
         func defaultsToClaude() throws {
             try withIsolatedHome {
-                let cmd = try AccountAddCommand.parse(["--name", "default-claude-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["--name", "default-claude-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .claude)
                 #expect(accounts.contains { $0.displayName == "default-claude-test" })
@@ -68,7 +68,7 @@ struct AccountCommandsAllTests {
         @Test("--codex flag creates a codex account")
         func codexFlag() throws {
             try withIsolatedHome {
-                let cmd = try AccountAddCommand.parse(["--codex", "--name", "codex-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["--codex", "--name", "codex-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .codex)
                 #expect(accounts.contains { $0.displayName == "codex-test" })
@@ -80,7 +80,7 @@ struct AccountCommandsAllTests {
         func claudeAccountHasKeychainItem() throws {
             try withIsolatedHome {
                 let tmpDir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
-                let cmd = try AccountAddCommand.parse(["--name", "keychain-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["--name", "keychain-test", "--skip-login"])
                 try cmd.run()
                 let store = AccountStore(homeURL: tmpDir)
                 let accounts = try store.list(tool: .claude)
@@ -96,27 +96,27 @@ struct AccountCommandsAllTests {
         @Test("rejects a duplicate display name for the same tool")
         func rejectsDuplicateName() throws {
             try withIsolatedHome {
-                try AccountAddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                try AddCommand.parse(["--name", "dup", "--skip-login"]).run()
                 // second add with the same name + tool must throw
                 #expect(throws: ValidationError.self) {
-                    try AccountAddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                    try AddCommand.parse(["--name", "dup", "--skip-login"]).run()
                 }
                 // a same-name account under a DIFFERENT tool is still allowed
-                try AccountAddCommand.parse(["--codex", "--name", "dup", "--skip-login"]).run()
+                try AddCommand.parse(["--codex", "--name", "dup", "--skip-login"]).run()
             }
         }
     }
 
-    // MARK: AccountListCommand
+    // MARK: ListCommand
 
-    @Suite("AccountListCommand")
+    @Suite("ListCommand")
     struct AccountListTests {
         init() {}
 
         @Test("empty store prints listEmpty message")
         func empty() throws {
             try withIsolatedHome {
-                let cmd = try AccountListCommand.parse([])
+                let cmd = try ListCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("No accounts"))
             }
@@ -127,7 +127,7 @@ struct AccountCommandsAllTests {
             try withIsolatedHome {
                 try AccountStore.default.save(Account(tool: .claude, displayName: "work"))
                 try AccountStore.default.save(Account(tool: .codex, displayName: "personal"))
-                let cmd = try AccountListCommand.parse([])
+                let cmd = try ListCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("work"))
                 #expect(output.contains("personal"))
@@ -141,7 +141,7 @@ struct AccountCommandsAllTests {
             try withIsolatedHome {
                 try AccountStore.default.save(Account(tool: .claude, displayName: "should-not-show"))
                 try AccountStore.default.save(Account(tool: .codex, displayName: "yes-show"))
-                let cmd = try AccountListCommand.parse(["--codex"])
+                let cmd = try ListCommand.parse(["--codex"])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("yes-show"))
                 #expect(!output.contains("should-not-show"))
@@ -161,7 +161,7 @@ struct AccountCommandsAllTests {
                 acct.plan = "free"
                 try store.save(acct)
 
-                let cmd = try AccountListCommand.parse(["--codex"])
+                let cmd = try ListCommand.parse(["--codex"])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("work-codex"))
                 #expect(output.contains("test@example.com"))
@@ -178,7 +178,7 @@ struct AccountCommandsAllTests {
                 acct.email = "gemini@example.com"
                 try store.save(acct)
 
-                let cmd = try AccountListCommand.parse(["--gemini"])
+                let cmd = try ListCommand.parse(["--gemini"])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("gemini-personal"))
                 #expect(output.contains("gemini@example.com"))
@@ -192,7 +192,7 @@ struct AccountCommandsAllTests {
                 try store.save(Account(tool: .claude, displayName: "no-creds-claude"))
                 try store.save(Account(tool: .codex, displayName: "no-creds-codex"))
                 try store.save(Account(tool: .gemini, displayName: "no-creds-gemini"))
-                let cmd = try AccountListCommand.parse([])
+                let cmd = try ListCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 // Must not crash; all account names should appear.
                 #expect(output.contains("no-creds-claude"))
@@ -202,16 +202,16 @@ struct AccountCommandsAllTests {
         }
     }
 
-    // MARK: AccountShowCommand
+    // MARK: ShowCommand
 
-    @Suite("AccountShowCommand")
+    @Suite("ShowCommand")
     struct AccountShowTests {
         init() {}
 
         @Test("unpinned rows show origin and unpinned text")
         func unpinnedRows() throws {
             try withIsolatedHome {
-                let cmd = try AccountShowCommand.parse([])
+                let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("origin"))
                 #expect(output.contains("no account pinned"))
@@ -226,7 +226,7 @@ struct AccountCommandsAllTests {
                 var origin = EnvironmentStore.default.loadOriginConfig()
                 origin.accounts["claude"] = acct.id
                 try EnvironmentStore.default.saveOriginConfig(origin)
-                let cmd = try AccountShowCommand.parse([])
+                let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("pinned-account"))
             }
@@ -247,7 +247,7 @@ struct AccountCommandsAllTests {
                 origin.accounts["codex"] = acct.id
                 try EnvironmentStore.default.saveOriginConfig(origin)
 
-                let cmd = try AccountShowCommand.parse([])
+                let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("show-codex"))
                 #expect(output.contains("codex-show@example.com"))
@@ -263,7 +263,7 @@ struct AccountCommandsAllTests {
                 var origin = EnvironmentStore.default.loadOriginConfig()
                 origin.accounts["claude"] = acct.id
                 try EnvironmentStore.default.saveOriginConfig(origin)
-                let cmd = try AccountShowCommand.parse([])
+                let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("bare-account"))
                 // No trailing " ()" — suffix is empty so no parens added.
@@ -289,7 +289,7 @@ struct AccountCommandsAllTests {
                 setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
                 defer { unsetenv("ORRERY_ACTIVE_ENV") }
 
-                let cmd = try AccountShowCommand.parse([])
+                let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("work-env"))
                 #expect(output.contains("env-pinned-account"))
@@ -297,9 +297,9 @@ struct AccountCommandsAllTests {
         }
     }
 
-    // MARK: AccountUseCommand
+    // MARK: UseCommand
 
-    @Suite("AccountUseCommand")
+    @Suite("UseCommand")
     struct AccountUseTests {
         init() {}
 
@@ -316,7 +316,7 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "work")
                 try AccountStore.default.save(acct)
 
-                let cmd = try AccountUseCommand.parse(["--name", "work"])
+                let cmd = try UseCommand.parse(["work"])
                 try cmd.run()
 
                 let pinned = EnvironmentStore.default.loadOriginConfig().account(for: .claude)
@@ -340,7 +340,7 @@ struct AccountCommandsAllTests {
                 setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
                 defer { unsetenv("ORRERY_ACTIVE_ENV") }
 
-                let cmd = try AccountUseCommand.parse(["--name", "personal"])
+                let cmd = try UseCommand.parse(["personal"])
                 try cmd.run()
 
                 // Named env should have the pin
@@ -362,7 +362,7 @@ struct AccountCommandsAllTests {
                     if let saved = savedEnv { setenv("ORRERY_ACTIVE_ENV", saved, 1) }
                 }
 
-                let cmd = try AccountUseCommand.parse(["--name", "ghost"])
+                let cmd = try UseCommand.parse(["ghost"])
                 #expect(throws: ValidationError.self) {
                     try cmd.run()
                 }
@@ -421,7 +421,7 @@ struct AccountCommandsAllTests {
                 #expect(ClaudeKeychain.setPassword("live-fresh-token", service: liveService))
 
                 // Run `account use --name new-account` — must sync-back live→old first.
-                try AccountUseCommand.parse(["--name", "new-account"]).run()
+                try UseCommand.parse(["new-account"]).run()
 
                 // Assert: old's pool entry now holds the live slot's pre-switch token.
                 #expect(ClaudeKeychain.password(forService: oldPoolService) == "live-fresh-token")
@@ -450,7 +450,7 @@ struct AccountCommandsAllTests {
                 setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
                 defer { unsetenv("ORRERY_ACTIVE_ENV") }
 
-                try AccountUseCommand.parse(["--codex", "--name", "codex-work"]).run()
+                try UseCommand.parse(["--codex", "codex-work"]).run()
 
                 // account use must have materialized: the live codex config dir
                 // now holds auth.json as a symlink pointing into the pool.
@@ -619,9 +619,9 @@ struct AccountCommandsAllTests {
         }
     }
 
-    // MARK: AccountRemoveCommand
+    // MARK: RemoveCommand
 
-    @Suite("AccountRemoveCommand")
+    @Suite("RemoveCommand")
     struct AccountRemoveTests {
         init() {}
 
@@ -631,7 +631,7 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "to-delete")
                 try AccountStore.default.save(acct)
 
-                let cmd = try AccountRemoveCommand.parse(["--name", "to-delete"])
+                let cmd = try RemoveCommand.parse(["to-delete"])
                 try cmd.run()
 
                 let accounts = try AccountStore.default.list(tool: .claude)
@@ -649,7 +649,7 @@ struct AccountCommandsAllTests {
                 origin.setAccount(acct.id, for: .claude)
                 try EnvironmentStore.default.saveOriginConfig(origin)
 
-                let cmd = try AccountRemoveCommand.parse(["--name", "in-use"])
+                let cmd = try RemoveCommand.parse(["in-use"])
                 #expect(throws: ValidationError.self) {
                     try cmd.run()
                 }
@@ -670,7 +670,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.save(env)
 
                 #expect(throws: ValidationError.self) {
-                    try AccountRemoveCommand.parse(["--name", "named-ref"]).run()
+                    try RemoveCommand.parse(["named-ref"]).run()
                 }
                 // account must still be in the pool
                 #expect(try AccountStore.default.findByDisplayName("named-ref", tool: .claude) != nil)
@@ -680,7 +680,7 @@ struct AccountCommandsAllTests {
         @Test("notFound: throws ValidationError when account does not exist")
         func notFound() throws {
             try withIsolatedHome {
-                let cmd = try AccountRemoveCommand.parse(["--name", "ghost"])
+                let cmd = try RemoveCommand.parse(["ghost"])
                 #expect(throws: ValidationError.self) {
                     try cmd.run()
                 }
