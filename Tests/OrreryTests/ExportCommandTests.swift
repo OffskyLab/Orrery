@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-@Suite("ExportCommand")
+@Suite("SandboxCommand.Export / Unexport")
 struct ExportCommandTests {
     var tmpDir: URL!
     var store: EnvironmentStore!
@@ -20,7 +20,7 @@ struct ExportCommandTests {
         try store.save(env)
         try store.addTool(.claude, to: "work")
 
-        let lines = try ExportCommand.exportLines(for: "work", store: store)
+        let lines = try SandboxCommand.Export.exportLines(for: "work", store: store)
         let claudeDir = store.toolConfigDir(tool: .claude, environment: "work").path
         #expect(lines.contains("export CLAUDE_CONFIG_DIR=\(claudeDir)"))
     }
@@ -30,7 +30,7 @@ struct ExportCommandTests {
         let env = OrreryEnvironment(name: "work", env: ["ANTHROPIC_API_KEY": "sk-test"])
         try store.save(env)
 
-        let lines = try ExportCommand.exportLines(for: "work", store: store)
+        let lines = try SandboxCommand.Export.exportLines(for: "work", store: store)
         #expect(lines.contains("export ANTHROPIC_API_KEY=sk-test"))
     }
 
@@ -40,7 +40,7 @@ struct ExportCommandTests {
         try store.save(env)
         try store.addTool(.claude, to: "work")
 
-        let lines = try UnexportCommand.unexportLines(for: "work", store: store)
+        let lines = try SandboxCommand.Unexport.unexportLines(for: "work", store: store)
         #expect(lines.contains("unset CLAUDE_CONFIG_DIR"))
         #expect(lines.contains("unset ANTHROPIC_API_KEY"))
     }
@@ -55,7 +55,7 @@ struct ExportCommandTests {
         // ISO8601 encoding uses second precision, so we need at least 1 second difference
         Thread.sleep(forTimeInterval: 1.0)
 
-        _ = try ExportCommand.exportLines(for: "work", store: store)
+        _ = try SandboxCommand.Export.exportLines(for: "work", store: store)
 
         let loaded = try store.load(named: "work")
         #expect(loaded.lastUsed >= before)
