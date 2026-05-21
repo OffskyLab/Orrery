@@ -155,12 +155,19 @@ public struct ShellFunctionGenerator {
                   # take effect for `orrery run claude`.
                   command orrery-bin _materialize claude
                   command claude "${_phantom_args[@]}"
+                  # Sync the just-used account's refreshed credential back into
+                  # the pool BEFORE the sentinel below changes which account/env
+                  # is active — otherwise the rotated token would be lost.
+                  command orrery-bin _syncback claude
                   [ -f "$_phantom_sentinel" ] || break
-                  local TARGET_ENV='' SESSION_ID=''
+                  local TARGET_ENV='' TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
                   . "$_phantom_sentinel"
                   rm -f "$_phantom_sentinel"
                   if [ -n "$TARGET_ENV" ]; then
                     orrery use "$TARGET_ENV" || break
+                  fi
+                  if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
+                    command orrery-bin account use --"$TARGET_ACCOUNT_TOOL" --name "$TARGET_ACCOUNT_NAME" || break
                   fi
                   # After a phantom switch, --resume <new-session-id> is the only
                   # arg we want — the user's original flags don't carry over (they

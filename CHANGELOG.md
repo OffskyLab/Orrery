@@ -28,6 +28,9 @@
 - Environments now reference accounts by id (`OrreryEnvironment.accounts`)
   rather than owning credentials directly. `orrery run` materializes the pinned
   account's credentials for the tool just before launch.
+- Credentials refreshed by a tool are now synced back into the accounts pool
+  after each run, so macOS Claude account switching stays valid across token
+  rotations.
 
 ### Migration
 
