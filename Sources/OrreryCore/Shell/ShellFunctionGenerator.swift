@@ -36,7 +36,7 @@ public struct ShellFunctionGenerator {
               fi
               # Unexport previous env vars if switching
               if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
-                eval "$(command orrery-bin _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
+                eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
               fi
               if [ "$2" = "origin" ]; then
                 unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
@@ -44,7 +44,7 @@ public struct ShellFunctionGenerator {
                 command orrery-bin _set-current origin 2>/dev/null || true
               else
                 local exports
-                exports=$(command orrery-bin _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
+                exports=$(command orrery-bin sandbox _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
                 eval "$exports"
                 export ORRERY_ACTIVE_ENV="$2"
                 command orrery-bin _set-current "$2" 2>/dev/null || true
