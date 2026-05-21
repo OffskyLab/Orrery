@@ -30,6 +30,11 @@
 
 ### Changed
 
+- `orrery account add --claude` now spawns Claude through the orrery shell
+  function so the REPL gets a proper foreground TTY process group; the Claude
+  onboarding wizard guides login naturally. codex/gemini account-add continue
+  to use the Swift `Process` path (their login subcommands are browser-based
+  and do not need TTY foreground).
 - Environments now reference accounts by id (`OrreryEnvironment.accounts`)
   rather than owning credentials directly.
 - Account switching (`orrery account use`) now materializes credentials

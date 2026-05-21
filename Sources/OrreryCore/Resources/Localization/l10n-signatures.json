@@ -110,11 +110,28 @@
     ]
   },
   {
-    "path": ["Account", "loginManualHint"],
+    "path": ["Account", "loginManualFallbackHint"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
+  { "path": ["Account", "loginReadyHint"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "addFinalized"],
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "tool", "type": "String" },
-      { "label": "_", "name": "dir", "type": "String" }
+      { "label": "_", "name": "name", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "addFinalizedWithInfo"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "info", "type": "String" }
     ]
   },
   {

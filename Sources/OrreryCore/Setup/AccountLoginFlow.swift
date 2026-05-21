@@ -110,7 +110,8 @@ public enum AccountLoginFlow {
         defer { try? fm.removeItem(at: stagingDir) }
 
         if let authCmd = account.tool.authLoginCommand {
-            // Tool has a scriptable login subcommand (e.g. codex).
+            // Tool has a scriptable login subcommand (e.g. codex / gemini):
+            // just launch it — no preamble needed, the subcommand is self-explanatory.
             try spawnInteractive(
                 command: authCmd,
                 envVarName: account.tool.envVarName,
@@ -119,7 +120,17 @@ public enum AccountLoginFlow {
         } else {
             // Tool has no scriptable login subcommand (e.g. claude): launch it
             // interactively and let the user complete login themselves.
-            print(L10n.Account.loginManualHint(account.tool.rawValue, stagingDir.path))
+            //
+            // NOTE: This is the defensive fallback path — the normal path for claude
+            // goes through the orrery shell function (`account)` case in the generated
+            // activate.sh), which sets CLAUDE_CONFIG_DIR and runs `command claude`
+            // directly from the shell so it gets a proper foreground TTY process group.
+            // Swift's Process does not give the child the foreground process group, so
+            // Claude Code detects "not foreground" and silently exits.
+            //
+            // If a user somehow invokes `orrery-bin account add --claude` directly
+            // (bypassing the shell function), we still try — but warn them.
+            print(L10n.Account.loginManualFallbackHint(account.tool.rawValue))
             try spawnInteractive(
                 command: [account.tool.rawValue],
                 envVarName: account.tool.envVarName,

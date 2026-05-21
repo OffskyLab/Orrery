@@ -38,4 +38,29 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("TARGET_ACCOUNT_NAME"))
         #expect(script.contains("account use --\"$TARGET_ACCOUNT_TOOL\" --name \"$TARGET_ACCOUNT_NAME\""))
     }
+
+    @Test("account add --claude routes through shell function with TTY-attached claude")
+    func accountAddClaudeRoutesThroughShell() {
+        let script = ShellFunctionGenerator.generate()
+        // The account) case must be present.
+        #expect(script.contains("account)"))
+        // Claude detection logic.
+        #expect(script.contains("_is_claude=1"))
+        #expect(script.contains("--codex|--gemini"))
+        // Prepare / claude / finalize pipeline.
+        #expect(script.contains("_account-add-prepare"))
+        #expect(script.contains("command claude"))
+        #expect(script.contains("_account-add-finalize"))
+        // Login ready hint is printed before claude launches.
+        #expect(script.contains(L10n.Account.loginReadyHint))
+    }
+
+    @Test("account add --codex and --gemini fall through to orrery-bin, not claude")
+    func accountAddCodexGeminiFallThrough() {
+        let script = ShellFunctionGenerator.generate()
+        // The non-claude path must fall through to orrery-bin "$@".
+        #expect(script.contains("command orrery-bin \"$@\""))
+        // The detection logic must check for --codex and --gemini flags.
+        #expect(script.contains("--codex|--gemini) _is_claude=0"))
+    }
 }
