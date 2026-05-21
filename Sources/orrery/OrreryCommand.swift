@@ -47,6 +47,8 @@ public struct OrreryCommand: AsyncParsableCommand {
             ThirdPartyCommand.self,
             PhantomTriggerCommand.self,
             PhantomAccountTriggerCommand.self,
+            AccountAddPrepareCommand.self,
+            AccountAddFinalizeCommand.self,
         ]
     )
     public init() {}
