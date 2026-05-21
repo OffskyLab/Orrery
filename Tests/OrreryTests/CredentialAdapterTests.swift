@@ -281,6 +281,32 @@ struct KeychainCredentialAdapterTests {
         _ = liveService
     }
 
+    @Test("syncBack is a no-op when pool already matches live — early return, no write")
+    func syncBackIdempotentPoolMatchesLive() throws {
+        let accountID = UUID().uuidString
+        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+        let account = Account(id: accountID, tool: .claude, displayName: "sb-idem",
+                              keychainItem: poolService)
+        try accountStore.save(account)
+
+        // Store the same token in both pool and live slots.
+        #expect(ClaudeKeychain.storePassword("same-token", forOrreryAccount: accountID))
+
+        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-syncback-idem")
+        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
+        defer {
+            _ = KeychainTestSupport.delete(service: poolService)
+            _ = KeychainTestSupport.delete(service: liveService)
+        }
+        #expect(ClaudeKeychain.setPassword("same-token", service: liveService))
+
+        let adapter = KeychainCredentialAdapter()
+        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
+
+        // Pool should still hold the same token (no write occurred).
+        #expect(ClaudeKeychain.password(forService: poolService) == "same-token")
+    }
+
     @Test("materialize is idempotent — second call is a safe no-op")
     func idempotent() throws {
         let accountID = UUID().uuidString
