@@ -94,9 +94,12 @@ public struct RunCommand: ParsableCommand {
 }
 
 extension RunCommand {
-    /// 啟動工具前：依當前 env / origin 的 pin 把憑證 materialize 到工具會讀的位置。
-    /// envName == nil 或 "origin" 視為 origin。
-    static func prepareMaterialize(tool: Tool, envName: String?) throws {
+    /// 解析「當前 env / origin 釘在某工具上的 account + 它的 configDir」。
+    /// envName == nil 或 "origin" 視為 origin（configDir = nil，工具預設位置）。
+    /// 回傳 nil 代表沒有釘任何 account。
+    static func resolvePinnedAccount(
+        tool: Tool, envName: String?
+    ) throws -> (account: Account, configDir: String?)? {
         let envStore = EnvironmentStore.default
         let acctStore = AccountStore.default
 
@@ -113,13 +116,29 @@ extension RunCommand {
             configDir = nil
         }
 
-        guard let id = pinnedID else {
+        guard let id = pinnedID else { return nil }
+        let account = try acctStore.load(id: id, tool: tool)
+        return (account, configDir)
+    }
+
+    /// 啟動工具前：依當前 env / origin 的 pin 把憑證 materialize 到工具會讀的位置。
+    /// envName == nil 或 "origin" 視為 origin。
+    static func prepareMaterialize(tool: Tool, envName: String?) throws {
+        guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
             // 沒釘 account — 不阻擋啟動，讓工具自己處理「未登入」。
             return
         }
-
-        let account = try acctStore.load(id: id, tool: tool)
         try CredentialAdapters.adapter(for: tool).materialize(
-            account: account, configDir: configDir, accountStore: acctStore)
+            account: account, configDir: configDir, accountStore: AccountStore.default)
+    }
+
+    /// 工具結束後：把工具可能 refresh 過的憑證寫回 pool account。
+    /// envName == nil 或 "origin" 視為 origin。沒釘 account 時為 no-op。
+    static func prepareSyncBack(tool: Tool, envName: String?) throws {
+        guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
+            return
+        }
+        try CredentialAdapters.adapter(for: tool).syncBack(
+            account: account, configDir: configDir, accountStore: AccountStore.default)
     }
 }
