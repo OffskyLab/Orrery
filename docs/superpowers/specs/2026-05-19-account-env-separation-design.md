@@ -94,22 +94,30 @@ orrery list              # 列出所有 env + 各自釘的 accounts
 orrery remove <env>      # 刪除 env（accounts pool 不受影響）
 ```
 
-## 4. 啟動流程（Materialize）
+## 4. Materialize / Sync-back（在「切換」當下完成）
 
-Symlink 是**持久**的，並非每次啟動才建。觸發時機有三：
+每個 env（與 origin）的 tool config dir 與 macOS Keychain slot 都是**env-specific 且持久**的——materialize 出來的憑證會留在那裡。因此 materialize 只需在**切換 account 的當下**做一次，不必每次啟動工具都做。
+
+觸發時機有二：
 
 - 自動遷移時建立一次
-- `orrery account use` 改變 pin 時更新
-- `orrery run <tool>` 啟動前做一次冪等檢查（修復任何 drift）
+- `orrery account use` 改變 pin 時：先 sync-back **舊** account，再 materialize **新** account
 
-`orrery run <tool>` 流程：
+`orrery use`（切 env）**不需要任何憑證邏輯**：每個 env 的 slot 各自保有自己已 materialize 的憑證。
 
-1. 讀目前 active env 的 `env.json` → 取得 `accounts.<tool>` 對應的 account id
-2. 冪等 materialize（檢查既有 symlink 是否指對地方，不對就重建）：
-   - **檔案型憑證**（Codex `auth.json`、Gemini `oauth_creds.json`、Linux Claude `.credentials.json`）：env 的 tool dir 內憑證檔是 **symlink** 到 account pool 的對應檔案
-   - **Keychain 型**（macOS Claude OAuth）：account 存的是 Keychain item 識別資訊，launcher 在啟動前把該 item 映射到工具預期讀取的位置（tool-specific adapter）
-3. 設 `CLAUDE_CONFIG_DIR` / `CODEX_HOME` / `GEMINI_CONFIG_DIR` 指向 env 的 tool dir
-4. exec 工具
+`orrery account use --<tool> --name <new>` 流程：
+
+1. 解析 tool、新 account、active env
+2. **Sync-back 目前釘的 account**（repin 之前）——把工具最後寫入的內容（例如 Claude refresh 過的 token）回寫到舊 account 的 pool entry
+3. 更新 pin → 新 account
+4. **Materialize 新釘的 account**——把它的 pool 憑證放進工具實際讀取的 live slot：
+   - **檔案型憑證**（Codex `auth.json`、Gemini `oauth_creds.json`、Linux Claude `.credentials.json`）：tool config dir 內憑證檔是 **symlink** 到 account pool 的對應檔案
+   - **Keychain 型**（macOS Claude OAuth）：把 pool token 複寫到工具預期讀取的 Keychain key
+5. 印出確認訊息
+
+順序很重要：sync-back 讀的是舊 pin，必須在步驟 3 之前；materialize 讀的是新 pin，必須在步驟 3 之後。
+
+**結果**：`orrery account use` 完成後憑證已就定位，純 `claude` / `codex` / `gemini`（不經 `orrery run`）直接就會使用切換後的 account——切換 account 不再需要 `orrery run`。
 
 ### Materialize Strategy 表
 
@@ -146,7 +154,7 @@ Materialize 流程：
 
 ### Sync-back（macOS Claude 專屬）
 
-Keychain item 無法 symlink，所以 macOS Claude 的 pool entry 是憑證的**複本**——materialize 把 pool token 複寫到 Claude 預期讀取的 live Keychain service。Claude 每次 refresh OAuth token 時只會把新 token 寫回 live service，**不會**回寫 pool；若不處理，pool 快照會逐漸過期，切回該 account 時就 401。因此每次工具結束後做一次 **sync-back**：把 live service 的（可能已 refresh 的）token 複寫回 account 的 pool entry，反向於 materialize。檔案型工具（Codex / Gemini / Linux Claude）因為 materialize 用 symlink，工具本來就直接讀寫 pool 檔案，sync-back 為純 no-op。phantom supervisor loop 在 `claude` 退出後、套用 sentinel 切換 env/account **之前**呼叫 `orrery-bin _syncback claude`，確保回寫的是剛用過的 account。
+Keychain item 無法 symlink，所以 macOS Claude 的 pool entry 是憑證的**複本**——materialize 把 pool token 複寫到 Claude 預期讀取的 live Keychain service。Claude 每次 refresh OAuth token 時只會把新 token 寫回 live service，**不會**回寫 pool；若不處理，pool 快照會逐漸過期，切回該 account 時就 401。因此在**切走某 account 之前**做一次 **sync-back**：把 live service 的（可能已 refresh 的）token 複寫回 account 的 pool entry，反向於 materialize。檔案型工具（Codex / Gemini / Linux Claude）因為 materialize 用 symlink，工具本來就直接讀寫 pool 檔案，sync-back 為純 no-op。sync-back 在 `orrery account use` repin **之前**執行（見上節步驟 2），讀的是舊 pin，確保回寫的是剛用過的 account。
 
 ## 5. Sessions 與 Memory
 
@@ -220,8 +228,8 @@ Keychain item 無法 symlink，所以 macOS Claude 的 pool entry 是憑證的**
 | `Sources/OrreryCore/Storage/AccountStore.swift` | 新增 store，負責 accounts pool CRUD |
 | `Sources/OrreryCore/Storage/EnvironmentStore.swift` | 移除憑證管理，加入 `accounts` 引用解析 |
 | `Sources/OrreryCore/Setup/CredentialAdapter.swift` | 新增 protocol，提供 file-based / Keychain materialize |
-| `Sources/OrreryCore/Commands/AccountCommands.swift` | 新增 `account add/remove/list/show/use` 子命令 |
-| `Sources/OrreryCore/Commands/RunCommand.swift` | 啟動前先 materialize |
+| `Sources/OrreryCore/Commands/AccountCommands.swift` | 新增 `account add/remove/list/show/use` 子命令；`account use` 切換時 sync-back 舊 account、materialize 新 account |
+| `Sources/OrreryCore/Commands/RunCommand.swift` | 提供 `prepareMaterialize` / `prepareSyncBack` helper 供 `account use` 重用 |
 | `Sources/OrreryCore/Setup/Migration.swift` | 新增 v2→v3 自動遷移 |
 | `Sources/OrreryCore/Commands/PhantomCommand.swift` | 加入 `account` 子命令 |
 | `Sources/OrreryCore/MCP/MCPServer.swift` | currentVersion bump、加入 account 相關 tool |

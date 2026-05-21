@@ -276,6 +276,38 @@ struct AccountCommandsAllTests {
                 }
             }
         }
+
+        @Test("materializes: account use places the codex credential into the live config dir")
+        func materializesCredential() throws {
+            try withIsolatedHome {
+                let envStore = EnvironmentStore.default
+                let acctStore = AccountStore.default
+
+                // A named env so the live config dir is inside the isolated home
+                // (origin would resolve to the real ~/.codex). The materialize
+                // path is identical for origin and named envs.
+                try envStore.save(OrreryEnvironment(name: "work-env"))
+
+                // Create the codex account and seed a credential file in its pool dir.
+                let acct = Account(tool: .codex, displayName: "codex-work")
+                try acctStore.save(acct)
+                let poolCred = acctStore.accountDir(id: acct.id, tool: .codex)
+                    .appendingPathComponent("auth.json")
+                try Data("{}".utf8).write(to: poolCred)
+
+                setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
+                defer { unsetenv("ORRERY_ACTIVE_ENV") }
+
+                try AccountUseCommand.parse(["--codex", "--name", "codex-work"]).run()
+
+                // account use must have materialized: the live codex config dir
+                // now holds auth.json as a symlink pointing into the pool.
+                let liveCred = envStore.toolConfigDir(tool: .codex, environment: "work-env")
+                    .appendingPathComponent("auth.json")
+                let dest = try FileManager.default.destinationOfSymbolicLink(atPath: liveCred.path)
+                #expect(dest == poolCred.path)
+            }
+        }
     }
 
     // MARK: AccountRemoveCommand
