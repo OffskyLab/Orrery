@@ -50,7 +50,7 @@ public struct PhantomTriggerCommand: ParsableCommand {
       - Parse the tool (`claude` by default) and account name from the rest of `$ARGUMENTS`.
       - If the account name is missing, ask the user which account they want to switch to before proceeding.
       - Run `orrery-bin _phantom-trigger-account --<tool> --name <account-name>` (e.g. `orrery-bin _phantom-trigger-account --claude --name work`).
-      - The trigger updates the pin and writes a sentinel for the SAME env, then signals Claude to relaunch — the new account is picked up automatically.
+      - The trigger writes a sentinel naming the target account, then signals Claude to relaunch. The supervisor syncs the just-used account's credential back into the pool, applies the new pin, and relaunches — the new account is picked up automatically.
 
     - **If `$ARGUMENTS` is non-empty and does NOT start with `account`** (a target env name): run `orrery-bin _phantom-trigger $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
 
@@ -90,7 +90,13 @@ public struct PhantomTriggerCommand: ParsableCommand {
         }
 
         let sessionId = Self.findCurrentClaudeSessionId()
-        try Self.writeSentinel(targetEnv: target, sessionId: sessionId, store: store)
+        try Self.writeSentinel(
+            targetEnv: target,
+            targetAccountTool: nil,
+            targetAccountName: nil,
+            sessionId: sessionId,
+            store: store
+        )
 
         if let sessionId {
             print(L10n.Phantom.switching(target, String(sessionId.prefix(8))))
@@ -145,16 +151,35 @@ public struct PhantomTriggerCommand: ParsableCommand {
 
     /// Sentinel format is shell-sourceable so the supervisor loop can simply
     /// `. "$sentinel"` to read it. Single-quoted values guard against names
-    /// containing shell metacharacters (env names are validated elsewhere, but
-    /// be defensive at the IPC boundary).
-    static func writeSentinel(targetEnv: String, sessionId: String?, store: EnvironmentStore) throws {
+    /// containing shell metacharacters (env / account names are validated
+    /// elsewhere, but be defensive at the IPC boundary).
+    ///
+    /// The sentinel can carry EITHER a target env (env-switch) OR a target
+    /// account (account-switch) — the supervisor loop applies whichever is
+    /// present AFTER claude exits. Only non-nil fields are emitted; `SESSION_ID`
+    /// is always emitted (empty string when nil).
+    static func writeSentinel(
+        targetEnv: String?,
+        targetAccountTool: String?,
+        targetAccountName: String?,
+        sessionId: String?,
+        store: EnvironmentStore
+    ) throws {
         let url = Self.sentinelURL(store: store)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         var lines: [String] = []
-        lines.append("TARGET_ENV='\(shellEscape(targetEnv))'")
+        if let targetEnv {
+            lines.append("TARGET_ENV='\(shellEscape(targetEnv))'")
+        }
+        if let targetAccountTool {
+            lines.append("TARGET_ACCOUNT_TOOL='\(shellEscape(targetAccountTool))'")
+        }
+        if let targetAccountName {
+            lines.append("TARGET_ACCOUNT_NAME='\(shellEscape(targetAccountName))'")
+        }
         if let sessionId {
             lines.append("SESSION_ID='\(shellEscape(sessionId))'")
         } else {

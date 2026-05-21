@@ -9,9 +9,14 @@ import Glibc
 /// `orrery-bin _phantom-trigger-account --<tool> --name <account>` — invoked from
 /// inside a phantom-supervised claude (via the `/orrery:phantom` slash command) to
 /// switch which account a tool uses, without leaving the current env or losing the
-/// conversation. Updates the current env's account pin, then writes a sentinel
-/// targeting the SAME env so the supervisor relaunches it — the relaunch's
-/// materialize step picks up the new credential.
+/// conversation.
+///
+/// This command does NOT mutate the account pin. It writes a sentinel carrying
+/// the target tool+account, then signals claude to exit. The supervisor loop
+/// applies the pin change (`orrery-bin account use`) AFTER claude exits and AFTER
+/// `_syncback` has persisted the just-used account's refreshed credential. If we
+/// flipped the pin here, sync-back would copy the old claude's live token into
+/// the NEW account's pool entry — corruption.
 public struct PhantomAccountTriggerCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_phantom-trigger-account",
@@ -38,18 +43,10 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         let tool = try AccountAddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let store = EnvironmentStore.default
 
-        // Resolve the account to switch to.
-        guard let account = try AccountStore.default.findByDisplayName(name, tool: tool) else {
+        // Resolve the account to switch to — fail fast BEFORE signalling claude
+        // so a typo never tears down the running session.
+        guard try AccountStore.default.findByDisplayName(name, tool: tool) != nil else {
             throw ValidationError(L10n.Account.useNotFound(name, tool.rawValue))
-        }
-
-        // Resolve the current env (origin if ORRERY_ACTIVE_ENV unset/origin).
-        let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        let currentEnvName: String
-        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
-            currentEnvName = activeEnv
-        } else {
-            currentEnvName = ReservedEnvironment.defaultName
         }
 
         // Find claude FIRST — don't leave a stale sentinel if we can't signal it.
@@ -57,24 +54,25 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
             throw ValidationError(L10n.Phantom.claudeNotFound)
         }
 
-        // Update the pin (origin config vs named env).
-        if currentEnvName == ReservedEnvironment.defaultName {
-            var origin = store.loadOriginConfig()
-            origin.setAccount(account.id, for: tool)
-            try store.saveOriginConfig(origin)
-        } else {
-            var env = try store.load(named: currentEnvName)
-            env.setAccount(account.id, for: tool)
-            try store.save(env)
-        }
-
-        // Write a sentinel targeting the SAME env — the relaunch's materialize
-        // step will pick up the just-written pin.
+        // Write a sentinel carrying the target account. The pin is NOT mutated
+        // here — the supervisor loop applies `orrery-bin account use` AFTER
+        // claude exits and AFTER `_syncback` has saved the old account's
+        // refreshed credential. Flipping the pin now would make sync-back copy
+        // the old claude's live token into the NEW account's pool entry.
         let sessionId = PhantomTriggerCommand.findCurrentClaudeSessionId()
         try PhantomTriggerCommand.writeSentinel(
-            targetEnv: currentEnvName, sessionId: sessionId, store: store)
+            targetEnv: nil,
+            targetAccountTool: tool.rawValue,
+            targetAccountName: name,
+            sessionId: sessionId,
+            store: store
+        )
 
-        print(L10n.Account.usePinned(tool.rawValue, name, currentEnvName))
+        if let sessionId {
+            print(L10n.Phantom.switching(name, String(sessionId.prefix(8))))
+        } else {
+            print(L10n.Phantom.switchingNoSession(name))
+        }
 
         // SIGTERM claude so the supervisor relaunches it.
         if kill(claudePid, SIGTERM) != 0 {
