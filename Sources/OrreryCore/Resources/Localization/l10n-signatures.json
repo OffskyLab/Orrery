@@ -2317,6 +2317,21 @@
     ]
   },
   {
+    "path": ["Phantom", "switchingAccount"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "account", "type": "String" },
+      { "label": "_", "name": "session", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Phantom", "switchingAccountNoSession"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "account", "type": "String" }
+    ]
+  },
+  {
     "path": ["Setup", "installedSlashCommand"],
     "kind": "func",
     "parameters": [

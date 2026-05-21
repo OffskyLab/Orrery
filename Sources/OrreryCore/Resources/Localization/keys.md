@@ -269,6 +269,8 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `phantom.usageHint` | Usage hint appended after the env list. `/orrery:phantom` is a literal slash command name. |
 | `phantom.switching` | Printed when switching to a named env with a known session. `{env}` = env name; `{sessionPrefix}` = first 8 chars of session id. |
 | `phantom.switchingNoSession` | Printed when switching to an env with no active session. `{env}` = env name. |
+| `phantom.switchingAccount` | Printed when switching to a named account with a known session. `{account}` = account display name; `{session}` = first 8 chars of session id. |
+| `phantom.switchingAccountNoSession` | Printed when switching to an account with no active session. `{account}` = account display name. |
 
 ## setup — `orrery setup` (shell integration install)
 
