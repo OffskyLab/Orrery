@@ -140,7 +140,7 @@ public struct MCPSetupCommand: ParsableCommand {
             // CLAUDE_CONFIG_DIR — this makes /orrery:phantom available in
             // any project where `orrery mcp setup` has been run.
             let phantomMd = commandsDir.appendingPathComponent("orrery:phantom.md")
-            try PhantomTriggerCommand.slashCommandMarkdown.write(to: phantomMd, atomically: true, encoding: .utf8)
+            try PhantomSandboxTriggerCommand.slashCommandMarkdown.write(to: phantomMd, atomically: true, encoding: .utf8)
             let magiMd = commandsDir.appendingPathComponent("orrery:magi.md")
             let magiContent = """
             # Multi-model discussion (Magi)
