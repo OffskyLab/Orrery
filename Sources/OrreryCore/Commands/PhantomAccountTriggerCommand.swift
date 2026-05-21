@@ -51,7 +51,7 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         }
 
         // Find claude FIRST — don't leave a stale sentinel if we can't signal it.
-        guard let claudePid = PhantomTriggerCommand.findClaudeAncestor(supervisorPid: supervisorPid) else {
+        guard let claudePid = PhantomSandboxTriggerCommand.findClaudeAncestor(supervisorPid: supervisorPid) else {
             throw ValidationError(L10n.Phantom.claudeNotFound)
         }
 
@@ -61,9 +61,9 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         // credential back into the pool before it repins. Flipping the pin now
         // would make that sync-back copy the old claude's live token into the
         // NEW account's pool entry.
-        let sessionId = PhantomTriggerCommand.findCurrentClaudeSessionId()
-        try PhantomTriggerCommand.writeSentinel(
-            targetEnv: nil,
+        let sessionId = PhantomSandboxTriggerCommand.findCurrentClaudeSessionId()
+        try PhantomSandboxTriggerCommand.writeSentinel(
+            targetSandbox: nil,
             targetAccountTool: tool.rawValue,
             targetAccountName: name,
             sessionId: sessionId,
@@ -80,7 +80,7 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         if kill(claudePid, SIGTERM) != 0 {
             // Signal failed (race with claude exiting) — pull the sentinel back
             // so it doesn't fire on the next manual claude launch.
-            try? FileManager.default.removeItem(at: PhantomTriggerCommand.sentinelURL(store: store))
+            try? FileManager.default.removeItem(at: PhantomSandboxTriggerCommand.sentinelURL(store: store))
             throw ValidationError(L10n.Phantom.signalFailed)
         }
     }
