@@ -148,6 +148,12 @@ public struct ShellFunctionGenerator {
                 # make the child claude hang waiting for an MCP host.
                 unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH
                 while true; do
+                  # Materialize the pinned account's credentials before every
+                  # launch. The phantom path forks claude directly (not via
+                  # `orrery-bin run`), so this is the only place account
+                  # switches (`orrery account use`, `/orrery:phantom account`)
+                  # take effect for `orrery run claude`.
+                  command orrery-bin _materialize claude
                   command claude "${_phantom_args[@]}"
                   [ -f "$_phantom_sentinel" ] || break
                   local TARGET_ENV='' SESSION_ID=''
