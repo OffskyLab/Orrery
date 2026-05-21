@@ -123,18 +123,21 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `delete.nothingSelected` | Shown when the user finishes the multi-select with no items. |
 | `delete.reservedName` | Error when trying to delete `origin`. |
 
-## envVar — `orrery config` (env-var configuration)
+## sandbox — `orrery sandbox` command family
 
 | Key | Context |
 | --- | --- |
-| `envVar.abstract` | Parent command help. |
-| `envVar.defaultNotSupported` | Error when targeting `origin`. |
-| `envVar.envHelp` | `--env` flag help. |
-| `envVar.noActive` | Error: no active env and `--env` not given. |
-| `envVar.set` | Success: variable set. `{key}`, `{envName}`. |
-| `envVar.setAbstract` | `set` sub-command help. |
-| `envVar.unset` | Success: variable removed. `{key}`, `{envName}`. |
-| `envVar.unsetAbstract` | `unset` sub-command help. |
+| `sandbox.abstract` | Root command help for `orrery sandbox`. |
+| `sandbox.setEnvAbstract` | Sub-command help for `orrery sandbox set-env`. |
+| `sandbox.setEnvKeyHelp` | Positional `key` argument help for `set-env`. |
+| `sandbox.setEnvValueHelp` | Positional `value` argument help for `set-env`. |
+| `sandbox.setEnvSandboxHelp` | `-s/--sandbox` option help for `set-env` and `unset-env`. |
+| `sandbox.setEnvNoActive` | Error: no active sandbox and `-s` not given. References `orrery sandbox use <name>` — keep literal. |
+| `sandbox.setEnvOriginNotSupported` | Error when targeting the `origin` sandbox. |
+| `sandbox.setEnvSuccess` | Success: variable set. `{key}` = variable name; `{name}` = sandbox name. |
+| `sandbox.unsetEnvAbstract` | Sub-command help for `orrery sandbox unset-env`. |
+| `sandbox.unsetEnvKeyHelp` | Positional `key` argument help for `unset-env`. |
+| `sandbox.unsetEnvSuccess` | Success: variable removed. `{key}` = variable name; `{name}` = sandbox name. |
 
 ## export / unexport — shell integration internals
 
