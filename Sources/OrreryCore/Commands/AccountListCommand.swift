@@ -39,17 +39,8 @@ public struct AccountListCommand: ParsableCommand {
         }
 
         for tool in Tool.allCases {
-            guard var accts = grouped[tool], !accts.isEmpty else { continue }
+            guard let accts = grouped[tool], !accts.isEmpty else { continue }
             print(L10n.Account.listToolHeader(tool.rawValue))
-
-            // Lazy backfill: if BOTH email and plan are nil on an account, try
-            // a best-effort refresh from credential sources. Persists when any
-            // field actually changes.
-            for i in accts.indices where accts[i].email == nil && accts[i].plan == nil {
-                if accts[i].refreshInfo(accountStore: store) {
-                    try? store.save(accts[i])
-                }
-            }
 
             // Pad display names to the longest in this group, plus 2 spaces.
             let maxNameLen = accts.map(\.displayName.count).max() ?? 0

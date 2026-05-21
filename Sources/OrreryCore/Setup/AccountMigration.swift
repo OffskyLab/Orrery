@@ -231,7 +231,13 @@ public enum AccountMigration {
                 // a `.claude.json`. If this scope does, refresh.
                 var refreshed = existing
                 if refreshed.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL) {
-                    try? acctStore.save(refreshed)
+                    do {
+                        try acctStore.save(refreshed)
+                    } catch {
+                        FileHandle.standardError.write(Data(
+                            "[orrery migration] warning: could not save refreshed info for account '\(existing.displayName)': \(error)\n".utf8
+                        ))
+                    }
                 }
                 return existing.id
             }
