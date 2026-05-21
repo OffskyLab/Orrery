@@ -180,6 +180,32 @@ public struct ShellFunctionGenerator {
                 fi
               fi
               ;;
+            account)
+              # `account add` for claude needs a real TTY-attached claude REPL.
+              # Swift's Process doesn't give the child the foreground process group,
+              # so claude silently exits. Route the claude case through the shell
+              # so `command claude` gets the controlling terminal directly.
+              # codex/gemini work fine via the regular orrery-bin path (their login
+              # subcommands open a browser and don't need TTY foreground).
+              if [ "${2:-}" = "add" ]; then
+                local _is_claude=1
+                for _a in "${@:3}"; do
+                  case "$_a" in
+                    --codex|--gemini) _is_claude=0; break ;;
+                  esac
+                done
+                if [ $_is_claude -eq 1 ]; then
+                  local _staging
+                  _staging=$(command orrery-bin _account-add-prepare "${@:3}") || return $?
+                  [ -z "$_staging" ] && { echo "orrery: prepare returned empty staging dir" >&2; return 1; }
+                  printf "\(L10n.Account.loginReadyHint)\\n"
+                  CLAUDE_CONFIG_DIR="$_staging" command claude
+                  command orrery-bin _account-add-finalize --staging "$_staging"
+                  return $?
+                fi
+              fi
+              command orrery-bin "$@"
+              ;;
             *)
               command orrery-bin "$@"
               ;;

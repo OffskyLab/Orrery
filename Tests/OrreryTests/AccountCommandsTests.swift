@@ -462,6 +462,146 @@ struct AccountCommandsAllTests {
         }
     }
 
+    // MARK: AccountAddPrepareCommand
+
+    @Suite("AccountAddPrepareCommand")
+    struct AccountAddPrepareTests {
+        init() {}
+
+        @Test("creates account in store, staging dir on disk, and prints staging path")
+        func prepareClaude() throws {
+            try withIsolatedHome {
+                let output = try captureStdout {
+                    let cmd = try AccountAddPrepareCommand.parse(["--name", "prep-test"])
+                    try cmd.run()
+                }
+                let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                #expect(!stagingPath.isEmpty)
+                #expect(FileManager.default.fileExists(atPath: stagingPath))
+
+                // The prepare metadata file must exist.
+                let metadataURL = URL(fileURLWithPath: stagingPath)
+                    .appendingPathComponent(".orrery-prepare.json")
+                #expect(FileManager.default.fileExists(atPath: metadataURL.path))
+
+                // Parse and verify metadata content.
+                let data = try Data(contentsOf: metadataURL)
+                let json = try JSONSerialization.jsonObject(with: data) as! [String: String]
+                #expect(json["tool"] == "claude")
+                #expect(json["displayName"] == "prep-test")
+                #expect(json["accountID"] != nil && !json["accountID"]!.isEmpty)
+
+                // The account must be in the store.
+                let accounts = try AccountStore.default.list(tool: .claude)
+                #expect(accounts.contains { $0.displayName == "prep-test" })
+
+                // Cleanup staging dir.
+                try? FileManager.default.removeItem(atPath: stagingPath)
+            }
+        }
+
+        @Test("rejects duplicate display name")
+        func prepareDuplicate() throws {
+            try withIsolatedHome {
+                let output = try captureStdout {
+                    let cmd = try AccountAddPrepareCommand.parse(["--name", "dup-prep"])
+                    try cmd.run()
+                }
+                let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                defer { try? FileManager.default.removeItem(atPath: stagingPath) }
+
+                // Second call with same name must throw.
+                #expect(throws: ValidationError.self) {
+                    try AccountAddPrepareCommand.parse(["--name", "dup-prep"]).run()
+                }
+            }
+        }
+    }
+
+    // MARK: AccountAddFinalizeCommand
+
+    @Suite("AccountAddFinalizeCommand")
+    struct AccountAddFinalizeTests {
+        init() {}
+
+        private func makeCodexStagingDir(accountID: String, displayName: String) throws -> URL {
+            let staging = FileManager.default.temporaryDirectory
+                .appendingPathComponent("orrery-login-test-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+
+            // Write the prepare metadata.
+            let metadata: [String: String] = [
+                "accountID": accountID,
+                "tool": "codex",
+                "displayName": displayName,
+            ]
+            let metaData = try JSONSerialization.data(withJSONObject: metadata)
+            try metaData.write(to: staging.appendingPathComponent(".orrery-prepare.json"))
+
+            return staging
+        }
+
+        @Test("finalize imports credential and prints success, removes staging dir")
+        func finalizeImportsCredential() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                var acct = Account(tool: .codex, displayName: "finalize-test")
+                try store.save(acct)
+
+                let staging = try makeCodexStagingDir(
+                    accountID: acct.id,
+                    displayName: acct.displayName
+                )
+                // Write a fake auth.json so importFrom succeeds.
+                let authURL = staging.appendingPathComponent("auth.json")
+                try Data(#"{"token":"fake"}"#.utf8).write(to: authURL)
+
+                let output = try captureStdout {
+                    let cmd = try AccountAddFinalizeCommand.parse(["--staging", staging.path])
+                    try cmd.run()
+                }
+
+                // Staging dir must be cleaned up by finalize.
+                #expect(!FileManager.default.fileExists(atPath: staging.path))
+
+                // Output should mention the account.
+                #expect(output.contains("finalize-test"))
+
+                // The credential must be in the pool.
+                let poolCred = store.accountDir(id: acct.id, tool: .codex)
+                    .appendingPathComponent("auth.json")
+                #expect(FileManager.default.fileExists(atPath: poolCred.path))
+            }
+        }
+
+        @Test("finalize rolls back account when importFrom fails (no credential)")
+        func finalizeRollsBackOnFailure() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                let acct = Account(tool: .codex, displayName: "rollback-test")
+                try store.save(acct)
+
+                // Staging dir with metadata but NO auth.json — importFrom will fail.
+                let staging = try makeCodexStagingDir(
+                    accountID: acct.id,
+                    displayName: acct.displayName
+                )
+
+                // Finalize must throw because there is no credential.
+                #expect(throws: (any Error).self) {
+                    try AccountAddFinalizeCommand.parse(["--staging", staging.path]).run()
+                }
+
+                // Staging dir should be cleaned up even on failure.
+                #expect(!FileManager.default.fileExists(atPath: staging.path))
+
+                // Account should have been removed from the store (rollback).
+                let accounts = try store.list(tool: .codex)
+                #expect(!accounts.contains { $0.displayName == "rollback-test" })
+            }
+        }
+    }
+
     // MARK: AccountRemoveCommand
 
     @Suite("AccountRemoveCommand")

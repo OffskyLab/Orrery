@@ -246,6 +246,28 @@ Keychain item 無法 symlink，所以 macOS Claude 的 pool entry 是憑證的**
 
 比現在切 env 輕量很多：memory 不變、sessions 不變、`.claude.json` 不變、就只是換了憑證。
 
+## 7a. Account Add — TTY Foreground（Claude 專屬）
+
+`orrery account add --claude` 需要啟動 Claude REPL 讓使用者完成 `/login` 流程。Swift 的 `Process` 雖然繼承 stdin/stdout/stderr，但**不會**把子進程放進 foreground process group，Claude Code 偵測到「不是 foreground」就靜默退出。
+
+解法：把 Claude 的 `account add` 路由到 orrery shell function，讓 shell 直接 fork/exec `command claude`，子進程自然繼承 controlling TTY 和 foreground process group。codex/gemini 的登入子命令（`codex login`、`gemini auth login`）是 browser-based，不需要 TTY foreground，維持 Swift `Process` 路徑。
+
+實作拆成兩個 internal 命令：
+
+1. **`_account-add-prepare`**：建立 Account（寫入 store）、建立 staging dir、把 metadata（accountID、tool、displayName）寫入 `<staging>/.orrery-prepare.json`，最後把 staging dir 路徑印到 stdout（供 shell 以 `$(...)` 捕獲）。
+2. **`_account-add-finalize`**：讀取 `<staging>/.orrery-prepare.json`、呼叫 `AccountLoginFlow.importFrom(stagingDir:into:)`，成功後印出確認訊息；失敗時 rollback（刪除 Account）並 rethrow。staging dir 在任何情況下都由 `defer` 清除。
+
+Shell function 中的 `account)` case 串接：
+
+```sh
+_staging=$(command orrery-bin _account-add-prepare "${@:3}") || return $?
+printf "<loginReadyHint>\n"
+CLAUDE_CONFIG_DIR="$_staging" command claude
+command orrery-bin _account-add-finalize --staging "$_staging"
+```
+
+若使用者繞過 shell function 直接呼叫 `orrery-bin account add --claude`，`AccountLoginFlow.run` 仍會嘗試 spawn claude，並印出 fallback warning 提醒 TTY foreground 可能受限。
+
 ## 8. 主要程式碼變更面
 
 | 檔案 | 變更 |
