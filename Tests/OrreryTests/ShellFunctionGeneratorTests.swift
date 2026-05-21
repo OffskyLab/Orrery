@@ -58,7 +58,9 @@ struct ShellFunctionGeneratorTests {
     @Test("account add -h bypasses the claude TTY interception")
     func accountAddHelpBypassesInterception() {
         let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("-h|--help) command orrery-bin account \"$@\"; return $?"))
+        #expect(script.contains("-h|--help) command orrery-bin \"$@\"; return $?"))
+        // Negative: no double-account prefix
+        #expect(!script.contains("-h|--help) command orrery-bin account \"$@\""))
     }
 
     @Test("account add --codex and --gemini fall through to orrery-bin, not claude")
