@@ -855,91 +855,30 @@
     "kind": "var",
     "parameters": []
   },
+  { "path": ["Sandbox", "abstract"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvKeyHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvValueHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvSandboxHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvNoActive"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "setEnvOriginNotSupported"], "kind": "var", "parameters": [] },
   {
-    "path": [
-      "EnvVar",
-      "abstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "EnvVar",
-      "defaultNotSupported"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "EnvVar",
-      "envHelp"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "EnvVar",
-      "noActive"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "EnvVar",
-      "set"
-    ],
+    "path": ["Sandbox", "setEnvSuccess"],
     "kind": "func",
     "parameters": [
-      {
-        "label": "_",
-        "name": "key",
-        "type": "String"
-      },
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
+      { "label": "_", "name": "key", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" }
     ]
   },
+  { "path": ["Sandbox", "unsetEnvAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Sandbox", "unsetEnvKeyHelp"], "kind": "var", "parameters": [] },
   {
-    "path": [
-      "EnvVar",
-      "setAbstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "EnvVar",
-      "unset"
-    ],
+    "path": ["Sandbox", "unsetEnvSuccess"],
     "kind": "func",
     "parameters": [
-      {
-        "label": "_",
-        "name": "key",
-        "type": "String"
-      },
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
+      { "label": "_", "name": "key", "type": "String" },
+      { "label": "_", "name": "name", "type": "String" }
     ]
-  },
-  {
-    "path": [
-      "EnvVar",
-      "unsetAbstract"
-    ],
-    "kind": "var",
-    "parameters": []
   },
   {
     "path": [
