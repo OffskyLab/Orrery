@@ -188,6 +188,14 @@ public struct ShellFunctionGenerator {
               # codex/gemini work fine via the regular orrery-bin path (their login
               # subcommands open a browser and don't need TTY foreground).
               if [ "${2:-}" = "add" ]; then
+                # Help requests bypass the claude TTY interception so the user sees
+                # the public `account add` help, not the internal prepare/finalize.
+                for _a in "${@:3}"; do
+                  case "$_a" in
+                    -h|--help) command orrery-bin account "$@"; return $?; ;;
+                  esac
+                done
+
                 local _is_claude=1
                 for _a in "${@:3}"; do
                   case "$_a" in

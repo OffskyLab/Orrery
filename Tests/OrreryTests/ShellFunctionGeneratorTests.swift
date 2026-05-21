@@ -55,6 +55,12 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains(L10n.Account.loginReadyHint))
     }
 
+    @Test("account add -h bypasses the claude TTY interception")
+    func accountAddHelpBypassesInterception() {
+        let script = ShellFunctionGenerator.generate()
+        #expect(script.contains("-h|--help) command orrery-bin account \"$@\"; return $?"))
+    }
+
     @Test("account add --codex and --gemini fall through to orrery-bin, not claude")
     func accountAddCodexGeminiFallThrough() {
         let script = ShellFunctionGenerator.generate()
