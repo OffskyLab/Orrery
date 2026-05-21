@@ -20,7 +20,7 @@ public struct SandboxCommand: ParsableCommand {
 
         @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvKeyHelp)) public var key: String
         @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvValueHelp)) public var value: String
-        @Option(name: [.customShort("s"), .customLong("sandbox")],
+        @Option(name: [.short, .customLong("sandbox")],
                 help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
 
         public init() {}
@@ -49,12 +49,15 @@ public struct SandboxCommand: ParsableCommand {
         )
 
         @Argument(help: ArgumentHelp(L10n.Sandbox.unsetEnvKeyHelp)) public var key: String
-        @Option(name: [.customShort("s"), .customLong("sandbox")],
+        @Option(name: [.short, .customLong("sandbox")],
                 help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
 
         public init() {}
 
         public func run() throws {
+            // Borrows `setEnvNoActive` / `setEnvOriginNotSupported` from SetEnv:
+            // the user-facing strings are tool-action-agnostic and apply equally to unset.
+            // If the unset path ever needs different wording, add dedicated keys.
             guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.Sandbox.setEnvNoActive)
             }

@@ -8,6 +8,8 @@
 
 **Tech Stack:** Swift 6, ArgumentParser, swift-testing (`@Suite`/`@Test`/`#expect`), L10n codegen plugin.
 
+> **L10n key shape:** This codebase uses **2-segment flat camelCase** keys throughout (e.g. `"sandbox.setEnvAbstract"` → `L10n.Sandbox.setEnvAbstract`). Do NOT introduce 3-segment dot-nested keys (e.g. `"sandbox.setEnv.abstract"` → `L10n.Sandbox.SetEnv.abstract`) — the codegen plugin does not produce a nested `SetEnv` enum.
+
 **Spec:** `docs/superpowers/specs/2026-05-21-v3-command-restructure-design.md` (markdown) and `.html` (illustrated).
 
 ---
@@ -86,16 +88,16 @@ Read the existing `envVar.*` keys in `en.json` first. The new keys reuse the sam
 
 ```json
 "sandbox.abstract": "Manage sandboxes (advanced isolation: memory, sessions, env-vars).",
-"sandbox.setEnv.abstract": "Set an environment variable on a sandbox.",
-"sandbox.setEnv.keyHelp": "Variable name.",
-"sandbox.setEnv.valueHelp": "Variable value.",
-"sandbox.setEnv.sandboxHelp": "Target sandbox (default: active sandbox).",
-"sandbox.setEnv.noActive": "No active sandbox. Use 'orrery sandbox use <name>' first or pass -s.",
-"sandbox.setEnv.originNotSupported": "Cannot set env vars on the origin sandbox.",
-"sandbox.setEnv.success": "Set {key} on sandbox '{name}'.",
-"sandbox.unsetEnv.abstract": "Unset an environment variable on a sandbox.",
-"sandbox.unsetEnv.keyHelp": "Variable name.",
-"sandbox.unsetEnv.success": "Unset {key} on sandbox '{name}'."
+"sandbox.setEnvAbstract": "Set an environment variable on a sandbox.",
+"sandbox.setEnvKeyHelp": "Variable name.",
+"sandbox.setEnvValueHelp": "Variable value.",
+"sandbox.setEnvSandboxHelp": "Target sandbox (default: active sandbox).",
+"sandbox.setEnvNoActive": "No active sandbox. Use 'orrery sandbox use <name>' first or pass -s.",
+"sandbox.setEnvOriginNotSupported": "Cannot set env vars on the origin sandbox.",
+"sandbox.setEnvSuccess": "Set {key} on sandbox '{name}'.",
+"sandbox.unsetEnvAbstract": "Unset an environment variable on a sandbox.",
+"sandbox.unsetEnvKeyHelp": "Variable name.",
+"sandbox.unsetEnvSuccess": "Unset {key} on sandbox '{name}'."
 ```
 
 Add equivalent zh-Hant / ja translations (match the existing `envVar.*` translations word-for-word, just under the new key paths).
@@ -125,28 +127,28 @@ public struct SandboxCommand: ParsableCommand {
     public struct SetEnv: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "set-env",
-            abstract: L10n.Sandbox.SetEnv.abstract
+            abstract: L10n.Sandbox.setEnvAbstract
         )
 
-        @Argument(help: ArgumentHelp(L10n.Sandbox.SetEnv.keyHelp)) public var key: String
-        @Argument(help: ArgumentHelp(L10n.Sandbox.SetEnv.valueHelp)) public var value: String
+        @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvKeyHelp)) public var key: String
+        @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvValueHelp)) public var value: String
         @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Sandbox.SetEnv.sandboxHelp)) public var sandbox: String?
+                help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
 
         public init() {}
 
         public func run() throws {
             guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-                throw ValidationError(L10n.Sandbox.SetEnv.noActive)
+                throw ValidationError(L10n.Sandbox.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Sandbox.SetEnv.originNotSupported)
+                throw ValidationError(L10n.Sandbox.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
             env.env[key] = value
             try store.save(env)
-            print(L10n.Sandbox.SetEnv.success(key, envName))
+            print(L10n.Sandbox.setEnvSuccess(key, envName))
         }
     }
 
@@ -155,27 +157,30 @@ public struct SandboxCommand: ParsableCommand {
     public struct UnsetEnv: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "unset-env",
-            abstract: L10n.Sandbox.UnsetEnv.abstract
+            abstract: L10n.Sandbox.unsetEnvAbstract
         )
 
-        @Argument(help: ArgumentHelp(L10n.Sandbox.UnsetEnv.keyHelp)) public var key: String
+        @Argument(help: ArgumentHelp(L10n.Sandbox.unsetEnvKeyHelp)) public var key: String
         @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Sandbox.SetEnv.sandboxHelp)) public var sandbox: String?
+                help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
 
         public init() {}
 
         public func run() throws {
+            // Borrows `setEnvNoActive` / `setEnvOriginNotSupported` from SetEnv:
+            // the user-facing strings are tool-action-agnostic and apply equally to unset.
+            // If the unset path ever needs different wording, add dedicated keys.
             guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-                throw ValidationError(L10n.Sandbox.SetEnv.noActive)
+                throw ValidationError(L10n.Sandbox.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Sandbox.SetEnv.originNotSupported)
+                throw ValidationError(L10n.Sandbox.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
             env.env.removeValue(forKey: key)
             try store.save(env)
-            print(L10n.Sandbox.UnsetEnv.success(key, envName))
+            print(L10n.Sandbox.unsetEnvSuccess(key, envName))
         }
     }
 }
