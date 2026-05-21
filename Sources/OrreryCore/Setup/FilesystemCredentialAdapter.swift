@@ -57,4 +57,14 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
         try fm.createDirectory(at: targetConfigDir, withIntermediateDirectories: true)
         try fm.createSymbolicLink(at: target, withDestinationURL: source)
     }
+
+    /// No-op: `materialize` installs a SYMLINK from the tool's config dir to the
+    /// pool credential file, so the tool reads and writes the pool entry directly.
+    /// Any token refresh the tool performs already lands in the pool — there is
+    /// nothing to sync back.
+    public func syncBack(
+        account: Account,
+        configDir: String?,
+        accountStore: AccountStore
+    ) throws {}
 }

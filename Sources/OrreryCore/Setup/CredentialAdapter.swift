@@ -11,6 +11,15 @@ public protocol CredentialAdapter: Sendable {
         configDir: String?,
         accountStore: AccountStore
     ) throws
+
+    /// Persist any tool-side credential mutation back into the pool.
+    /// No-op for adapters where the pool IS the live store (symlink-based).
+    /// configDir semantics match `materialize` (nil = the tool's default location).
+    func syncBack(
+        account: Account,
+        configDir: String?,
+        accountStore: AccountStore
+    ) throws
 }
 
 /// Factory：依工具 + 平台選擇 CredentialAdapter 實作。

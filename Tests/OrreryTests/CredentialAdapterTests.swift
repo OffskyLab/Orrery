@@ -114,6 +114,21 @@ struct FilesystemCredentialAdapterTests {
         #expect(try FileManager.default.destinationOfSymbolicLink(atPath: target.path) == creds.path)
     }
 
+    @Test("syncBack is a no-op for symlink-based tools")
+    func syncBackIsNoOp() throws {
+        let account = Account(tool: .codex, displayName: "sb")
+        try accountStore.save(account)
+        // The symlink installed by materialize means the tool already wrote into
+        // the pool — syncBack has nothing to do. It must not throw, and must not
+        // require any credential to be present.
+        let adapter = FilesystemCredentialAdapter(tool: .codex)
+        try adapter.syncBack(account: account, configDir: nil, accountStore: accountStore)
+        try adapter.syncBack(
+            account: account,
+            configDir: tmpDir.appendingPathComponent("anywhere").path,
+            accountStore: accountStore)
+    }
+
     @Test("materialize symlinks gemini oauth_creds.json")
     func materializeGemini() throws {
         let account = Account(tool: .gemini, displayName: "g")
@@ -218,6 +233,52 @@ struct KeychainCredentialAdapterTests {
                                     configDir: tmpDir.appendingPathComponent("c").path,
                                     accountStore: accountStore)
         }
+    }
+
+    @Test("syncBack copies the live token back into the pool service")
+    func syncBackCopiesLiveToPool() throws {
+        let accountID = UUID().uuidString
+        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+        let account = Account(id: accountID, tool: .claude, displayName: "sb-mac",
+                              keychainItem: poolService)
+        try accountStore.save(account)
+
+        // Pool starts with the original (pre-rotation) token; the live slot has
+        // the refreshed token Claude just wrote on its way out.
+        #expect(ClaudeKeychain.storePassword("stale-pool-token", forOrreryAccount: accountID))
+
+        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-syncback")
+        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
+        defer {
+            _ = KeychainTestSupport.delete(service: poolService)
+            _ = KeychainTestSupport.delete(service: liveService)
+        }
+        #expect(ClaudeKeychain.setPassword("refreshed-live-token", service: liveService))
+
+        let adapter = KeychainCredentialAdapter()
+        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
+
+        #expect(ClaudeKeychain.password(forService: poolService) == "refreshed-live-token")
+    }
+
+    @Test("syncBack is a safe no-op when the live slot has no credential")
+    func syncBackNoLiveCredential() throws {
+        let accountID = UUID().uuidString
+        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+        let account = Account(id: accountID, tool: .claude, displayName: "sb-empty",
+                              keychainItem: poolService)
+        try accountStore.save(account)
+        #expect(ClaudeKeychain.storePassword("untouched", forOrreryAccount: accountID))
+
+        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-empty")
+        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
+        defer { _ = KeychainTestSupport.delete(service: poolService) }
+        // No item ever written at liveService — syncBack must not throw and must
+        // leave the pool untouched.
+        let adapter = KeychainCredentialAdapter()
+        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
+        #expect(ClaudeKeychain.password(forService: poolService) == "untouched")
+        _ = liveService
     }
 
     @Test("materialize is idempotent — second call is a safe no-op")
