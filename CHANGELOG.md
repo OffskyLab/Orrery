@@ -22,6 +22,11 @@
 - **`/orrery:phantom account <tool> <name>`** — switch a tool's account
   mid-conversation inside a phantom-supervised Claude session, without leaving
   the current environment.
+- `Account` now records `email` and `plan` directly on the model, displayed by
+  `orrery account list` and `orrery account show` without re-reading credentials
+  each time. These fields are populated automatically when an account is added,
+  migrated, or synced back after use. A one-time backfill populates them for
+  accounts created before this change.
 
 ### Changed
 

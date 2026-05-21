@@ -35,6 +35,10 @@ public enum AccountLoginFlow {
     ///   into the account's pool directory, overwriting any existing file.
     /// - macOS claude: copies the Keychain item the login wrote (service derived from
     ///   the staging dir) into the account's own Keychain service.
+    ///
+    /// After the credential is in place, the freshly-known email/plan are captured
+    /// onto the pool `Account` and saved via `AccountStore.default`, so subsequent
+    /// `account list` / `account show` reads do not have to re-parse credentials.
     public static func importFrom(stagingDir: URL, into account: Account) throws {
         #if os(macOS)
         if account.tool == .claude {
@@ -45,10 +49,33 @@ public enum AccountLoginFlow {
             guard ClaudeKeychain.copyKeychainItem(from: srcService, to: dstService) else {
                 throw LoginError.credentialNotProduced(account.tool)
             }
+            captureInfo(stagingDir: stagingDir, account: account)
             return
         }
         #endif
         try importCredentialFile(stagingDir: stagingDir, into: account)
+        captureInfo(stagingDir: stagingDir, account: account)
+    }
+
+    /// Refresh `email` / `plan` from the just-imported credential and persist.
+    /// Best-effort: a failure here must not mask the success of the import.
+    private static func captureInfo(stagingDir: URL, account: Account) {
+        var updated = account
+        let claudeJSONURL: URL? = account.tool == .claude
+            ? stagingDir.appendingPathComponent(".claude.json")
+            : nil
+        let changed = updated.refreshInfo(
+            accountStore: AccountStore.default,
+            claudeJSONURL: claudeJSONURL
+        )
+        guard changed else { return }
+        do {
+            try AccountStore.default.save(updated)
+        } catch {
+            FileHandle.standardError.write(Data(
+                "orrery: warning: could not persist refreshed account info for '\(account.displayName)': \(error)\n".utf8
+            ))
+        }
     }
 
     /// File-based import: codex, gemini, and Linux claude.

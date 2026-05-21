@@ -136,11 +136,33 @@ extension RunCommand {
 
     /// 工具結束後：把工具可能 refresh 過的憑證寫回 pool account。
     /// envName == nil 或 "origin" 視為 origin。沒釘 account 時為 no-op。
+    ///
+    /// 同時刷新 account 上的 `email` / `plan`，反映工具剛剛可能更新的訂閱資訊。
     static func prepareSyncBack(tool: Tool, envName: String?) throws {
         guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
             return
         }
+        let acctStore = AccountStore.default
         try CredentialAdapters.adapter(for: tool).syncBack(
-            account: account, configDir: configDir, accountStore: AccountStore.default)
+            account: account, configDir: configDir, accountStore: acctStore)
+
+        // The pool credential is now up-to-date; refresh email/plan from it.
+        // For Claude, the email source is the live `.claude.json` (origin →
+        // `~/.claude.json`; named env → its toolConfigDir's `.claude.json`).
+        var refreshed = account
+        let claudeJSONURL: URL? = {
+            guard tool == .claude else { return nil }
+            if let configDir { return URL(fileURLWithPath: configDir).appendingPathComponent(".claude.json") }
+            return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+        }()
+        if refreshed.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL) {
+            do {
+                try acctStore.save(refreshed)
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "orrery: warning: could not persist refreshed account info for '\(account.displayName)': \(error)\n".utf8
+                ))
+            }
+        }
     }
 }

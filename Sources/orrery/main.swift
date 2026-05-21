@@ -12,6 +12,10 @@ private func runOrreryMain() throws {
     // active phantom session) aborts the whole invocation — intentional: it is
     // safer to stop than to migrate credentials unsafely.
     try AccountMigration.runIfNeeded(homeURL: orreryHomeURL())
+    // One-shot retroactive backfill: populate email/plan on accounts that were
+    // created (via v3 migration or manual `account add`) before those fields
+    // were stored on the `Account` model. Best-effort, never throws.
+    AccountMigration.runInfoBackfillIfNeeded(homeURL: orreryHomeURL())
     OriginTakeoverBootstrap.runIfNeeded()
     OrreryThirdPartyRuntime.register()
 
