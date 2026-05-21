@@ -345,5 +345,7 @@
   "phantom.usageHint": "用法：/orrery:phantom <環境名稱>",
   "phantom.switching": "切換到 '{env}'，將以 session {sessionPrefix} 接續對話…",
   "phantom.switchingNoSession": "切換到 '{env}'（找不到可接續的 session — 將開新對話）…",
+  "phantom.switchingAccount": "切換到帳號「{account}」，將以 session {session} 接續對話…",
+  "phantom.switchingAccountNoSession": "切換到帳號「{account}」（找不到可接續的 session — 將開新對話）…",
   "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n"
 }

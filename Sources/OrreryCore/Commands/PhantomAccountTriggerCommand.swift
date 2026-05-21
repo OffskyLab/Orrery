@@ -69,9 +69,9 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         )
 
         if let sessionId {
-            print(L10n.Phantom.switching(name, String(sessionId.prefix(8))))
+            print(L10n.Phantom.switchingAccount(name, String(sessionId.prefix(8))))
         } else {
-            print(L10n.Phantom.switchingNoSession(name))
+            print(L10n.Phantom.switchingAccountNoSession(name))
         }
 
         // SIGTERM claude so the supervisor relaunches it.

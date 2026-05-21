@@ -345,5 +345,7 @@
   "phantom.usageHint": "Usage: /orrery:phantom <env-name>",
   "phantom.switching": "Switching to '{env}' and resuming session {sessionPrefix}…",
   "phantom.switchingNoSession": "Switching to '{env}' (no session to resume — fresh conversation)…",
+  "phantom.switchingAccount": "アカウント「{account}」に切り替え、セッション {session} を再開します…",
+  "phantom.switchingAccountNoSession": "アカウント「{account}」に切り替えます（再開できるセッションがありません — 新しい会話を開始します）…",
   "setup.installedSlashCommand": "orrery: installed slash command at {path}\n"
 }
