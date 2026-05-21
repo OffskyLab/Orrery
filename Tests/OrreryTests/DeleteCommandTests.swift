@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-@Suite("DeleteCommand")
+@Suite("SandboxCommand.Delete")
 struct DeleteCommandTests {
     var tmpDir: URL!
     var store: EnvironmentStore!
@@ -17,7 +17,7 @@ struct DeleteCommandTests {
     @Test("deletes environment when force is true")
     func forceDelete() throws {
         try store.save(OrreryEnvironment(name: "work"))
-        try DeleteCommand.deleteEnvironment(name: "work", force: true, store: store)
+        try SandboxCommand.Delete.deleteEnvironment(name: "work", force: true, store: store)
         let names = try store.listNames()
         #expect(names.isEmpty)
     }
@@ -25,7 +25,7 @@ struct DeleteCommandTests {
     @Test("throws when environment not found")
     func deleteMissing() throws {
         #expect(throws: (any Error).self) {
-            try DeleteCommand.deleteEnvironment(name: "nonexistent", force: true, store: store)
+            try SandboxCommand.Delete.deleteEnvironment(name: "nonexistent", force: true, store: store)
         }
     }
 }
