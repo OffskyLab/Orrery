@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct AccountShowCommand: ParsableCommand {
+public struct ShowCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "show",
         abstract: L10n.Account.showAbstract
