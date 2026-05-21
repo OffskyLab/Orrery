@@ -32,31 +32,29 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     /// independent of `CLAUDE_CONFIG_DIR`.
     public static let slashCommandMarkdown: String = """
     ---
-    description: Switch orrery environment or account without restarting Claude
-    argument-hint: [env-name | account <tool> <name>]
+    description: Switch orrery account or sandbox without restarting Claude
+    argument-hint: [name | <tool> <name> | sandbox <name>]
     ---
 
-    # Phantom: switch orrery environment or account in-place
+    # Phantom: switch orrery account or sandbox in-place
 
-    Switch the active orrery environment (or a tool's account within the current env) without losing the conversation. Claude exits and the orrery supervisor relaunches it with the new env/account active and `--resume`, so the conversation continues where it left off.
+    Switch the active orrery account (or sandbox) without losing the conversation. Claude exits and the orrery supervisor relaunches it with `--resume`, so the conversation continues where it left off.
 
     **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
 
     ## What to do
 
-    Inspect `$ARGUMENTS`:
+    Inspect `$ARGUMENTS` and pick the matching branch:
 
-    - **If `$ARGUMENTS` starts with `account`** (e.g. `account claude work`, `account codex personal`, `account work`): the user wants to switch a tool's account within the current env.
-      - Parse the tool (`claude` by default) and account name from the rest of `$ARGUMENTS`.
-      - If the account name is missing, ask the user which account they want to switch to before proceeding.
-      - Run `orrery-bin _phantom-trigger-account --<tool> --name <account-name>` (e.g. `orrery-bin _phantom-trigger-account --claude --name work`).
-      - The trigger writes a sentinel naming the target account, then signals Claude to relaunch. The supervisor syncs the just-used account's credential back into the pool, applies the new pin, and relaunches — the new account is picked up automatically.
+    - **`$ARGUMENTS` is `sandbox <name>`** (explicit sandbox switch): run `orrery-bin _phantom-trigger-sandbox <name>`.
 
-    - **If `$ARGUMENTS` is non-empty and does NOT start with `account`** (a target env name): run `orrery-bin _phantom-trigger-sandbox $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
+    - **`$ARGUMENTS` starts with `claude`, `codex`, or `gemini`** followed by a name: switch that tool's account. Run `orrery-bin _phantom-trigger-account --<tool> --name <name>`.
 
-    - **If `$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger-sandbox` (with no arguments) to get the list of available environments. Then ask the user which environment they want to switch to — present the list as choices. Once they answer, run `orrery-bin _phantom-trigger-sandbox <chosen-env>`.
+    - **`$ARGUMENTS` is just `<name>`** (a single token, not `sandbox`/`claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin _phantom-trigger-account --claude --name <name>`.
 
-    Do not narrate the relaunch — Claude will simply exit and reappear with the new env/account. The user's next message lands in the updated context.
+    - **`$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger-sandbox` (no args) to get the list of available sandboxes, and `orrery-bin list` to get the list of accounts. Present both lists to the user, ask which they want to switch to, and re-invoke this slash command with their choice.
+
+    Do not narrate the relaunch — Claude will simply exit and reappear with the new account or sandbox active. The user's next message lands in the new context.
     """
 
     public func run() throws {
