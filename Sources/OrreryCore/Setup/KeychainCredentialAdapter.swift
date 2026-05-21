@@ -37,6 +37,37 @@ public struct KeychainCredentialAdapter: CredentialAdapter {
         }
     }
 
+    /// Persist Claude's (possibly refreshed) live credential back into the pool.
+    /// Claude rotates its OAuth token on every refresh, writing the new token to
+    /// the live Keychain service derived from CLAUDE_CONFIG_DIR — never to the
+    /// pool. Without this, the pool snapshot goes stale and switching back to
+    /// this account 401s. Copies the LIVE service's token into the pool service.
+    public func syncBack(
+        account: Account,
+        configDir: String?,
+        accountStore: AccountStore
+    ) throws {
+        guard account.tool == .claude else {
+            throw Error.wrongTool(got: account.tool)
+        }
+        guard let poolService = account.keychainItem else {
+            throw Error.missingKeychainItem(accountID: account.id)
+        }
+        let liveService = ClaudeKeychain.service(for: configDir)
+        // Claude may not have written a credential (e.g. it errored before login);
+        // nothing to sync in that case.
+        guard let liveToken = ClaudeKeychain.password(forService: liveService) else {
+            return
+        }
+        // Idempotent: skip the write if the pool already matches.
+        if ClaudeKeychain.password(forService: poolService) == liveToken {
+            return
+        }
+        guard ClaudeKeychain.setPassword(liveToken, service: poolService) else {
+            throw Error.keychainCopyFailed(from: liveService, to: poolService)
+        }
+    }
+
     public enum Error: Swift.Error {
         case wrongTool(got: Tool)
         case missingKeychainItem(accountID: String)
