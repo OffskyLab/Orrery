@@ -58,25 +58,29 @@ public struct ShellFunctionGenerator {
             deactivate)
               orrery use origin
               ;;
-            create)
-              command orrery-bin "$@"
-              if [ $? -eq 0 ]; then
-                local _env_name="" _skip=0
-                for _arg in "${@:2}"; do
-                  if [ $_skip -eq 1 ]; then _skip=0; continue; fi
-                  case "$_arg" in
-                    --description|--clone|--tool) _skip=1 ;;
-                    --*) ;;
-                    *) _env_name="$_arg"; break ;;
-                  esac
-                done
-                if [ -n "$_env_name" ]; then
-                  printf "切換到環境 '%s'？[Y/n] " "$_env_name"
-                  read -r _ans </dev/tty
-                  case "${_ans:-Y}" in
-                    [Yy]*|"") orrery use "$_env_name" ;;
-                  esac
+            sandbox)
+              if [ "${2:-}" = "create" ]; then
+                command orrery-bin "$@"
+                if [ $? -eq 0 ]; then
+                  local _name="" _skip=0
+                  for _arg in "${@:3}"; do
+                    if [ $_skip -eq 1 ]; then _skip=0; continue; fi
+                    case "$_arg" in
+                      --description|--clone|--tool|--copy-login-from) _skip=1 ;;
+                      --*) ;;
+                      *) _name="$_arg"; break ;;
+                    esac
+                  done
+                  if [ -n "$_name" ]; then
+                    printf "切換到 sandbox '%s'？[Y/n] " "$_name"
+                    read -r _ans </dev/tty
+                    case "${_ans:-Y}" in
+                      [Yy]*|"") orrery sandbox use "$_name" ;;
+                    esac
+                  fi
                 fi
+              else
+                command orrery-bin "$@"
               fi
               ;;
             run)

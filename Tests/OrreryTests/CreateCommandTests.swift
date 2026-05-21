@@ -16,7 +16,7 @@ struct CreateCommandTests {
 
     @Test("creates a new single-tool environment")
     func createNew() throws {
-        try CreateCommand.createEnvironment(
+        try SandboxCommand.Create.createEnvironment(
             name: "work",
             description: "Work account",
             tool: .claude,
