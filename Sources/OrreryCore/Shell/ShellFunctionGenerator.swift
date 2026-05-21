@@ -192,7 +192,7 @@ public struct ShellFunctionGenerator {
                 # the public `account add` help, not the internal prepare/finalize.
                 for _a in "${@:3}"; do
                   case "$_a" in
-                    -h|--help) command orrery-bin account "$@"; return $?; ;;
+                    -h|--help) command orrery-bin "$@"; return $?; ;;
                   esac
                 done
 
