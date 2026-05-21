@@ -2159,22 +2159,6 @@
     "kind": "var",
     "parameters": []
   },
-  { "path": ["Origin", "abstract"],        "kind": "var", "parameters": [] },
-  { "path": ["Origin", "statusAbstract"],  "kind": "var", "parameters": [] },
-  { "path": ["Origin", "takeoverAbstract"],"kind": "var", "parameters": [] },
-  { "path": ["Origin", "releaseAbstract"], "kind": "var", "parameters": [] },
-  { "path": ["Origin", "hint"],            "kind": "var", "parameters": [] },
-  { "path": ["Origin", "nothingToRelease"],"kind": "var", "parameters": [] },
-  {
-    "path": ["Origin", "alreadyManaged"],
-    "kind": "func",
-    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
-  },
-  {
-    "path": ["Origin", "alreadyUnmanaged"],
-    "kind": "func",
-    "parameters": [{ "label": "_", "name": "tool", "type": "String" }]
-  },
   {
     "path": ["Origin", "tookOver"],
     "kind": "func",
