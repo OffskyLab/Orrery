@@ -6,9 +6,15 @@ import OrreryThirdParty
 @MainActor
 private func runOrreryMain() throws {
     LegacyOrbitalMigration.runIfNeeded()
+    // Takeover MUST run before AccountMigration: takeover populates ~/.orrery/origin/
+    // with the user's real credentials (via symlinks from ~/.claude, ~/.codex, ~/.gemini).
+    // Migration's "nothing to migrate" check looks at ~/.orrery/origin/. If migration
+    // ran first on an empty ~/.orrery/, it would write the .migration-v3 flag and exit,
+    // causing real credentials moved in later by takeover to be silently skipped forever.
+    OriginTakeoverBootstrap.runIfNeeded()
     // v2→v3 account-pool migration. Runs after the orbital→orrery move (so any
-    // freshly-migrated envs are included) and before origin takeover / any
-    // subcommand touches the stores. A throw here (e.g. backup failure or an
+    // freshly-migrated envs are included) and after origin takeover (so any origin-
+    // resident credentials are visible). A throw here (e.g. backup failure or an
     // active phantom session) aborts the whole invocation — intentional: it is
     // safer to stop than to migrate credentials unsafely.
     try AccountMigration.runIfNeeded(homeURL: orreryHomeURL())
@@ -16,7 +22,6 @@ private func runOrreryMain() throws {
     // created (via v3 migration or manual `account add`) before those fields
     // were stored on the `Account` model. Best-effort, never throws.
     AccountMigration.runInfoBackfillIfNeeded(homeURL: orreryHomeURL())
-    OriginTakeoverBootstrap.runIfNeeded()
     OrreryThirdPartyRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first
