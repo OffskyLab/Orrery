@@ -13,10 +13,11 @@ import Glibc
 ///
 /// This command does NOT mutate the account pin. It writes a sentinel carrying
 /// the target tool+account, then signals claude to exit. The supervisor loop
-/// applies the pin change (`orrery-bin account use`) AFTER claude exits and AFTER
-/// `_syncback` has persisted the just-used account's refreshed credential. If we
-/// flipped the pin here, sync-back would copy the old claude's live token into
-/// the NEW account's pool entry — corruption.
+/// applies the pin change (`orrery-bin account use`) AFTER claude exits, and
+/// `account use` itself syncs the just-used account's refreshed credential back
+/// into the pool BEFORE it repins. If we flipped the pin here, that sync-back
+/// would read the new pin and copy the old claude's live token into the NEW
+/// account's pool entry — corruption.
 public struct PhantomAccountTriggerCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_phantom-trigger-account",
@@ -56,9 +57,10 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
 
         // Write a sentinel carrying the target account. The pin is NOT mutated
         // here — the supervisor loop applies `orrery-bin account use` AFTER
-        // claude exits and AFTER `_syncback` has saved the old account's
-        // refreshed credential. Flipping the pin now would make sync-back copy
-        // the old claude's live token into the NEW account's pool entry.
+        // claude exits, and `account use` syncs the old account's refreshed
+        // credential back into the pool before it repins. Flipping the pin now
+        // would make that sync-back copy the old claude's live token into the
+        // NEW account's pool entry.
         let sessionId = PhantomTriggerCommand.findCurrentClaudeSessionId()
         try PhantomTriggerCommand.writeSentinel(
             targetEnv: nil,

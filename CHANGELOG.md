@@ -26,11 +26,15 @@
 ### Changed
 
 - Environments now reference accounts by id (`OrreryEnvironment.accounts`)
-  rather than owning credentials directly. `orrery run` materializes the pinned
-  account's credentials for the tool just before launch.
-- Credentials refreshed by a tool are now synced back into the accounts pool
-  after each run, so macOS Claude account switching stays valid across token
-  rotations.
+  rather than owning credentials directly.
+- Account switching (`orrery account use`) now materializes credentials
+  immediately — it syncs the previously pinned account's credentials back into
+  the pool, then places the newly pinned account's credentials into the slot the
+  tool reads. A plain `claude` / `codex` / `gemini` invocation therefore uses the
+  switched account; `orrery run` is no longer required for account switching.
+- Credentials refreshed by a tool are synced back into the accounts pool when
+  switching away from an account, so macOS Claude account switching stays valid
+  across token rotations.
 
 ### Migration
 
