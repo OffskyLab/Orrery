@@ -53,6 +53,36 @@ public enum ClaudeKeychain {
         return ToolAuth.AccountInfo(email: email, plan: plan, model: nil, key: nil)
     }
 
+    /// Look up account info for a Claude pool account.
+    /// On macOS reads from the Keychain item stored under `account.keychainItem`.
+    /// On Linux reads `<poolDir>/.credentials.json`.
+    /// Extracts plan from `claudeAiOauth.subscriptionType` and tries to extract
+    /// email from the `claudeAiOauth.accessToken` JWT `email` claim.
+    /// Never throws — returns an empty `AccountInfo` on any failure.
+    public static func accountInfo(forPoolAccount account: Account, poolDir: URL) -> ToolAuth.AccountInfo {
+        #if os(macOS)
+        guard let keychainItem = account.keychainItem,
+              let json = password(forService: keychainItem)
+        else {
+            return ToolAuth.AccountInfo(email: nil, plan: nil, model: nil, key: nil)
+        }
+        #else
+        let credURL = poolDir.appendingPathComponent(".credentials.json")
+        guard let data = try? Data(contentsOf: credURL),
+              let json = String(data: data, encoding: .utf8)
+        else {
+            return ToolAuth.AccountInfo(email: nil, plan: nil, model: nil, key: nil)
+        }
+        #endif
+
+        let plan = parsePlan(fromCredential: json)
+
+        // Attempt to extract email from the access token JWT.
+        let email = parseEmailFromAccessToken(inCredential: json)
+
+        return ToolAuth.AccountInfo(email: email, plan: plan, model: nil, key: nil)
+    }
+
     /// Copy the Claude credential from one config dir to another.
     /// Pass `nil` for `srcDir` to copy from the origin (unset CLAUDE_CONFIG_DIR) entry.
     /// Returns true on success.
@@ -102,6 +132,33 @@ public enum ClaudeKeychain {
               let oauth = obj["claudeAiOauth"] as? [String: Any]
         else { return nil }
         return oauth["subscriptionType"] as? String
+    }
+
+    /// Try to extract an email address from the `claudeAiOauth.accessToken` JWT payload.
+    /// Returns nil if the credential JSON is malformed, the access token is missing,
+    /// or the JWT payload does not contain an `email` claim.
+    private static func parseEmailFromAccessToken(inCredential json: String) -> String? {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = obj["claudeAiOauth"] as? [String: Any],
+              let accessToken = oauth["accessToken"] as? String
+        else { return nil }
+        return decodeJWTEmail(from: accessToken)
+    }
+
+    /// Decode a JWT's payload segment and return the `email` claim, if present.
+    private static func decodeJWTEmail(from jwt: String) -> String? {
+        let parts = jwt.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var b64 = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let pad = (4 - b64.count % 4) % 4
+        b64 += String(repeating: "=", count: pad)
+        guard let payloadData = Data(base64Encoded: b64),
+              let payload = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any]
+        else { return nil }
+        return payload["email"] as? String
     }
 
     private static func parseEmail(fromClaudeJSON url: URL) -> String? {

@@ -41,8 +41,25 @@ public struct AccountListCommand: ParsableCommand {
         for tool in Tool.allCases {
             guard let accts = grouped[tool], !accts.isEmpty else { continue }
             print(L10n.Account.listToolHeader(tool.rawValue))
-            for acct in accts {
-                print(L10n.Account.listRow(acct.displayName, acct.id))
+
+            // Compute the info suffix for each account (may hit Keychain / disk).
+            let infos: [ToolAuth.AccountInfo] = accts.map {
+                ToolAuth.accountInfo(forPoolAccount: $0, accountStore: store)
+            }
+
+            // Pad display names to the longest in this group, plus 2 spaces.
+            let maxNameLen = accts.map(\.displayName.count).max() ?? 0
+
+            for (acct, info) in zip(accts, infos) {
+                let suffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+                let tail: String
+                if suffix.isEmpty {
+                    tail = ""
+                } else {
+                    let padding = String(repeating: " ", count: max(0, maxNameLen - acct.displayName.count + 2))
+                    tail = "\(padding)\(suffix)"
+                }
+                print(L10n.Account.listRow(acct.displayName, tail))
             }
         }
     }
