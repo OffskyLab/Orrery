@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>orrery v3.0 命令結構重整設計</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --pink: #ff7eb6;
+    --code-bg: #0d1117;
+    --account: #bc8cff;
+    --sandbox: #58a6ff;
+    --tool: #8b949e;
+    --removed: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Noto Sans CJK TC", sans-serif;
+    line-height: 1.6;
+    padding: 32px 20px 80px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: 0.3px; }
+  h2 { font-size: 19px; margin: 36px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 15px; margin: 16px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  p { margin: 8px 0; }
+  .lede { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; color: var(--text); border: 1px solid var(--border); }
+
+  /* === The Flip diagram === */
+  .flip { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 16px; align-items: stretch; margin: 24px 0 8px; }
+  .flip .arrow {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: var(--muted);
+  }
+  .pyramid {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .pyramid h3 { margin: 0 0 4px; text-align: center; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; }
+  .pyramid .era { text-align: center; color: var(--muted); font-size: 11px; margin-bottom: 8px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .tier {
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  .tier .tier-label {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px; font-weight: 600;
+  }
+  .tier .verbs {
+    display: flex; flex-wrap: wrap; gap: 5px;
+  }
+  .verb {
+    display: inline-block;
+    padding: 3px 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .verb.account { border-color: rgba(188, 140, 255, 0.5); color: var(--account); }
+  .verb.sandbox { border-color: rgba(88, 166, 255, 0.5); color: var(--sandbox); }
+  .verb.removed { border-color: rgba(248, 81, 73, 0.5); color: var(--removed); text-decoration: line-through; opacity: 0.6; }
+  .tier.primary { border-left: 3px solid var(--account); padding-left: 14px; }
+  .tier.primary-blue { border-left: 3px solid var(--sandbox); padding-left: 14px; }
+  .tier.nested { border-left: 3px solid var(--muted); padding-left: 14px; margin-left: 16px; }
+  .tier-prefix {
+    display: inline-block;
+    background: rgba(188, 140, 255, 0.15);
+    color: var(--account);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .tier-prefix.sandbox { background: rgba(88, 166, 255, 0.15); color: var(--sandbox); }
+
+  /* === Tables === */
+  .map-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+    font-size: 13px;
+  }
+  .map-table th, .map-table td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .map-table th { background: var(--panel-2); color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .map-table tr:last-child td { border-bottom: none; }
+  .map-table .cat { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 600; letter-spacing: 0.5px; display: inline-block; }
+  .map-table .cat-sandbox { background: rgba(88, 166, 255, 0.15); color: var(--sandbox); border: 1px solid rgba(88, 166, 255, 0.4); }
+  .map-table .cat-account { background: rgba(188, 140, 255, 0.15); color: var(--account); border: 1px solid rgba(188, 140, 255, 0.4); }
+  .map-table .cat-remove { background: rgba(248, 81, 73, 0.15); color: var(--removed); border: 1px solid rgba(248, 81, 73, 0.4); }
+  .map-table .cat-keep { background: rgba(139, 148, 158, 0.15); color: var(--muted); border: 1px solid var(--border); }
+  .map-table .from { color: var(--muted); }
+  .map-table .to { color: var(--text); }
+  .map-table .to.account { color: var(--account); }
+  .map-table .to.sandbox { color: var(--sandbox); }
+  .map-table .to.removed { color: var(--removed); text-decoration: line-through; }
+  .map-table .note { color: var(--yellow); font-size: 11px; font-style: italic; }
+
+  /* === Shell dispatch === */
+  .shell-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .shell-table th, .shell-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .shell-table th { background: var(--panel-2); text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .shell-table td:first-child { color: var(--account); font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .shell-table td:nth-child(2) { color: var(--muted); }
+  .shell-table td:nth-child(3) { color: var(--sandbox); font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .shell-table .gone { color: var(--removed); text-decoration: line-through; }
+  .shell-table .new { color: var(--green); }
+
+  /* === Slash command === */
+  .slash-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .slash-row {
+    display: grid; grid-template-columns: 380px 1fr;
+    gap: 16px; align-items: center;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .slash-row .cmd { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; color: var(--text); }
+  .slash-row .cmd .marker { font-weight: 700; }
+  .slash-row.account .cmd .marker { color: var(--account); }
+  .slash-row.sandbox .cmd .marker { color: var(--sandbox); }
+  .slash-row .desc { color: var(--muted); font-size: 13px; }
+
+  /* === Compat hints === */
+  .hint-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .hint-card .input { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .hint-card .output { margin-top: 6px; padding: 8px 12px; background: var(--code-bg); border-radius: 4px; border-left: 3px solid var(--yellow); font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; color: var(--text); }
+
+  /* === Scope === */
+  .scope-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .scope-item {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .scope-item .n {
+    flex: 0 0 24px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--blue); color: var(--bg);
+    font-weight: 800; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scope-item .desc { font-size: 12px; color: var(--muted); }
+  .scope-item .desc strong { color: var(--text); }
+
+  /* === Goals === */
+  .goals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .goal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .goal .label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .goal .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .goal .body { font-size: 12px; color: var(--muted); }
+
+  /* === Sentinel diagram === */
+  .sentinel-diff {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .sentinel-diff .removed-line { color: var(--removed); text-decoration: line-through; }
+  .sentinel-diff .added-line { color: var(--green); }
+  .sentinel-diff .keep { color: var(--muted); }
+
+  /* === Versioning callout === */
+  .version-callout {
+    background: linear-gradient(180deg, rgba(63, 185, 80, 0.08), rgba(63, 185, 80, 0.02));
+    border: 1px solid rgba(63, 185, 80, 0.4);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .version-callout .big { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 28px; font-weight: 800; color: var(--green); }
+  .version-callout .text { font-size: 13px; color: var(--muted); }
+  .version-callout .text strong { color: var(--text); }
+
+  @media (max-width: 900px) {
+    .flip { grid-template-columns: 1fr; }
+    .flip .arrow { transform: rotate(90deg); }
+    .scope-grid, .goals { grid-template-columns: 1fr; }
+    .slash-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>orrery v3.0 命令結構重整</h1>
+  <div class="lede">
+    Date: 2026-05-21 · Status: Draft · 把 account 提到 top level、env 改名為 sandbox 並降為 namespace
+  </div>
+
+  <!-- ====================== Motivation ====================== -->
+  <h2>1. 為什麼要重構</h2>
+  <p>
+    orrery 第一版以 env 為核心抽象——所有指令都圍繞 env(<code>orrery create / use / list ...</code>)。
+    env 同時兼具「帳號隔離 + memory/sessions 沙箱 + env-var 容器」三個責任。
+  </p>
+  <p>
+    <strong>v2.8.0</strong>(PR #11)把<strong>帳號</strong>從 env 拆出來變成獨立 pool 之後,實際使用上看到:
+    <em>大部分使用者只需要切換帳號、不在乎沙箱</em>。env 已經變成「進階場景才會碰的東西」。
+    但目前命令面還是以 env 為主、account 在 nested namespace,這個結構繼續錯誤地暗示「env 是主、account 是附屬」。
+  </p>
+
+  <!-- ====================== The Flip ====================== -->
+  <h2>2. 結構翻轉:env-centric → account-centric</h2>
+
+  <div class="flip">
+    <!-- LEFT: v2.8 -->
+    <div class="pyramid">
+      <div class="era">v2.8 (現況)</div>
+      <h3>env 是主、account 是附屬</h3>
+
+      <div class="tier primary-blue">
+        <div class="tier-label">Top-level — env 動詞</div>
+        <div class="verbs">
+          <span class="verb sandbox">create</span>
+          <span class="verb sandbox">use</span>
+          <span class="verb sandbox">list</span>
+          <span class="verb sandbox">delete</span>
+          <span class="verb sandbox">info</span>
+          <span class="verb sandbox">rename</span>
+          <span class="verb sandbox">current</span>
+          <span class="verb sandbox">deactivate</span>
+          <span class="verb sandbox">memory</span>
+          <span class="verb sandbox">sync</span>
+          <span class="verb sandbox">env set/unset</span>
+          <span class="verb">auth</span>
+          <span class="verb">origin</span>
+        </div>
+      </div>
+
+      <div class="tier nested">
+        <span class="tier-prefix">account</span>
+        <div class="verbs">
+          <span class="verb account">add</span>
+          <span class="verb account">list</span>
+          <span class="verb account">show</span>
+          <span class="verb account">use</span>
+          <span class="verb account">remove</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">⇄</div>
+
+    <!-- RIGHT: v3.0 -->
+    <div class="pyramid">
+      <div class="era">v3.0 (新)</div>
+      <h3>account 是主、sandbox 是附屬</h3>
+
+      <div class="tier primary">
+        <div class="tier-label">Top-level — account 動詞(預設 mental model)</div>
+        <div class="verbs">
+          <span class="verb account">add</span>
+          <span class="verb account">list</span>
+          <span class="verb account">show</span>
+          <span class="verb account">use</span>
+          <span class="verb account">remove</span>
+        </div>
+      </div>
+
+      <div class="tier nested">
+        <span class="tier-prefix sandbox">sandbox</span>
+        <div class="verbs">
+          <span class="verb sandbox">create</span>
+          <span class="verb sandbox">use</span>
+          <span class="verb sandbox">list</span>
+          <span class="verb sandbox">delete</span>
+          <span class="verb sandbox">info</span>
+          <span class="verb sandbox">rename</span>
+          <span class="verb sandbox">current</span>
+          <span class="verb sandbox">memory</span>
+          <span class="verb sandbox">sync</span>
+          <span class="verb sandbox">set-env</span>
+          <span class="verb sandbox">unset-env</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="color: var(--muted); font-size: 13px; margin-top: 12px;">
+    重點:<code>list</code> / <code>use</code> 這類動詞,在 v2.8 是 env 的、v3.0 變成 account 的——
+    這是 hard break,但意義單一,不再有「<code>list</code> 看的是哪個」的雙重含意。
+    「env」改名為「<code>sandbox</code>」是為了避開既有的 <code>env set/unset</code> (環境變數操作)的語意衝突。
+  </p>
+
+  <!-- ====================== Goals ====================== -->
+  <h2>3. 設計目標</h2>
+  <div class="goals">
+    <div class="goal">
+      <div class="label">GOAL 1</div>
+      <div class="title">入門 = account</div>
+      <div class="body">第一次裝 orrery 的人,<code>orrery add</code> / <code>orrery use</code> / <code>orrery list</code> 就能用,不必先學什麼是 env。</div>
+    </div>
+    <div class="goal">
+      <div class="label">GOAL 2</div>
+      <div class="title">進階 = sandbox</div>
+      <div class="body">需要 memory/sessions/env-var 隔離時才進 <code>orrery sandbox *</code>。</div>
+    </div>
+    <div class="goal">
+      <div class="label">GOAL 3</div>
+      <div class="title">動詞意義單一</div>
+      <div class="body"><code>list</code> 永遠是 account、<code>sandbox list</code> 永遠是 sandbox。不會混淆。</div>
+    </div>
+    <div class="goal">
+      <div class="label">GOAL 4</div>
+      <div class="title">無歷史包袱</div>
+      <div class="body">v3.0 一刀切、不留 alias。CHANGELOG 寫完整對照表,加錯誤訊息 hint 接住沒看的人。</div>
+    </div>
+  </div>
+
+  <!-- ====================== Mapping ====================== -->
+  <h2>4. 完整命令對應表</h2>
+  <table class="map-table">
+    <thead>
+      <tr>
+        <th style="width: 130px;">類別</th>
+        <th>v2.8 (現在)</th>
+        <th>v3.0 (新)</th>
+        <th>備註</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- sandbox -->
+      <tr><td colspan="4" style="background: rgba(88, 166, 255, 0.05); color: var(--sandbox); font-weight: 600; padding: 8px 12px; font-size: 12px;">▎ env → sandbox namespace</td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery create &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox create &lt;name&gt;</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery use &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox use &lt;name&gt;</code></td><td class="note">含意改變</td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery list</code></td><td class="to sandbox"><code>orrery sandbox list</code></td><td class="note">含意改變</td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery delete &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox delete &lt;name&gt;</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery info &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox info &lt;name&gt;</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery rename &lt;old&gt; &lt;new&gt;</code></td><td class="to sandbox"><code>orrery sandbox rename &lt;old&gt; &lt;new&gt;</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery current</code></td><td class="to sandbox"><code>orrery sandbox current</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery memory ...</code></td><td class="to sandbox"><code>orrery sandbox memory ...</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery sync ...</code></td><td class="to sandbox"><code>orrery sandbox sync ...</code></td><td></td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery export &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox export &lt;name&gt;</code></td><td class="note">內部</td></tr>
+      <tr><td><span class="cat cat-sandbox">sandbox</span></td><td class="from"><code>orrery unexport &lt;name&gt;</code></td><td class="to sandbox"><code>orrery sandbox unexport &lt;name&gt;</code></td><td class="note">內部</td></tr>
+      <tr><td><span class="cat cat-sandbox">env-var</span></td><td class="from"><code>orrery env set &lt;k&gt; &lt;v&gt;</code></td><td class="to sandbox"><code>orrery sandbox set-env &lt;k&gt; &lt;v&gt;</code></td><td class="note">verb 一體化、避開 env namespace</td></tr>
+      <tr><td><span class="cat cat-sandbox">env-var</span></td><td class="from"><code>orrery env unset &lt;k&gt;</code></td><td class="to sandbox"><code>orrery sandbox unset-env &lt;k&gt;</code></td><td></td></tr>
+
+      <!-- account -->
+      <tr><td colspan="4" style="background: rgba(188, 140, 255, 0.05); color: var(--account); font-weight: 600; padding: 8px 12px; font-size: 12px;">▎ account → top level</td></tr>
+      <tr><td><span class="cat cat-account">account</span></td><td class="from"><code>orrery account add</code></td><td class="to account"><code>orrery add</code></td><td></td></tr>
+      <tr><td><span class="cat cat-account">account</span></td><td class="from"><code>orrery account list</code></td><td class="to account"><code>orrery list</code></td><td class="note">含意翻轉</td></tr>
+      <tr><td><span class="cat cat-account">account</span></td><td class="from"><code>orrery account show</code></td><td class="to account"><code>orrery show</code></td><td></td></tr>
+      <tr><td><span class="cat cat-account">account</span></td><td class="from"><code>orrery account use --name X</code></td><td class="to account"><code>orrery use &lt;X&gt;</code></td><td class="note">positional、含意翻轉</td></tr>
+      <tr><td><span class="cat cat-account">account</span></td><td class="from"><code>orrery account remove --name X</code></td><td class="to account"><code>orrery remove &lt;X&gt;</code></td><td class="note">positional</td></tr>
+
+      <!-- removed -->
+      <tr><td colspan="4" style="background: rgba(248, 81, 73, 0.05); color: var(--removed); font-weight: 600; padding: 8px 12px; font-size: 12px;">▎ 移除</td></tr>
+      <tr><td><span class="cat cat-remove">remove</span></td><td class="from"><code>orrery auth</code></td><td class="to removed">—</td><td class="note">功能被 <code>show</code> / <code>list</code> 取代</td></tr>
+      <tr><td><span class="cat cat-remove">remove</span></td><td class="from"><code>orrery origin</code></td><td class="to removed">—</td><td class="note">takeover 自動跑、release 走 uninstall</td></tr>
+      <tr><td><span class="cat cat-remove">remove</span></td><td class="from"><code>orrery deactivate</code></td><td class="to removed">—</td><td class="note">改用 <code>orrery sandbox use origin</code></td></tr>
+
+      <!-- unchanged -->
+      <tr><td colspan="4" style="background: rgba(139, 148, 158, 0.05); color: var(--muted); font-weight: 600; padding: 8px 12px; font-size: 12px;">▎ 不動的正交動作</td></tr>
+      <tr><td><span class="cat cat-keep">keep</span></td><td class="from"><code>run / delegate / sessions / resume</code></td><td class="to">同左</td><td></td></tr>
+      <tr><td><span class="cat cat-keep">keep</span></td><td class="from"><code>setup / init / install / uninstall / update / check-update</code></td><td class="to">同左</td><td></td></tr>
+      <tr><td><span class="cat cat-keep">keep</span></td><td class="from"><code>mcp setup / mcp server / tools / third-party</code></td><td class="to">同左</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <p style="color: var(--muted); font-size: 12px; margin-top: 8px;">
+    <code>orrery use &lt;name&gt;</code> 預設 claude;同名跨工具時(work 在 claude/codex 都有)報錯並提示加 <code>--&lt;tool&gt;</code> 旗標。<code>remove</code> 同規則。
+  </p>
+
+  <!-- ====================== Shell function ====================== -->
+  <h2>5. shell function 攔截變化</h2>
+  <p style="color: var(--muted); font-size: 13px;">
+    shell function 仍然需要攔截那些「Swift 進程改不到父 shell 環境」的指令(切 sandbox 要 export env vars / 設 <code>ORRERY_ACTIVE_ENV</code>),以及 TTY-attached 啟動 claude 的 case。
+  </p>
+
+  <table class="shell-table">
+    <thead>
+      <tr><th style="width: 200px;">場景</th><th style="width: 220px;">v2.8 攔截</th><th style="width: 280px;">v3.0 攔截</th><th>為何 shell 端要管</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>切 sandbox</td><td><code>use &lt;name&gt;</code></td><td><code>sandbox use &lt;name&gt;</code></td><td>需要 <code>eval</code> orrery-bin 算出的 env-var exports + 設 <code>ORRERY_ACTIVE_ENV</code></td></tr>
+      <tr><td>切回 origin</td><td><code>deactivate</code></td><td class="gone">(移除)</td><td>改用 <code>orrery sandbox use origin</code></td></tr>
+      <tr><td>建立 sandbox</td><td><code>create &lt;name&gt;</code></td><td><code>sandbox create &lt;name&gt;</code></td><td>創建完問「切過去?」需要 shell 端 <code>read</code></td></tr>
+      <tr><td>add claude(TTY)</td><td><code>account add</code> (claude)</td><td><code>add</code> (claude)</td><td>claude REPL 需要 foreground TTY</td></tr>
+      <tr><td>phantom claude</td><td><code>run</code></td><td><code>run</code></td><td>phantom 迴圈;內容不變</td></tr>
+      <tr><td>切 account</td><td><code>account use</code></td><td class="new">不再攔截</td><td>純 Keychain / symlink 操作,不需 shell magic</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ====================== Slash command ====================== -->
+  <h2>6. <code>/orrery:phantom</code> slash command</h2>
+  <p style="color: var(--muted); font-size: 13px;">
+    對話中觸發的 slash command 也跟 CLI 預設語意對齊——預設切 account(因為使用者已經在 claude session 裡),顯式 <code>sandbox</code> 關鍵字才切沙箱。
+  </p>
+
+  <div class="slash-list">
+    <div class="slash-row account">
+      <div class="cmd">/orrery:phantom <span class="marker">&lt;name&gt;</span></div>
+      <div class="desc">切 claude account(預設 — 因為 supervisor 本身是 claude session)</div>
+    </div>
+    <div class="slash-row account">
+      <div class="cmd">/orrery:phantom <span class="marker">codex</span> &lt;name&gt;</div>
+      <div class="desc">切 codex account(罕見,但允許)</div>
+    </div>
+    <div class="slash-row account">
+      <div class="cmd">/orrery:phantom <span class="marker">gemini</span> &lt;name&gt;</div>
+      <div class="desc">切 gemini account</div>
+    </div>
+    <div class="slash-row sandbox">
+      <div class="cmd">/orrery:phantom <span class="marker">sandbox</span> &lt;name&gt;</div>
+      <div class="desc">切 sandbox(顯式 sandbox 關鍵字)</div>
+    </div>
+    <div class="slash-row">
+      <div class="cmd">/orrery:phantom</div>
+      <div class="desc">無參數 → 列出可用的 account 與 sandbox,提示使用者</div>
+    </div>
+  </div>
+
+  <!-- ====================== Internal rename ====================== -->
+  <h2>7. 內部 sentinel 欄位更名</h2>
+  <p style="color: var(--muted); font-size: 13px;">phantom IPC sentinel (<code>~/.orrery/.phantom-sentinel</code>) 欄位:</p>
+<div class="sentinel-diff">
+<span class="removed-line">TARGET_ENV='&lt;sandbox-name&gt;'</span>
+<span class="added-line">TARGET_SANDBOX='&lt;sandbox-name&gt;'</span>
+<span class="keep">TARGET_ACCOUNT_TOOL='claude|codex|gemini'</span>
+<span class="keep">TARGET_ACCOUNT_NAME='&lt;name&gt;'</span>
+<span class="keep">SESSION_ID='&lt;uuid&gt;'</span>
+</div>
+  <p style="color: var(--muted); font-size: 13px;">
+    對應內部命令:<code>PhantomTriggerCommand</code> → <code>PhantomSandboxTriggerCommand</code>;<code>_phantom-trigger</code> → <code>_phantom-trigger-sandbox</code>(與 <code>_phantom-trigger-account</code> 對稱)。
+  </p>
+  <p style="color: var(--yellow); font-size: 13px;">
+    ⚠️ <code>ORRERY_ACTIVE_ENV</code> 環境變數<strong>保留原名</strong>——這是對使用者 script 的出口,改名會破壞既有 <code>if [ "$ORRERY_ACTIVE_ENV" = ... ]</code>。內部 Swift 命名以可讀性為主。
+  </p>
+
+  <!-- ====================== Compat hints ====================== -->
+  <h2>8. 相容性 hint(沒看 CHANGELOG 也能找到路)</h2>
+  <p style="color: var(--muted); font-size: 13px;">v3.0 不留 alias,但加幾條友善錯誤訊息,接住舊使用者:</p>
+
+  <div class="hint-card">
+    <div class="input">$ orrery use foo  &nbsp;<span style="color: var(--muted);">(舊習慣;v3.0 是 account use,但沒有名為 foo 的 account、卻有同名 sandbox)</span></div>
+    <div class="output">No account 'foo'. Did you mean: <span style="color: var(--sandbox);">orrery sandbox use foo</span>?</div>
+  </div>
+  <div class="hint-card">
+    <div class="input">$ orrery create work  &nbsp;<span style="color: var(--muted);">(已移除的 top-level)</span></div>
+    <div class="output">Unknown subcommand 'create'. Did you mean: <span style="color: var(--sandbox);">orrery sandbox create work</span>?</div>
+  </div>
+  <div class="hint-card">
+    <div class="input">$ orrery auth  &nbsp;<span style="color: var(--muted);">(已刪除)</span></div>
+    <div class="output">'orrery auth' was removed in v3.0. Use <span style="color: var(--account);">orrery show</span> to see pinned accounts, or <span style="color: var(--account);">orrery list</span> for the full pool.</div>
+  </div>
+
+  <!-- ====================== Implementation scope ====================== -->
+  <h2>9. 實作範圍</h2>
+  <div class="scope-grid">
+    <div class="scope-item"><div class="n">1</div><div class="desc"><strong>新增 <code>SandboxCommand</code></strong>:把現有 7 個 env-related top-level struct + memory/sync/export/unexport + 新 set-env/unset-env 全部變成它的 subcommand。<code>EnvCommand</code> 整個刪除。</div></div>
+    <div class="scope-item"><div class="n">2</div><div class="desc"><strong>account 提到 top level</strong>:<code>AccountCommand</code> 父刪;5 個 verb 變 top-level command。<code>UseCommand</code>/<code>ListCommand</code> 名稱跟舊 env 衝突,要先把舊版搬走再掛新版。</div></div>
+    <div class="scope-item"><div class="n">3</div><div class="desc"><strong>刪除</strong>:<code>AuthCommand</code>、<code>OriginCommand</code>、<code>DeactivateCommand</code>、<code>EnvCommand</code>、<code>AccountCommand</code>(父)。</div></div>
+    <div class="scope-item"><div class="n">4</div><div class="desc"><strong>sentinel + phantom rename</strong>:<code>TARGET_ENV</code> → <code>TARGET_SANDBOX</code>、<code>_phantom-trigger</code> → <code>_phantom-trigger-sandbox</code>。</div></div>
+    <div class="scope-item"><div class="n">5</div><div class="desc"><strong>slash command markdown</strong>:預設語意改為 account,sandbox 改成顯式關鍵字。</div></div>
+    <div class="scope-item"><div class="n">6</div><div class="desc"><strong><code>ShellFunctionGenerator</code> 重寫</strong>:<code>sandbox)</code> / <code>add)</code> / <code>run)</code> 三個 case 重組;舊 <code>use)</code>/<code>deactivate)</code>/<code>create)</code>/<code>account)</code> 刪除。</div></div>
+    <div class="scope-item"><div class="n">7</div><div class="desc"><strong>L10n audit</strong>:所有 user-facing env 字眼改成 sandbox;account.* keys 大多保留(verb 沒變)。</div></div>
+    <div class="scope-item"><div class="n">8</div><div class="desc"><strong>Tests</strong>:命令名變了,大量測試要重寫;內部單元測試(adapter/store/migration)幾乎不動。</div></div>
+    <div class="scope-item"><div class="n">9</div><div class="desc"><strong>CHANGELOG</strong>:v3.0 breaking change 區段、完整對照表。Homebrew formula bump。</div></div>
+    <div class="scope-item"><div class="n">10</div><div class="desc"><strong>版號</strong>:5 個位置同步 <code>3.0.0</code>(per CLAUDE.md Versioning)。</div></div>
+  </div>
+
+  <!-- ====================== Out of scope ====================== -->
+  <h2>10. 不在範圍內</h2>
+  <ul style="color: var(--muted); font-size: 13px;">
+    <li>不動 <code>run / delegate / sessions / resume / install 系列 / mcp / tools / third-party</code></li>
+    <li>不引入 <code>orrery account *</code> alias(直接刪)</li>
+    <li>不引入 <code>orrery env *</code> alias(直接刪)</li>
+    <li>不重新設計 account / sandbox 的內部資料模型(只動 command surface)</li>
+    <li><code>ORRERY_ACTIVE_ENV</code> 環境變數保留原名(出口契約)</li>
+  </ul>
+
+  <!-- ====================== Versioning ====================== -->
+  <div class="version-callout">
+    <div class="big">3.0.0</div>
+    <div class="text">
+      <strong>major bump,因為 hard break。</strong><br>
+      5 個版號位置同步更新:<code>OrreryCommand.swift</code>、<code>MCPServer.swift</code>、<code>Version.swift</code>、<code>CHANGELOG.md</code>、<code>docs/{index,zh_TW}.html</code> badge。
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
