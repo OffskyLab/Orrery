@@ -60,10 +60,10 @@ public struct AccountUseCommand: ParsableCommand {
         // succeeded and materialize is retryable; warn so the user knows they may
         // need to log in.
         do {
-            try RunCommand.prepareMaterialize(tool: tool, envName: activeEnv)
+            try RunCommand.prepareMaterialize(tool: tool, envName: targetEnvName)
         } catch {
             FileHandle.standardError.write(Data(
-                "orrery: warning: could not place credentials for '\(name)': \(error)\n".utf8))
+                "orrery: warning: could not materialize \(tool.rawValue) credentials for '\(name)': \(error)\n".utf8))
         }
 
         print(L10n.Account.usePinned(tool.rawValue, name, targetEnvName))
