@@ -34,14 +34,7 @@ public struct AccountShowCommand: ParsableCommand {
         print(L10n.Account.showActiveEnv(activeEnvName))
         for tool in Tool.allCases {
             if let id = pins[tool.rawValue],
-               var acct = try? acctStore.load(id: id, tool: tool) {
-                // Lazy backfill: if both fields are nil on this account, attempt a
-                // best-effort refresh from credential sources before display.
-                if acct.email == nil && acct.plan == nil {
-                    if acct.refreshInfo(accountStore: acctStore) {
-                        try? acctStore.save(acct)
-                    }
-                }
+               let acct = try? acctStore.load(id: id, tool: tool) {
                 let infoSuffix = [acct.email, acct.plan].compactMap { $0 }.joined(separator: ", ")
                 let suffix = infoSuffix.isEmpty ? "" : " (\(infoSuffix))"
                 print(L10n.Account.showRowPinned(tool.rawValue, acct.displayName, suffix))

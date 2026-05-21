@@ -150,30 +150,16 @@ struct AccountCommandsAllTests {
 
         // MARK: - Info suffix tests
 
-        @Test("codex account with auth.json JWT shows email and plan")
-        func codexAccountWithJWT() throws {
+        @Test("codex account with email and plan stored shows both in list")
+        func codexAccountWithStoredEmailAndPlan() throws {
             try withIsolatedHome {
                 let store = AccountStore.default
-                let acct = Account(tool: .codex, displayName: "work-codex")
+                // Simulate what write paths (login/syncback/backfill) do: store
+                // email and plan directly on the Account before saving.
+                var acct = Account(tool: .codex, displayName: "work-codex")
+                acct.email = "test@example.com"
+                acct.plan = "free"
                 try store.save(acct)
-
-                // Build a minimal JWT: base64url(header).base64url(payload).sig
-                // Payload contains email + plan in the OpenAI-specific claim.
-                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
-                let payload = Data(#"{"email":"test@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"free"}}"#.utf8)
-                func b64url(_ d: Data) -> String {
-                    d.base64EncodedString()
-                        .replacingOccurrences(of: "+", with: "-")
-                        .replacingOccurrences(of: "/", with: "_")
-                        .replacingOccurrences(of: "=", with: "")
-                }
-                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
-
-                // Write auth.json into the pool dir.
-                let poolDir = store.accountDir(id: acct.id, tool: .codex)
-                let authURL = poolDir.appendingPathComponent("auth.json")
-                let authJSON = #"{"tokens":{"id_token":"\#(jwt)"}}"#
-                try Data(authJSON.utf8).write(to: authURL)
 
                 let cmd = try AccountListCommand.parse(["--codex"])
                 let output = try captureStdout { try cmd.run() }
@@ -183,28 +169,14 @@ struct AccountCommandsAllTests {
             }
         }
 
-        @Test("gemini account with oauth_creds.json shows email")
-        func geminiAccountWithOAuth() throws {
+        @Test("gemini account with stored email shows email in list")
+        func geminiAccountWithStoredEmail() throws {
             try withIsolatedHome {
                 let store = AccountStore.default
-                let acct = Account(tool: .gemini, displayName: "gemini-personal")
+                // Simulate what write paths do: store email directly on Account.
+                var acct = Account(tool: .gemini, displayName: "gemini-personal")
+                acct.email = "gemini@example.com"
                 try store.save(acct)
-
-                // Build a JWT with email claim for the Gemini id_token.
-                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
-                let payload = Data(#"{"email":"gemini@example.com","sub":"12345"}"#.utf8)
-                func b64url(_ d: Data) -> String {
-                    d.base64EncodedString()
-                        .replacingOccurrences(of: "+", with: "-")
-                        .replacingOccurrences(of: "/", with: "_")
-                        .replacingOccurrences(of: "=", with: "")
-                }
-                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
-
-                let poolDir = store.accountDir(id: acct.id, tool: .gemini)
-                let oauthURL = poolDir.appendingPathComponent("oauth_creds.json")
-                let oauthJSON = #"{"id_token":"\#(jwt)"}"#
-                try Data(oauthJSON.utf8).write(to: oauthURL)
 
                 let cmd = try AccountListCommand.parse(["--gemini"])
                 let output = try captureStdout { try cmd.run() }
@@ -260,26 +232,15 @@ struct AccountCommandsAllTests {
             }
         }
 
-        @Test("pinned codex account shows email from auth.json")
-        func pinnedCodexShowsEmail() throws {
+        @Test("pinned codex account with stored email and plan shows both")
+        func pinnedCodexShowsStoredEmailAndPlan() throws {
             try withIsolatedHome {
                 let acctStore = AccountStore.default
-                let acct = Account(tool: .codex, displayName: "show-codex")
+                // Simulate what write paths do: store email/plan directly on Account.
+                var acct = Account(tool: .codex, displayName: "show-codex")
+                acct.email = "codex-show@example.com"
+                acct.plan = "pro"
                 try acctStore.save(acct)
-
-                // Seed auth.json with a JWT carrying an email claim.
-                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
-                let payload = Data(#"{"email":"codex-show@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"pro"}}"#.utf8)
-                func b64url(_ d: Data) -> String {
-                    d.base64EncodedString()
-                        .replacingOccurrences(of: "+", with: "-")
-                        .replacingOccurrences(of: "/", with: "_")
-                        .replacingOccurrences(of: "=", with: "")
-                }
-                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
-                let poolDir = acctStore.accountDir(id: acct.id, tool: .codex)
-                try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
-                    .write(to: poolDir.appendingPathComponent("auth.json"))
 
                 // Pin the account to origin.
                 var origin = EnvironmentStore.default.loadOriginConfig()
