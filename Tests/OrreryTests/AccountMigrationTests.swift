@@ -179,6 +179,47 @@ struct AccountMigrationTests {
         #expect(try envStore.load(named: "rerun").account(for: .codex) == firstID)
     }
 
+    @Test("migration picks up credentials moved in by takeover")
+    func migrationPicksUpTakeoverCredentials() throws {
+        // Simulate the post-takeover state: ~/.orrery/origin/codex/auth.json exists
+        // (populated by OriginTakeoverBootstrap) but the .migration-v3 flag has NOT
+        // been written yet.  Migration should see the origin credential and lift it
+        // into the account pool — the scenario that was broken before the ordering fix.
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+
+        // Create only origin/codex/ (no envs/) — exactly what takeover produces.
+        let originCodexDir = home.appendingPathComponent("origin/codex")
+        try FileManager.default.createDirectory(at: originCodexDir, withIntermediateDirectories: true)
+        let credentialContent = Data(#"{"token": "fake"}"#.utf8)
+        let authFile = originCodexDir.appendingPathComponent("auth.json")
+        try credentialContent.write(to: authFile)
+
+        // No .migration-v3 flag pre-created — this is a fresh first run.
+        let flagURL = home.appendingPathComponent(AccountMigration.flagFileName)
+        #expect(!FileManager.default.fileExists(atPath: flagURL.path))
+
+        try AccountMigration.runIfNeeded(homeURL: home)
+
+        // (a) .migration-v3 flag is written.
+        #expect(FileManager.default.fileExists(atPath: flagURL.path))
+
+        // (b) exactly one codex account was created in the pool.
+        let acctStore = AccountStore(homeURL: home)
+        let accounts = try acctStore.list(tool: .codex)
+        #expect(accounts.count == 1)
+        let account = try #require(accounts.first)
+
+        // (c) the account dir contains auth.json with the original synthetic content.
+        let pooledAuth = acctStore.accountDir(id: account.id, tool: .codex)
+            .appendingPathComponent("auth.json")
+        #expect(FileManager.default.fileExists(atPath: pooledAuth.path))
+        #expect(try Data(contentsOf: pooledAuth) == credentialContent)
+
+        // (d) the original origin credential is still present (migration is non-destructive).
+        #expect(FileManager.default.fileExists(atPath: authFile.path))
+    }
+
     @Test("takes a backup before migrating a non-empty home")
     func takesBackupBeforeMigrating() throws {
         let (home, cleanup) = makeTempHome()
