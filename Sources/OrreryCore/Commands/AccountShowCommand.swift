@@ -35,7 +35,10 @@ public struct AccountShowCommand: ParsableCommand {
         for tool in Tool.allCases {
             if let id = pins[tool.rawValue],
                let acct = try? acctStore.load(id: id, tool: tool) {
-                print(L10n.Account.showRowPinned(tool.rawValue, acct.displayName))
+                let info = ToolAuth.accountInfo(forPoolAccount: acct, accountStore: acctStore)
+                let infoSuffix = [info.email, info.plan, info.model].compactMap { $0 }.joined(separator: ", ")
+                let suffix = infoSuffix.isEmpty ? "" : " (\(infoSuffix))"
+                print(L10n.Account.showRowPinned(tool.rawValue, acct.displayName, suffix))
             } else {
                 print(L10n.Account.showRowUnpinned(tool.rawValue))
             }

@@ -32,7 +32,7 @@
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "name", "type": "String" },
-      { "label": "_", "name": "id", "type": "String" }
+      { "label": "_", "name": "tail", "type": "String" }
     ]
   },
   {
@@ -80,7 +80,8 @@
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "tool", "type": "String" },
-      { "label": "_", "name": "name", "type": "String" }
+      { "label": "_", "name": "name", "type": "String" },
+      { "label": "_", "name": "suffix", "type": "String" }
     ]
   },
   {

@@ -147,6 +147,87 @@ struct AccountCommandsAllTests {
                 #expect(!output.contains("should-not-show"))
             }
         }
+
+        // MARK: - Info suffix tests
+
+        @Test("codex account with auth.json JWT shows email and plan")
+        func codexAccountWithJWT() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                let acct = Account(tool: .codex, displayName: "work-codex")
+                try store.save(acct)
+
+                // Build a minimal JWT: base64url(header).base64url(payload).sig
+                // Payload contains email + plan in the OpenAI-specific claim.
+                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
+                let payload = Data(#"{"email":"test@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"free"}}"#.utf8)
+                func b64url(_ d: Data) -> String {
+                    d.base64EncodedString()
+                        .replacingOccurrences(of: "+", with: "-")
+                        .replacingOccurrences(of: "/", with: "_")
+                        .replacingOccurrences(of: "=", with: "")
+                }
+                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
+
+                // Write auth.json into the pool dir.
+                let poolDir = store.accountDir(id: acct.id, tool: .codex)
+                let authURL = poolDir.appendingPathComponent("auth.json")
+                let authJSON = #"{"tokens":{"id_token":"\#(jwt)"}}"#
+                try Data(authJSON.utf8).write(to: authURL)
+
+                let cmd = try AccountListCommand.parse(["--codex"])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("work-codex"))
+                #expect(output.contains("test@example.com"))
+                #expect(output.contains("free"))
+            }
+        }
+
+        @Test("gemini account with oauth_creds.json shows email")
+        func geminiAccountWithOAuth() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                let acct = Account(tool: .gemini, displayName: "gemini-personal")
+                try store.save(acct)
+
+                // Build a JWT with email claim for the Gemini id_token.
+                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
+                let payload = Data(#"{"email":"gemini@example.com","sub":"12345"}"#.utf8)
+                func b64url(_ d: Data) -> String {
+                    d.base64EncodedString()
+                        .replacingOccurrences(of: "+", with: "-")
+                        .replacingOccurrences(of: "/", with: "_")
+                        .replacingOccurrences(of: "=", with: "")
+                }
+                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
+
+                let poolDir = store.accountDir(id: acct.id, tool: .gemini)
+                let oauthURL = poolDir.appendingPathComponent("oauth_creds.json")
+                let oauthJSON = #"{"id_token":"\#(jwt)"}"#
+                try Data(oauthJSON.utf8).write(to: oauthURL)
+
+                let cmd = try AccountListCommand.parse(["--gemini"])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("gemini-personal"))
+                #expect(output.contains("gemini@example.com"))
+            }
+        }
+
+        @Test("account list does not crash with no credentials in pool dirs")
+        func noCrashWithNoCredentials() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                try store.save(Account(tool: .claude, displayName: "no-creds-claude"))
+                try store.save(Account(tool: .codex, displayName: "no-creds-codex"))
+                try store.save(Account(tool: .gemini, displayName: "no-creds-gemini"))
+                let cmd = try AccountListCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                // Must not crash; all account names should appear.
+                #expect(output.contains("no-creds-claude"))
+                #expect(output.contains("no-creds-codex"))
+                #expect(output.contains("no-creds-gemini"))
+            }
+        }
     }
 
     // MARK: AccountShowCommand
@@ -176,6 +257,56 @@ struct AccountCommandsAllTests {
                 let cmd = try AccountShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("pinned-account"))
+            }
+        }
+
+        @Test("pinned codex account shows email from auth.json")
+        func pinnedCodexShowsEmail() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let acct = Account(tool: .codex, displayName: "show-codex")
+                try acctStore.save(acct)
+
+                // Seed auth.json with a JWT carrying an email claim.
+                let header  = Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8)
+                let payload = Data(#"{"email":"codex-show@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"pro"}}"#.utf8)
+                func b64url(_ d: Data) -> String {
+                    d.base64EncodedString()
+                        .replacingOccurrences(of: "+", with: "-")
+                        .replacingOccurrences(of: "/", with: "_")
+                        .replacingOccurrences(of: "=", with: "")
+                }
+                let jwt = "\(b64url(header)).\(b64url(payload)).fakesig"
+                let poolDir = acctStore.accountDir(id: acct.id, tool: .codex)
+                try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
+                    .write(to: poolDir.appendingPathComponent("auth.json"))
+
+                // Pin the account to origin.
+                var origin = EnvironmentStore.default.loadOriginConfig()
+                origin.accounts["codex"] = acct.id
+                try EnvironmentStore.default.saveOriginConfig(origin)
+
+                let cmd = try AccountShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("show-codex"))
+                #expect(output.contains("codex-show@example.com"))
+                #expect(output.contains("pro"))
+            }
+        }
+
+        @Test("pinned account with no credentials shows name without parens")
+        func pinnedNoCredentialsShowsNameOnly() throws {
+            try withIsolatedHome {
+                let acct = Account(tool: .claude, displayName: "bare-account")
+                try AccountStore.default.save(acct)
+                var origin = EnvironmentStore.default.loadOriginConfig()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginConfig(origin)
+                let cmd = try AccountShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("bare-account"))
+                // No trailing " ()" — suffix is empty so no parens added.
+                #expect(!output.contains("bare-account ()"))
             }
         }
 

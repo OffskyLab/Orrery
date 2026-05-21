@@ -54,6 +54,21 @@ public enum ToolAuth {
         }
     }
 
+    /// Look up account info for a pool account.
+    /// Reads from the pool dir (not from the live/env config dir).
+    /// Never throws — returns an empty `AccountInfo` on any failure.
+    public static func accountInfo(forPoolAccount account: Account, accountStore: AccountStore) -> AccountInfo {
+        let dir = accountStore.accountDir(id: account.id, tool: account.tool)
+        switch account.tool {
+        case .codex:
+            return codexAccountInfo(dir: dir)
+        case .gemini:
+            return geminiAccountInfo(dir: dir)
+        case .claude:
+            return ClaudeKeychain.accountInfo(forPoolAccount: account, poolDir: dir)
+        }
+    }
+
     // MARK: - Codex
 
     private static func codexAccountInfo(dir: URL) -> AccountInfo {
