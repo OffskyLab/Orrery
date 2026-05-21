@@ -64,10 +64,11 @@ public struct AccountAddPrepareCommand: ParsableCommand {
 
     private func resolveName() throws -> String {
         if let n = name, !n.isEmpty { return n }
-        print(L10n.Account.addNamePrompt, terminator: "")
+        FileHandle.standardError.write(Data(L10n.Account.addNamePrompt.utf8))
         guard let input = readLine()?.trimmingCharacters(in: .whitespaces),
               !input.isEmpty
         else {
+            FileHandle.standardError.write(Data((L10n.Account.addEmptyName + "\n").utf8))
             throw ValidationError(L10n.Account.addEmptyName)
         }
         return input

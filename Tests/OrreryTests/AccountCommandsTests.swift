@@ -500,6 +500,23 @@ struct AccountCommandsAllTests {
             }
         }
 
+        @Test("stdout contains only the staging path when --name is given")
+        func stdoutOnlyStagingPath() throws {
+            try withIsolatedHome {
+                let output = try captureStdout {
+                    let cmd = try AccountAddPrepareCommand.parse(["--name", "stdout-only-test"])
+                    try cmd.run()
+                }
+                let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                // stdout must be exactly the staging path — no extra chatter
+                #expect(!stagingPath.isEmpty)
+                #expect(!stagingPath.contains("\n"), "stdout must be a single line (the staging path)")
+                #expect(FileManager.default.fileExists(atPath: stagingPath))
+                // Cleanup
+                try? FileManager.default.removeItem(atPath: stagingPath)
+            }
+        }
+
         @Test("rejects duplicate display name")
         func prepareDuplicate() throws {
             try withIsolatedHome {
