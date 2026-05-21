@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-@Suite("RenameCommand")
+@Suite("SandboxCommand.Rename")
 struct RenameCommandTests {
     var tmpDir: URL!
     var store: EnvironmentStore!
@@ -17,7 +17,7 @@ struct RenameCommandTests {
     @Test("renames environment directory and updates name field")
     func renamesEnvironment() throws {
         try store.save(OrreryEnvironment(name: "work"))
-        try RenameCommand.renameEnvironment(from: "work", to: "office", store: store)
+        try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 
         let env = try store.load(named: "office")
         #expect(env.name == "office")
@@ -30,7 +30,7 @@ struct RenameCommandTests {
     func preservesToolDirs() throws {
         try store.save(OrreryEnvironment(name: "work", tools: [.claude]))
         try store.addTool(.claude, to: "work")
-        try RenameCommand.renameEnvironment(from: "work", to: "office", store: store)
+        try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 
         let toolDir = store.toolConfigDir(tool: .claude, environment: "office")
         #expect(FileManager.default.fileExists(atPath: toolDir.path))
@@ -40,7 +40,7 @@ struct RenameCommandTests {
     func updatesCurrentPointer() throws {
         try store.save(OrreryEnvironment(name: "work"))
         try store.setCurrent("work")
-        try RenameCommand.renameEnvironment(from: "work", to: "office", store: store)
+        try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 
         #expect(try store.current() == "office")
     }
@@ -48,7 +48,7 @@ struct RenameCommandTests {
     @Test("throws when source environment does not exist")
     func throwsWhenMissing() throws {
         #expect(throws: (any Error).self) {
-            try RenameCommand.renameEnvironment(from: "nonexistent", to: "other", store: store)
+            try SandboxCommand.Rename.renameEnvironment(from: "nonexistent", to: "other", store: store)
         }
     }
 }

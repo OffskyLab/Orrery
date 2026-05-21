@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-@Suite("ListCommand")
+@Suite("SandboxCommand.List")
 struct ListCommandTests {
     var tmpDir: URL!
     var store: EnvironmentStore!
@@ -19,7 +19,7 @@ struct ListCommandTests {
         let env = OrreryEnvironment(name: "work", description: "Work", tools: [.claude, .codex])
         try store.save(env)
 
-        let rows = try ListCommand.environmentRows(activeEnv: nil, store: store)
+        let rows = try SandboxCommand.List.environmentRows(activeEnv: nil, store: store)
         // default is always included as the first row
         #expect(rows.count == 2)
         let workRow = rows.first { $0.contains("work") }!
@@ -32,7 +32,7 @@ struct ListCommandTests {
         try store.save(OrreryEnvironment(name: "work"))
         try store.save(OrreryEnvironment(name: "personal"))
 
-        let rows = try ListCommand.environmentRows(activeEnv: "work", store: store)
+        let rows = try SandboxCommand.List.environmentRows(activeEnv: "work", store: store)
         let workRow = rows.first { $0.contains("work") }!
         #expect(workRow.contains("*"))
     }
