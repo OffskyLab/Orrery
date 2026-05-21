@@ -11,7 +11,9 @@ struct AccountModelTests {
             tool: .claude,
             displayName: "work",
             createdAt: Date(timeIntervalSince1970: 1_700_000_000),
-            keychainItem: "Claude Code-orrery-550e8400"
+            keychainItem: "Claude Code-orrery-550e8400",
+            email: "work@example.com",
+            plan: "max"
         )
 
         let encoder = JSONEncoder()
@@ -28,6 +30,8 @@ struct AccountModelTests {
         #expect(decoded.displayName == "work")
         #expect(decoded.keychainItem == "Claude Code-orrery-550e8400")
         #expect(decoded.createdAt == account.createdAt)
+        #expect(decoded.email == "work@example.com")
+        #expect(decoded.plan == "max")
     }
 
     @Test("keychainItem optional for non-macOS-claude accounts")
@@ -39,6 +43,32 @@ struct AccountModelTests {
             createdAt: Date()
         )
         #expect(account.keychainItem == nil)
+        #expect(account.email == nil)
+        #expect(account.plan == nil)
+    }
+
+    @Test("old metadata.json without email/plan keys decodes with nils")
+    func legacyDecode() throws {
+        // Matches what a pre-v2.8.1 metadata.json looks like — no email, no plan.
+        let legacyJSON = """
+            {
+              "id": "abc123",
+              "tool": "claude",
+              "displayName": "legacy",
+              "createdAt": "2024-01-01T00:00:00Z",
+              "keychainItem": "Claude Code-orrery-abc123"
+            }
+            """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(Account.self, from: Data(legacyJSON.utf8))
+
+        #expect(decoded.id == "abc123")
+        #expect(decoded.tool == .claude)
+        #expect(decoded.displayName == "legacy")
+        #expect(decoded.keychainItem == "Claude Code-orrery-abc123")
+        #expect(decoded.email == nil)
+        #expect(decoded.plan == nil)
     }
 }
 

@@ -1,0 +1,257 @@
+import Testing
+import Foundation
+import ArgumentParser
+@testable import OrreryCore
+
+// MARK: - JWT helper
+
+private func b64url(_ d: Data) -> String {
+    d.base64EncodedString()
+        .replacingOccurrences(of: "+", with: "-")
+        .replacingOccurrences(of: "/", with: "_")
+        .replacingOccurrences(of: "=", with: "")
+}
+
+/// Build a fake JWT (3 segments) where the middle segment encodes `payload`
+/// as base64url(JSON). Signature is opaque garbage — the parser only decodes
+/// the payload.
+private func makeJWT(payload: String) -> String {
+    let header = b64url(Data(#"{"alg":"RS256","typ":"JWT"}"#.utf8))
+    let body = b64url(Data(payload.utf8))
+    return "\(header).\(body).fakesig"
+}
+
+// MARK: - Account.refreshInfo
+
+@Suite("Account.refreshInfo")
+struct AccountRefreshInfoTests {
+
+    /// Make a fresh AccountStore rooted at a per-test temp dir.
+    private func makeStore() throws -> AccountStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-refresh-info-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return AccountStore(homeURL: dir)
+    }
+
+    @Test("codex: extracts email + plan from auth.json JWT")
+    func codexFromJWT() throws {
+        let store = try makeStore()
+        var acct = Account(tool: .codex, displayName: "work")
+        try store.save(acct)
+
+        // Seed `<poolDir>/auth.json` with a JWT whose claims encode email + plan.
+        let jwt = makeJWT(
+            payload: #"{"email":"foo@bar.com","https://api.openai.com/auth":{"chatgpt_plan_type":"pro"}}"#
+        )
+        let poolDir = store.accountDir(id: acct.id, tool: .codex)
+        try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
+            .write(to: poolDir.appendingPathComponent("auth.json"))
+
+        let changed = acct.refreshInfo(accountStore: store)
+        #expect(changed)
+        #expect(acct.email == "foo@bar.com")
+        #expect(acct.plan == "pro")
+
+        // Idempotent: second call must report no change.
+        let changedAgain = acct.refreshInfo(accountStore: store)
+        #expect(!changedAgain)
+    }
+
+    @Test("gemini: extracts email from oauth_creds.json id_token")
+    func geminiFromOAuth() throws {
+        let store = try makeStore()
+        var acct = Account(tool: .gemini, displayName: "gpersonal")
+        try store.save(acct)
+
+        let jwt = makeJWT(payload: #"{"email":"g@example.com","sub":"42"}"#)
+        let poolDir = store.accountDir(id: acct.id, tool: .gemini)
+        try Data(#"{"id_token":"\#(jwt)"}"#.utf8)
+            .write(to: poolDir.appendingPathComponent("oauth_creds.json"))
+
+        let changed = acct.refreshInfo(accountStore: store)
+        #expect(changed)
+        #expect(acct.email == "g@example.com")
+        #expect(acct.plan == nil)
+    }
+
+    @Test("claude: email is populated from .claude.json when provided")
+    func claudeFromClaudeJSON() throws {
+        let store = try makeStore()
+        var acct = Account(tool: .claude, displayName: "claude-work")
+        try store.save(acct)
+
+        // Synthesize a `.claude.json` somewhere outside the pool — it could be
+        // in an env's tool dir or a staging dir.
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-claudejson-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(".claude.json")
+        try Data(#"{"oauthAccount":{"emailAddress":"alice@example.com"}}"#.utf8)
+            .write(to: url)
+
+        let changed = acct.refreshInfo(accountStore: store, claudeJSONURL: url)
+        #expect(changed)
+        #expect(acct.email == "alice@example.com")
+    }
+
+    @Test("claude: without .claude.json email stays nil (no-op on email)")
+    func claudeWithoutClaudeJSON() throws {
+        let store = try makeStore()
+        var acct = Account(tool: .claude, displayName: "claude-no-json")
+        try store.save(acct)
+
+        // No claudeJSONURL passed; no credential blob present either.
+        let changed = acct.refreshInfo(accountStore: store)
+        #expect(!changed)
+        #expect(acct.email == nil)
+        #expect(acct.plan == nil)
+    }
+
+    @Test("missing credential file: never throws, leaves fields nil")
+    func missingCredentialIsSafe() throws {
+        let store = try makeStore()
+        var acct = Account(tool: .codex, displayName: "no-cred")
+        try store.save(acct)
+        // No `auth.json` in pool — refreshInfo must not throw and must not change.
+        let changed = acct.refreshInfo(accountStore: store)
+        #expect(!changed)
+        #expect(acct.email == nil)
+        #expect(acct.plan == nil)
+    }
+}
+
+// MARK: - AccountListCommand lazy backfill
+
+@Suite("AccountListCommand lazy backfill", .serialized)
+struct AccountListLazyBackfillTests {
+
+    @Test("codex account in pool gets email/plan saved after `account list`")
+    func codexLazyBackfill() throws {
+        try withIsolatedHome {
+            let store = AccountStore.default
+            let acct = Account(tool: .codex, displayName: "backfill-codex")
+            try store.save(acct)
+            #expect(acct.email == nil)
+            #expect(acct.plan == nil)
+
+            // Place an auth.json carrying claims.
+            let jwt = makeJWT(
+                payload: #"{"email":"lazy@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"team"}}"#
+            )
+            let poolDir = store.accountDir(id: acct.id, tool: .codex)
+            try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
+                .write(to: poolDir.appendingPathComponent("auth.json"))
+
+            let cmd = try AccountListCommand.parse(["--codex"])
+            _ = try captureStdout { try cmd.run() }
+
+            // Read back from disk — the stored Account should now have the fields.
+            let reloaded = try store.load(id: acct.id, tool: .codex)
+            #expect(reloaded.email == "lazy@example.com")
+            #expect(reloaded.plan == "team")
+        }
+    }
+}
+
+// MARK: - AccountMigration.runInfoBackfillIfNeeded
+
+@Suite("AccountMigration.runInfoBackfillIfNeeded")
+struct AccountInfoBackfillTests {
+
+    private func makeTempHome() -> (home: URL, cleanup: () -> Void) {
+        let parent = FileManager.default.temporaryDirectory
+            .appendingPathComponent("orrery-info-backfill-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let home = parent.appendingPathComponent(".orrery")
+        let cleanup: () -> Void = { try? FileManager.default.removeItem(at: parent) }
+        return (home, cleanup)
+    }
+
+    @Test("backfills Claude email from a referencing env's .claude.json and writes the flag")
+    func backfillsClaudeEmail() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+        let envStore = EnvironmentStore(homeURL: home)
+        let acctStore = AccountStore(homeURL: home)
+
+        // Pre-existing Claude account without email/plan, no credential blob.
+        let acct = Account(tool: .claude, displayName: "needs-backfill")
+        try acctStore.save(acct)
+
+        // A named env that pins this account.
+        var env = OrreryEnvironment(name: "work-env")
+        env.setAccount(acct.id, for: .claude)
+        try envStore.save(env)
+
+        // Drop a `.claude.json` into the env's claude tool dir.
+        let claudeDir = envStore.toolConfigDir(tool: .claude, environment: "work-env")
+        try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
+        try Data(#"{"oauthAccount":{"emailAddress":"backfill@example.com"}}"#.utf8)
+            .write(to: claudeDir.appendingPathComponent(".claude.json"))
+
+        // Run backfill.
+        AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+        // Account email is now populated.
+        let reloaded = try acctStore.load(id: acct.id, tool: .claude)
+        #expect(reloaded.email == "backfill@example.com")
+
+        // Flag file written.
+        let flag = home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName)
+        #expect(FileManager.default.fileExists(atPath: flag.path))
+    }
+
+    @Test("second run is a no-op (flag already exists)")
+    func secondRunNoOp() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+        let acctStore = AccountStore(homeURL: home)
+        let acct = Account(tool: .codex, displayName: "stays-empty")
+        try acctStore.save(acct)
+
+        // Pre-create the flag.
+        let flag = home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName)
+        try Data("v1\n".utf8).write(to: flag)
+
+        // Add an auth.json that WOULD be backfilled in a first run.
+        let jwt = makeJWT(payload: #"{"email":"should-not-show@example.com"}"#)
+        let poolDir = acctStore.accountDir(id: acct.id, tool: .codex)
+        try FileManager.default.createDirectory(at: poolDir, withIntermediateDirectories: true)
+        try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
+            .write(to: poolDir.appendingPathComponent("auth.json"))
+
+        AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+        let reloaded = try acctStore.load(id: acct.id, tool: .codex)
+        #expect(reloaded.email == nil)  // because backfill was skipped
+    }
+
+    @Test("fills codex email/plan from pool credentials regardless of tool")
+    func backfillsCodexFromCredential() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+        let acctStore = AccountStore(homeURL: home)
+        let acct = Account(tool: .codex, displayName: "codex-backfill")
+        try acctStore.save(acct)
+
+        let jwt = makeJWT(
+            payload: #"{"email":"cx@example.com","https://api.openai.com/auth":{"chatgpt_plan_type":"plus"}}"#
+        )
+        let poolDir = acctStore.accountDir(id: acct.id, tool: .codex)
+        try Data(#"{"tokens":{"id_token":"\#(jwt)"}}"#.utf8)
+            .write(to: poolDir.appendingPathComponent("auth.json"))
+
+        AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+        let reloaded = try acctStore.load(id: acct.id, tool: .codex)
+        #expect(reloaded.email == "cx@example.com")
+        #expect(reloaded.plan == "plus")
+    }
+}

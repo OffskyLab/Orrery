@@ -116,8 +116,16 @@ public enum AccountMigration {
         guard let credential = extractCredential(tool: tool, configDir: configDir, isOrigin: true) else {
             return  // tool never logged in for origin — nothing to migrate
         }
+        // For origin Claude, `.claude.json` lives at `~/.claude.json`.
+        let claudeJSON: URL? = tool == .claude
+            ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+            : nil
         let id = try resolveOrCreateAccount(
-            credential: credential, tool: tool, scopeName: "origin", acctStore: acctStore
+            credential: credential,
+            tool: tool,
+            scopeName: "origin",
+            acctStore: acctStore,
+            claudeJSONURL: claudeJSON
         )
         config.setAccount(id, for: tool)
         try envStore.saveOriginConfig(config)
@@ -138,8 +146,16 @@ public enum AccountMigration {
         guard let credential = extractCredential(tool: tool, configDir: configDir, isOrigin: false) else {
             return  // tool never logged in for this env — nothing to migrate
         }
+        // For named-env Claude, `.claude.json` lives inside the env's tool dir.
+        let claudeJSON: URL? = tool == .claude
+            ? configDir.appendingPathComponent(".claude.json")
+            : nil
         let id = try resolveOrCreateAccount(
-            credential: credential, tool: tool, scopeName: envName, acctStore: acctStore
+            credential: credential,
+            tool: tool,
+            scopeName: envName,
+            acctStore: acctStore,
+            claudeJSONURL: claudeJSON
         )
         env.setAccount(id, for: tool)
         try envStore.save(env)
@@ -198,15 +214,25 @@ public enum AccountMigration {
 
     /// Returns an existing pool account id whose credential content matches, or
     /// creates a new account (copying the credential into the pool) and returns its id.
+    ///
+    /// `claudeJSONURL` is the source env's `.claude.json` URL (Claude only), used to
+    /// capture the email onto the newly-created account. Ignored for other tools.
     private static func resolveOrCreateAccount(
         credential: Data,
         tool: Tool,
         scopeName: String,
-        acctStore: AccountStore
+        acctStore: AccountStore,
+        claudeJSONURL: URL? = nil
     ) throws -> AccountID {
         // Dedup: reuse the first pool account with identical credential content.
         for existing in try acctStore.list(tool: tool) {
             if storedCredential(of: existing, acctStore: acctStore) == credential {
+                // Best-effort top-up: an earlier migrated scope may not have had
+                // a `.claude.json`. If this scope does, refresh.
+                var refreshed = existing
+                if refreshed.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL) {
+                    try? acctStore.save(refreshed)
+                }
                 return existing.id
             }
         }
@@ -225,6 +251,11 @@ public enum AccountMigration {
         try copyCredentialIntoPool(
             credential: credential, account: account, tool: tool, acctStore: acctStore
         )
+
+        // Capture email/plan into the freshly-created Account so `list` / `show`
+        // don't have to re-parse on first use.
+        account.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL)
+        try acctStore.save(account)
         return account.id
     }
 
@@ -277,5 +308,79 @@ public enum AccountMigration {
         try credential.write(to: dest, options: .atomic)
         // Credential files are sensitive — mirror Claude Code's 0600 perms.
         try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: dest.path)
+    }
+
+    // MARK: - One-shot retroactive info backfill (v1)
+
+    /// Flag file marking the one-shot account-info backfill as done.
+    public static let infoBackfillFlagFileName = ".backfill-account-info-v1"
+
+    /// Best-effort: walks every pool account and backfills `email`/`plan` from
+    /// whatever sources are now available. Guarded by a flag file so it only
+    /// runs once. Never throws — failures are warnings.
+    ///
+    /// For Claude accounts whose `email` is still nil, scans envs that reference
+    /// the account (`EnvironmentStore.envsReferencing`) to find a `.claude.json`
+    /// from which to harvest the email.
+    public static func runInfoBackfillIfNeeded(homeURL: URL) {
+        let fm = FileManager.default
+        let flagURL = homeURL.appendingPathComponent(infoBackfillFlagFileName)
+        if fm.fileExists(atPath: flagURL.path) { return }
+        // No home means nothing to scan — but still no-op (the next call will
+        // also see no home, so we don't write the flag prematurely).
+        guard fm.fileExists(atPath: homeURL.path) else { return }
+
+        let acctStore = AccountStore(homeURL: homeURL)
+        let envStore = EnvironmentStore(homeURL: homeURL)
+
+        for tool in Tool.allCases {
+            let accounts: [Account]
+            do { accounts = try acctStore.list(tool: tool) } catch { continue }
+
+            for account in accounts {
+                var updated = account
+                // Step 1: fill plan + email-from-credential via the standard helper.
+                let credChanged = updated.refreshInfo(accountStore: acctStore)
+
+                // Step 2: Claude-specific — if email is still nil, scan referencing
+                // envs for a `.claude.json` that carries it.
+                var claudeJSONChanged = false
+                if tool == .claude, updated.email == nil {
+                    let envNames = (try? envStore.envsReferencing(accountID: account.id, tool: .claude)) ?? []
+                    for name in envNames {
+                        let url: URL
+                        if name == ReservedEnvironment.defaultName {
+                            url = fm.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+                        } else {
+                            url = envStore.toolConfigDir(tool: .claude, environment: name)
+                                .appendingPathComponent(".claude.json")
+                        }
+                        if updated.refreshInfo(accountStore: acctStore, claudeJSONURL: url) {
+                            claudeJSONChanged = true
+                        }
+                        if updated.email != nil { break }
+                    }
+                }
+
+                if credChanged || claudeJSONChanged {
+                    do {
+                        try acctStore.save(updated)
+                    } catch {
+                        FileHandle.standardError.write(Data(
+                            "[orrery backfill] warning: could not save account '\(account.displayName)': \(error)\n".utf8
+                        ))
+                    }
+                }
+            }
+        }
+
+        // Write the flag last so a partial run can retry.
+        do {
+            try Data("v1\n".utf8).write(to: flagURL)
+        } catch {
+            FileHandle.standardError.write(Data(
+                "[orrery backfill] warning: could not write flag file: \(error)\n".utf8
+            ))
+        }
     }
 }
