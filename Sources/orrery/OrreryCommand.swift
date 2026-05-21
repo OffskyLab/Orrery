@@ -36,7 +36,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             UninstallCommand.self,
             InstallCommand.self,
             ThirdPartyCommand.self,
-            PhantomTriggerCommand.self,
+            PhantomSandboxTriggerCommand.self,
             PhantomAccountTriggerCommand.self,
             AccountAddPrepareCommand.self,
             AccountAddFinalizeCommand.self,

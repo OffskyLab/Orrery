@@ -154,11 +154,11 @@ public struct ShellFunctionGenerator {
                 while true; do
                   command claude "${_phantom_args[@]}"
                   [ -f "$_phantom_sentinel" ] || break
-                  local TARGET_ENV='' TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
+                  local TARGET_SANDBOX='' TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
                   . "$_phantom_sentinel"
                   rm -f "$_phantom_sentinel"
-                  if [ -n "$TARGET_ENV" ]; then
-                    orrery use "$TARGET_ENV" || break
+                  if [ -n "$TARGET_SANDBOX" ]; then
+                    orrery sandbox use "$TARGET_SANDBOX" || break
                   fi
                   if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
                     command orrery-bin account use --"$TARGET_ACCOUNT_TOOL" --name "$TARGET_ACCOUNT_NAME" || break

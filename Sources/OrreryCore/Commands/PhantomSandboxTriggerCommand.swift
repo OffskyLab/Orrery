@@ -6,14 +6,14 @@ import Darwin
 import Glibc
 #endif
 
-/// `orrery-bin _phantom-trigger <env>` — invoked from inside a phantom-supervised
+/// `orrery-bin _phantom-trigger-sandbox <env>` — invoked from inside a phantom-supervised
 /// claude (typically via the `/orrery:phantom` slash command). Writes a sentinel
-/// describing the desired next env + current session id, then SIGTERMs claude so
-/// the supervisor loop in `activate.sh` can relaunch with the new env active and
+/// describing the desired next sandbox + current session id, then SIGTERMs claude so
+/// the supervisor loop in `activate.sh` can relaunch with the new sandbox active and
 /// `--resume <session-id>` so the conversation continues seamlessly.
-public struct PhantomTriggerCommand: ParsableCommand {
+public struct PhantomSandboxTriggerCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
-        commandName: "_phantom-trigger",
+        commandName: "_phantom-trigger-sandbox",
         abstract: L10n.Phantom.triggerAbstract,
         shouldDisplay: false
     )
@@ -52,9 +52,9 @@ public struct PhantomTriggerCommand: ParsableCommand {
       - Run `orrery-bin _phantom-trigger-account --<tool> --name <account-name>` (e.g. `orrery-bin _phantom-trigger-account --claude --name work`).
       - The trigger writes a sentinel naming the target account, then signals Claude to relaunch. The supervisor syncs the just-used account's credential back into the pool, applies the new pin, and relaunches — the new account is picked up automatically.
 
-    - **If `$ARGUMENTS` is non-empty and does NOT start with `account`** (a target env name): run `orrery-bin _phantom-trigger $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
+    - **If `$ARGUMENTS` is non-empty and does NOT start with `account`** (a target env name): run `orrery-bin _phantom-trigger-sandbox $ARGUMENTS`. The trigger writes a sentinel and signals Claude to exit. The supervisor relaunches Claude under the new env automatically — no further user action is needed.
 
-    - **If `$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger` (with no arguments) to get the list of available environments. Then ask the user which environment they want to switch to — present the list as choices. Once they answer, run `orrery-bin _phantom-trigger <chosen-env>`.
+    - **If `$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger-sandbox` (with no arguments) to get the list of available environments. Then ask the user which environment they want to switch to — present the list as choices. Once they answer, run `orrery-bin _phantom-trigger-sandbox <chosen-env>`.
 
     Do not narrate the relaunch — Claude will simply exit and reappear with the new env/account. The user's next message lands in the updated context.
     """
@@ -91,7 +91,7 @@ public struct PhantomTriggerCommand: ParsableCommand {
 
         let sessionId = Self.findCurrentClaudeSessionId()
         try Self.writeSentinel(
-            targetEnv: target,
+            targetSandbox: target,
             targetAccountTool: nil,
             targetAccountName: nil,
             sessionId: sessionId,
@@ -159,7 +159,7 @@ public struct PhantomTriggerCommand: ParsableCommand {
     /// present AFTER claude exits. Only non-nil fields are emitted; `SESSION_ID`
     /// is always emitted (empty string when nil).
     static func writeSentinel(
-        targetEnv: String?,
+        targetSandbox: String?,
         targetAccountTool: String?,
         targetAccountName: String?,
         sessionId: String?,
@@ -171,8 +171,8 @@ public struct PhantomTriggerCommand: ParsableCommand {
             withIntermediateDirectories: true
         )
         var lines: [String] = []
-        if let targetEnv {
-            lines.append("TARGET_ENV='\(shellEscape(targetEnv))'")
+        if let targetSandbox {
+            lines.append("TARGET_SANDBOX='\(shellEscape(targetSandbox))'")
         }
         if let targetAccountTool {
             lines.append("TARGET_ACCOUNT_TOOL='\(shellEscape(targetAccountTool))'")
