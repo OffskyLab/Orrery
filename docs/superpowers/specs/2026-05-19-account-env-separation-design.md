@@ -144,6 +144,10 @@ Materialize 流程：
 - 「active token」位置是 mutable 的；不擔心多進程競爭，因為 `orrery run` 是序列化的入口
 - metadata.json 也是未來放 token 過期時間、user-friendly 顯示名、登入時間戳等資訊的位置
 
+### Sync-back（macOS Claude 專屬）
+
+Keychain item 無法 symlink，所以 macOS Claude 的 pool entry 是憑證的**複本**——materialize 把 pool token 複寫到 Claude 預期讀取的 live Keychain service。Claude 每次 refresh OAuth token 時只會把新 token 寫回 live service，**不會**回寫 pool；若不處理，pool 快照會逐漸過期，切回該 account 時就 401。因此每次工具結束後做一次 **sync-back**：把 live service 的（可能已 refresh 的）token 複寫回 account 的 pool entry，反向於 materialize。檔案型工具（Codex / Gemini / Linux Claude）因為 materialize 用 symlink，工具本來就直接讀寫 pool 檔案，sync-back 為純 no-op。phantom supervisor loop 在 `claude` 退出後、套用 sentinel 切換 env/account **之前**呼叫 `orrery-bin _syncback claude`，確保回寫的是剛用過的 account。
+
 ## 5. Sessions 與 Memory
 
 **結論：維持 env-scoped，account 切換不影響。**

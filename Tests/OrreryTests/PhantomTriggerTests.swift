@@ -18,7 +18,9 @@ struct PhantomTriggerTests {
 
     @Test("sentinel is shell-sourceable with target env and session id")
     func sentinelRoundTrip() throws {
-        try PhantomTriggerCommand.writeSentinel(targetEnv: "work", sessionId: "abc123-def", store: store)
+        try PhantomTriggerCommand.writeSentinel(
+            targetEnv: "work", targetAccountTool: nil, targetAccountName: nil,
+            sessionId: "abc123-def", store: store)
         let url = PhantomTriggerCommand.sentinelURL(store: store)
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains("TARGET_ENV='work'"))
@@ -30,7 +32,9 @@ struct PhantomTriggerTests {
 
     @Test("sentinel handles nil session id (fresh conversation)")
     func sentinelNoSession() throws {
-        try PhantomTriggerCommand.writeSentinel(targetEnv: "personal", sessionId: nil, store: store)
+        try PhantomTriggerCommand.writeSentinel(
+            targetEnv: "personal", targetAccountTool: nil, targetAccountName: nil,
+            sessionId: nil, store: store)
         let text = try String(contentsOf: PhantomTriggerCommand.sentinelURL(store: store), encoding: .utf8)
         #expect(text.contains("TARGET_ENV='personal'"))
         #expect(text.contains("SESSION_ID=''"))
@@ -41,7 +45,9 @@ struct PhantomTriggerTests {
         // Env names with quotes should never reach the sentinel (they're rejected
         // upstream by the create command), but test the shell escaping anyway
         // because this is the IPC trust boundary.
-        try PhantomTriggerCommand.writeSentinel(targetEnv: "weird'name", sessionId: nil, store: store)
+        try PhantomTriggerCommand.writeSentinel(
+            targetEnv: "weird'name", targetAccountTool: nil, targetAccountName: nil,
+            sessionId: nil, store: store)
         let text = try String(contentsOf: PhantomTriggerCommand.sentinelURL(store: store), encoding: .utf8)
         #expect(text.contains(#"TARGET_ENV='weird'\''name'"#))
     }
