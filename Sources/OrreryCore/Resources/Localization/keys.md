@@ -9,46 +9,46 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 
 ---
 
-## account — `orrery account` command family
+## account — top-level account commands (v3: promoted from `orrery account X` to `orrery X`)
 
 | Key | Context |
 | --- | --- |
-| `account.abstract` | Root command help for `orrery account`. |
-| `account.addAbstract` | Sub-command help for `orrery account add`. |
+| `account.abstract` | Legacy root-command help (kept for compatibility; in v3 there is no top-level `orrery account` — commands are promoted to top-level). |
+| `account.addAbstract` | Command help for `orrery add`. |
 | `account.addCreated` | Success after adding an account. `{tool}` = tool name; `{name}` = display name. |
 | `account.addDuplicateName` | Validation error when adding an account whose display name already exists for the same tool. `{name}` = display name; `{tool}` = tool name. |
 | `account.addEmptyName` | Validation error when an empty name is entered. |
-| `account.addNameHelp` | `--name` flag help text for `account add`. |
-| `account.flagClaudeHelp` | `--claude` flag help text for `account add` (and other account sub-commands). |
-| `account.flagCodexHelp` | `--codex` flag help text for `account add` (and other account sub-commands). |
-| `account.flagGeminiHelp` | `--gemini` flag help text for `account add` (and other account sub-commands). |
+| `account.addNameHelp` | `--name` flag help text for `add`. |
+| `account.flagClaudeHelp` | `--claude` flag help text for `add` (and other top-level account commands). |
+| `account.flagCodexHelp` | `--codex` flag help text for `add` (and other top-level account commands). |
+| `account.flagGeminiHelp` | `--gemini` flag help text for `add` (and other top-level account commands). |
 | `account.addNamePrompt` | Interactive prompt asking the user to enter a display name. Trailing space is load-bearing. |
 | `account.addToolsTooMany` | Error when more than one of `--claude`, `--codex`, `--gemini` is given. Flag names are literal identifiers — do not translate. |
-| `account.listAbstract` | Sub-command help for `orrery account list`. |
-| `account.listEmpty` | Shown when no accounts exist yet. Command `orrery account add` is literal. |
+| `account.listAbstract` | Command help for `orrery list`. |
+| `account.listEmpty` | Shown when no accounts exist yet. Command `orrery add` is literal. |
 | `account.listRow` | One row in the account list. `{name}` = display name; `{tail}` = pre-built padding + info suffix (e.g. `"  jiabao@..., team"`) or empty string. |
 | `account.listToolHeader` | Section header per tool in the list output. `{tool}` = tool name. |
-| `account.removeAbstract` | Sub-command help for `orrery account remove`. |
+| `account.removeAbstract` | Command help for `orrery remove`. |
 | `account.removeNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. |
 | `account.removeRemoved` | Success after removing an account. `{tool}` = tool name; `{name}` = display name. |
 | `account.removeStillReferenced` | Error when the account is still pinned by one or more envs. `{name}` = display name; `{envs}` = comma-joined env names. |
-| `account.showAbstract` | Sub-command help for `orrery account show`. |
+| `account.showAbstract` | Command help for `orrery show`. |
 | `account.showActiveEnv` | Header line showing the active env name. `{name}` = env name. |
 | `account.showRowPinned` | One row when a tool has an account pinned. `{tool}` = tool name; `{name}` = account display name; `{suffix}` = " (email, plan)" or empty string. |
 | `account.showRowUnpinned` | One row when a tool has no account pinned. `{tool}` = tool name. |
-| `account.nameSelectorHelp` | `--name` option help text shared by `account use` (and `account remove`). |
-| `account.useAbstract` | Sub-command help for `orrery account use`. |
+| `account.nameSelectorHelp` | `--name` option help text shared by `use` (and `remove`). |
+| `account.useAbstract` | Command help for `orrery use`. |
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
 | `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = env name. |
 | `account.loginManualFallbackHint` | Warning shown when Claude is launched via the Swift `Process` fallback path (bypassing the shell function). `{tool}` = tool name. File path `~/.orrery/activate.sh` is literal — do not translate. |
 | `account.loginReadyHint` | Hint printed by the shell function just before `command claude` is launched for account-add. `/exit` is a literal Claude command — do not translate. |
 | `account.addFinalized` | Success line printed by `_account-add-finalize` when no email or plan is available. `{tool}` = tool name; `{name}` = display name. |
 | `account.addFinalizedWithInfo` | Success line printed by `_account-add-finalize` when email and/or plan are available. `{tool}` = tool name; `{name}` = display name; `{info}` = comma-joined email/plan string. |
-## create — `orrery create` wizard
+## create — `orrery sandbox create` wizard
 
 | Key | Context |
 | --- | --- |
-| `create.abstract` | One-line command help shown by `orrery create --help`. |
+| `create.abstract` | One-line command help shown by `orrery sandbox create --help`. |
 | `create.alreadyExists` | Error when the name already exists. `{name}` = user-supplied env name. |
 | `create.askSetupTool` | Per-tool confirmation inside the wizard. `{tool}` = `claude` / `codex` / `gemini`. |
 | `create.cloneFrom` | Option label in the clone picker. `{name}` = source environment name. |
@@ -169,7 +169,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | Key | Context |
 | --- | --- |
 | `list.abstract` | Command help. |
-| `list.empty` | Shown when no envs exist. Contains literal command `orrery create <name>`. |
+| `list.empty` | Shown when no envs exist. Contains literal command `orrery sandbox create <name>`. |
 | `list.header` | Currently unused (list now uses multi-line layout). Retained for compatibility. |
 
 ## mCPServerCmd / mCPSetup — MCP server commands
@@ -318,7 +318,7 @@ Shown by ArgumentParser as part of auto-generated help.
 | `tools.addAbstract` | `tools add` sub-command help. |
 | `tools.addWizardTitle` | Title for the tool-add picker. `{envName}`. |
 | `tools.added` | Success. `{tool}`. |
-| `tools.defaultNotSupported` | Error when operating on `origin`. References `orrery create <name>` — literal. |
+| `tools.defaultNotSupported` | Error when operating on `origin`. References `orrery sandbox create <name>` — literal. |
 | `tools.envHelp` | `--env` flag help. |
 | `tools.noActive` | Error: no active env. |
 | `tools.noToolsToAdd` | Shown when every supported tool is already configured. `{envName}`. |
@@ -359,7 +359,7 @@ Shown by ArgumentParser as part of auto-generated help.
 ## Conventions for translators
 
 - **Tool names** (`claude`, `codex`, `gemini`), **command names** (`orrery`,
-  `orrery create`, …), **shell names** (`bash`, `zsh`), and **URLs** are
+  `orrery sandbox create`, …), **shell names** (`bash`, `zsh`), and **URLs** are
   identifiers — never translate them.
 - **`[Y/n]` / `[y/N]`** conventions should be preserved as-is; the parser
   reads these characters.
