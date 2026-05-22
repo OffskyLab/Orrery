@@ -8,6 +8,11 @@ private let orreryHomeLock = NSLock()
 /// Runs `body` with `ORRERY_HOME` pointed at a fresh temp directory.
 /// Holds a process-global lock for the duration so concurrent suites cannot race.
 /// Restores the previous ORRERY_HOME and deletes the temp dir afterwards.
+///
+/// `ORRERY_ACTIVE_ENV` is scrubbed for the duration too: a dev running the
+/// suite from a shell that is "in" a sandbox would otherwise leak that name
+/// into commands like `orrery show`, which read the active env from the
+/// process environment. Restored afterwards.
 func withIsolatedHome(_ body: () throws -> Void) rethrows {
     orreryHomeLock.lock()
     defer { orreryHomeLock.unlock() }
@@ -16,13 +21,20 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
         .appendingPathComponent("orrery-test-\(UUID().uuidString)")
     try? FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
 
-    let saved = ProcessInfo.processInfo.environment["ORRERY_HOME"]
+    let savedHome = ProcessInfo.processInfo.environment["ORRERY_HOME"]
+    let savedActiveEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
     setenv("ORRERY_HOME", tmpDir.path, 1)
+    unsetenv("ORRERY_ACTIVE_ENV")
     defer {
-        if let saved {
-            setenv("ORRERY_HOME", saved, 1)
+        if let savedHome {
+            setenv("ORRERY_HOME", savedHome, 1)
         } else {
             unsetenv("ORRERY_HOME")
+        }
+        if let savedActiveEnv {
+            setenv("ORRERY_ACTIVE_ENV", savedActiveEnv, 1)
+        } else {
+            unsetenv("ORRERY_ACTIVE_ENV")
         }
         try? FileManager.default.removeItem(at: tmpDir)
     }
