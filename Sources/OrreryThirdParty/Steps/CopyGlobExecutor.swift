@@ -20,7 +20,7 @@ public enum CopyGlobExecutor {
 
         var copied: [String] = []
         let contents = (try? fm.contentsOfDirectory(atPath: srcSubdir.path)) ?? []
-        for name in contents where (name as NSString).pathExtension == ext {
+        for name in contents where URL(fileURLWithPath: name).pathExtension == ext {
             let src = srcSubdir.appendingPathComponent(name)
             let dst = dstDir.appendingPathComponent(name)
             if fm.fileExists(atPath: dst.path) { try fm.removeItem(at: dst) }

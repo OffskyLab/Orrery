@@ -215,12 +215,12 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     /// Whether a process comm names the Claude Code binary. The native binary
     /// is Bun-compiled and runs with comm "claude.exe" (Bun appends .exe to
     /// compiled executables even on macOS); other installs report plain
-    /// "claude". Match on the extension-stripped, lowercased base name so
-    /// packaging changes don't silently break phantom again — but still
-    /// require the base name to be exactly "claude": findClaudeAncestor's
-    /// result gets signalled, so it must not mistarget another process.
+    /// "claude". The regex accepts "claude" with an optional extension,
+    /// case-insensitively — tolerant of packaging changes, but anchored by
+    /// `wholeMatch` so it won't mistarget e.g. "claude-helper":
+    /// findClaudeAncestor's result gets signalled.
     static func isClaudeComm(_ comm: String) -> Bool {
-        (comm as NSString).deletingPathExtension.lowercased() == "claude"
+        comm.wholeMatch(of: /claude(\..+)?/.ignoresCase()) != nil
     }
 
     static func findClaudeAncestor(supervisorPid: Int32) -> Int32? {
@@ -276,7 +276,7 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
             let comm = withUnsafePointer(to: &procInfo.kp_proc.p_comm) { ptr in
                 String(cString: UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self))
             }
-            let basename = (comm as NSString).lastPathComponent
+            let basename = URL(fileURLWithPath: comm).lastPathComponent
             if !basename.isEmpty {
                 return (procInfo.kp_eproc.e_ppid, basename)
             }
@@ -306,7 +306,7 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
         let parts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
         guard parts.count == 2, let ppid = Int32(parts[0]) else { return nil }
         let commPath = String(parts[1]).trimmingCharacters(in: .whitespaces)
-        let basename = (commPath as NSString).lastPathComponent
+        let basename = URL(fileURLWithPath: commPath).lastPathComponent
         return (ppid, basename)
     }
 }

@@ -141,16 +141,13 @@ public enum ToolAuth {
 
     private static func codexModel(dir: URL) -> String? {
         let url = dir.appendingPathComponent("config.toml")
-        guard let contents = try? String(contentsOf: url),
-              let regex = try? NSRegularExpression(pattern: #"^\s*model\s*=\s*"([^"]+)""#, options: [.anchorsMatchLines])
-        else { return nil }
+        guard let contents = try? String(contentsOf: url) else { return nil }
 
-        let range = NSRange(contents.startIndex..<contents.endIndex, in: contents)
-        guard let match = regex.firstMatch(in: contents, options: [], range: range),
-              let modelRange = Range(match.range(at: 1), in: contents)
-        else { return nil }
+        // `model = "<value>"` on its own line in config.toml.
+        let regex = /^\s*model\s*=\s*"([^"]+)"/.anchorsMatchLineEndings()
+        guard let match = contents.firstMatch(of: regex) else { return nil }
 
-        let model = String(contents[modelRange])
+        let model = String(match.output.1)
         return model.isEmpty ? nil : model
     }
 

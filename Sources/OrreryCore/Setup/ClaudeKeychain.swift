@@ -89,7 +89,8 @@ public enum ClaudeKeychain {
     @discardableResult
     public static func copyCredential(from srcDir: String?, to dstDir: String) -> Bool {
         #if os(macOS)
-        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        let account = ProcessInfo.processInfo.environment["USER"]
+            ?? FileManager.default.homeDirectoryForCurrentUser.lastPathComponent
         guard let password = findPassword(service: service(for: srcDir), account: account) else {
             return false
         }
@@ -117,7 +118,8 @@ public enum ClaudeKeychain {
     /// dir, regardless of whether it came from the macOS Keychain or a Linux file.
     private static func loadCredentialJSON(for configDir: String?) -> String? {
         #if os(macOS)
-        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        let account = ProcessInfo.processInfo.environment["USER"]
+            ?? FileManager.default.homeDirectoryForCurrentUser.lastPathComponent
         return findPassword(service: service(for: configDir), account: account)
         #else
         let url = credentialsFile(for: configDir)
@@ -178,7 +180,8 @@ public enum ClaudeKeychain {
     }
 
     private static var currentUserAccount: String {
-        ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        ProcessInfo.processInfo.environment["USER"]
+            ?? FileManager.default.homeDirectoryForCurrentUser.lastPathComponent
     }
 
     /// 該 service 下是否存在 Keychain item（有 password 即視為存在）。

@@ -1,5 +1,6 @@
 import ArgumentParser
 import Foundation
+import Synchronization
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -1298,6 +1299,14 @@ public struct SandboxCommand: ParsableCommand {
 
 // MARK: - Memory migration / storage helpers (used by SandboxCommand.Memory subcommands)
 
+/// Expand a leading `~` / `~/…` to the current user's home directory.
+private func expandingTilde(_ path: String) -> String {
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    if path == "~" { return home }
+    if path.hasPrefix("~/") { return home + "/" + path.dropFirst(2) }
+    return path
+}
+
 private func applyStoragePath(
     _ path: String,
     currentEnvName: String,
@@ -1305,7 +1314,7 @@ private func applyStoragePath(
     getPath: () -> String?,
     setPath: (String) throws -> Void
 ) throws {
-    let expanded = (path as NSString).expandingTildeInPath
+    let expanded = expandingTilde(path)
     let fm = FileManager.default
     var isDir: ObjCBool = false
     let exists = fm.fileExists(atPath: expanded, isDirectory: &isDir)
@@ -1405,26 +1414,21 @@ private func applyMigration(merge: Bool, fromDir sourceDir: URL, toDir destDir: 
 /// Lock-protected sink for parallel `ToolAuth.accountInfo` lookups so the
 /// concurrentPerform closure has a Sendable destination without resorting
 /// to UnsafeMutableBufferPointer.
-private final class ResultsCollector: @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [ToolAuth.AccountInfo]
+private final class ResultsCollector: Sendable {
+    private let values: Mutex<[ToolAuth.AccountInfo]>
 
     init(count: Int) {
-        self.values = Array(
+        self.values = Mutex(Array(
             repeating: ToolAuth.AccountInfo(email: nil, plan: nil, model: nil, key: nil),
             count: count
-        )
+        ))
     }
 
     func set(_ value: ToolAuth.AccountInfo, at index: Int) {
-        lock.lock()
-        values[index] = value
-        lock.unlock()
+        values.withLock { $0[index] = value }
     }
 
     var snapshot: [ToolAuth.AccountInfo] {
-        lock.lock()
-        defer { lock.unlock() }
-        return values
+        values.withLock { $0 }
     }
 }
