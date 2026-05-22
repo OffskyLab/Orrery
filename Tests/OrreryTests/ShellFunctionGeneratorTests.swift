@@ -28,6 +28,12 @@ struct ShellFunctionGeneratorTests {
         // exit clears tool env vars and writes ORRERY_ACTIVE_ENV=origin.
         #expect(script.contains("unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME"))
         #expect(script.contains("export ORRERY_ACTIVE_ENV=\"origin\""))
+        // Friendly no-op path at origin: emits the alreadyAtOrigin message to
+        // stderr and returns 0 instead of erroring. Mirrors enterRejectsOrigin's
+        // approach of asserting the L10n constant itself so a translation drift
+        // or a removed branch is caught.
+        #expect(script.contains(L10n.Exit.alreadyAtOrigin))
+        #expect(script.contains("return 0"))
     }
 
     @Test("enter rejects 'origin' and points the user at exit")
