@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.0.1 - 2026-05-22
+
+### Changed
+
+- **`orrery list` shows the active context.** When a non-origin sandbox is
+  active, `orrery list` prints a `sandbox: <name>` header. Within each tool
+  group, the account pinned for the current sandbox is marked with a `●`
+  bullet; the rest keep `-`. Origin prints no sandbox header (origin is the
+  absence of a sandbox). The pins are read from the active env's config — the
+  same source `orrery show` uses.
+
 ## v3.0.0 - 2026-05-22
 
 ### Breaking — command surface restructured
