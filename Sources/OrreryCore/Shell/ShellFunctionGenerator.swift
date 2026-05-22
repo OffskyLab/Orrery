@@ -29,6 +29,49 @@ public struct ShellFunctionGenerator {
 
           local cmd="${1:-}"
           case "$cmd" in
+            enter)
+              # Shell-side env-var export when opting into a sandbox.
+              # `shift` so $1 becomes the sandbox name.
+              shift
+              if [ -z "${1:-}" ]; then
+                echo "Usage: orrery enter <sandbox>" >&2
+                return 1
+              fi
+              if [ "$1" = "origin" ]; then
+                printf "\(L10n.Enter.cannotEnterOrigin)\\n" >&2
+                return 1
+              fi
+              # Unexport previous sandbox's env vars if switching from another sandbox.
+              if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
+                eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
+              fi
+              local exports
+              exports=$(command orrery-bin sandbox _export "$1") || { echo "orrery: sandbox '$1' not found" >&2; return 1; }
+              eval "$exports"
+              export ORRERY_ACTIVE_ENV="$1"
+              command orrery-bin _set-current "$1" 2>/dev/null || true
+              # Background quota refresh so `orrery list` shows fresh data
+              # next time. Double subshell hides the job notice from
+              # interactive shells, just like the update check above.
+              ( ( command orrery-bin quota refresh -e "$1" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
+              printf "\(L10n.Enter.switched)\\n" "$1"
+              ;;
+            exit)
+              # Idempotent: even when already at origin we re-assert the
+              # state (set ORRERY_ACTIVE_ENV=origin, write current=origin)
+              # so a freshly-started shell ends up consistent.
+              if [ -z "${ORRERY_ACTIVE_ENV:-}" ] || [ "$ORRERY_ACTIVE_ENV" = "origin" ]; then
+                export ORRERY_ACTIVE_ENV="origin"
+                command orrery-bin _set-current origin 2>/dev/null || true
+                printf "\(L10n.Exit.alreadyAtOrigin)\\n" >&2
+                return 0
+              fi
+              eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
+              unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
+              export ORRERY_ACTIVE_ENV="origin"
+              command orrery-bin _set-current origin 2>/dev/null || true
+              printf "\(L10n.Exit.switched)\\n"
+              ;;
             sandbox)
               case "${2:-}" in
                 use)
