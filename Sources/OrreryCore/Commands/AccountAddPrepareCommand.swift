@@ -23,6 +23,7 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
+        AddCommand.announceDefaultToolIfNoFlag(claude: claude, codex: codex, gemini: gemini)
         let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let displayName = try resolveName()
 

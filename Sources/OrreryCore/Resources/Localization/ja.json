@@ -10,6 +10,7 @@
   "account.flagGeminiHelp": "Gemini アカウントプールを対象にします。",
   "account.addNamePrompt": "アカウントの表示名を入力してください：",
   "account.addToolsTooMany": "--claude、--codex、--gemini のいずれか一つを指定してください（デフォルト：--claude）。",
+  "account.addToolDefaultNotice": "ツールフラグが指定されていません — Claude アカウントを追加します。別のツールのアカウントを追加するには --codex または --gemini を指定してください。",
   "account.listAbstract": "アカウント一覧を表示します（ツールで絞り込み可能）。",
   "account.listEmpty": "アカウントがありません。'orrery add' を実行して作成してください。",
   "account.listRow": "  - {name}{tail}",
