@@ -2,7 +2,7 @@
 import Foundation
 
 /// macOS Claude 的 CredentialAdapter。
-/// Materialize = 把 orrery account 專屬 Keychain item 的 token
+/// Materialize = 把 account-pool 專屬 Keychain item 的 token
 /// 複寫到「Claude 依 CLAUDE_CONFIG_DIR 推導出的 service」上。
 public struct KeychainCredentialAdapter: CredentialAdapter {
     public init() {}

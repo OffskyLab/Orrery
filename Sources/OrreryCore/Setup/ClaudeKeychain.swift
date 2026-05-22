@@ -169,10 +169,10 @@ public enum ClaudeKeychain {
         return oauthAccount["emailAddress"] as? String
     }
 
-    // MARK: - orrery account Keychain helpers (macOS)
+    // MARK: - Account-pool Keychain helpers (macOS)
 
     #if os(macOS)
-    /// orrery account 專屬的 Keychain service name。
+    /// Account-pool 專屬的 Keychain service name（與 Claude 原生 Keychain 區隔）。
     public static func serviceName(forOrreryAccount accountID: String) -> String {
         "Claude Code-orrery-\(accountID)"
     }
@@ -195,7 +195,7 @@ public enum ClaudeKeychain {
         return addPassword(service: dstService, account: currentUserAccount, password: pw)
     }
 
-    /// 把 password 寫入 orrery account 專屬 service（建立帳號 / 測試用）。回傳成功與否。
+    /// 把 password 寫入 account-pool 專屬 service（建立帳號 / 測試用）。回傳成功與否。
     @discardableResult
     public static func storePassword(_ password: String, forOrreryAccount accountID: String) -> Bool {
         addPassword(
