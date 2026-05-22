@@ -1,5 +1,4 @@
 import ArgumentParser
-import Foundation
 
 /// Top-level `orrery exit`. Same shape as EnterCommand: the binary
 /// throws needsShellIntegration; the shell function does the work.
