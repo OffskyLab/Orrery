@@ -212,6 +212,17 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     /// supervisor). Killing it cascades down through any wrapper layers
     /// (caffeinate, nested claudes) and lets the supervisor's `command
     /// claude` line return so the loop can read the sentinel and relaunch.
+    /// Whether a process comm names the Claude Code binary. The native binary
+    /// is Bun-compiled and runs with comm "claude.exe" (Bun appends .exe to
+    /// compiled executables even on macOS); other installs report plain
+    /// "claude". Match on the extension-stripped, lowercased base name so
+    /// packaging changes don't silently break phantom again — but still
+    /// require the base name to be exactly "claude": findClaudeAncestor's
+    /// result gets signalled, so it must not mistarget another process.
+    static func isClaudeComm(_ comm: String) -> Bool {
+        (comm as NSString).deletingPathExtension.lowercased() == "claude"
+    }
+
     static func findClaudeAncestor(supervisorPid: Int32) -> Int32? {
         var pid = getppid()
         var outermostClaude: Int32? = nil
@@ -225,7 +236,7 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
                 break
             }
             walked.append("\(pid):\(info.comm)")
-            if info.comm == "claude" {
+            if Self.isClaudeComm(info.comm) {
                 // Overwrite as we walk up — keep the last (outermost) claude.
                 outermostClaude = pid
             }
