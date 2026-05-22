@@ -10,6 +10,7 @@
   "account.flagGeminiHelp": "Target the Gemini account pool.",
   "account.addNamePrompt": "Enter a display name for this account: ",
   "account.addToolsTooMany": "Pick exactly one of --claude, --codex, --gemini (default: --claude).",
+  "account.addToolDefaultNotice": "No tool flag given — adding a Claude account. Pass --codex or --gemini to add an account for a different tool.",
   "account.listAbstract": "List accounts (optionally filtered by tool).",
   "account.listEmpty": "No accounts yet. Run 'orrery add' to create one.",
   "account.listRow": "  - {name}{tail}",

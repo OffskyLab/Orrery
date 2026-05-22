@@ -21,6 +21,7 @@ public struct AddCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
+        AddCommand.announceDefaultToolIfNoFlag(claude: claude, codex: codex, gemini: gemini)
         let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let displayName = try resolveName()
 
@@ -58,6 +59,17 @@ public struct AddCommand: ParsableCommand {
         if codex { return .codex }
         if gemini { return .gemini }
         return .claude
+    }
+
+    /// When `orrery add` runs without a tool flag it defaults to Claude. Print a
+    /// one-line notice (to stderr) so that default is explicit rather than a
+    /// silent surprise, and tell the user how to target a different tool.
+    /// Shared with the internal `_account-add-prepare` command: the Claude
+    /// add path is routed through the shell function to that command, so the
+    /// notice has to be emitted from both entry points.
+    static func announceDefaultToolIfNoFlag(claude: Bool, codex: Bool, gemini: Bool) {
+        guard !claude, !codex, !gemini else { return }
+        stderrWrite(L10n.Account.addToolDefaultNotice + "\n")
     }
 
     private func resolveName() throws -> String {

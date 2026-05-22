@@ -10,6 +10,7 @@
   "account.flagGeminiHelp": "操作 Gemini 帳號池。",
   "account.addNamePrompt": "請輸入帳號顯示名稱：",
   "account.addToolsTooMany": "--claude、--codex、--gemini 三選一（預設 --claude）。",
+  "account.addToolDefaultNotice": "未指定工具旗標 — 將新增 Claude 帳號。若要新增其他工具的帳號，請改帶 --codex 或 --gemini。",
   "account.listAbstract": "列出帳號（可指定工具篩選）。",
   "account.listEmpty": "尚未建立任何帳號。執行 'orrery add' 來建立。",
   "account.listRow": "  - {name}{tail}",

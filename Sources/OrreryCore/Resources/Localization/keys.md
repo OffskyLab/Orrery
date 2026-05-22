@@ -24,6 +24,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.flagGeminiHelp` | `--gemini` flag help text for `add` (and other top-level account commands). |
 | `account.addNamePrompt` | Interactive prompt asking the user to enter a display name. Trailing space is load-bearing. |
 | `account.addToolsTooMany` | Error when more than one of `--claude`, `--codex`, `--gemini` is given. Flag names are literal identifiers — do not translate. |
+| `account.addToolDefaultNotice` | Notice printed (to stderr) when `orrery add` runs with no tool flag and falls back to the Claude default. Flag names are literal identifiers — do not translate. |
 | `account.listAbstract` | Command help for `orrery list`. |
 | `account.listEmpty` | Shown when no accounts exist yet. Command `orrery add` is literal. |
 | `account.listRow` | One row in the account list. `{name}` = display name; `{tail}` = pre-built padding + info suffix (e.g. `"  jiabao@..., team"`) or empty string. |

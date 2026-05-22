@@ -25,6 +25,7 @@
   { "path": ["Account", "flagGeminiHelp"], "kind": "var", "parameters": [] },
   { "path": ["Account", "addNamePrompt"], "kind": "var", "parameters": [] },
   { "path": ["Account", "addToolsTooMany"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "addToolDefaultNotice"], "kind": "var", "parameters": [] },
   { "path": ["Account", "listAbstract"], "kind": "var", "parameters": [] },
   { "path": ["Account", "listEmpty"], "kind": "var", "parameters": [] },
   {
