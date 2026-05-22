@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "orrery",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "orrery-bin", targets: ["orrery-bin"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),

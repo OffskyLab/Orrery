@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Concrete `AgentExecutor` that spawns the delegate CLI via
 /// `DelegateProcessBuilder` and captures stdout/stderr/session-id.
@@ -20,10 +21,9 @@ public final class ProcessAgentExecutor: AgentExecutor {
     private let store: EnvironmentStore
     private let activeEnvironment: String?
 
-    // Guards `currentProcess`. `cancel()` may be invoked from any thread;
-    // keep the critical sections narrow (set / read reference only).
-    private let lock = NSLock()
-    private var currentProcess: Process?
+    // Holds the inflight subprocess. `cancel()` may be invoked from any
+    // thread; the Mutex keeps the critical sections narrow (set / read only).
+    private let currentProcess = Mutex<Process?>(nil)
 
     public init(
         cwd: String = FileManager.default.currentDirectoryPath,
@@ -98,10 +98,10 @@ public final class ProcessAgentExecutor: AgentExecutor {
         }
 
         // Publish the process reference so `cancel()` can find it.
-        lock.withLock { currentProcess = process }
+        currentProcess.withLock { $0 = process }
 
         defer {
-            lock.withLock { currentProcess = nil }
+            currentProcess.withLock { $0 = nil }
             timeoutTask?.cancel()
         }
 
@@ -164,7 +164,7 @@ public final class ProcessAgentExecutor: AgentExecutor {
     }
 
     public func cancel() {
-        lock.withLock { currentProcess }?.terminate()
+        currentProcess.withLock { $0 }?.terminate()
     }
 
     private func debugLog(_ message: String) {

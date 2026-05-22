@@ -97,8 +97,9 @@ public struct ManifestRunner: ThirdPartyRunner {
             try? fm.removeItem(at: claudeDir.appendingPathComponent(p))
         }
         // Prune any empty directories left by copyGlob steps.
-        let parentDirs = Set(record.copiedFiles.map {
-            (($0 as NSString).deletingLastPathComponent)
+        let parentDirs = Set(record.copiedFiles.map { path -> String in
+            guard let slash = path.lastIndex(of: "/") else { return "" }
+            return String(path[..<slash])
         }).filter { !$0.isEmpty && $0 != "." }
         for rel in parentDirs.sorted(by: { $0.count > $1.count }) {
             let dir = claudeDir.appendingPathComponent(rel)
