@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.0.2 - 2026-05-22
+
+### Fixed
+
+- **Phantom switching works again.** `/orrery:phantom <account>` failed with
+  `claudeNotFound` on every Bun-native Claude Code install: the supervised
+  process was matched by an exact comm of `claude`, but the Bun-compiled
+  binary runs as `claude.exe`. The match now accepts `claude` with any
+  extension. The phantom supervisor loop also tried to apply an account
+  switch with the removed v2-era `orrery account use` — corrected to the
+  v3 top-level `orrery use`. When the claude process can't be located, the
+  failure now prints the walked process ancestry for diagnosis.
+
+### Changed
+
+- **Minimum macOS is now 15 (Sequoia).** The deployment target moved up from
+  macOS 13 so the codebase can adopt the standard-library `Mutex` from
+  `Synchronization` (cross-platform, unlike the Apple-only `os` lock).
+- **All Objective-C bridge types removed.** `NSString`, `NSLock`,
+  `NSRegularExpression` / `NSRange`, `NSUserName()`, and `ObjCBool` are
+  replaced with native Swift — `URL` path APIs, Swift `Regex`, `Mutex`, and
+  `URL.resourceValues`.
+
 ## v3.0.1 - 2026-05-22
 
 ### Changed
