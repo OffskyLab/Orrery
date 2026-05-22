@@ -43,9 +43,11 @@ struct ShellFunctionGeneratorTests {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("_orrery_init"))
         #expect(script.contains("current"))
-        // Init must call `orrery sandbox use` (not bare `orrery use`) so the
-        // shell-side env-var exports for the active sandbox actually run.
-        #expect(script.contains("orrery sandbox use \"$env_name\""))
+        // Init must dispatch through the v3 verbs: origin → exit, other → enter.
+        #expect(script.contains("orrery exit >/dev/null 2>&1"))
+        #expect(script.contains("orrery enter \"$env_name\" >/dev/null 2>&1"))
+        // Old call site is gone.
+        #expect(!script.contains("orrery sandbox use \"$env_name\""))
     }
 
     @Test("phantom loop applies a target account from the sentinel")
@@ -89,5 +91,40 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("command orrery-bin \"$@\""))
         // The detection logic must check for --codex and --gemini flags.
         #expect(script.contains("--codex|--gemini) _is_claude=0"))
+    }
+
+    @Test("sandbox)/use) arm is removed from the dispatcher")
+    func sandboxUseGone() {
+        let script = ShellFunctionGenerator.generate()
+        // The nested use) arm under sandbox) must be gone.
+        // Match the indented dispatch line specifically so we don't false-match
+        // a different "use)" elsewhere.
+        #expect(!script.contains("                use)\n"))
+        // sandbox)/create) auto-switch must hand off to enter, not sandbox use.
+        #expect(!script.contains("orrery sandbox use \"$_name\""))
+        #expect(script.contains("orrery enter \"$_name\""))
+    }
+
+    @Test("run -e <env> hands the target to orrery enter (or exit for origin)")
+    func runUsesEnter() {
+        let script = ShellFunctionGenerator.generate()
+        // No bare `orrery sandbox use` left in the run case.
+        #expect(!script.contains("orrery sandbox use \"$_run_target\""))
+        // origin → exit; other → enter.
+        #expect(script.contains("if [ \"$_run_target\" = \"origin\" ]; then"))
+        #expect(script.contains("orrery enter \"$_run_target\""))
+    }
+
+    @Test("phantom loop translates TARGET_SANDBOX=origin into orrery exit")
+    func phantomLoopTranslatesOrigin() {
+        let script = ShellFunctionGenerator.generate()
+        // The phantom-supervisor loop must dispatch on TARGET_SANDBOX with an
+        // origin → exit fallback so the user can switch back via the slash
+        // command without breaking the supervisor.
+        #expect(script.contains("if [ \"$TARGET_SANDBOX\" = \"origin\" ]; then"))
+        #expect(script.contains("orrery exit"))
+        #expect(script.contains("orrery enter \"$TARGET_SANDBOX\""))
+        // Old direct call is gone.
+        #expect(!script.contains("orrery sandbox use \"$TARGET_SANDBOX\""))
     }
 }

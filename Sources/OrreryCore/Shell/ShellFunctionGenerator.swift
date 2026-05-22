@@ -74,35 +74,6 @@ public struct ShellFunctionGenerator {
               ;;
             sandbox)
               case "${2:-}" in
-                use)
-                  # Shell-side env-var export when switching sandbox.
-                  # `shift` so $2 becomes the sandbox name (was "use" before).
-                  shift
-                  if [ -z "${2:-}" ]; then
-                    echo "Usage: orrery sandbox use <name>" >&2
-                    return 1
-                  fi
-                  # Unexport previous sandbox's env vars if switching
-                  if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
-                    eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
-                  fi
-                  if [ "$2" = "origin" ]; then
-                    unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
-                    export ORRERY_ACTIVE_ENV="origin"
-                    command orrery-bin _set-current origin 2>/dev/null || true
-                  else
-                    local exports
-                    exports=$(command orrery-bin sandbox _export "$2") || { echo "orrery: sandbox '$2' not found" >&2; return 1; }
-                    eval "$exports"
-                    export ORRERY_ACTIVE_ENV="$2"
-                    command orrery-bin _set-current "$2" 2>/dev/null || true
-                    # Background quota refresh so `orrery list` shows fresh data
-                    # next time. Double subshell hides the job notice from
-                    # interactive shells, just like the update check above.
-                    ( ( command orrery-bin quota refresh -e "$2" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
-                  fi
-                  printf "\(L10n.Enter.switched)\\n" "$2"
-                  ;;
                 create)
                   command orrery-bin "$@"
                   if [ $? -eq 0 ]; then
@@ -119,7 +90,7 @@ public struct ShellFunctionGenerator {
                       printf "切換到 sandbox '%s'？[Y/n] " "$_name"
                       read -r _ans </dev/tty
                       case "${_ans:-Y}" in
-                        [Yy]*|"") orrery sandbox use "$_name" ;;
+                        [Yy]*|"") orrery enter "$_name" ;;
                       esac
                     fi
                   fi
@@ -185,7 +156,11 @@ public struct ShellFunctionGenerator {
               # session-resume semantics so a supervisor loop adds no value.
               if [ $_run_non_phantom -eq 0 ] && [ "${1:-}" = "claude" ]; then
                 if [ -n "$_run_target" ]; then
-                  orrery sandbox use "$_run_target" || return $?
+                  if [ "$_run_target" = "origin" ]; then
+                    orrery exit || return $?
+                  else
+                    orrery enter "$_run_target" || return $?
+                  fi
                 fi
                 local _phantom_sentinel="$_orrery_home/.phantom-sentinel"
                 rm -f "$_phantom_sentinel"
@@ -204,7 +179,11 @@ public struct ShellFunctionGenerator {
                   . "$_phantom_sentinel"
                   rm -f "$_phantom_sentinel"
                   if [ -n "$TARGET_SANDBOX" ]; then
-                    orrery sandbox use "$TARGET_SANDBOX" || break
+                    if [ "$TARGET_SANDBOX" = "origin" ]; then
+                      orrery exit || break
+                    else
+                      orrery enter "$TARGET_SANDBOX" || break
+                    fi
                   fi
                   if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
                     command orrery-bin account use --"$TARGET_ACCOUNT_TOOL" --name "$TARGET_ACCOUNT_NAME" || break
@@ -298,7 +277,11 @@ public struct ShellFunctionGenerator {
               echo "origin" > "$current_file" 2>/dev/null || true
             fi
             if [ -n "$env_name" ]; then
-              orrery sandbox use "$env_name" >/dev/null 2>&1 || true
+              if [ "$env_name" = "origin" ]; then
+                orrery exit >/dev/null 2>&1 || true
+              else
+                orrery enter "$env_name" >/dev/null 2>&1 || true
+              fi
             fi
           fi
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
