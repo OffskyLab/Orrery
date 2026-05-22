@@ -27,7 +27,8 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.addToolDefaultNotice` | Notice printed (to stderr) when `orrery add` runs with no tool flag and falls back to the Claude default. Flag names are literal identifiers — do not translate. |
 | `account.listAbstract` | Command help for `orrery list`. |
 | `account.listEmpty` | Shown when no accounts exist yet. Command `orrery add` is literal. |
-| `account.listRow` | One row in the account list. `{name}` = display name; `{tail}` = pre-built padding + info suffix (e.g. `"  jiabao@..., team"`) or empty string. |
+| `account.listRow` | One row in the account list. `{marker}` = `●` for the account active in the current sandbox, `-` otherwise; `{name}` = display name; `{tail}` = pre-built padding + info suffix (e.g. `"  jiabao@..., team"`) or empty string. |
+| `account.listSandboxHeader` | Header line printed by `orrery list` when a non-origin sandbox is active. `{name}` = sandbox name. The literal `sandbox:` is kept as-is. |
 | `account.listToolHeader` | Section header per tool in the list output. `{tool}` = tool name. |
 | `account.removeAbstract` | Command help for `orrery remove`. |
 | `account.removeNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. |

@@ -19,6 +19,19 @@ public struct ListCommand: ParsableCommand {
     public func run() throws {
         let store = AccountStore.default
 
+        // Active sandbox + its per-tool account pins (mirrors ShowCommand).
+        // ORRERY_ACTIVE_ENV unset or "origin" → origin; the sandbox header
+        // is shown only for a non-origin sandbox.
+        let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        let activePins: [String: AccountID]
+        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
+            activePins = (try? EnvironmentStore.default.load(named: activeEnv).accounts) ?? [:]
+            print(L10n.Account.listSandboxHeader(activeEnv))
+            print("")
+        } else {
+            activePins = EnvironmentStore.default.loadOriginConfig().accounts
+        }
+
         // 只有「剛好一個」flag 才視為過濾；0 或 >1 → 顯示全部。
         let selected: [Tool] = [claude ? Tool.claude : nil,
                                 codex ? Tool.codex : nil,
@@ -44,6 +57,7 @@ public struct ListCommand: ParsableCommand {
 
             // Pad display names to the longest in this group, plus 2 spaces.
             let maxNameLen = accts.map(\.displayName.count).max() ?? 0
+            let activeID = activePins[tool.rawValue]
 
             for acct in accts {
                 let suffix = [acct.email, acct.plan].compactMap { $0 }.joined(separator: ", ")
@@ -54,7 +68,8 @@ public struct ListCommand: ParsableCommand {
                     let padding = String(repeating: " ", count: max(0, maxNameLen - acct.displayName.count + 2))
                     tail = "\(padding)\(suffix)"
                 }
-                print(L10n.Account.listRow(acct.displayName, tail))
+                let marker = acct.id == activeID ? "●" : "-"
+                print(L10n.Account.listRow(marker, acct.displayName, tail))
             }
         }
     }
