@@ -1,5 +1,4 @@
 import ArgumentParser
-import Foundation
 
 /// Top-level `orrery enter <sandbox>`. The binary always throws
 /// `enter.needsShellIntegration` — the actual env-var dance lives in
