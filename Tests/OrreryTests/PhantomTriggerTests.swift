@@ -146,13 +146,16 @@ struct ShellFunctionGeneratorRunTests {
         #expect(script.contains("SESSION_ID"))
     }
 
-    @Test("run loop calls 'orrery sandbox use' to switch sandboxes between iterations")
+    @Test("run loop translates TARGET_SANDBOX through the v3 enter/exit verbs")
     func runLoopSwitchesEnv() {
         let script = ShellFunctionGenerator.generate()
         // The loop must use the orrery() shell function (not orrery-bin directly)
         // so the env vars actually mutate the supervisor's shell — that's how the
-        // child claude inherits the new sandbox on the next iteration.
-        #expect(script.contains("orrery sandbox use \"$TARGET_SANDBOX\""))
+        // child claude inherits the new sandbox on the next iteration. In v3,
+        // origin maps to `orrery exit` and any other name to `orrery enter`.
+        #expect(script.contains("if [ \"$TARGET_SANDBOX\" = \"origin\" ]; then"))
+        #expect(script.contains("orrery enter \"$TARGET_SANDBOX\""))
+        #expect(!script.contains("orrery sandbox use \"$TARGET_SANDBOX\""))
     }
 
     @Test("run parses -e flag for the target env")
