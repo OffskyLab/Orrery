@@ -16,7 +16,7 @@ public struct OriginConfig: Codable, Sendable {
     public var accounts: [String: AccountID]
 
     public init(
-        isolateMemory: Bool = true,
+        isolateMemory: Bool = false,
         memoryStoragePath: String? = nil,
         isolatedSessionTools: Set<Tool> = [],
         accounts: [String: AccountID] = [:]
@@ -37,7 +37,7 @@ public struct OriginConfig: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? true
+        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
         memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
         isolatedSessionTools = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) ?? []
         accounts = try c.decodeIfPresent([String: AccountID].self, forKey: .accounts) ?? [:]
