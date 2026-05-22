@@ -178,9 +178,7 @@ public enum LegacyOrbitalMigration {
     }
 
     private static func dirExists(_ url: URL) -> Bool {
-        let fm = FileManager.default
-        var isDir: ObjCBool = false
-        return fm.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+        (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
     }
 
     /// Entries in the envs dir that contain an env.json (filters out stray files / junk).

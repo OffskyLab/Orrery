@@ -1316,9 +1316,9 @@ private func applyStoragePath(
 ) throws {
     let expanded = expandingTilde(path)
     let fm = FileManager.default
-    var isDir: ObjCBool = false
-    let exists = fm.fileExists(atPath: expanded, isDirectory: &isDir)
-    if exists && !isDir.boolValue {
+    let values = try? URL(fileURLWithPath: expanded).resourceValues(forKeys: [.isDirectoryKey])
+    let exists = values != nil
+    if exists && values?.isDirectory != true {
         throw ValidationError(L10n.Memory.storageNotDirectory(expanded))
     }
     if !exists {

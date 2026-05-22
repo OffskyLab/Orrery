@@ -202,8 +202,7 @@ public struct EnvironmentStore: Sendable {
                 try fm.removeItem(at: linkPath)
             } else {
                 // Real directory — migrate its contents into shared, then remove.
-                var isDir: ObjCBool = false
-                if fm.fileExists(atPath: linkPath.path, isDirectory: &isDir), isDir.boolValue {
+                if (try? linkPath.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
                     let contents = (try? fm.contentsOfDirectory(atPath: linkPath.path)) ?? []
                     for item in contents {
                         let src = linkPath.appendingPathComponent(item)
@@ -308,8 +307,7 @@ public struct EnvironmentStore: Sendable {
             try? fm.removeItem(at: memoryDirURL)
         } else {
             // Real directory — migrate contents into orrery dir, then remove
-            var isDir: ObjCBool = false
-            if fm.fileExists(atPath: memoryDirURL.path, isDirectory: &isDir), isDir.boolValue {
+            if (try? memoryDirURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
                 let contents = (try? fm.contentsOfDirectory(atPath: memoryDirURL.path)) ?? []
                 for item in contents {
                     let src = memoryDirURL.appendingPathComponent(item)
@@ -398,11 +396,11 @@ public struct EnvironmentStore: Sendable {
 
         try fm.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
 
-        var srcIsDir: ObjCBool = false
-        if fm.fileExists(atPath: src.path, isDirectory: &srcIsDir) {
+        let srcValues = try? src.resourceValues(forKeys: [.isDirectoryKey])
+        if srcValues != nil {
             if fm.fileExists(atPath: dst.path) {
                 // dst already exists — merge src contents in, then remove src
-                if srcIsDir.boolValue {
+                if srcValues?.isDirectory == true {
                     let contents = (try? fm.contentsOfDirectory(atPath: src.path)) ?? []
                     for item in contents {
                         let srcItem = src.appendingPathComponent(item)
