@@ -12,7 +12,7 @@ public struct SandboxCommand: ParsableCommand {
         abstract: L10n.Sandbox.abstract,
         subcommands: [
             SetEnv.self, UnsetEnv.self,
-            Use.self, List.self, Delete.self, Info.self, Rename.self, Current.self,
+            List.self, Delete.self, Info.self, Rename.self, Current.self,
             Create.self,
             Memory.self, Sync.self, Export.self, Unexport.self,
         ]
@@ -79,25 +79,6 @@ public struct SandboxCommand: ParsableCommand {
             env.env.removeValue(forKey: key)
             try store.save(env)
             print(L10n.Sandbox.unsetEnvSuccess(key, envName))
-        }
-    }
-
-    // MARK: - Use
-
-    public struct Use: ParsableCommand {
-        public static let configuration = CommandConfiguration(
-            commandName: "use",
-            abstract: L10n.Enter.abstract
-        )
-
-        @Argument(help: ArgumentHelp(L10n.Enter.nameHelp))
-        public var name: String
-
-        public init() {}
-
-        public func run() throws {
-            stderrWrite(L10n.Enter.needsShellIntegration)
-            throw ExitCode.failure
         }
     }
 
