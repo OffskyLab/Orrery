@@ -356,8 +356,8 @@ public struct EnvironmentStore: Sendable {
     }
 
     /// Marker file that suppresses automatic origin takeover.
-    /// Written by `orrery origin release` / `orrery uninstall`.
-    /// Deleted by `orrery origin takeover` / `orrery setup`.
+    /// Written by `orrery uninstall` (via `originRelease(tool:)`).
+    /// Deleted by `orrery setup` (via `offerOriginTakeover`).
     public var originTakeoverOptOutMarker: URL {
         homeURL.appendingPathComponent(".no-origin-takeover")
     }
