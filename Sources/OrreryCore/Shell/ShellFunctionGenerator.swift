@@ -58,7 +58,7 @@ public struct ShellFunctionGenerator {
                     # interactive shells, just like the update check above.
                     ( ( command orrery-bin quota refresh -e "$2" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
                   fi
-                  printf "\(L10n.Use.switched)\\n" "$2"
+                  printf "\(L10n.Enter.switched)\\n" "$2"
                   ;;
                 create)
                   command orrery-bin "$@"

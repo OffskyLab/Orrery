@@ -2075,7 +2075,7 @@
   },
   {
     "path": [
-      "Use",
+      "Enter",
       "abstract"
     ],
     "kind": "var",
@@ -2083,7 +2083,15 @@
   },
   {
     "path": [
-      "Use",
+      "Enter",
+      "cannotEnterOrigin"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Enter",
       "nameHelp"
     ],
     "kind": "var",
@@ -2091,7 +2099,7 @@
   },
   {
     "path": [
-      "Use",
+      "Enter",
       "needsShellIntegration"
     ],
     "kind": "var",
@@ -2099,7 +2107,31 @@
   },
   {
     "path": [
-      "Use",
+      "Enter",
+      "switched"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Exit",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Exit",
+      "alreadyAtOrigin"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Exit",
       "switched"
     ],
     "kind": "var",
