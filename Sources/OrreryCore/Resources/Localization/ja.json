@@ -282,6 +282,7 @@
   "setup.shellHelp": "Shell type to configure (bash, zsh). Auto-detected if omitted.",
   "setup.unsupportedShell": "Unsupported shell '{shell}'. Supported: bash, zsh",
   "setup.originHeader": "Configuring origin:",
+  "setup.originSharedDefault": "  memory and sessions are shared with sandboxes by default.",
   "setup.wroteActivate": "orrery: wrote {path}\n",
   "toolFlag.claude": "Anthropic Claude (default)",
   "toolFlag.codex": "OpenAI Codex",

@@ -1,10 +1,5 @@
 import ArgumentParser
 import Foundation
-#if canImport(Darwin)
-import Darwin
-#else
-import Glibc
-#endif
 
 public struct SetupCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
@@ -110,7 +105,7 @@ public struct SetupCommand: ParsableCommand {
         let store = EnvironmentStore.default
         store.setOriginTakeoverOptOut(false)
 
-        // Only show prompts for tools taken over during THIS run (not previously managed ones).
+        // Take over any tool whose config dir exists and isn't already managed.
         var newlyTakenOver: [Tool] = []
         for tool in Tool.allCases {
             guard !store.isOriginManaged(tool: tool),
@@ -124,47 +119,20 @@ public struct SetupCommand: ParsableCommand {
 
         guard !newlyTakenOver.isEmpty else { return }
 
-        // Interactive prompts only when /dev/tty is available
-        let ttyCheck = open("/dev/tty", O_RDWR)
-        guard ttyCheck >= 0 else { return }
-        close(ttyCheck)
-
+        // origin defaults to fully shared — no interactive prompts. Its memory
+        // and sessions must be available to any sandbox that opts into sharing;
+        // if origin kept them isolated, a sandbox set to "shared" would have
+        // nothing to share with.
         var config = store.loadOriginConfig()
+        config.isolateMemory = false
+        for tool in newlyTakenOver {
+            config.isolatedSessionTools.remove(tool)
+            try? store.ensureSharedSessionLinksForOrigin(tool: tool)
+        }
+        try? store.saveOriginConfig(config)
 
         stderrWrite("\n\(L10n.Setup.originHeader)\n")
-
-        // For each newly taken-over tool: ask session then memory; summaries stay visible
-        for tool in newlyTakenOver {
-            stderrWrite("\n  \(tool.coloredTag)\n")
-
-            // --- Session ---
-            let sessionPicker = SingleSelect(
-                title: L10n.Create.sessionSharePrompt,
-                options: [L10n.Create.sessionShareYes, L10n.Create.sessionShareNo],
-                selected: 0
-            )
-            let isolateSession = sessionPicker.run() == 1
-            if isolateSession {
-                config.isolatedSessionTools.insert(tool)
-            } else {
-                config.isolatedSessionTools.remove(tool)
-                try? store.ensureSharedSessionLinksForOrigin(tool: tool)
-            }
-            stderrWrite("    \(L10n.Create.sessions(isolateSession))\n")
-
-            // --- Memory (Claude only — codex/gemini have no memory concept) ---
-            if tool == .claude {
-                let memoryPicker = SingleSelect(
-                    title: L10n.Create.memorySharePrompt,
-                    options: [L10n.Create.memoryShareYes, L10n.Create.memoryShareNo],
-                    selected: 1   // default: 不共享 (isolate)
-                )
-                config.isolateMemory = memoryPicker.run() == 1
-                stderrWrite("    \(L10n.Create.memory(config.isolateMemory))\n")
-            }
-        }
-
-        try? store.saveOriginConfig(config)
+        stderrWrite("\(L10n.Setup.originSharedDefault)\n")
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {

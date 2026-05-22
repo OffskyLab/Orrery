@@ -282,6 +282,7 @@
   "setup.shellHelp": "Shell 類型 (bash, zsh)。未指定時自動偵測。",
   "setup.unsupportedShell": "不支援的 shell '{shell}'。支援：bash, zsh",
   "setup.originHeader": "origin 設定：",
+  "setup.originSharedDefault": "  memory 與 session 預設與 sandbox 共享。",
   "setup.wroteActivate": "orrery: 已產生 {path}\n",
   "toolFlag.claude": "Anthropic Claude（預設）",
   "toolFlag.codex": "OpenAI Codex",

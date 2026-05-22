@@ -1763,6 +1763,7 @@
     ]
   },
   { "path": ["Setup", "originHeader"], "kind": "var", "parameters": [] },
+  { "path": ["Setup", "originSharedDefault"], "kind": "var", "parameters": [] },
   {
     "path": [
       "Setup",
