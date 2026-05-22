@@ -10,12 +10,32 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("orrery()"))
     }
 
-    @Test("output handles 'sandbox use' subcommand")
-    func handlesSandboxUse() {
+    @Test("output handles top-level 'enter' subcommand")
+    func handlesEnter() {
         let script = ShellFunctionGenerator.generate()
-        // Shell-side export pipeline still in place — just nested under sandbox now.
+        // Top-level enter) case exists.
+        #expect(script.contains("\n    enter)\n"))
+        // Same shell-side export pipeline that sandbox use had.
         #expect(script.contains("sandbox _export"))
         #expect(script.contains("ORRERY_ACTIVE_ENV"))
+    }
+
+    @Test("output handles top-level 'exit' subcommand")
+    func handlesExit() {
+        let script = ShellFunctionGenerator.generate()
+        // Top-level exit) case exists.
+        #expect(script.contains("\n    exit)\n"))
+        // exit clears tool env vars and writes ORRERY_ACTIVE_ENV=origin.
+        #expect(script.contains("unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME"))
+        #expect(script.contains("export ORRERY_ACTIVE_ENV=\"origin\""))
+    }
+
+    @Test("enter rejects 'origin' and points the user at exit")
+    func enterRejectsOrigin() {
+        let script = ShellFunctionGenerator.generate()
+        // The enter case must check for "$1" = "origin" and surface the L10n message.
+        #expect(script.contains("\"$1\" = \"origin\""))
+        #expect(script.contains(L10n.Enter.cannotEnterOrigin))
     }
 
     @Test("output auto-activates current sandbox on shell start")
