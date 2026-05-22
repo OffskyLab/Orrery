@@ -87,16 +87,16 @@ public struct SandboxCommand: ParsableCommand {
     public struct Use: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "use",
-            abstract: L10n.Use.abstract
+            abstract: L10n.Enter.abstract
         )
 
-        @Argument(help: ArgumentHelp(L10n.Use.nameHelp))
+        @Argument(help: ArgumentHelp(L10n.Enter.nameHelp))
         public var name: String
 
         public init() {}
 
         public func run() throws {
-            stderrWrite(L10n.Use.needsShellIntegration)
+            stderrWrite(L10n.Enter.needsShellIntegration)
             throw ExitCode.failure
         }
     }
