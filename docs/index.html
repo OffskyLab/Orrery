@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orrery — AI CLI environment manager</title>
-  <meta name="description" content="Per-shell environment manager for AI CLI tools. Isolate accounts for Claude Code, Codex, and Gemini CLI — keep your conversations continuous across account switches." />
+  <title>Orrery — switch AI CLI accounts without logging out</title>
+  <meta name="description" content="Orrery pools your Claude Code, Codex, and Gemini CLI accounts and switches between them with one command — no logout, no re-auth, conversations stay continuous. Per-shell, with an optional sandbox layer for full config isolation." />
   <link rel="icon" href="icon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -548,6 +548,7 @@
   </a>
   <ul class="nav-links">
     <li class="nav-collapsible"><a href="#features">Features</a></li>
+    <li class="nav-collapsible"><a href="#accounts">Accounts</a></li>
     <li class="nav-collapsible"><a href="#use-cases">Use Cases</a></li>
     <li class="nav-collapsible"><a href="#commands">Commands</a></li>
     <li class="nav-collapsible"><a href="#install">Install</a></li>
@@ -567,6 +568,7 @@
 
 <ul class="mobile-menu" id="mobile-menu">
   <li><a href="#features" onclick="closeMenu()">Features</a></li>
+  <li><a href="#accounts" onclick="closeMenu()">Accounts</a></li>
   <li><a href="#use-cases" onclick="closeMenu()">Use Cases</a></li>
   <li><a href="#commands" onclick="closeMenu()">Commands</a></li>
   <li><a href="#install" onclick="closeMenu()">Install</a></li>
@@ -579,8 +581,8 @@
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
   <div class="badge">v3.0.0</div>
-  <h1>Manage AI CLI environments, per shell</h1>
-  <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
+  <h1>Juggling multiple AI accounts, solved</h1>
+  <p>Orrery pools your Claude Code, Codex, and Gemini CLI accounts and switches between them with one command — no logging out, no re-auth, and your conversation picks up right where you left off.</p>
   <div class="cta-group">
     <a class="btn btn-primary" href="#install">Get Started</a>
     <a class="btn btn-secondary" href="https://github.com/OffskyLab/Orrery">View on GitHub</a>
@@ -634,38 +636,56 @@
 
 <!-- Features -->
 <section class="section" id="features">
-  <h2 class="section-title">Everything you need to context-switch</h2>
+  <h2 class="section-title">Built for switching AI accounts</h2>
   <div class="features-grid">
     <div class="feature-card">
-      <span class="feature-icon">🔒</span>
-      <h3>Switch freely, no login hassle</h3>
-      <p>Set up once, then switch with one command. Each environment has its own credentials, completely isolated — no logging out, no re-entering passwords, no waiting for auth flows.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">💬</span>
-      <h3>Shared sessions</h3>
-      <p>Switch accounts and pick up where you left off. Session data is shared by default — <code>claude --resume</code> works seamlessly after switching environments.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">🐚</span>
-      <h3>Per-shell activation</h3>
-      <p><code>orrery enter work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">✦</span>
-      <h3>Interactive wizard</h3>
-      <p>Create environments with a guided multi-select UI. Pick your tools with arrow keys and space — no flags needed.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">🔑</span>
-      <h3>Custom env vars</h3>
-      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orrery enter</code>.</p>
+      <span class="feature-icon">🗂️</span>
+      <h3>Account pool</h3>
+      <p>All your logins in one place. Add a Claude, Codex, or Gemini account once — Orrery keeps the credential in a shared pool, ready to switch to any time.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
-      <h3>Zero runtime overhead</h3>
-      <p>Built in Swift — native binary, instant startup. Shell integration is a tiny eval'd function, not a daemon. Supports bash and zsh.</p>
+      <h3>One-command switch</h3>
+      <p><code>orrery use --claude --name work</code> swaps the active account for a tool. No logout, no password, no browser auth flow — just an instant switch.</p>
     </div>
+    <div class="feature-card">
+      <span class="feature-icon">💬</span>
+      <h3>Sessions follow you</h3>
+      <p>Switch accounts mid-task and <code>claude --resume</code> still works. Conversation history is shared across switches by default.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📦</span>
+      <h3>Sandboxes for isolation</h3>
+      <p>Need a fully separate config per client or project? An optional sandbox isolates memory, sessions, and env vars on top of accounts.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🐚</span>
+      <h3>Per-shell, no daemon</h3>
+      <p>Switching only affects the current shell. Other terminal windows stay on their own account, unaffected — and there's no background process.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🚀</span>
+      <h3>Zero runtime overhead</h3>
+      <p>Built in Swift — native binary, instant startup. Shell integration is a tiny eval'd function. Supports bash and zsh.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Account pool -->
+<section class="section" id="accounts">
+  <h2 class="section-title">The account pool</h2>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto 2rem">
+    Add each AI tool account once. Orrery keeps the credentials in a shared pool — switching is instant, with no logout and no re-auth.
+  </p>
+  <div class="code-block" style="max-width:640px;margin:0 auto;font-size:.85rem">
+    <span class="prompt">$ </span>orrery add --claude<br/>
+    <span style="color:var(--muted)"># log in once — the account joins the pool</span><br/><br/>
+    <span class="prompt">$ </span>orrery list<br/>
+    <span style="color:var(--muted)">claude accounts:</span><br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;- work&nbsp;&nbsp;&nbsp;&nbsp; you@company.com, team</span><br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;- personal you@gmail.com, pro</span><br/><br/>
+    <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+    <span style="color:var(--muted)"># active Claude account → personal, instantly</span>
   </div>
 </section>
 
@@ -673,30 +693,30 @@
 <section class="section" id="concepts">
   <h2 class="section-title">The Model</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
-    Orrery draws a clean line between <strong style="color:var(--text)">identity</strong>
-    (who you're logged in as) and <strong style="color:var(--text)">continuity</strong>
-    (what you were working on). Switch identity without losing context.
+    Start with <strong style="color:var(--text)">accounts</strong> — that's all most people
+    need. Reach for a <strong style="color:var(--text)">sandbox</strong> only when a context
+    needs fully isolated config.
   </p>
   <div class="features-grid">
     <div class="feature-card">
-      <span class="feature-icon">&#x1fa90;</span>
-      <h3>Environment</h3>
-      <p>Isolates <strong style="color:var(--text)">identity</strong>: accounts, credentials, per-tool config. Activated per-shell via <code>orrery enter</code> so other terminal windows stay on their own environment.</p>
+      <span class="feature-icon">&#x1f464;</span>
+      <h3>Account</h3>
+      <p>Your <strong style="color:var(--text)">identity</strong> for a tool — the credential Orrery logs in with. Accounts live in a shared pool: add once, switch any time with <code>orrery use</code>. This is the layer you'll touch every day.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">&#x1f4e6;</span>
+      <h3>Sandbox <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">ADVANCED</span></h3>
+      <p>An optional <strong style="color:var(--text)">isolation</strong> layer: separate memory, sessions, and env vars. Most users never need one — reach for a sandbox when a client or project needs its own config space. Enter with <code>orrery enter</code>, leave with <code>orrery exit</code>.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4ac;</span>
       <h3>Session</h3>
-      <p>Represents <strong style="color:var(--text)">continuity</strong>: conversation history and project context. Shared across environments by default — <code>claude --resume</code> works after switching accounts.</p>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">&#x1f501;</span>
-      <h3>MCP Delegation</h3>
-      <p>Enables <strong style="color:var(--text)">coordination</strong> between environments. One Claude instance delegates a task to another running under a different account — multi-agent workflows with explicit identity boundaries.</p>
+      <p>Represents <strong style="color:var(--text)">continuity</strong>: conversation history and project context. Shared across account switches by default — <code>claude --resume</code> just works.</p>
     </div>
   </div>
   <p style="text-align:center;color:var(--muted);max-width:640px;margin:2.5rem auto 0;font-size:.9rem">
     Traditional tooling isolates dependencies (<code>virtualenv</code>) or runtime versions (<code>nvm</code>).
-    Orrery extends that idea to <strong style="color:var(--text)">AI identity, context, and coordination</strong>.
+    Orrery extends that idea to <strong style="color:var(--text)">AI accounts — and, when you need it, full config isolation</strong>.
   </p>
 </section>
 
@@ -715,22 +735,29 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <h4>Create environments</h4>
-        <p>Run <code>orrery sandbox create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orrery/envs/</code>.</p>
+        <h4>Add your accounts</h4>
+        <p>Run <code>orrery add --claude</code> (or <code>--codex</code> / <code>--gemini</code>) and log in once. The account joins a shared pool — repeat for every account you use.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>Switch with one command</h4>
-        <p><code>orrery enter work</code> exports the right config dirs and custom env vars into your current session. <code>orrery exit</code> returns you to origin. Your conversation history stays intact across switches.</p>
+        <p><code>orrery use --claude --name personal</code> makes that account active for Claude. No logout, no re-auth — and your conversation history stays intact across switches.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
         <h4>Resume where you left off</h4>
-        <p>After switching accounts, <code>claude --resume</code> picks up your last session. Auth is isolated, but sessions are shared — the best of both worlds.</p>
+        <p>After switching accounts, <code>claude --resume</code> picks up your last session. Identity changes, continuity doesn't — the best of both worlds.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>Optional: create a sandbox</h4>
+        <p>When a client or project needs fully isolated config, run <code>orrery sandbox create client-a</code>, then <code>orrery enter client-a</code> / <code>orrery exit</code> to move in and out. Skip this entirely if you only switch accounts.</p>
       </div>
     </div>
   </div>
@@ -738,14 +765,17 @@
 
 <!-- Origin -->
 <section class="origin-section" id="origin">
-  <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> Environment</h2>
+  <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> baseline</h2>
   <div class="origin-callout">
-    <h3>Orrery's default-managed environment</h3>
+    <h3>Your default config — where you are before entering any sandbox</h3>
     <p>
-      <code>origin</code> is the environment Orrery takes over on first <code>orrery setup</code>.
-      Your existing tool configs (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>)
-      are moved into <code>~/.orrery/origin/</code> and the original paths become symlinks — your
-      data is untouched, it just lives where Orrery can manage and sync it.
+      <code>origin</code> is your normal setup: the accounts and per-tool config you'd use
+      without Orrery at all. On first <code>orrery setup</code>, your existing tool configs
+      (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>) are moved into
+      <code>~/.orrery/origin/</code> and the original paths become symlinks — your data is
+      untouched, it just lives where Orrery can manage and sync it. Switching accounts with
+      <code>orrery use</code> works right here at origin; you only need a sandbox when a
+      context calls for fully isolated config.
     </p>
     <p>
       <code>orrery exit</code> returns to origin from any sandbox. Orrery-specific variables
@@ -781,22 +811,12 @@
     <div class="feature-card">
       <span class="feature-icon">💼</span>
       <h3>Work / Personal</h3>
-      <p>Your company uses a Claude Team plan, and you have a personal Pro subscription. Instead of logging out and back in, just switch environments.</p>
+      <p>Your company uses a Claude Team plan, and you have a personal Pro subscription. Add both to the pool, then flip between them with one command — no logout.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery enter work<br/>
-        <span style="color:var(--muted)"># → uses company Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orrery enter personal<br/>
-        <span style="color:var(--muted)"># → uses personal Pro plan</span>
-      </div>
-    </div>
-    <div class="feature-card">
-      <span class="feature-icon">🏢</span>
-      <h3>Multiple Clients</h3>
-      <p>Freelancers and consultants working with different clients — each with their own API keys and credentials. One command to switch context.</p>
-      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sandbox create client-a --tool claude<br/>
-        <span class="prompt">$ </span>orrery sandbox create client-b --tool claude<br/>
-        <span class="prompt">$ </span>orrery enter client-a
+        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span style="color:var(--muted)"># → company Team plan</span><br/><br/>
+        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+        <span style="color:var(--muted)"># → personal Pro plan</span>
       </div>
     </div>
     <div class="feature-card">
@@ -804,13 +824,23 @@
       <h3>Resume After Switching</h3>
       <p>Mid-conversation with Claude on your work account? Switch to personal, do something, then switch back — your session is still there.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery enter work<br/>
+        <span class="prompt">$ </span>orrery use --claude --name work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... working on a task ...</span><br/><br/>
-        <span class="prompt">$ </span>orrery enter personal<br/>
-        <span class="prompt">$ </span>orrery enter work<br/>
+        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+        <span class="prompt">$ </span>orrery use --claude --name work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → picks up exactly where you left off</span>
+      </div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏢</span>
+      <h3>Multiple Clients <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">SANDBOX</span></h3>
+      <p>Freelancers and consultants juggling different clients — each needs its own credentials, settings, and memory. Give each client a sandbox for full isolation.</p>
+      <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
+        <span class="prompt">$ </span>orrery sandbox create client-a<br/>
+        <span class="prompt">$ </span>orrery sandbox create client-b<br/>
+        <span class="prompt">$ </span>orrery enter client-a
       </div>
     </div>
   </div>
@@ -1011,21 +1041,21 @@
   <h2 class="section-title">Commands</h2>
   <div class="commands-grid">
     <div class="command-group">
+      <div class="command-group-title">Accounts — the everyday layer</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery add --&lt;tool&gt;</span><span class="cmd-desc">Add an account (--claude / --codex / --gemini)</span></div>
+        <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">List accounts in the pool</span></div>
+        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">Switch the active account for a tool</span></div>
+        <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">Show the active account per tool</span></div>
+        <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">Remove an account from the pool</span></div>
+      </div>
+    </div>
+    <div class="command-group">
       <div class="command-group-title">Sandbox state</div>
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">Activate a sandbox in current shell</span></div>
         <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">Leave the current sandbox, return to origin</span></div>
         <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
-      </div>
-    </div>
-    <div class="command-group">
-      <div class="command-group-title">Accounts (top-level)</div>
-      <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery add</span><span class="cmd-desc">Add an account (--claude / --codex / --gemini)</span></div>
-        <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">List accounts</span></div>
-        <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">Show pinned account per tool</span></div>
-        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">Pin an account to the active sandbox</span></div>
-        <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">Remove an account from the pool</span></div>
       </div>
     </div>
     <div class="command-group">
