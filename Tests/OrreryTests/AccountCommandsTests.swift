@@ -200,6 +200,27 @@ struct AccountCommandsAllTests {
                 #expect(output.contains("no-creds-gemini"))
             }
         }
+
+        @Test("active account in the current sandbox is marked, inactive is not")
+        func activeAccountMarked() throws {
+            try withIsolatedHome {
+                let store = AccountStore.default
+                let active = Account(tool: .claude, displayName: "active-one")
+                let other = Account(tool: .claude, displayName: "other-one")
+                try store.save(active)
+                try store.save(other)
+                var origin = EnvironmentStore.default.loadOriginConfig()
+                origin.accounts["claude"] = active.id
+                try EnvironmentStore.default.saveOriginConfig(origin)
+
+                let cmd = try ListCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("● active-one"))
+                #expect(output.contains("- other-one"))
+                // At origin, the sandbox header is not shown.
+                #expect(!output.contains("sandbox:"))
+            }
+        }
     }
 
     // MARK: ShowCommand

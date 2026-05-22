@@ -32,8 +32,16 @@
     "path": ["Account", "listRow"],
     "kind": "func",
     "parameters": [
+      { "label": "_", "name": "marker", "type": "String" },
       { "label": "_", "name": "name", "type": "String" },
       { "label": "_", "name": "tail", "type": "String" }
+    ]
+  },
+  {
+    "path": ["Account", "listSandboxHeader"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "name", "type": "String" }
     ]
   },
   {
