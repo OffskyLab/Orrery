@@ -132,7 +132,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `sandbox.setEnvKeyHelp` | Positional `key` argument help for `set-env`. |
 | `sandbox.setEnvValueHelp` | Positional `value` argument help for `set-env`. |
 | `sandbox.setEnvSandboxHelp` | `-s/--sandbox` option help for `set-env` and `unset-env`. |
-| `sandbox.setEnvNoActive` | Error: no active sandbox and `-s` not given. References `orrery sandbox use <name>` — keep literal. |
+| `sandbox.setEnvNoActive` | Error: no active sandbox and `-s` not given. References `orrery enter <name>` — keep literal. |
 | `sandbox.setEnvOriginNotSupported` | Error when targeting the `origin` sandbox. |
 | `sandbox.setEnvSuccess` | Success: variable set. `{key}` = variable name; `{name}` = sandbox name. |
 | `sandbox.unsetEnvAbstract` | Sub-command help for `orrery sandbox unset-env`. |
@@ -336,14 +336,18 @@ Shown by ArgumentParser as part of auto-generated help.
 | `update.unsupportedPlatform` | Error on non-supported OS. URL kept literal. |
 | `update.upgrading` | Progress line. |
 
-## use — `orrery use`
+## enter / exit — `orrery enter` and `orrery exit`
 
 | Key | Context |
 | --- | --- |
-| `use.abstract` | Command help. |
-| `use.nameHelp` | Positional `name` help. |
-| `use.needsShellIntegration` | Error when shell integration isn't installed. References `orrery setup` — keep literal. Has `\n`. |
-| `use.switchedToOrigin` | Shown when switching back to `origin`. References `orrery sandbox use <name>` — literal. |
+| `enter.abstract` | Command help. |
+| `enter.nameHelp` | Positional `name` help. |
+| `enter.needsShellIntegration` | Error when shell integration isn't installed. Shared by `exit` (both verbs need the shell wrapper to export/unset env vars). References `orrery setup` — keep literal. Has `\n`. |
+| `enter.switched` | Shown when entering a sandbox. `%s` = sandbox name. |
+| `enter.cannotEnterOrigin` | Rejection when the user passes `origin` to `enter`. References `orrery exit` — keep literal. |
+| `exit.abstract` | Command help. |
+| `exit.switched` | Shown when leaving a sandbox back to origin. |
+| `exit.alreadyAtOrigin` | Friendly no-op message when `exit` runs while already at origin. |
 
 ## which — `orrery which`
 

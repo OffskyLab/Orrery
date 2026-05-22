@@ -74,7 +74,7 @@ public struct ThirdPartyCommand: ParsableCommand {
 
 private func currentEnvOrThrow() throws -> String {
     guard let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-        throw ValidationError("No active environment. Use --env <env> or switch with `orrery sandbox use <env>`.")
+        throw ValidationError("No active environment. Use --env <env> or switch with `orrery enter <env>`.")
     }
     return env
 }
