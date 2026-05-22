@@ -343,7 +343,7 @@ Shown by ArgumentParser as part of auto-generated help.
 | `use.abstract` | Command help. |
 | `use.nameHelp` | Positional `name` help. |
 | `use.needsShellIntegration` | Error when shell integration isn't installed. References `orrery setup` — keep literal. Has `\n`. |
-| `use.switchedToOrigin` | Shown when switching back to `origin`. References `orrery use <name>` — literal. |
+| `use.switchedToOrigin` | Shown when switching back to `origin`. References `orrery sandbox use <name>` — literal. |
 
 ## which — `orrery which`
 
