@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.8.0</div>
+  <div class="badge">v3.0.0</div>
   <h1>解決 AI 多帳號的救星</h1>
   <p>為 Claude Code、Codex、Gemini CLI 隔離帳號，自由切換工作與個人情境 — 對話歷史無縫接續，不再從頭開始。</p>
   <div class="cta-group">
@@ -649,7 +649,7 @@
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
       <h3>Per-shell 生效</h3>
-      <p><code>orrery use work</code> 只在當前 shell 設定環境變數。其他終端機視窗維持各自的環境，互不影響。</p>
+      <p><code>orrery enter work</code> 只在當前 shell 設定環境變數。其他終端機視窗維持各自的環境，互不影響。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">✦</span>
@@ -659,7 +659,7 @@
     <div class="feature-card">
       <span class="feature-icon">🔑</span>
       <h3>自訂環境變數</h3>
-      <p>每個環境可儲存 API 金鑰等變數，<code>orrery use</code> 切換時自動匯出。</p>
+      <p>每個環境可儲存 API 金鑰等變數，<code>orrery enter</code> 切換時自動匯出。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
@@ -681,7 +681,7 @@
     <div class="feature-card">
       <span class="feature-icon">&#x1fa90;</span>
       <h3>Environment</h3>
-      <p>隔離<strong style="color:var(--text)">身分</strong>：帳號、憑證、各工具的設定。透過 <code>orrery use</code> 以 per-shell 啟用 — 其他 terminal 視窗維持自己的環境，互不影響。</p>
+      <p>隔離<strong style="color:var(--text)">身分</strong>：帳號、憑證、各工具的設定。透過 <code>orrery enter</code> 以 per-shell 啟用 — 其他 terminal 視窗維持自己的環境，互不影響。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4ac;</span>
@@ -716,14 +716,14 @@
       <div class="step-num">2</div>
       <div class="step-body">
         <h4>建立環境</h4>
-        <p>執行 <code>orrery create work</code>。互動式精靈讓你選擇工具並設定 session 共享。環境存放在 <code>~/.orrery/envs/</code>。</p>
+        <p>執行 <code>orrery sandbox create work</code>。互動式精靈讓你選擇工具並設定 session 共享。環境存放在 <code>~/.orrery/envs/</code>。</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>一行指令切換</h4>
-        <p><code>orrery use work</code> 將正確的設定目錄與自訂環境變數匯出到當前 session。對話歷史在切換後完整保留。</p>
+        <p><code>orrery enter work</code> 把正確的設定目錄與自訂環境變數匯出到當前 session；<code>orrery exit</code> 把你帶回 origin。對話歷史在切換後完整保留。</p>
       </div>
     </div>
     <div class="step">
@@ -748,29 +748,25 @@
       資料本身完全沒動，只是改住在 Orrery 可以管理與同步的位置。
     </p>
     <p>
-      <code>orrery use origin</code>（或 <code>orrery deactivate</code>）會切回這個預設環境：
-      Orrery 專屬的變數（如 <code>CLAUDE_CONFIG_DIR</code>）會被 unset，
-      工具走自己原生的路徑 — 而這些路徑透過 symlink 指向 Orrery 管理的 config。
-      從使用感受上像「離開 Orrery」，但實際上仍在 Orrery 管理的儲存之下。
+      <code>orrery exit</code> 從任何 sandbox 切回 origin：Orrery 專屬的變數（如
+      <code>CLAUDE_CONFIG_DIR</code>）會被 unset，工具走自己原生的路徑 — 而這些路徑透過
+      symlink 指向 Orrery 管理的 config。從使用感受上像「離開 Orrery」，但實際上仍在
+      Orrery 管理的儲存之下。<code>orrery enter origin</code> 會被明確拒絕，並指向
+      <code>exit</code>：origin 是「沒有 sandbox」這個狀態，不是某個你會進去的 sandbox。
     </p>
     <p>
-      與一般環境不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config 路徑。
-      不過它支援 memory 與 session 設定：可以用 <code>orrery memory isolate</code> /
-      <code>share</code> / <code>storage</code> 控制 memory 存放位置，
-      也可以在 <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。
-      執行 <code>orrery info origin</code> 查看完整狀態。
+      與一般 sandbox 不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config
+      路徑。不過它支援 memory 與 session 設定：可以用 <code>orrery sandbox memory isolate</code> /
+      <code>share</code> / <code>storage</code> 控制 memory 存放位置，也可以在
+      <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。執行
+      <code>orrery sandbox info origin</code> 查看完整狀態。
     </p>
     <p style="margin-top:1rem">
       <strong style="color:var(--text)">還原接管。</strong>
-      想讓某個工具完全脫離 Orrery（回到 setup 前的狀態），執行 release：
+      想讓工具完全脫離 Orrery（回到 setup 前的狀態），執行 uninstall — 一次把工具還原到原本
+      的位置並移除 shell 整合：
     </p>
     <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
-      <span class="prompt">$ </span>orrery origin status<br/>
-      <span style="color:var(--muted)"># 查看目前哪些工具被 Orrery 管理</span><br/><br/>
-      <span class="prompt">$ </span>orrery origin release<br/>
-      <span style="color:var(--muted)"># 把所有工具還原到原本的位置</span><br/><br/>
-      <span class="prompt">$ </span>orrery origin release --claude<br/>
-      <span style="color:var(--muted)"># 只釋放 Claude</span><br/><br/>
       <span class="prompt">$ </span>orrery uninstall<br/>
       <span style="color:var(--muted)"># 釋放全部 + 移除 shell 整合</span>
     </div>
@@ -786,9 +782,9 @@
       <h3>工作 / 個人帳號</h3>
       <p>公司用 Claude Team plan，自己有 Pro 訂閱。不用反覆登入登出，一行指令切換。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span style="color:var(--muted)"># → 使用公司 Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orrery use personal<br/>
+        <span class="prompt">$ </span>orrery enter personal<br/>
         <span style="color:var(--muted)"># → 使用個人 Pro plan</span>
       </div>
     </div>
@@ -797,9 +793,9 @@
       <h3>多客戶 / 多專案</h3>
       <p>接案者或顧問同時服務多個客戶，各自有不同的 API key 和憑證。一行指令切換情境。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery create client-a --tool claude<br/>
-        <span class="prompt">$ </span>orrery create client-b --tool claude<br/>
-        <span class="prompt">$ </span>orrery use client-a
+        <span class="prompt">$ </span>orrery sandbox create client-a --tool claude<br/>
+        <span class="prompt">$ </span>orrery sandbox create client-b --tool claude<br/>
+        <span class="prompt">$ </span>orrery enter client-a
       </div>
     </div>
     <div class="feature-card">
@@ -807,11 +803,11 @@
       <h3>切換帳號不中斷對話</h3>
       <p>用工作帳號跟 Claude 對話到一半？切到個人帳號處理事情，再切回來 — session 還在原地等你。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... 工作中 ...</span><br/><br/>
-        <span class="prompt">$ </span>orrery use personal<br/>
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter personal<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → 接續上次的對話</span>
       </div>
@@ -931,7 +927,7 @@
         <p>Memory 預設儲存在 <code>~/.orrery</code>。你可以將它重新導向到任何目錄，包括 <strong>Obsidian</strong> 等 wiki 系統，讓 AI 記憶和你的筆記放在一起。</p>
         <div style="margin-top:.75rem">
           <div class="code-block" style="font-size:.82rem">
-            <span class="prompt">$ </span>orrery memory storage ~/Documents/my-wiki/orrery<br/>
+            <span class="prompt">$ </span>orrery sandbox memory storage ~/Documents/my-wiki/orrery<br/>
             <span style="color:var(--muted)">新路徑目前沒有記憶，是否要將目前的記憶複製過去？</span><br/>
             <span style="color:var(--muted)">▶ 複製過去</span><br/>
             <span style="color:var(--muted)">  不複製（從空白開始）</span>
@@ -957,9 +953,9 @@
       <p>同一人、兩台電腦。在同一網路下啟動 daemon，Bonjour 自動發現彼此。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># 桌機</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9527<br/><br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527<br/><br/>
         <span style="color:var(--muted)"># 筆電（Bonjour 自動發現）</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -967,12 +963,12 @@
       <h3>團隊協作</h3>
       <p>建立團隊、分享邀請碼。隊友加入後啟動 daemon，所有人的記憶即時同步。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sync team create my-team<br/>
-        <span class="prompt">$ </span>orrery sync team invite --port 9527<br/>
+        <span class="prompt">$ </span>orrery sandbox sync team create my-team<br/>
+        <span class="prompt">$ </span>orrery sandbox sync team invite --port 9527<br/>
         <span style="color:var(--muted)"># → 分享邀請碼</span><br/><br/>
         <span style="color:var(--muted)"># 隊友加入：</span><br/>
-        <span class="prompt">$ </span>orrery sync team join &lt;code&gt;<br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sandbox sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -980,7 +976,7 @@
       <h3>加密傳輸（mTLS）</h3>
       <p>敏感環境適用。雙方必須出示同一 CA 簽發的憑證，未授權的節點在握手階段即被拒絕。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--tls-ca ca.pem \<br/>
         &nbsp;&nbsp;--tls-cert node.pem \<br/>
         &nbsp;&nbsp;--tls-key node-key.pem
@@ -992,9 +988,9 @@
       <p>不同辦公室、不同網路。輕量的 rendezvous server 負責節點發現，資料直接在節點間傳輸。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># VPS 上：</span><br/>
-        <span class="prompt">$ </span>orrery sync rendezvous --port 9600<br/><br/>
+        <span class="prompt">$ </span>orrery sandbox sync rendezvous --port 9600<br/><br/>
         <span style="color:var(--muted)"># 各節點：</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--rendezvous rv.example.com:9600
       </div>
     </div>
@@ -1012,32 +1008,42 @@
   <h2 class="section-title">指令一覽</h2>
   <div class="commands-grid">
     <div class="command-group">
-      <div class="command-group-title">環境管理</div>
+      <div class="command-group-title">Sandbox 狀態</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery create &lt;name&gt;</span><span class="cmd-desc">建立新環境</span></div>
-        <div class="command-item"><span class="cmd">orrery delete &lt;name&gt;</span><span class="cmd-desc">刪除環境</span></div>
-        <div class="command-item"><span class="cmd">orrery rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名環境</span></div>
-        <div class="command-item"><span class="cmd">orrery list</span><span class="cmd-desc">列出所有環境</span></div>
-        <div class="command-item"><span class="cmd">orrery info [name]</span><span class="cmd-desc">顯示環境詳細資訊</span></div>
-      </div>
-    </div>
-    <div class="command-group">
-      <div class="command-group-title">切換</div>
-      <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">在當前 shell 啟用環境</span></div>
-        <div class="command-item"><span class="cmd">orrery deactivate</span><span class="cmd-desc">停用目前的環境</span></div>
-        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">顯示目前啟用的環境</span></div>
+        <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">在當前 shell 進入 sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">離開目前的 sandbox 回到 origin</span></div>
         <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">顯示工具設定目錄路徑</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">設定</div>
+      <div class="command-group-title">Account（top-level）</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery add</span><span class="cmd-desc">新增帳號（--claude / --codex / --gemini）</span></div>
+        <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">列出帳號</span></div>
+        <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">顯示各工具釘住的帳號</span></div>
+        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">把帳號釘到目前的 sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">從帳號池刪除帳號</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Sandbox CRUD</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery sandbox create &lt;name&gt;</span><span class="cmd-desc">建立 sandbox（wizard）</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox delete [name]</span><span class="cmd-desc">刪除 sandbox（不帶名稱會開多選）</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名 sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">列出 sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">顯示 sandbox 詳細</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox current</span><span class="cmd-desc">顯示目前啟用的 sandbox</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Sandbox 設定</div>
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">加入工具（wizard）</span></div>
         <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">移除工具</span></div>
-        <div class="command-item"><span class="cmd">orrery env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定環境變數</span></div>
-        <div class="command-item"><span class="cmd">orrery env unset &lt;K&gt;</span><span class="cmd-desc">移除環境變數</span></div>
-        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定 sandbox 環境變數</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">移除 sandbox 環境變數</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -1071,8 +1077,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.6</span>
+        <span class="changelog-ver">v3.0</span>
         <span class="changelog-new">最新</span>
+        <h3>Account 與 sandbox 拆開、新 verb <code>orrery enter</code> / <code>orrery exit</code></h3>
+      </div>
+      <p class="changelog-body">CLI 對齊 v3 心智模型：<strong style="color:var(--text)">account</strong>（帳號）跟 <strong style="color:var(--text)">sandbox</strong>（沙盒）是兩個獨立層，<strong style="color:var(--text)">origin</strong> 是一個<em>狀態</em>（沒進任何 sandbox），不是某個 sandbox 的名字。Account 指令全部提升為 top-level（<code>orrery add / list / show / use / remove</code>）；sandbox CRUD 移到 <code>sandbox</code> 子群（<code>orrery sandbox create / list / delete / info / rename / current / set-env / unset-env / memory / sync</code>）。</p>
+      <p class="changelog-body">兩個新 top-level verb 處理 sandbox 狀態：<code>orrery enter &lt;name&gt;</code> 進入 sandbox、<code>orrery exit</code> 回到 origin。<code>orrery enter origin</code> 會被拒絕、訊息直接指向 <code>exit</code>。「透明切換」：在 sandbox Y 裡執行 <code>enter X</code> 會自動 unexport Y、export X — 不需要先 <code>exit</code>。舊的 <code>orrery use &lt;env&gt;</code> / <code>orrery deactivate</code> 都已移除；bare <code>orrery use</code> 現在是 <strong style="color:var(--text)">account</strong> 切換指令。</p>
+      <p class="changelog-body">其他移除：<code>orrery auth</code>（憑證住在 account pool）、<code>orrery origin status / release</code>（改用 <code>orrery uninstall</code>）、<code>orrery sandbox use</code>（v3 開發中段的過渡指令）。<code>PhantomTriggerCommand</code> 改名為 <code>PhantomSandboxTriggerCommand</code>；phantom 監督迴圈會把 <code>TARGET_SANDBOX=origin</code> 翻譯成 <code>orrery exit</code>。L10n keys 從 <code>use.*</code> 改名為 <code>enter.*</code> / <code>exit.*</code>，並新增三個 key 對應新的拒絕與 no-op 路徑。243 個 test 全部通過。</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.6</span>
         <h3>Phantom 環境切換：<code>/orrery:phantom &lt;env&gt;</code> 中途切 env</h3>
       </div>
       <p class="changelog-body"><code>orrery run claude</code> 現在預設啟用 phantom 監督。在 Claude 裡輸入 <code>/orrery:phantom &lt;env&gt;</code> 時，supervisor 會用新環境 + <code>--resume</code> 重啟 Claude，對話無縫接續，不用重開 terminal。要關掉 phantom 走單次模式：<code>orrery run --non-phantom claude</code>。Slash command 同時裝在全域（<code>~/.claude/commands/</code>，給 <code>origin</code>）和專案內（透過 <code>orrery mcp setup</code>）—— project-local 的 slash command 不受 <code>CLAUDE_CONFIG_DIR</code> 影響，所以非 origin 環境也能用。</p>

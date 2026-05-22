@@ -1,5 +1,57 @@
 # Changelog
 
+## v3.0.0 - 2026-05-22
+
+### Breaking — command surface restructured
+
+The CLI is reshaped around the v3 mental model: **accounts** and **sandboxes** are two independent layers, and **origin** is a *state* (no sandbox active), not a sandbox name.
+
+- **Account commands promoted to top level.** `orrery account add/list/show/use/remove` becomes `orrery add/list/show/use/remove`. The bare `orrery use <name>` is now the **account** switcher (was the sandbox switcher in v2).
+- **Sandbox subgroup formed.** Per-sandbox CRUD and tooling moves under `orrery sandbox <verb>`: `set-env`, `unset-env`, `create`, `list`, `delete`, `info`, `rename`, `current`, `memory`, `sync`, `export`, `unexport`.
+- **`orrery enter <sandbox>` / `orrery exit`** are the new sandbox state verbs:
+  - `orrery enter <sandbox>` — opt into a sandbox.
+  - `orrery exit` — return to origin. `orrery enter origin` is rejected and points the user at `exit` (origin is the absence-of-sandbox state, not a sandbox to enter).
+  - Transparent switch: `enter X` while in sandbox Y unexports Y, exports X, no need to `exit` first.
+- **`orrery deactivate` removed** — replaced by `orrery exit`.
+- **`orrery use <env>` (v2 sandbox switch) removed** — see migration table below.
+- **`orrery sandbox use` removed entirely** — was a brief stepping stone during v3 dev; `enter`/`exit` are the only sandbox state verbs.
+- **`orrery auth ...` removed** — credentials are managed via the account pool (`orrery add/list/show/remove`).
+- **`orrery origin status/release` removed** — `orrery uninstall` is the supported way to release.
+- **`/orrery:phantom` slash command** now treats a bare name as an **account** switch; sandbox switches use the explicit `sandbox` keyword (e.g. `/orrery:phantom sandbox <name>`). The phantom-supervisor loop in the generated shell function translates `TARGET_SANDBOX=origin` to `orrery exit`, other values to `orrery enter $TARGET_SANDBOX` — the sentinel format is unchanged.
+
+### Migration table
+
+| v2 | v3 |
+|---|---|
+| `orrery account add` | `orrery add` |
+| `orrery account list` | `orrery list` |
+| `orrery account show` | `orrery show` |
+| `orrery account use` | `orrery use` |
+| `orrery account remove` | `orrery remove` |
+| `orrery use <sandbox>` | `orrery enter <sandbox>` |
+| `orrery deactivate` | `orrery exit` |
+| `orrery create <name>` | `orrery sandbox create <name>` |
+| `orrery delete <name>` | `orrery sandbox delete <name>` |
+| `orrery rename <old> <new>` | `orrery sandbox rename <old> <new>` |
+| `orrery list` (envs) | `orrery sandbox list` |
+| `orrery info [name]` | `orrery sandbox info [name]` |
+| `orrery current` | `orrery sandbox current` |
+| `orrery env set <K> <V>` | `orrery sandbox set-env <K> <V>` |
+| `orrery env unset <K>` | `orrery sandbox unset-env <K>` |
+| `orrery memory <op>` | `orrery sandbox memory <op>` |
+| `orrery sync <op>` | `orrery sandbox sync <op>` |
+| `orrery auth store` | (removed; use `orrery show` or `orrery list`) |
+| `orrery origin status` | (removed; `orrery sandbox info origin` shows origin state) |
+| `orrery origin release` | `orrery uninstall` |
+
+### Internal / housekeeping
+
+- **`PhantomTriggerCommand` renamed** to `PhantomSandboxTriggerCommand`; sentinel field `TARGET_ENV` renamed to `TARGET_SANDBOX`.
+- **`AuthCommand` and `OriginCommand` removed.** Dead-code branches that checked for `origin release` were pruned from `OriginTakeoverBootstrap`.
+- **L10n keys** renamed `use.*` → `enter.*` / `exit.*`; three new keys (`enter.cannotEnterOrigin`, `exit.abstract`, `exit.alreadyAtOrigin`). Hint strings across `en` / `zh-Hant` / `ja` updated in lockstep.
+- **`SandboxCommand.Use`** Swift stub removed; the shell function's `sandbox)/use)` dispatch arm is gone too.
+- **Tests:** 243 passing across 61 suites. `ShellFunctionGeneratorTests` and `PhantomTriggerTests` updated with negative assertions guarding against any return of `orrery sandbox use`.
+
 ## v2.8.0 - 2026-05-20
 
 ### Added

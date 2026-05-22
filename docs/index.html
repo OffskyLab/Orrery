@@ -578,7 +578,7 @@
 <!-- Hero -->
 <section class="hero">
   <img class="hero-logo" src="icon.png" alt="Orrery" />
-  <div class="badge">v2.8.0</div>
+  <div class="badge">v3.0.0</div>
   <h1>Manage AI CLI environments, per shell</h1>
   <p>Isolate accounts for Claude Code, Codex, and Gemini CLI across work and personal contexts — switch accounts freely while keeping your conversations continuous.</p>
   <div class="cta-group">
@@ -649,7 +649,7 @@
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
       <h3>Per-shell activation</h3>
-      <p><code>orrery use work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
+      <p><code>orrery enter work</code> sets environment variables only in the current shell. Other windows stay on their own environment, unaffected.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">✦</span>
@@ -659,7 +659,7 @@
     <div class="feature-card">
       <span class="feature-icon">🔑</span>
       <h3>Custom env vars</h3>
-      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orrery use</code>.</p>
+      <p>Store API keys and other variables per environment. They're automatically exported when you switch with <code>orrery enter</code>.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
@@ -681,7 +681,7 @@
     <div class="feature-card">
       <span class="feature-icon">&#x1fa90;</span>
       <h3>Environment</h3>
-      <p>Isolates <strong style="color:var(--text)">identity</strong>: accounts, credentials, per-tool config. Activated per-shell via <code>orrery use</code> so other terminal windows stay on their own environment.</p>
+      <p>Isolates <strong style="color:var(--text)">identity</strong>: accounts, credentials, per-tool config. Activated per-shell via <code>orrery enter</code> so other terminal windows stay on their own environment.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4ac;</span>
@@ -716,14 +716,14 @@
       <div class="step-num">2</div>
       <div class="step-body">
         <h4>Create environments</h4>
-        <p>Run <code>orrery create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orrery/envs/</code>.</p>
+        <p>Run <code>orrery sandbox create work</code>. An interactive wizard lets you pick tools and configure session sharing. Environments are stored under <code>~/.orrery/envs/</code>.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>Switch with one command</h4>
-        <p><code>orrery use work</code> exports the right config dirs and custom env vars into your current session. Your conversation history stays intact across switches.</p>
+        <p><code>orrery enter work</code> exports the right config dirs and custom env vars into your current session. <code>orrery exit</code> returns you to origin. Your conversation history stays intact across switches.</p>
       </div>
     </div>
     <div class="step">
@@ -748,30 +748,26 @@
       data is untouched, it just lives where Orrery can manage and sync it.
     </p>
     <p>
-      <code>orrery use origin</code> (or <code>orrery deactivate</code>) switches back to this
-      default environment. Orrery-specific variables like <code>CLAUDE_CONFIG_DIR</code> get
-      unset, so each tool falls back to its native path — which now resolves to the managed
-      config via the symlink. The experience feels like "exit Orrery", but you're still on
-      Orrery-managed storage.
+      <code>orrery exit</code> returns to origin from any sandbox. Orrery-specific variables
+      like <code>CLAUDE_CONFIG_DIR</code> get unset, so each tool falls back to its native
+      path — which now resolves to the managed config via the symlink. The experience feels
+      like "exit Orrery", but you're still on Orrery-managed storage. <code>orrery enter
+      origin</code> is rejected and points you at <code>exit</code>: origin is the absence
+      of a sandbox, not a sandbox you enter.
     </p>
     <p>
-      Unlike regular environments, <code>origin</code> cannot be deleted or renamed and
+      Unlike regular sandboxes, <code>origin</code> cannot be deleted or renamed and
       uses the system's native config paths. It does support memory and session settings —
-      use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
+      use <code>orrery sandbox memory isolate</code> / <code>share</code> / <code>storage</code> to
       control where its project memory lives, and choose per-tool session sharing during
-      <code>orrery setup</code>. Run <code>orrery info origin</code> to see full state.
+      <code>orrery setup</code>. Run <code>orrery sandbox info origin</code> to see full state.
     </p>
     <p style="margin-top:1rem">
       <strong style="color:var(--text)">Reverting the takeover.</strong>
-      If you want a tool fully out of Orrery (back to its pre-setup state), release it:
+      To take a tool fully out of Orrery (back to its pre-setup state), uninstall — it
+      restores tools to their original locations and removes the shell integration:
     </p>
     <div class="code-block" style="margin-top:.5rem;font-size:.82rem">
-      <span class="prompt">$ </span>orrery origin status<br/>
-      <span style="color:var(--muted)"># show which tools are currently managed by Orrery</span><br/><br/>
-      <span class="prompt">$ </span>orrery origin release<br/>
-      <span style="color:var(--muted)"># restore all tools to their original locations</span><br/><br/>
-      <span class="prompt">$ </span>orrery origin release --claude<br/>
-      <span style="color:var(--muted)"># release just Claude</span><br/><br/>
       <span class="prompt">$ </span>orrery uninstall<br/>
       <span style="color:var(--muted)"># release everything + remove shell integration</span>
     </div>
@@ -787,9 +783,9 @@
       <h3>Work / Personal</h3>
       <p>Your company uses a Claude Team plan, and you have a personal Pro subscription. Instead of logging out and back in, just switch environments.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span style="color:var(--muted)"># → uses company Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orrery use personal<br/>
+        <span class="prompt">$ </span>orrery enter personal<br/>
         <span style="color:var(--muted)"># → uses personal Pro plan</span>
       </div>
     </div>
@@ -798,9 +794,9 @@
       <h3>Multiple Clients</h3>
       <p>Freelancers and consultants working with different clients — each with their own API keys and credentials. One command to switch context.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery create client-a --tool claude<br/>
-        <span class="prompt">$ </span>orrery create client-b --tool claude<br/>
-        <span class="prompt">$ </span>orrery use client-a
+        <span class="prompt">$ </span>orrery sandbox create client-a --tool claude<br/>
+        <span class="prompt">$ </span>orrery sandbox create client-b --tool claude<br/>
+        <span class="prompt">$ </span>orrery enter client-a
       </div>
     </div>
     <div class="feature-card">
@@ -808,11 +804,11 @@
       <h3>Resume After Switching</h3>
       <p>Mid-conversation with Claude on your work account? Switch to personal, do something, then switch back — your session is still there.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... working on a task ...</span><br/><br/>
-        <span class="prompt">$ </span>orrery use personal<br/>
-        <span class="prompt">$ </span>orrery use work<br/>
+        <span class="prompt">$ </span>orrery enter personal<br/>
+        <span class="prompt">$ </span>orrery enter work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → picks up exactly where you left off</span>
       </div>
@@ -932,7 +928,7 @@
         <p>By default, memory is stored under <code>~/.orrery</code>. You can redirect it to any directory — including an external wiki like <strong>Obsidian</strong> — so your AI memory lives alongside your notes.</p>
         <div style="margin-top:.75rem">
           <div class="code-block" style="font-size:.82rem">
-            <span class="prompt">$ </span>orrery memory storage ~/Documents/my-wiki/orrery<br/>
+            <span class="prompt">$ </span>orrery sandbox memory storage ~/Documents/my-wiki/orrery<br/>
             <span style="color:var(--muted)">New path has no memory yet. Copy current memory there?</span><br/>
             <span style="color:var(--muted)">▶ Copy memory to new path</span><br/>
             <span style="color:var(--muted)">  No, start fresh</span>
@@ -958,9 +954,9 @@
       <p>Same person, two machines. Start the daemon on each — Bonjour finds them automatically on the same network.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># Desktop</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9527<br/><br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527<br/><br/>
         <span style="color:var(--muted)"># Laptop (auto-discovers via Bonjour)</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -968,12 +964,12 @@
       <h3>Team Collaboration</h3>
       <p>Create a team, share an invite code. When teammates join and start the daemon, everyone's memory stays in sync.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sync team create my-team<br/>
-        <span class="prompt">$ </span>orrery sync team invite --port 9527<br/>
+        <span class="prompt">$ </span>orrery sandbox sync team create my-team<br/>
+        <span class="prompt">$ </span>orrery sandbox sync team invite --port 9527<br/>
         <span style="color:var(--muted)"># → share the invite code</span><br/><br/>
         <span style="color:var(--muted)"># Teammate joins:</span><br/>
-        <span class="prompt">$ </span>orrery sync team join &lt;code&gt;<br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9528
+        <span class="prompt">$ </span>orrery sandbox sync team join &lt;code&gt;<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9528
       </div>
     </div>
     <div class="feature-card">
@@ -981,7 +977,7 @@
       <h3>Encrypted (mTLS)</h3>
       <p>For sensitive environments. Both peers must present certificates signed by the same CA — unauthorized peers are rejected at handshake.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--tls-ca ca.pem \<br/>
         &nbsp;&nbsp;--tls-cert node.pem \<br/>
         &nbsp;&nbsp;--tls-key node-key.pem
@@ -993,9 +989,9 @@
       <p>Different offices, different networks. A lightweight rendezvous server coordinates peer discovery — data flows directly between peers.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
         <span style="color:var(--muted)"># On a VPS:</span><br/>
-        <span class="prompt">$ </span>orrery sync rendezvous --port 9600<br/><br/>
+        <span class="prompt">$ </span>orrery sandbox sync rendezvous --port 9600<br/><br/>
         <span style="color:var(--muted)"># Each peer:</span><br/>
-        <span class="prompt">$ </span>orrery sync daemon --port 9527 \<br/>
+        <span class="prompt">$ </span>orrery sandbox sync daemon --port 9527 \<br/>
         &nbsp;&nbsp;--rendezvous rv.example.com:9600
       </div>
     </div>
@@ -1015,32 +1011,42 @@
   <h2 class="section-title">Commands</h2>
   <div class="commands-grid">
     <div class="command-group">
-      <div class="command-group-title">Environments</div>
+      <div class="command-group-title">Sandbox state</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery create &lt;name&gt;</span><span class="cmd-desc">Create a new environment</span></div>
-        <div class="command-item"><span class="cmd">orrery delete &lt;name&gt;</span><span class="cmd-desc">Delete an environment</span></div>
-        <div class="command-item"><span class="cmd">orrery rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename an environment</span></div>
-        <div class="command-item"><span class="cmd">orrery list</span><span class="cmd-desc">List all environments</span></div>
-        <div class="command-item"><span class="cmd">orrery info [name]</span><span class="cmd-desc">Show environment details</span></div>
-      </div>
-    </div>
-    <div class="command-group">
-      <div class="command-group-title">Switching</div>
-      <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">Activate in current shell</span></div>
-        <div class="command-item"><span class="cmd">orrery deactivate</span><span class="cmd-desc">Deactivate current environment</span></div>
-        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">Print active environment</span></div>
+        <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">Activate a sandbox in current shell</span></div>
+        <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">Leave the current sandbox, return to origin</span></div>
         <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Configuration</div>
+      <div class="command-group-title">Accounts (top-level)</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery add</span><span class="cmd-desc">Add an account (--claude / --codex / --gemini)</span></div>
+        <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">List accounts</span></div>
+        <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">Show pinned account per tool</span></div>
+        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">Pin an account to the active sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">Remove an account from the pool</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Sandbox CRUD</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery sandbox create &lt;name&gt;</span><span class="cmd-desc">Create a sandbox (wizard)</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox delete [name]</span><span class="cmd-desc">Delete sandbox(es) (multi-select if no name)</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename a sandbox</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">List sandboxes</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">Show sandbox details</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox current</span><span class="cmd-desc">Print active sandbox</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Sandbox config</div>
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">Add a tool (wizard)</span></div>
         <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">Remove a tool</span></div>
-        <div class="command-item"><span class="cmd">orrery env set &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orrery env unset &lt;K&gt;</span><span class="cmd-desc">Remove an environment variable</span></div>
-        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set a per-sandbox env var</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">Remove a per-sandbox env var</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -1053,15 +1059,15 @@
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sync</div>
+      <div class="command-group-title">Sandbox sync (experimental)</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
-        <div class="command-item"><span class="cmd">orrery sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
-        <div class="command-item"><span class="cmd">orrery sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
-        <div class="command-item"><span class="cmd">orrery sync team create</span><span class="cmd-desc">Create a new team</span></div>
-        <div class="command-item"><span class="cmd">orrery sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
-        <div class="command-item"><span class="cmd">orrery sync team join</span><span class="cmd-desc">Join a team</span></div>
-        <div class="command-item"><span class="cmd">orrery sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync team create</span><span class="cmd-desc">Create a new team</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync team join</span><span class="cmd-desc">Join a team</span></div>
+        <div class="command-item"><span class="cmd">orrery sandbox sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -1086,8 +1092,18 @@
 
     <article class="changelog-entry">
       <div class="changelog-head">
-        <span class="changelog-ver">v2.6</span>
+        <span class="changelog-ver">v3.0</span>
         <span class="changelog-new">latest</span>
+        <h3>Accounts and sandboxes split · <code>orrery enter</code> / <code>orrery exit</code> verbs</h3>
+      </div>
+      <p class="changelog-body">The CLI is reshaped around the v3 mental model: <strong style="color:var(--text)">accounts</strong> and <strong style="color:var(--text)">sandboxes</strong> are two independent layers, and <strong style="color:var(--text)">origin</strong> is a <em>state</em> (no sandbox active), not a sandbox name. Account commands are promoted to top-level (<code>orrery add / list / show / use / remove</code>); sandbox CRUD moves under a <code>sandbox</code> subgroup (<code>orrery sandbox create / list / delete / info / rename / current / set-env / unset-env / memory / sync</code>).</p>
+      <p class="changelog-body">Two new top-level verbs handle sandbox state: <code>orrery enter &lt;name&gt;</code> opts into a sandbox, <code>orrery exit</code> returns to origin. <code>orrery enter origin</code> is rejected and points the user at <code>exit</code>. Transparent switch: <code>enter X</code> while in sandbox Y unexports Y and exports X — no need to <code>exit</code> first. The old <code>orrery use &lt;env&gt;</code> / <code>orrery deactivate</code> are gone; the bare <code>orrery use</code> is now the <strong style="color:var(--text)">account</strong> switcher.</p>
+      <p class="changelog-body">Other removals: <code>orrery auth</code> (credentials live in the account pool), <code>orrery origin status / release</code> (use <code>orrery uninstall</code>), <code>orrery sandbox use</code> (was a brief v3-dev stepping stone). <code>PhantomTriggerCommand</code> renamed to <code>PhantomSandboxTriggerCommand</code>; the phantom-supervisor loop translates <code>TARGET_SANDBOX=origin</code> to <code>orrery exit</code>. L10n keys renamed <code>use.*</code> → <code>enter.*</code> / <code>exit.*</code> with three new keys for the new error and no-op paths. 243 tests passing.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <div class="changelog-head">
+        <span class="changelog-ver">v2.6</span>
         <h3>Phantom env switching: <code>/orrery:phantom &lt;env&gt;</code> mid-conversation</h3>
       </div>
       <p class="changelog-body"><code>orrery run claude</code> is now phantom-supervised by default. When <code>/orrery:phantom &lt;env&gt;</code> fires from inside Claude, the supervisor relaunches Claude with the new env active and <code>--resume</code>, so the conversation continues uninterrupted across account switches. Opt out with <code>orrery run --non-phantom claude</code>. The slash command is installed both globally (<code>~/.claude/commands/</code>, for the <code>origin</code> env) and project-locally via <code>orrery mcp setup</code> — project-local commands are read regardless of <code>CLAUDE_CONFIG_DIR</code>, making phantom available under any non-origin env.</p>
