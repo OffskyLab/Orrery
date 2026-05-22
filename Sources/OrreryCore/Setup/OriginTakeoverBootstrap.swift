@@ -1,8 +1,8 @@
 import Foundation
 
 /// Automatically takes over unmanaged tool configs on every orrery invocation,
-/// unless the user has explicitly opted out (via `orrery origin release` or
-/// `orrery uninstall`, which write `~/.orrery/.no-origin-takeover`).
+/// unless the user has explicitly opted out (via `orrery uninstall`, which
+/// writes `~/.orrery/.no-origin-takeover`).
 ///
 /// Skipped when:
 /// - the opt-out marker is present

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Drives the per-tool setup flow (login copy → clone → sessions → memory) used by
-/// both `orrery create` and `orrery tools add`. Keeps create/tools thin.
+/// both `orrery sandbox create` and `orrery tools add`. Keeps create/tools thin.
 public enum ToolSetupRunner {
 
     public struct Config {

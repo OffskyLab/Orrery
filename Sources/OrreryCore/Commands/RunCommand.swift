@@ -49,7 +49,7 @@ public struct RunCommand: ParsableCommand {
             }
         }
 
-        // Idempotent safety net: `orrery account use` already materialized the
+        // Idempotent safety net: `orrery use` already materialized the
         // pinned account's credentials at switch time. This re-asserts them in
         // case the pin changed by some other path before launch.
         if let tool = Tool(rawValue: command[0]) {
