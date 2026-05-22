@@ -61,7 +61,11 @@ struct ShellFunctionGeneratorTests {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("TARGET_ACCOUNT_TOOL"))
         #expect(script.contains("TARGET_ACCOUNT_NAME"))
-        #expect(script.contains("account use --\"$TARGET_ACCOUNT_TOOL\" --name \"$TARGET_ACCOUNT_NAME\""))
+        // v3: the account switcher is the top-level `orrery use`, and the
+        // account name is a positional argument — not the v2-era
+        // `orrery account use --name <name>`.
+        #expect(script.contains("use --\"$TARGET_ACCOUNT_TOOL\" \"$TARGET_ACCOUNT_NAME\""))
+        #expect(!script.contains("orrery-bin account use"))
     }
 
     @Test("orrery add --claude routes through shell function with TTY-attached claude")

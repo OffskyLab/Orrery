@@ -186,7 +186,7 @@ public struct ShellFunctionGenerator {
                     fi
                   fi
                   if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
-                    command orrery-bin account use --"$TARGET_ACCOUNT_TOOL" --name "$TARGET_ACCOUNT_NAME" || break
+                    command orrery-bin use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME" || break
                   fi
                   # After a phantom switch, --resume <new-session-id> is the only
                   # arg we want — the user's original flags don't carry over (they
