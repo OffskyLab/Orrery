@@ -46,7 +46,7 @@ public struct InstallCommand: ParsableCommand {
 
 func installCurrentEnvOrThrow() throws -> String {
     guard let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-        throw ValidationError("No active environment. Use --env <env> or switch with `orrery use <env>`.")
+        throw ValidationError("No active environment. Use --env <env> or switch with `orrery sandbox use <env>`.")
     }
     return env
 }
