@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>orrery enter / exit 動詞設計</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --pink: #ff7eb6;
+    --orange: #f0883e;
+    --code-bg: #0d1117;
+    --enter: #3fb950;
+    --exit: #f0883e;
+    --origin: #8b949e;
+    --sandbox: #58a6ff;
+    --removed: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Noto Sans CJK TC", sans-serif;
+    line-height: 1.6;
+    padding: 32px 20px 80px;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: 0.3px; }
+  h2 { font-size: 19px; margin: 40px 0 16px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 15px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  p { margin: 8px 0; }
+  .lede { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  .meta { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+  code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; color: var(--text); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 13px; }
+  th, td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; background: var(--panel-2); }
+  td.kbd code { white-space: nowrap; }
+
+  /* === Tag colors === */
+  .tag-enter { color: var(--enter); }
+  .tag-exit { color: var(--exit); }
+  .tag-origin { color: var(--origin); }
+  .tag-sandbox { color: var(--sandbox); }
+  .tag-removed { color: var(--removed); text-decoration: line-through; }
+
+  /* === Hero diagram: before / after === */
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 16px;
+    align-items: stretch;
+    margin: 24px 0 12px;
+  }
+  .before-after .arrow {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: var(--muted);
+  }
+  .ba-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+  }
+  .ba-card.before { border-color: rgba(248, 81, 73, 0.35); }
+  .ba-card.after { border-color: rgba(63, 185, 80, 0.35); }
+  .ba-tag {
+    display: inline-block; font-size: 10px; letter-spacing: 1.5px; font-weight: 700;
+    padding: 3px 8px; border-radius: 4px; margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .ba-card.before .ba-tag { background: rgba(248, 81, 73, 0.15); color: var(--red); }
+  .ba-card.after  .ba-tag { background: rgba(63, 185, 80, 0.15); color: var(--green); }
+  .ba-card h3 { margin: 0 0 10px; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; }
+  .ba-card p { margin: 6px 0; color: var(--muted); font-size: 13px; }
+  .ba-card .pain { color: var(--red); font-size: 12px; margin-top: 10px; }
+  .ba-card .win { color: var(--green); font-size: 12px; margin-top: 10px; }
+
+  /* === State machine SVG container === */
+  .state-machine {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0 8px;
+    display: flex;
+    justify-content: center;
+  }
+  .state-machine svg { max-width: 100%; height: auto; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px 22px;
+    font-size: 12px; color: var(--muted);
+    margin: 8px 4px 0;
+  }
+  .legend .sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+
+  /* === Verb chips === */
+  .verb {
+    display: inline-block;
+    padding: 3px 9px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .verb.enter   { color: var(--enter);   border-color: rgba(63, 185, 80, 0.4); }
+  .verb.exit    { color: var(--exit);    border-color: rgba(240, 136, 62, 0.4); }
+  .verb.sandbox { color: var(--sandbox); border-color: rgba(88, 166, 255, 0.4); }
+  .verb.removed { color: var(--removed); border-color: rgba(248, 81, 73, 0.4); text-decoration: line-through; opacity: 0.7; }
+  .verb.new     { color: var(--green);   border-color: rgba(63, 185, 80, 0.4); }
+
+  /* === Surface tree === */
+  .surface {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .surface-col {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .surface-col h3 { margin-top: 0; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 14px; }
+  .tree { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; line-height: 1.8; }
+  .tree .branch { color: var(--muted); }
+  .tree .added { color: var(--green); }
+  .tree .removed { color: var(--red); text-decoration: line-through; opacity: 0.7; }
+  .tree .kept { color: var(--text); }
+
+  /* === Behavior matrix === */
+  table.behavior td:first-child { width: 30%; }
+  table.behavior td.outcome { width: 14%; font-weight: 600; }
+  table.behavior tr.ok td.outcome  { color: var(--green); }
+  table.behavior tr.no td.outcome  { color: var(--red); }
+  table.behavior tr.noop td.outcome { color: var(--orange); }
+
+  /* === Sequence diagram === */
+  .seq {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin: 14px 0;
+    overflow-x: auto;
+  }
+
+  /* === L10n migration table === */
+  table.migrate td.from { color: var(--muted); }
+  table.migrate td.to   { color: var(--green); }
+  table.migrate td.note { color: var(--muted); font-size: 12px; }
+
+  /* === Step cards === */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  .step .num {
+    position: absolute;
+    top: 8px; right: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .step .title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .step .body { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* === Scope columns === */
+  .scope {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .scope-col {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .scope-col.in  { border-color: rgba(63, 185, 80, 0.35); }
+  .scope-col.out { border-color: rgba(248, 81, 73, 0.35); }
+  .scope-col h3 { margin: 0 0 10px; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 14px; }
+  .scope-col ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .scope-col li { margin: 4px 0; }
+  .scope-col.in  h3::before { content: "✓ "; color: var(--green); }
+  .scope-col.out h3::before { content: "✗ "; color: var(--red); }
+
+  /* === Callout boxes === */
+  .callout {
+    background: var(--panel-2);
+    border-left: 3px solid var(--blue);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .callout strong { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>orrery <span class="tag-enter">enter</span> / <span class="tag-exit">exit</span> 動詞設計</h1>
+  <div class="meta">2026-05-22 · feat/v3-command-restructure · brainstorm 完成設計</div>
+  <div class="lede">
+    用兩個 top-level 動詞 <code>orrery enter &lt;sandbox&gt;</code> 和 <code>orrery exit</code> 取代
+    <code>orrery sandbox use &lt;name&gt;</code> — 把「進入 sandbox」(opt-in) 和「回到 origin」(opt-out)
+    當成兩個對等但相反的動作,而不是塞進同一個 verb,讓 origin 永遠是「沒進 sandbox」的狀態而不是某種叫 origin 的 sandbox。
+  </div>
+
+
+  <h2>1. 為什麼要動</h2>
+
+  <div class="before-after">
+    <div class="ba-card before">
+      <div class="ba-tag">v3 草案</div>
+      <h3>一個動詞兼差兩件事</h3>
+      <p><code>orrery sandbox use S-A</code> — 進入 sandbox</p>
+      <p><code>orrery sandbox use origin</code> — 回到 origin</p>
+      <p class="pain">↳ origin 被當成一種「叫 origin 的 sandbox」, 跟使用者心智模型「origin = 我真正的 config」不合。</p>
+      <p class="pain">↳ Hint string 要嘛印 <code>orrery sandbox use origin</code> 這種彆扭句, 要嘛假裝沒這個 case。</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="ba-card after">
+      <div class="ba-tag">新設計</div>
+      <h3>對稱的兩個動詞</h3>
+      <p><code class="tag-enter">orrery enter S-A</code> — 進入 sandbox</p>
+      <p><code class="tag-exit">orrery exit</code> — 離開回 origin</p>
+      <p class="win">↳ 「進入」跟「離開」對稱,使用者直覺。</p>
+      <p class="win">↳ Origin 變回「狀態」, 不再是某個 sandbox 的名字。</p>
+      <p class="win">↳ v3 還沒 ship, 砍 <code>sandbox use</code> 零相容性成本。</p>
+    </div>
+  </div>
+
+
+  <h2>2. 狀態機</h2>
+
+  <div class="state-machine">
+    <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" width="100%" font-family="-apple-system, sans-serif">
+      <defs>
+        <marker id="arrow-enter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#3fb950"/>
+        </marker>
+        <marker id="arrow-exit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0883e"/>
+        </marker>
+        <marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
+        </marker>
+        <marker id="arrow-noop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b949e"/>
+        </marker>
+        <marker id="arrow-rej" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f85149"/>
+        </marker>
+      </defs>
+
+      <!-- origin node -->
+      <ellipse cx="160" cy="180" rx="92" ry="56" fill="#1c2128" stroke="#8b949e" stroke-width="2"/>
+      <text x="160" y="172" text-anchor="middle" fill="#e6edf3" font-size="18" font-weight="600">origin</text>
+      <text x="160" y="194" text-anchor="middle" fill="#8b949e" font-size="11">(沒進 sandbox)</text>
+
+      <!-- sandbox node -->
+      <ellipse cx="560" cy="180" rx="100" ry="56" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
+      <text x="560" y="172" text-anchor="middle" fill="#58a6ff" font-size="18" font-weight="600">sandbox X</text>
+      <text x="560" y="194" text-anchor="middle" fill="#8b949e" font-size="11">ORRERY_ACTIVE_ENV=X</text>
+
+      <!-- enter X arrow (origin → sandbox) -->
+      <path d="M 252 158 Q 360 105 460 158" stroke="#3fb950" stroke-width="2.2" fill="none" marker-end="url(#arrow-enter)"/>
+      <text x="356" y="115" text-anchor="middle" fill="#3fb950" font-size="13" font-weight="600" font-family="SF Mono, Menlo, monospace">enter X</text>
+
+      <!-- exit arrow (sandbox → origin) -->
+      <path d="M 460 210 Q 360 263 252 210" stroke="#f0883e" stroke-width="2.2" fill="none" marker-end="url(#arrow-exit)"/>
+      <text x="356" y="265" text-anchor="middle" fill="#f0883e" font-size="13" font-weight="600" font-family="SF Mono, Menlo, monospace">exit</text>
+
+      <!-- transparent switch self-loop on sandbox -->
+      <path d="M 632 140 Q 700 80 660 220" stroke="#58a6ff" stroke-width="1.6" fill="none" marker-end="url(#arrow-loop)" stroke-dasharray="0"/>
+      <text x="685" y="100" text-anchor="middle" fill="#58a6ff" font-size="11" font-family="SF Mono, Menlo, monospace">enter Y</text>
+      <text x="685" y="115" text-anchor="middle" fill="#8b949e" font-size="10">(透明切換)</text>
+
+      <!-- exit at origin no-op self-loop -->
+      <path d="M 100 220 Q 30 290 130 240" stroke="#8b949e" stroke-width="1.4" fill="none" marker-end="url(#arrow-noop)" stroke-dasharray="3 3"/>
+      <text x="50" y="295" text-anchor="middle" fill="#8b949e" font-size="11" font-family="SF Mono, Menlo, monospace">exit</text>
+      <text x="58" y="310" text-anchor="middle" fill="#8b949e" font-size="10">(no-op + 提醒)</text>
+
+      <!-- enter origin rejected -->
+      <path d="M 250 130 Q 200 50 152 122" stroke="#f85149" stroke-width="1.4" fill="none" marker-end="url(#arrow-rej)" stroke-dasharray="4 4"/>
+      <text x="200" y="40" text-anchor="middle" fill="#f85149" font-size="11" font-family="SF Mono, Menlo, monospace">enter origin</text>
+      <text x="200" y="54" text-anchor="middle" fill="#f85149" font-size="10">(拒絕, 指向 exit)</text>
+    </svg>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#3fb950"></span>進入</span>
+    <span><span class="sw" style="background:#f0883e"></span>退出</span>
+    <span><span class="sw" style="background:#58a6ff"></span>透明切換</span>
+    <span><span class="sw" style="background:#8b949e; opacity: 0.6;"></span>no-op</span>
+    <span><span class="sw" style="background:#f85149"></span>拒絕</span>
+  </div>
+
+
+  <h2>3. 行為矩陣</h2>
+
+  <table class="behavior">
+    <thead>
+      <tr><th>輸入</th><th>目前狀態</th><th>結果</th><th>動作</th></tr>
+    </thead>
+    <tbody>
+      <tr class="ok">
+        <td class="kbd"><code>orrery enter X</code></td>
+        <td>origin</td>
+        <td class="outcome">OK</td>
+        <td>export X · <code>ORRERY_ACTIVE_ENV=X</code> · 印 switched 訊息</td>
+      </tr>
+      <tr class="ok">
+        <td class="kbd"><code>orrery enter X</code></td>
+        <td>sandbox Y</td>
+        <td class="outcome">透明切換</td>
+        <td>unexport Y · export X · <code>ORRERY_ACTIVE_ENV=X</code> · 印 switched 訊息</td>
+      </tr>
+      <tr class="no">
+        <td class="kbd"><code>orrery enter origin</code></td>
+        <td>任何</td>
+        <td class="outcome">拒絕</td>
+        <td>stderr: <code>'origin' is not a sandbox — use 'orrery exit' to leave the current sandbox.</code> exit 1</td>
+      </tr>
+      <tr class="no">
+        <td class="kbd"><code>orrery enter &lt;not-exist&gt;</code></td>
+        <td>任何</td>
+        <td class="outcome">錯誤</td>
+        <td>stderr: <code>sandbox '&lt;name&gt;' not found</code> exit 1（同現行 <code>sandbox use</code> 錯誤）</td>
+      </tr>
+      <tr class="ok">
+        <td class="kbd"><code>orrery exit</code></td>
+        <td>sandbox X</td>
+        <td class="outcome">OK</td>
+        <td>unexport X · unset Claude/Codex/Gemini env vars · <code>ORRERY_ACTIVE_ENV=origin</code> · 寫 current=origin · 印 switched-to-origin 訊息</td>
+      </tr>
+      <tr class="noop">
+        <td class="kbd"><code>orrery exit</code></td>
+        <td>origin</td>
+        <td class="outcome">no-op</td>
+        <td>stderr: <code>Already at origin (no sandbox active).</code> exit 0</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <h2>4. CLI surface 變化</h2>
+
+  <div class="surface">
+    <div class="surface-col">
+      <h3>Top-level（OrreryCommand subcommands）</h3>
+      <div style="margin: 6px 0 4px;">
+        <span class="verb new">enter</span>
+        <span class="verb new">exit</span>
+        <span class="verb">add</span>
+        <span class="verb">list</span>
+        <span class="verb">show</span>
+        <span class="verb">use</span>
+        <span class="verb">remove</span>
+        <span class="verb sandbox">sandbox</span>
+        <span class="verb">tools</span>
+        <span class="verb">which</span>
+        <span class="verb">run</span>
+        <span class="verb">resume</span>
+        <span class="verb">delegate</span>
+        <span class="verb">sessions</span>
+        <span class="verb">setup</span>
+        <span class="verb">init</span>
+        <span class="verb">update</span>
+        <span class="verb">uninstall</span>
+        <span class="verb">install</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px;">
+        加上 <code class="tag-enter">enter</code>、<code class="tag-exit">exit</code> 兩個新 verb；其他不動。
+      </p>
+    </div>
+
+    <div class="surface-col">
+      <h3>orrery sandbox subcommands</h3>
+      <div style="margin: 6px 0 4px;">
+        <span class="verb removed">use</span>
+        <span class="verb">create</span>
+        <span class="verb">list</span>
+        <span class="verb">delete</span>
+        <span class="verb">info</span>
+        <span class="verb">rename</span>
+        <span class="verb">current</span>
+        <span class="verb">set-env</span>
+        <span class="verb">unset-env</span>
+        <span class="verb">memory</span>
+        <span class="verb">sync</span>
+        <span class="verb">export</span>
+        <span class="verb">unexport</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px;">
+        砍掉 <code class="tag-removed">sandbox use</code>；其他 12 個 subcommand 留著。
+      </p>
+    </div>
+  </div>
+
+
+  <h2>5. Shell function dispatch（top-level case）</h2>
+
+  <div class="surface">
+    <div class="surface-col">
+      <h3>v3 草案（已 commit）</h3>
+      <div class="tree">
+        <div class="branch">orrery() {</div>
+        <div class="branch">  case "$cmd" in</div>
+        <div class="kept">    sandbox)</div>
+        <div class="branch">      case "${2:-}" in</div>
+        <div class="removed">        use) <span style="color:#8b949e">[44 行 env-var dance + origin branch]</span></div>
+        <div class="kept">        create) ...</div>
+        <div class="kept">        *) command orrery-bin "$@"</div>
+        <div class="branch">      esac ;;</div>
+        <div class="kept">    run) ...</div>
+        <div class="kept">    add) ...</div>
+        <div class="kept">    *)  command orrery-bin "$@"</div>
+        <div class="branch">  esac</div>
+        <div class="branch">}</div>
+      </div>
+    </div>
+
+    <div class="surface-col">
+      <h3>新設計</h3>
+      <div class="tree">
+        <div class="branch">orrery() {</div>
+        <div class="branch">  case "$cmd" in</div>
+        <div class="added">    enter) <span style="color:#8b949e">[原 sandbox/use 內容 + 拒絕 enter origin]</span></div>
+        <div class="added">    exit)  <span style="color:#8b949e">[原 sandbox/use 的 origin 分支 + no-op 提醒]</span></div>
+        <div class="kept">    sandbox)</div>
+        <div class="branch">      case "${2:-}" in</div>
+        <div class="kept">        create) ...</div>
+        <div class="kept">        *) command orrery-bin "$@"</div>
+        <div class="branch">      esac ;;</div>
+        <div class="kept">    run) ...</div>
+        <div class="kept">    add) ...</div>
+        <div class="kept">    *)  command orrery-bin "$@"</div>
+        <div class="branch">  esac</div>
+        <div class="branch">}</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>需要連帶更新的兩個 call site</h3>
+  <table>
+    <thead><tr><th>位置</th><th>舊</th><th>新</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>_orrery_init</code> 自動啟用</td>
+        <td><code>orrery sandbox use "$env_name"</code></td>
+        <td><code class="tag-enter">orrery enter "$env_name"</code></td>
+      </tr>
+      <tr>
+        <td><code>run)</code> case 內 phantom-claude target 預設</td>
+        <td><code>orrery sandbox use "$_run_target"</code></td>
+        <td><code class="tag-enter">orrery enter "$_run_target"</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <h2>6. Phantom 流程</h2>
+
+  <p>Sentinel 不變、slash command 不變 — 只在 supervisor 端做一次 origin 翻譯。</p>
+
+  <div class="seq">
+    <svg viewBox="0 0 920 360" xmlns="http://www.w3.org/2000/svg" width="100%" font-family="-apple-system, sans-serif">
+      <!-- lanes -->
+      <g font-size="12" font-weight="600" fill="#e6edf3">
+        <text x="100" y="24" text-anchor="middle">user (in claude)</text>
+        <text x="320" y="24" text-anchor="middle">/orrery:phantom</text>
+        <text x="540" y="24" text-anchor="middle">.phantom-sentinel</text>
+        <text x="760" y="24" text-anchor="middle">supervisor shell loop</text>
+      </g>
+      <g stroke="#30363d" stroke-width="1" stroke-dasharray="3 4">
+        <line x1="100" y1="36" x2="100" y2="340"/>
+        <line x1="320" y1="36" x2="320" y2="340"/>
+        <line x1="540" y1="36" x2="540" y2="340"/>
+        <line x1="760" y1="36" x2="760" y2="340"/>
+      </g>
+
+      <!-- step 1: user calls slash command -->
+      <g>
+        <line x1="100" y1="70" x2="320" y2="70" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrow-loop)"/>
+        <text x="210" y="62" text-anchor="middle" fill="#58a6ff" font-size="11" font-family="SF Mono, Menlo, monospace">/orrery:phantom sandbox X</text>
+      </g>
+
+      <!-- step 2: trigger writes sentinel -->
+      <g>
+        <line x1="320" y1="110" x2="540" y2="110" stroke="#bc8cff" stroke-width="1.5" marker-end="url(#arrow-loop)"/>
+        <text x="430" y="102" text-anchor="middle" fill="#bc8cff" font-size="11" font-family="SF Mono, Menlo, monospace">writeSentinel(TARGET_SANDBOX=X)</text>
+      </g>
+
+      <!-- step 3: claude exits -->
+      <g>
+        <line x1="320" y1="150" x2="100" y2="150" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arrow-noop)" stroke-dasharray="3 3"/>
+        <text x="210" y="142" text-anchor="middle" fill="#8b949e" font-size="11">signal claude SIGTERM, claude exits</text>
+      </g>
+
+      <!-- step 4: supervisor reads sentinel -->
+      <g>
+        <line x1="760" y1="190" x2="540" y2="190" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrow-loop)"/>
+        <text x="650" y="182" text-anchor="middle" fill="#58a6ff" font-size="11" font-family="SF Mono, Menlo, monospace">source $sentinel</text>
+      </g>
+
+      <!-- step 5: supervisor translates -->
+      <g>
+        <rect x="600" y="210" width="320" height="60" rx="6" fill="#0d1117" stroke="#30363d"/>
+        <text x="760" y="232" text-anchor="middle" fill="#e6edf3" font-size="12" font-family="SF Mono, Menlo, monospace">if [ "$TARGET_SANDBOX" = "origin" ]; then</text>
+        <text x="760" y="248" text-anchor="middle" fill="#f0883e" font-size="12" font-family="SF Mono, Menlo, monospace">  orrery exit</text>
+        <text x="760" y="262" text-anchor="middle" fill="#e6edf3" font-size="12" font-family="SF Mono, Menlo, monospace">else <tspan fill="#3fb950">orrery enter "$TARGET_SANDBOX"</tspan>; fi</text>
+      </g>
+
+      <!-- step 6: relaunch claude -->
+      <g>
+        <line x1="760" y1="310" x2="100" y2="310" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arrow-enter)"/>
+        <text x="430" y="302" text-anchor="middle" fill="#3fb950" font-size="11" font-family="SF Mono, Menlo, monospace">claude --resume（新 sandbox env 已套用）</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="callout">
+    <strong>關鍵：</strong>
+    <code>PhantomSandboxTriggerCommand</code> 本身不動 — 它寫 sentinel 的方式照舊。
+    唯一的翻譯邏輯放在 shell function 的 phantom-loop 裡，集中、好驗證、也不會洩漏到使用者面前。
+  </div>
+
+
+  <h2>7. L10n key 重映射</h2>
+
+  <h3>重命名（v3 草案還沒 ship、key path 自由動）</h3>
+  <table class="migrate">
+    <thead><tr><th>舊 key</th><th>新 key</th><th>備註</th></tr></thead>
+    <tbody>
+      <tr><td class="from"><code>use.abstract</code></td><td class="to"><code>enter.abstract</code></td><td class="note">enter 指令的 abstract</td></tr>
+      <tr><td class="from"><code>use.nameHelp</code></td><td class="to"><code>enter.nameHelp</code></td><td class="note">positional &lt;sandbox&gt;</td></tr>
+      <tr><td class="from"><code>use.needsShellIntegration</code></td><td class="to"><code>enter.needsShellIntegration</code></td><td class="note">enter 跟 exit 共用此條；內容改成「<code>'orrery enter' or 'orrery exit' requires shell integration.</code>」</td></tr>
+      <tr><td class="from"><code>use.switched</code></td><td class="to"><code>enter.switched</code></td><td class="note">「Switched to sandbox: %s」</td></tr>
+      <tr><td class="from"><code>use.switchedToOrigin</code></td><td class="to"><code>exit.switched</code></td><td class="note">語意對齊 exit；「Left sandbox, back to origin.」</td></tr>
+    </tbody>
+  </table>
+
+  <h3>新增</h3>
+  <table class="migrate">
+    <thead><tr><th>key</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td class="to"><code>exit.abstract</code></td><td class="note">「Leave the current sandbox and return to origin.」</td></tr>
+      <tr><td class="to"><code>exit.alreadyAtOrigin</code></td><td class="note">在 origin 打 exit 的友善提醒</td></tr>
+      <tr><td class="to"><code>enter.cannotEnterOrigin</code></td><td class="note">「'origin' is not a sandbox — use 'orrery exit' to leave the current sandbox.」</td></tr>
+    </tbody>
+  </table>
+
+  <h3>內容更新（既有 key、字串裡的指令名換掉）</h3>
+  <table>
+    <thead><tr><th>key</th><th>裡頭的字串</th></tr></thead>
+    <tbody>
+      <tr><td><code>create.firstEnvCreated</code> × 3 langs</td><td><code>orrery sandbox use {name}</code> → <code class="tag-enter">orrery enter {name}</code></td></tr>
+      <tr><td><code>info.noActive</code> × 3 langs</td><td>同上</td></tr>
+      <tr><td><code>memory.noActiveEnv</code> × 3 langs</td><td>同上</td></tr>
+      <tr><td><code>tools.noActive</code> × 3 langs</td><td>同上</td></tr>
+      <tr><td><code>which.noActive</code> × 3 langs</td><td>同上</td></tr>
+      <tr><td><code>sandbox.setEnvNoActive</code> × 3 langs</td><td>同上</td></tr>
+      <tr><td><code>ThirdPartyCommand.swift</code> / <code>InstallCommand.swift</code> ValidationError</td><td>同上（不在 L10n 裡的字串）</td></tr>
+    </tbody>
+  </table>
+
+
+  <h2>8. 實作順序</h2>
+
+  <div class="steps">
+    <div class="step"><span class="num">1</span><div class="title">L10n 字串</div><div class="body">en/zh-Hant/ja 三檔；新增 + 重命名 + 改字串。先做才能讓 generated <code>L10n.Enter.*</code> 出現。</div></div>
+    <div class="step"><span class="num">2</span><div class="title">新增 Swift Command</div><div class="body"><code>EnterCommand.swift</code>、<code>ExitCommand.swift</code>，註冊到 <code>OrreryCommand</code>。</div></div>
+    <div class="step"><span class="num">3</span><div class="title">砍 SandboxCommand.Use</div><div class="body">struct 整段刪除、<code>Use.self</code> 從 sandbox subcommands 移除。</div></div>
+    <div class="step"><span class="num">4</span><div class="title">ShellFunctionGenerator</div><div class="body">加 <code>enter)</code> / <code>exit)</code>、拆掉 <code>sandbox)/use)</code>、更新 init + run 兩處呼叫。</div></div>
+    <div class="step"><span class="num">5</span><div class="title">Phantom 翻譯</div><div class="body">phantom-loop 那段加 <code>TARGET_SANDBOX=origin</code> 條件。</div></div>
+    <div class="step"><span class="num">6</span><div class="title">Tests</div><div class="body"><code>ShellFunctionGeneratorTests</code> 改斷言；補 enter/exit case 存在性、phantom 翻譯邏輯。</div></div>
+    <div class="step"><span class="num">7</span><div class="title">Hint 字串收尾</div><div class="body">L10n 跟 source code 裡仍指 <code>orrery sandbox use</code> 的全換 enter。</div></div>
+    <div class="step"><span class="num">8</span><div class="title">keys.md</div><div class="body">doc 表跟新 key 名對齊。</div></div>
+    <div class="step"><span class="num">9</span><div class="title">build + test</div><div class="body"><code>swift build</code> → <code>swift test</code> → 拆 commit（可能 2-3 顆）。</div></div>
+    <div class="step"><span class="num">10</span><div class="title">刷 v3 sandbox</div><div class="body">rebuild release → 複製到 <code>~/.orrery-v3/bin/</code> → 重新生成 <code>activate.sh</code>。</div></div>
+    <div class="step"><span class="num">11</span><div class="title">Push</div><div class="body">推到 <code>origin/feat/v3-command-restructure</code>。</div></div>
+  </div>
+
+
+  <h2>9. 範圍</h2>
+
+  <div class="scope">
+    <div class="scope-col in">
+      <h3>範圍內</h3>
+      <ul>
+        <li>新增 <code>orrery enter</code> / <code>orrery exit</code> top-level commands</li>
+        <li>刪除 <code>orrery sandbox use</code>（CLI + shell + L10n）</li>
+        <li>L10n key 重命名 <code>use.*</code> → <code>enter.*</code> / <code>exit.*</code></li>
+        <li>所有指向 <code>orrery sandbox use</code> 的 hint 字串全換</li>
+        <li>Phantom supervisor 加 <code>TARGET_SANDBOX=origin</code> 翻譯</li>
+        <li><code>_orrery_init</code> + <code>run)</code> 兩處 call site 改用 enter</li>
+        <li>對應 tests 更新</li>
+        <li><code>keys.md</code> doc 對齊</li>
+      </ul>
+    </div>
+    <div class="scope-col out">
+      <h3>不在範圍</h3>
+      <ul>
+        <li>不重命名 env var <code>ORRERY_ACTIVE_ENV</code>（牽連 statusline / MCP / 外部 consumer）</li>
+        <li>不重命名 Swift 內部型別 <code>EnvironmentStore</code> / <code>Environment</code> / <code>ReservedEnvironment</code></li>
+        <li>不動 <code>SandboxCommand</code> 其他 12 個 subcommand</li>
+        <li>沒有 <code>sandbox use</code> compat alias / hidden command（v3 未 ship、乾淨切）</li>
+        <li>不改 <code>PhantomSandboxTriggerCommand</code> 自身 sentinel 寫法</li>
+        <li>不改 <code>/orrery:phantom</code> slash command 介面</li>
+      </ul>
+    </div>
+  </div>
+
+
+  <h2>10. 風險與回滾</h2>
+
+  <div class="callout">
+    <strong>Pre-ship、無外部依賴：</strong>
+    v3 還沒釋出，沒人在用 <code>sandbox use</code>。若實作後發現方向不對, 回 revert 即可、spec 保留作為紀錄。
+    Shell function 在每次 <code>eval "$(orrery init)"</code> 重新生成 — 同一台機器不會卡在「半套用」狀態。
+  </div>
+
+
+  <h2>11. Open questions</h2>
+  <p style="color:var(--muted);">無 — brainstorm 過程中所有設計分歧都已收斂。</p>
+
+</div>
+</body>
+</html>
