@@ -29,59 +29,62 @@ public struct ShellFunctionGenerator {
 
           local cmd="${1:-}"
           case "$cmd" in
-            use)
-              if [ -z "${2:-}" ]; then
-                echo "Usage: orrery use <name>" >&2
-                return 1
-              fi
-              # Unexport previous env vars if switching
-              if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
-                eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
-              fi
-              if [ "$2" = "origin" ]; then
-                unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
-                export ORRERY_ACTIVE_ENV="origin"
-                command orrery-bin _set-current origin 2>/dev/null || true
-              else
-                local exports
-                exports=$(command orrery-bin sandbox _export "$2") || { echo "orrery: environment '$2' not found" >&2; return 1; }
-                eval "$exports"
-                export ORRERY_ACTIVE_ENV="$2"
-                command orrery-bin _set-current "$2" 2>/dev/null || true
-                # Background quota refresh so `orrery list` shows fresh data
-                # next time. Double subshell hides the job notice from
-                # interactive shells, just like the update check above.
-                ( ( command orrery-bin quota refresh -e "$2" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
-              fi
-              printf "\(L10n.Use.switched)\\n" "$2"
-              ;;
-            deactivate)
-              orrery use origin
-              ;;
             sandbox)
-              if [ "${2:-}" = "create" ]; then
-                command orrery-bin "$@"
-                if [ $? -eq 0 ]; then
-                  local _name="" _skip=0
-                  for _arg in "${@:3}"; do
-                    if [ $_skip -eq 1 ]; then _skip=0; continue; fi
-                    case "$_arg" in
-                      --description|--clone|--tool|--copy-login-from) _skip=1 ;;
-                      --*) ;;
-                      *) _name="$_arg"; break ;;
-                    esac
-                  done
-                  if [ -n "$_name" ]; then
-                    printf "切換到 sandbox '%s'？[Y/n] " "$_name"
-                    read -r _ans </dev/tty
-                    case "${_ans:-Y}" in
-                      [Yy]*|"") orrery sandbox use "$_name" ;;
-                    esac
+              case "${2:-}" in
+                use)
+                  # Shell-side env-var export when switching sandbox.
+                  # `shift` so $2 becomes the sandbox name (was "use" before).
+                  shift
+                  if [ -z "${2:-}" ]; then
+                    echo "Usage: orrery sandbox use <name>" >&2
+                    return 1
                   fi
-                fi
-              else
-                command orrery-bin "$@"
-              fi
+                  # Unexport previous sandbox's env vars if switching
+                  if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
+                    eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
+                  fi
+                  if [ "$2" = "origin" ]; then
+                    unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
+                    export ORRERY_ACTIVE_ENV="origin"
+                    command orrery-bin _set-current origin 2>/dev/null || true
+                  else
+                    local exports
+                    exports=$(command orrery-bin sandbox _export "$2") || { echo "orrery: sandbox '$2' not found" >&2; return 1; }
+                    eval "$exports"
+                    export ORRERY_ACTIVE_ENV="$2"
+                    command orrery-bin _set-current "$2" 2>/dev/null || true
+                    # Background quota refresh so `orrery list` shows fresh data
+                    # next time. Double subshell hides the job notice from
+                    # interactive shells, just like the update check above.
+                    ( ( command orrery-bin quota refresh -e "$2" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
+                  fi
+                  printf "\(L10n.Use.switched)\\n" "$2"
+                  ;;
+                create)
+                  command orrery-bin "$@"
+                  if [ $? -eq 0 ]; then
+                    local _name="" _skip=0
+                    for _arg in "${@:3}"; do
+                      if [ $_skip -eq 1 ]; then _skip=0; continue; fi
+                      case "$_arg" in
+                        --description|--clone|--tool|--copy-login-from) _skip=1 ;;
+                        --*) ;;
+                        *) _name="$_arg"; break ;;
+                      esac
+                    done
+                    if [ -n "$_name" ]; then
+                      printf "切換到 sandbox '%s'？[Y/n] " "$_name"
+                      read -r _ans </dev/tty
+                      case "${_ans:-Y}" in
+                        [Yy]*|"") orrery sandbox use "$_name" ;;
+                      esac
+                    fi
+                  fi
+                  ;;
+                *)
+                  command orrery-bin "$@"
+                  ;;
+              esac
               ;;
             run)
               # Phantom mode is the default for `orrery run claude` — claude is
@@ -139,7 +142,7 @@ public struct ShellFunctionGenerator {
               # session-resume semantics so a supervisor loop adds no value.
               if [ $_run_non_phantom -eq 0 ] && [ "${1:-}" = "claude" ]; then
                 if [ -n "$_run_target" ]; then
-                  orrery use "$_run_target" || return $?
+                  orrery sandbox use "$_run_target" || return $?
                 fi
                 local _phantom_sentinel="$_orrery_home/.phantom-sentinel"
                 rm -f "$_phantom_sentinel"
@@ -184,37 +187,36 @@ public struct ShellFunctionGenerator {
                 fi
               fi
               ;;
-            account)
-              # `account add` for claude needs a real TTY-attached claude REPL.
+            add)
+              # `orrery add --claude` needs a real TTY-attached claude REPL.
               # Swift's Process doesn't give the child the foreground process group,
               # so claude silently exits. Route the claude case through the shell
               # so `command claude` gets the controlling terminal directly.
               # codex/gemini work fine via the regular orrery-bin path (their login
               # subcommands open a browser and don't need TTY foreground).
-              if [ "${2:-}" = "add" ]; then
-                # Help requests bypass the claude TTY interception so the user sees
-                # the public `account add` help, not the internal prepare/finalize.
-                for _a in "${@:3}"; do
-                  case "$_a" in
-                    -h|--help) command orrery-bin "$@"; return $?; ;;
-                  esac
-                done
+              #
+              # Help requests bypass the claude TTY interception so the user sees
+              # the public `add` help, not the internal prepare/finalize.
+              for _a in "${@:2}"; do
+                case "$_a" in
+                  -h|--help) command orrery-bin "$@"; return $?; ;;
+                esac
+              done
 
-                local _is_claude=1
-                for _a in "${@:3}"; do
-                  case "$_a" in
-                    --codex|--gemini) _is_claude=0; break ;;
-                  esac
-                done
-                if [ $_is_claude -eq 1 ]; then
-                  local _staging
-                  _staging=$(command orrery-bin _account-add-prepare "${@:3}") || return $?
-                  [ -z "$_staging" ] && { echo "orrery: prepare returned empty staging dir" >&2; return 1; }
-                  printf "\(L10n.Account.loginReadyHint)\\n"
-                  CLAUDE_CONFIG_DIR="$_staging" command claude
-                  command orrery-bin _account-add-finalize --staging "$_staging"
-                  return $?
-                fi
+              local _is_claude=1
+              for _a in "${@:2}"; do
+                case "$_a" in
+                  --codex|--gemini) _is_claude=0; break ;;
+                esac
+              done
+              if [ $_is_claude -eq 1 ]; then
+                local _staging
+                _staging=$(command orrery-bin _account-add-prepare "${@:2}") || return $?
+                [ -z "$_staging" ] && { echo "orrery: prepare returned empty staging dir" >&2; return 1; }
+                printf "\(L10n.Account.loginReadyHint)\\n"
+                CLAUDE_CONFIG_DIR="$_staging" command claude
+                command orrery-bin _account-add-finalize --staging "$_staging"
+                return $?
               fi
               command orrery-bin "$@"
               ;;
@@ -253,7 +255,7 @@ public struct ShellFunctionGenerator {
               echo "origin" > "$current_file" 2>/dev/null || true
             fi
             if [ -n "$env_name" ]; then
-              orrery use "$env_name" >/dev/null 2>&1 || true
+              orrery sandbox use "$env_name" >/dev/null 2>&1 || true
             fi
           fi
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
