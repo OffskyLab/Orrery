@@ -110,9 +110,12 @@ struct ShellFunctionGeneratorTests {
         let script = ShellFunctionGenerator.generate()
         // No bare `orrery sandbox use` left in the run case.
         #expect(!script.contains("orrery sandbox use \"$_run_target\""))
-        // origin → exit; other → enter.
+        // origin → exit; other → enter. Both branches asserted so a regression
+        // that drops either branch is caught — `|| return $?` is unique to the
+        // run case (the phantom loop uses `|| break`, init uses `|| true`).
         #expect(script.contains("if [ \"$_run_target\" = \"origin\" ]; then"))
-        #expect(script.contains("orrery enter \"$_run_target\""))
+        #expect(script.contains("orrery exit || return $?"))
+        #expect(script.contains("orrery enter \"$_run_target\" || return $?"))
     }
 
     @Test("phantom loop translates TARGET_SANDBOX=origin into orrery exit")
@@ -120,10 +123,12 @@ struct ShellFunctionGeneratorTests {
         let script = ShellFunctionGenerator.generate()
         // The phantom-supervisor loop must dispatch on TARGET_SANDBOX with an
         // origin → exit fallback so the user can switch back via the slash
-        // command without breaking the supervisor.
+        // command without breaking the supervisor. The `|| break` suffix is
+        // unique to the phantom loop (the run case uses `|| return $?`, init
+        // uses `|| true`), so it pins the assertion to this call site.
         #expect(script.contains("if [ \"$TARGET_SANDBOX\" = \"origin\" ]; then"))
-        #expect(script.contains("orrery exit"))
-        #expect(script.contains("orrery enter \"$TARGET_SANDBOX\""))
+        #expect(script.contains("orrery exit || break"))
+        #expect(script.contains("orrery enter \"$TARGET_SANDBOX\" || break"))
         // Old direct call is gone.
         #expect(!script.contains("orrery sandbox use \"$TARGET_SANDBOX\""))
     }
