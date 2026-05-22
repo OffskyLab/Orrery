@@ -28,9 +28,7 @@ public enum OriginTakeoverBootstrap {
         let subcommands = args.filter { !$0.hasPrefix("-") }
         // Pure flag invocations like --version / --help have no subcommands; skip takeover
         if subcommands.isEmpty { return true }
-        // orrery origin release — avoid immediately re-taking over what's being released
-        if subcommands.first == "origin" && subcommands.dropFirst().first == "release" { return true }
-        // orrery uninstall — same reason
+        // orrery uninstall — avoid immediately re-taking over what is about to be released
         if subcommands.first == "uninstall" { return true }
         // orrery setup — handles takeover itself with interactive prompts; skip silent bootstrap
         if subcommands.first == "setup" { return true }
