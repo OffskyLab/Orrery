@@ -215,18 +215,33 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     static func findClaudeAncestor(supervisorPid: Int32) -> Int32? {
         var pid = getppid()
         var outermostClaude: Int32? = nil
+        // Record each (pid:comm) hop so a failure prints the actual ancestry —
+        // the claudeNotFound error is then debuggable from its own output.
+        var walked: [String] = []
         for _ in 0..<32 {
             guard pid > 1 else { break }
-            guard let info = Self.readProcessInfo(pid: pid) else { break }
+            guard let info = Self.readProcessInfo(pid: pid) else {
+                walked.append("\(pid):<unreadable>")
+                break
+            }
+            walked.append("\(pid):\(info.comm)")
             if info.comm == "claude" {
                 // Overwrite as we walk up — keep the last (outermost) claude.
                 outermostClaude = pid
             }
             if pid == supervisorPid {
+                if outermostClaude == nil {
+                    stderrWrite("orrery: phantom: reached supervisor \(supervisorPid) "
+                        + "but found no claude in the ancestry; walked: "
+                        + walked.joined(separator: " -> ") + "\n")
+                }
                 return outermostClaude
             }
             pid = info.ppid
         }
+        stderrWrite("orrery: phantom: walked off the process tree without "
+            + "reaching supervisor \(supervisorPid); walked: "
+            + walked.joined(separator: " -> ") + "\n")
         return nil
     }
 
