@@ -10,25 +10,22 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("orrery()"))
     }
 
-    @Test("output handles 'use' subcommand")
-    func handlesUse() {
+    @Test("output handles 'sandbox use' subcommand")
+    func handlesSandboxUse() {
         let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("_export"))
+        // Shell-side export pipeline still in place — just nested under sandbox now.
+        #expect(script.contains("sandbox _export"))
         #expect(script.contains("ORRERY_ACTIVE_ENV"))
     }
 
-    @Test("output handles 'deactivate' subcommand")
-    func handlesDeactivate() {
-        let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("deactivate"))
-        #expect(script.contains("orrery use origin"))
-    }
-
-    @Test("output auto-activates current environment on shell start")
+    @Test("output auto-activates current sandbox on shell start")
     func autoActivatesCurrent() {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("_orrery_init"))
         #expect(script.contains("current"))
+        // Init must call `orrery sandbox use` (not bare `orrery use`) so the
+        // shell-side env-var exports for the active sandbox actually run.
+        #expect(script.contains("orrery sandbox use \"$env_name\""))
     }
 
     @Test("phantom loop applies a target account from the sentinel")
@@ -39,11 +36,13 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("account use --\"$TARGET_ACCOUNT_TOOL\" --name \"$TARGET_ACCOUNT_NAME\""))
     }
 
-    @Test("account add --claude routes through shell function with TTY-attached claude")
-    func accountAddClaudeRoutesThroughShell() {
+    @Test("orrery add --claude routes through shell function with TTY-attached claude")
+    func addClaudeRoutesThroughShell() {
         let script = ShellFunctionGenerator.generate()
-        // The account) case must be present.
-        #expect(script.contains("account)"))
+        // The add) case must be present (was account) before v3).
+        #expect(script.contains("add)"))
+        // The old account) dispatcher must be gone.
+        #expect(!script.contains("            account)"))
         // Claude detection logic.
         #expect(script.contains("_is_claude=1"))
         #expect(script.contains("--codex|--gemini"))
