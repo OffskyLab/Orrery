@@ -176,7 +176,7 @@ claude --resume              # 無縫接續同一個 session
 ```
 
 <p align="center">
-  <img src="../assets/demo/use.gif" alt="orrery use 切換 Claude 帳號" width="640" />
+  <img src="assets/demo/use.gif" alt="orrery use 切換 Claude 帳號" width="640" />
 </p>
 
 ---
@@ -194,7 +194,7 @@ claude --resume              # 無縫接續同一個 session
 Claude 退出後 supervisor 帶著新的 account/sandbox 與 `--resume` 把它叫回來，對話無感接續。
 
 <p align="center">
-  <img src="../assets/demo/phatom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
+  <img src="assets/demo/phatom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
 </p>
 
 Phantom 是 `orrery run claude` 的**預設**模式。若要關掉（單次執行、不帶 supervisor）：
@@ -227,8 +227,8 @@ orrery exit                         # 返回 origin
 ```
 
 <p align="center">
-  <img src="../assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
-  <img src="../assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
+  <img src="assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
+  <img src="assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
 </p>
 
 Sandbox 級的 env vars 用 `orrery sandbox set-env` / `unset-env`：

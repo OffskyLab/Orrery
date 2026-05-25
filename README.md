@@ -176,7 +176,7 @@ claude --resume              # pick up right where you left off
 ```
 
 <p align="center">
-  <img src="assets/demo/use.gif" alt="orrery use switching between Claude accounts" width="640" />
+  <img src="docs/assets/demo/use.gif" alt="orrery use switching between Claude accounts" width="640" />
 </p>
 
 ---
@@ -194,7 +194,7 @@ Launch Claude with `orrery run claude` and a supervisor stays alongside it. From
 Claude exits, the supervisor relaunches it with the new account or sandbox active and `--resume`, and the conversation continues uninterrupted.
 
 <p align="center">
-  <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
+  <img src="docs/assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
 </p>
 
 Phantom mode is the **default** for `orrery run claude`. To opt out (single-shot, no supervisor):
@@ -227,8 +227,8 @@ orrery exit                         # return to origin
 ```
 
 <p align="center">
-  <img src="assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
-  <img src="assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
+  <img src="docs/assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
+  <img src="docs/assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
 </p>
 
 Sandbox-level env vars are managed with `orrery sandbox set-env` / `unset-env`:
