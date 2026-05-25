@@ -549,6 +549,7 @@
   <ul class="nav-links">
     <li class="nav-collapsible"><a href="#features">Features</a></li>
     <li class="nav-collapsible"><a href="#accounts">Accounts</a></li>
+    <li class="nav-collapsible"><a href="#phantom">Phantom</a></li>
     <li class="nav-collapsible"><a href="#use-cases">Use Cases</a></li>
     <li class="nav-collapsible"><a href="#commands">Commands</a></li>
     <li class="nav-collapsible"><a href="#install">Install</a></li>
@@ -569,6 +570,7 @@
 <ul class="mobile-menu" id="mobile-menu">
   <li><a href="#features" onclick="closeMenu()">Features</a></li>
   <li><a href="#accounts" onclick="closeMenu()">Accounts</a></li>
+  <li><a href="#phantom" onclick="closeMenu()">Phantom</a></li>
   <li><a href="#use-cases" onclick="closeMenu()">Use Cases</a></li>
   <li><a href="#commands" onclick="closeMenu()">Commands</a></li>
   <li><a href="#install" onclick="closeMenu()">Install</a></li>
@@ -646,12 +648,17 @@
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
       <h3>One-command switch</h3>
-      <p><code>orrery use --claude --name work</code> swaps the active account for a tool. No logout, no password, no browser auth flow — just an instant switch.</p>
+      <p><code>orrery use --claude work</code> swaps the active account for a tool. No logout, no password, no browser auth flow — just an instant switch.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">💬</span>
       <h3>Sessions follow you</h3>
       <p>Switch accounts mid-task and <code>claude --resume</code> still works. Conversation history is shared across switches by default.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">👻</span>
+      <h3>Switch mid-conversation</h3>
+      <p>Launch via <code>orrery run claude</code> and use <code>/orrery:phantom</code> inside Claude to swap account or sandbox without losing the conversation.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📦</span>
@@ -684,9 +691,12 @@
     <span style="color:var(--muted)">claude accounts:</span><br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;- work&nbsp;&nbsp;&nbsp;&nbsp; you@company.com, team</span><br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;- personal you@gmail.com, pro</span><br/><br/>
-    <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+    <span class="prompt">$ </span>orrery use --claude personal<br/>
     <span style="color:var(--muted)"># active Claude account → personal, instantly</span>
   </div>
+  <p style="text-align:center;margin:2rem auto 0">
+    <img src="../assets/demo/use.gif" alt="orrery use switching between Claude accounts" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+  </p>
 </section>
 
 <!-- Core Concepts -->
@@ -743,7 +753,7 @@
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>Switch with one command</h4>
-        <p><code>orrery use --claude --name personal</code> makes that account active for Claude. No logout, no re-auth — and your conversation history stays intact across switches.</p>
+        <p><code>orrery use --claude personal</code> makes that account active for Claude. No logout, no re-auth — and your conversation history stays intact across switches.</p>
       </div>
     </div>
     <div class="step">
@@ -758,9 +768,42 @@
       <div class="step-body">
         <h4>Optional: create a sandbox</h4>
         <p>When a client or project needs fully isolated config, run <code>orrery sandbox create client-a</code>, then <code>orrery enter client-a</code> / <code>orrery exit</code> to move in and out. Skip this entirely if you only switch accounts.</p>
+        <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
+          <img src="../assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="../assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+        </p>
       </div>
     </div>
   </div>
+</section>
+
+<!-- Phantom -->
+<section class="section" id="phantom">
+  <h2 class="section-title">Phantom mode — switch mid-conversation</h2>
+  <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2rem">
+    Launch Claude with <code>orrery run claude</code> and a supervisor stays alongside it.
+    From inside that Claude, the <code>/orrery:phantom</code> slash command swaps the active
+    account or sandbox <strong style="color:var(--text)">without restarting the conversation</strong> —
+    Claude exits, the supervisor relaunches it with the new context and <code>--resume</code>,
+    and you continue where you left off.
+  </p>
+  <div class="code-block" style="max-width:680px;margin:0 auto 1.5rem;font-size:.85rem">
+    <span style="color:var(--muted)"># inside a Claude session started with `orrery run claude`</span><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom personal<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → switch the claude account to 'personal'</span><br/><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom codex work<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → switch the codex account</span><br/><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom sandbox client-a<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → enter sandbox 'client-a'</span>
+  </div>
+  <p style="text-align:center;margin:0 auto 1.5rem">
+    <img src="../assets/demo/phatom.gif" alt="/orrery:phantom mid-session switch" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+  </p>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
+    Phantom mode is the <strong style="color:var(--text)">default</strong> for <code>orrery run claude</code>.
+    To opt out (single-shot, no supervisor): <code>orrery run --non-phantom claude</code>.
+    The slash command is installed automatically by <code>orrery mcp setup</code>.
+  </p>
 </section>
 
 <!-- Origin -->
@@ -813,9 +856,9 @@
       <h3>Work / Personal</h3>
       <p>Your company uses a Claude Team plan, and you have a personal Pro subscription. Add both to the pool, then flip between them with one command — no logout.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span style="color:var(--muted)"># → company Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+        <span class="prompt">$ </span>orrery use --claude personal<br/>
         <span style="color:var(--muted)"># → personal Pro plan</span>
       </div>
     </div>
@@ -824,11 +867,11 @@
       <h3>Resume After Switching</h3>
       <p>Mid-conversation with Claude on your work account? Switch to personal, do something, then switch back — your session is still there.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... working on a task ...</span><br/><br/>
-        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude personal<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → picks up exactly where you left off</span>
       </div>
@@ -1045,7 +1088,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery add --&lt;tool&gt;</span><span class="cmd-desc">Add an account (--claude / --codex / --gemini)</span></div>
         <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">List accounts in the pool</span></div>
-        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">Switch the active account for a tool</span></div>
+        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; &lt;name&gt;</span><span class="cmd-desc">Switch the active account for a tool</span></div>
         <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">Show the active account per tool</span></div>
         <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">Remove an account from the pool</span></div>
       </div>
