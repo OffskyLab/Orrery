@@ -32,21 +32,27 @@ Each environment has its own auth credentials and configuration. But sessions �
 
 ## 🧩 Core Concepts
 
-### Environment
+Start with **accounts** — that's all most people need. Reach for a **sandbox** only when a context needs fully isolated config.
 
-An isolated runtime for AI tools:
+### Account
 
-- Independent account and credentials
-- Independent configuration per tool
-- Per-shell activation — other terminal windows are unaffected
+Your **identity** for a tool — the credential Orrery logs in with. Accounts live in a shared pool: add once, switch any time with `orrery use`. This is the layer you'll touch every day.
+
+### Sandbox _(advanced)_
+
+An optional **isolation** layer: separate memory, sessions, and env vars on top of accounts. Most users never need one — reach for a sandbox when a client or project needs its own config space. Enter with `orrery enter`, leave with `orrery exit`.
 
 ### Session
 
-Conversations persist across environments. Switch from `work` to `personal` and your sessions are still there — `claude --resume` continues the same conversation even after switching accounts.
+Represents **continuity**: conversation history and project context. Shared across account switches by default — `claude --resume` just works after switching accounts.
+
+### Phantom mode
+
+`orrery run claude` launches Claude under a phantom supervisor. From inside that Claude session, the `/orrery:phantom` slash command can swap accounts or sandboxes without losing the conversation — Claude exits, the supervisor relaunches it with the new context and `--resume`. See the [Phantom Mode](#phantom-mode) section below.
 
 ### MCP Delegation
 
-Assign tasks to specific environments from within a running session. Enables multi-agent workflows where one Claude instance delegates to another running under a different account.
+Assign tasks to specific accounts or sandboxes from within a running session. Enables multi-agent workflows where one Claude instance delegates to another running under a different account.
 
 ---
 
@@ -54,15 +60,11 @@ Assign tasks to specific environments from within a running session. Enables mul
 
 Orrery introduces a structured runtime model for AI tools:
 
-- **Environment** → isolates identity (accounts, credentials, config)
+- **Account** → isolates identity (credentials per tool)
+- **Sandbox** _(optional)_ → isolates config (memory, sessions, env vars)
 - **Session** → represents continuity (conversation, context, memory)
-- **Delegation (MCP)** → enables coordination between environments
-
-This separation allows:
-
-- Identity isolation without losing context
-- Cross-account workflows without duplication
-- Multi-agent collaboration with explicit boundaries
+- **Phantom** → in-session switching without losing the conversation
+- **Delegation (MCP)** → enables coordination between accounts and sandboxes
 
 In traditional tooling:
 
@@ -160,120 +162,176 @@ sudo apt update
 ## Quick Start
 
 ```bash
-# Create environments (sessions are shared by default)
-orrery create work --description "Work account"
-orrery create personal --description "Personal account"
+# Add accounts to the shared pool (one-time per account)
+orrery add --claude --name work
+orrery add --claude --name personal
 
-# Add tools interactively
-orrery tools add -e work
-orrery tools add -e personal
+# Switch the active Claude account — pinning is per-shell
+orrery use work --claude    # bare `orrery use work` also defaults to claude
+claude                       # start a conversation under 'work'
 
-# Switch environments — your session history carries over
-orrery use work
-claude                    # start a conversation
-orrery use personal
-claude --resume           # pick up right where you left off
+# Switch to another account — sessions stay shared by default
+orrery use personal --claude
+claude --resume              # pick up right where you left off
+```
 
-# Deactivate and return to system config
-orrery use origin
+<p align="center">
+  <img src="assets/demo/use.gif" alt="orrery use switching between Claude accounts" width="640" />
+</p>
+
+---
+
+## Phantom Mode
+
+Launch Claude with `orrery run claude` and a supervisor stays alongside it. From inside that Claude, the `/orrery:phantom` slash command (installed by `orrery mcp setup`) swaps the active account or sandbox **without restarting the conversation**:
+
+```text
+/orrery:phantom personal           # switch the claude account to 'personal'
+/orrery:phantom codex work         # switch the codex account
+/orrery:phantom sandbox client-a   # switch the active sandbox
+```
+
+Claude exits, the supervisor relaunches it with the new account or sandbox active and `--resume`, and the conversation continues uninterrupted.
+
+<p align="center">
+  <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
+</p>
+
+Phantom mode is the **default** for `orrery run claude`. To opt out (single-shot, no supervisor):
+
+```bash
+orrery run --non-phantom claude
+```
+
+For non-Claude commands, `orrery run` is always single-shot:
+
+```bash
+orrery run codex             # one-shot codex under the pinned codex account
+orrery run npm install       # ad-hoc command inside the active sandbox
 ```
 
 ---
 
-## The `origin` Environment
+## Sandboxes _(optional)_
 
-`origin` is Orrery's reserved name for your original system environment. Switching to it exits Orrery management — all Orrery variables are cleared and tools fall back to their system-wide config, exactly as if Orrery weren't installed.
+A sandbox is a full config-isolation layer: separate memory, sessions, env vars, and per-tool config dirs. Useful when a client or project needs its own walled-off context. If you only need to swap accounts, you can skip sandboxes entirely.
 
 ```bash
-orrery use origin     # return to system config
-orrery deactivate     # same as above
+orrery sandbox create client-a     # interactive wizard: pick tools, memory mode, clone source
+orrery sandbox list                # show all sandboxes
+orrery sandbox info client-a       # full state (tools, accounts, env vars, memory)
+
+orrery enter client-a              # opt into the sandbox (per-shell)
+claude                              # uses the sandbox's pinned accounts and config
+orrery exit                         # return to origin
 ```
 
-### Origin takeover
+<p align="center">
+  <img src="assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
+  <img src="assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
+</p>
 
-`orrery setup` automatically moves your existing tool configs (`~/.claude/`, `~/.codex/`, `~/.gemini/`) into Orrery storage (`~/.orrery/origin/`) and replaces them with symlinks. Your data is untouched — it just lives inside Orrery where it can be managed and synced.
-
-To undo this at any time:
+Sandbox-level env vars are managed with `orrery sandbox set-env` / `unset-env`:
 
 ```bash
-orrery origin release       # restore all tools to their original locations
-orrery origin release --claude  # restore just Claude
-orrery origin status        # show current state
+orrery sandbox set-env API_BASE https://staging.example.com --sandbox client-a
+orrery sandbox unset-env API_BASE --sandbox client-a
 ```
 
-To completely remove Orrery from your system:
+---
+
+## The `origin` Baseline
+
+`origin` is your default config — where you are before entering any sandbox. On first `orrery setup`, your existing tool configs (`~/.claude/`, `~/.codex/`, `~/.gemini/`) are moved into `~/.orrery/origin/` and the original paths become symlinks. Your data is untouched; it just lives where Orrery can manage and sync it.
 
 ```bash
-orrery uninstall            # release all managed configs + remove shell integration
+orrery exit                  # return to origin from any sandbox
+orrery sandbox info origin   # show origin state (memory, sessions, tools)
+```
+
+`orrery enter origin` is rejected and points you at `exit`: origin is the **absence** of a sandbox, not a sandbox you enter.
+
+To fully back out of Orrery (release tool configs and remove shell integration):
+
+```bash
+orrery uninstall
 ```
 
 ---
 
 ## Session Sharing
 
-By default, session data is shared across all environments:
+By default, session data is shared across all sandboxes:
 
 - Switch from `work` to `personal` → your Claude conversations are still there
 - `claude --resume` continues the same session after switching accounts
-- Each environment still has its own **isolated auth credentials**
+- Each sandbox still has its own **isolated auth credentials**
 
 Session sharing works by symlinking tool session directories (`projects/`, `sessions/`, `session-env/`) to `~/.orrery/shared/`.
 
-For fully isolated sessions (e.g. compliance requirements):
-
-```bash
-orrery create secure-env --isolate-sessions
-```
+For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery sandbox create` wizard, or switch later with `orrery sandbox memory isolate` / `share`.
 
 ---
 
 ## Commands
 
-### Environment management
+### Accounts
 
 | Command | Description |
 |---|---|
-| `orrery create <name>` | Create a new environment (sessions shared by default) |
-| `orrery create <name> --clone <source>` | Clone tools and env vars from an existing environment |
-| `orrery create <name> --isolate-sessions` | Create with fully isolated sessions |
-| `orrery delete <name>` | Delete an environment |
-| `orrery rename <old> <new>` | Rename an environment |
-| `orrery list` | List all environments |
-| `orrery info [name]` | Show full details of an environment |
+| `orrery add [--claude\|--codex\|--gemini] --name <name>` | Register a new account in the pool (runs the tool's login flow) |
+| `orrery list [--claude\|--codex\|--gemini]` | List accounts (filtered by tool, or all) |
+| `orrery show` | Show the currently pinned accounts and active sandbox |
+| `orrery use [--claude\|--codex\|--gemini] <name>` | Pin the named account as active for the tool (default tool: claude) |
+| `orrery remove [--claude\|--codex\|--gemini] <name>` | Remove an account from the pool |
 
-### Switching
+### Sandboxes
+
+| Command | Description |
+|---|---|
+| `orrery sandbox create <name>` | Create a sandbox (interactive wizard) |
+| `orrery sandbox list` | List all sandboxes |
+| `orrery sandbox info [name]` | Show full details of a sandbox |
+| `orrery sandbox delete <name>` | Delete a sandbox |
+| `orrery sandbox rename <old> <new>` | Rename a sandbox |
+| `orrery sandbox set-env <KEY> <VALUE> [-s <name>]` | Set a sandbox env var |
+| `orrery sandbox unset-env <KEY> [-s <name>]` | Remove a sandbox env var |
+| `orrery sandbox current` | Print the active sandbox name (or `origin`) |
+| `orrery sandbox memory {isolate\|share\|info\|storage \| export}` | Manage memory mode and storage |
+| `orrery sandbox sync ...` | Sync state into/out of a sandbox |
+
+### Sandbox state (per-shell)
 
 > Requires shell integration (`orrery setup`)
 
 | Command | Description |
 |---|---|
-| `orrery use <name>` | Activate an environment in the current shell |
-| `orrery deactivate` | Deactivate and return to origin |
-| `orrery current` | Print the active environment name |
+| `orrery enter <name>` | Enter a sandbox in the current shell |
+| `orrery exit` | Return to origin |
 
 ### Configuration
 
 | Command | Description |
 |---|---|
-| `orrery tools add [-e <name>]` | Add a tool via wizard |
-| `orrery tools remove [-e <name>]` | Remove a tool |
-| `orrery set env <KEY> <VALUE> [-e <name>]` | Set an environment variable |
-| `orrery unset env <KEY> [-e <name>]` | Remove an environment variable |
+| `orrery tools add [-e <name>]` | Add a tool to a sandbox via wizard |
+| `orrery tools remove [-e <name>]` | Remove a tool from a sandbox |
 | `orrery which <tool>` | Print the config dir path for a tool |
 
 ### Sessions
 
 | Command | Description |
 |---|---|
-| `orrery sessions` | List sessions for the current project |
-| `orrery resume [index]` | Resume a session (interactive picker if no index) |
+| `orrery sessions [--claude\|--codex\|--gemini]` | List sessions for the current project |
+| `orrery resume [--claude\|--codex\|--gemini] [index]` | Resume a session (interactive picker if no index) |
 
 ### Cross-tool
 
 | Command | Description |
 |---|---|
-| `orrery run -e <name> <command>` | Run a command in a specific environment |
-| `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another environment |
+| `orrery run [-e <name>] claude` | Launch Claude under a phantom supervisor (default) — enables `/orrery:phantom` |
+| `orrery run --non-phantom claude` | Launch Claude as a single-shot (no supervisor) |
+| `orrery run [-e <name>] <command>` | Run any other command inside the named (or active) sandbox |
+| `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another sandbox |
 | `orrery delegate --resume <id\|index> "prompt"` | Resume a native tool session (UUID, short prefix, or index from `orrery sessions`) |
 | `orrery delegate --session [<name>]` | Open a managed-session picker (or resume a named mapping if `<name>` is given) |
 | `orrery magi "<topic>"` | Start a multi-model discussion and reach consensus |
@@ -303,7 +361,7 @@ orrery magi --output report.md "Should we migrate to Swift 6?"
 | `--claude` / `--codex` / `--gemini` | Select participating tools (default: all installed) |
 | `--rounds <N>` | Maximum discussion rounds (default: 3) |
 | `--output <path>` | Write the markdown report to a file |
-| `-e <name>` | Use a specific environment |
+| `-e <name>` | Use a specific sandbox |
 
 At least 2 tools must be installed. Each round, models see their own previous reasoning in full and a structured summary of other participants' positions. The final consensus report uses deterministic majority voting: `agreed` (all agree), `majority` (≥2 agree), `disputed` (≥2 disagree), or `pending` (insufficient data).
 
@@ -365,21 +423,13 @@ orrery spec-run --mode status --session-id <id>
 
 The four mandatory headings (`介面合約` / `改動檔案` / `實作步驟` / `驗收標準`) are checked statically before any subprocess launches — malformed specs are rejected upfront.
 
-### Origin management
-
-| Command | Description |
-|---|---|
-| `orrery origin status` | Show which tools are managed by Orrery |
-| `orrery origin takeover` | Move tool configs into Orrery storage |
-| `orrery origin release` | Restore tool configs to their original locations |
-| `orrery uninstall` | Remove shell integration and restore all managed configs |
-
 ### Shell integration
 
 | Command | Description |
 |---|---|
-| `orrery setup` | Install shell integration (idempotent) |
+| `orrery setup` | Install shell integration (idempotent) — also moves existing tool configs into `~/.orrery/origin/` on first run |
 | `orrery update` | Update Orrery to the latest version |
+| `orrery uninstall` | Release all managed configs back to their original paths and remove shell integration |
 
 ---
 
@@ -398,9 +448,9 @@ This registers Orrery as an MCP server and installs slash commands.
 | Tool | Description |
 |---|---|
 | `orrery_delegate` | Delegate a task to another account's AI tool |
-| `orrery_list` | List all environments |
+| `orrery_list` | List accounts and sandboxes |
 | `orrery_sessions` | List sessions for the current project |
-| `orrery_current` | Get the active environment |
+| `orrery_current` | Get the active sandbox (or `origin`) |
 | `orrery_memory_read` | Read shared project memory |
 | `orrery_memory_write` | Write to shared project memory |
 | `orrery_spec_status` | Poll the status of an `orrery_spec_implement` session (reads local state file) |
@@ -423,10 +473,10 @@ This registers Orrery as an MCP server and installs slash commands.
 
 | Slash command | Maps to |
 |---|---|
-| `/orrery:delegate` | `orrery_delegate` MCP tool with environment hints |
+| `/orrery:delegate` | `orrery_delegate` MCP tool with sandbox hints |
 | `/orrery:sessions` | `orrery sessions` |
 | `/orrery:resume` | `orrery resume <index>` |
-| `/orrery:phantom` | `_phantom-trigger` for in-session env switching |
+| `/orrery:phantom` | In-session account or sandbox switch — see [Phantom Mode](#phantom-mode) |
 | `/orrery:magi` | `orrery_magi` (with a `/grill-me` pre-flight hint for product/scope topics) |
 | `/orrery:spec` | `orrery_spec` |
 | `/orrery:spec-verify` | `orrery_spec_verify` |
@@ -438,8 +488,8 @@ This registers Orrery as an MCP server and installs slash commands.
 **External memory storage**: Redirect memory to any directory — such as an Obsidian vault:
 
 ```bash
-orrery memory storage ~/Documents/my-wiki/orrery
-orrery memory storage --reset   # revert to ~/.orrery
+orrery sandbox memory storage ~/Documents/my-wiki/orrery
+orrery sandbox memory storage --reset   # revert to ~/.orrery
 ```
 
 ---
@@ -450,27 +500,27 @@ Sync project memory across machines and teammates in real time, powered by [orre
 
 ```bash
 # Desktop
-orrery sync daemon --port 9527
+orrery sandbox sync daemon --port 9527
 
 # Laptop (auto-discovers via Bonjour)
-orrery sync daemon --port 9528
+orrery sandbox sync daemon --port 9528
 ```
 
 For cross-network sync, run a rendezvous server on a VPS:
 
 ```bash
-orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery sandbox sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 Only project memory is synced — sessions stay local. Memory changes are tracked as conflict-free fragments and consolidated by the AI agent at session start.
 
 | Command | Description |
 |---|---|
-| `orrery sync daemon` | Start the sync daemon |
-| `orrery sync status` | Show daemon and peer status |
-| `orrery sync team create <name>` | Create a new team |
-| `orrery sync team invite` | Generate an invite code |
-| `orrery sync team join <code>` | Join a team |
+| `orrery sandbox sync daemon` | Start the sync daemon |
+| `orrery sandbox sync status` | Show daemon and peer status |
+| `orrery sandbox sync team create <name>` | Create a new team |
+| `orrery sandbox sync team invite` | Generate an invite code |
+| `orrery sandbox sync team join <code>` | Join a team |
 
 ---
 
@@ -478,20 +528,25 @@ Only project memory is synced — sessions stay local. Memory changes are tracke
 
 ```
 ~/.orrery/
-  current                  # active environment name
+  current                  # active sandbox name (empty / unset = origin)
   origin/                  # original tool configs (after orrery setup takeover)
     claude/                #   ~/.claude/ symlinks here
     codex/
     gemini/
-  shared/                  # shared session data across environments
+  accounts/                # the shared account pool
+    claude/
+      <uuid>/              #   one directory per registered Claude account
+    codex/
+    gemini/
+  shared/                  # shared session data across sandboxes
     claude/
       projects/            #   conversation history per project
       sessions/            #   session metadata
-  envs/
+  envs/                    # sandbox storage (on-disk dirname kept from v2)
     <UUID>/
-      env.json             #   metadata: tools, env vars, timestamps
-      claude/              #   CLAUDE_CONFIG_DIR → here
-        .claude.json       #   auth credentials (isolated per env)
+      env.json             #   metadata: tools, pinned accounts, env vars
+      claude/              #   CLAUDE_CONFIG_DIR → here when this sandbox is active
+        .claude.json       #   materialized credentials of the pinned account
         projects/  →  ~/.orrery/shared/claude/projects
         sessions/  →  ~/.orrery/shared/claude/sessions
       codex/               #   CODEX_CONFIG_DIR → here

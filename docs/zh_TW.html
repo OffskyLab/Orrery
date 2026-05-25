@@ -549,6 +549,7 @@
   <ul class="nav-links">
     <li class="nav-collapsible"><a href="#features">功能</a></li>
     <li class="nav-collapsible"><a href="#accounts">帳號</a></li>
+    <li class="nav-collapsible"><a href="#phantom">Phantom</a></li>
     <li class="nav-collapsible"><a href="#use-cases">情境</a></li>
     <li class="nav-collapsible"><a href="#commands">指令</a></li>
     <li class="nav-collapsible"><a href="#install">安裝</a></li>
@@ -569,6 +570,7 @@
 <ul class="mobile-menu" id="mobile-menu">
   <li><a href="#features" onclick="closeMenu()">功能</a></li>
   <li><a href="#accounts" onclick="closeMenu()">帳號</a></li>
+  <li><a href="#phantom" onclick="closeMenu()">Phantom</a></li>
   <li><a href="#use-cases" onclick="closeMenu()">情境</a></li>
   <li><a href="#commands" onclick="closeMenu()">指令</a></li>
   <li><a href="#install" onclick="closeMenu()">安裝</a></li>
@@ -646,12 +648,17 @@
     <div class="feature-card">
       <span class="feature-icon">⚡</span>
       <h3>一行指令切換</h3>
-      <p><code>orrery use --claude --name work</code> 換掉某工具當前的帳號。不用登出、不用密碼、不用瀏覽器認證流程 — 瞬間完成。</p>
+      <p><code>orrery use --claude work</code> 換掉某工具當前的帳號。不用登出、不用密碼、不用瀏覽器認證流程 — 瞬間完成。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">💬</span>
       <h3>Session 跟著你</h3>
       <p>做到一半切換帳號，<code>claude --resume</code> 照樣能用。對話歷史預設在切換之間共享。</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">👻</span>
+      <h3>對話中無痛切換</h3>
+      <p>用 <code>orrery run claude</code> 啟動，在 Claude 裡用 <code>/orrery:phantom</code> 直接切 account 或 sandbox，不會中斷對話。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📦</span>
@@ -684,9 +691,12 @@
     <span style="color:var(--muted)">claude accounts:</span><br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;- work&nbsp;&nbsp;&nbsp;&nbsp; you@company.com, team</span><br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;- personal you@gmail.com, pro</span><br/><br/>
-    <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+    <span class="prompt">$ </span>orrery use --claude personal<br/>
     <span style="color:var(--muted)"># Claude 當前帳號 → personal，瞬間切換</span>
   </div>
+  <p style="text-align:center;margin:2rem auto 0">
+    <img src="../assets/demo/use.gif" alt="orrery use 切換 Claude 帳號示範" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+  </p>
 </section>
 
 <!-- Core Concepts -->
@@ -742,7 +752,7 @@
       <div class="step-num">3</div>
       <div class="step-body">
         <h4>一行指令切換</h4>
-        <p><code>orrery use --claude --name personal</code> 把該帳號設為 Claude 當前帳號。不用登出、不用重新認證 — 對話歷史在切換後完整保留。</p>
+        <p><code>orrery use --claude personal</code> 把該帳號設為 Claude 當前帳號。不用登出、不用重新認證 — 對話歷史在切換後完整保留。</p>
       </div>
     </div>
     <div class="step">
@@ -757,9 +767,41 @@
       <div class="step-body">
         <h4>進階：建立 sandbox</h4>
         <p>當某個客戶或專案需要完全獨立的 config，執行 <code>orrery sandbox create client-a</code>，再用 <code>orrery enter client-a</code> / <code>orrery exit</code> 進出。如果你只切帳號，這步可以完全跳過。</p>
+        <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
+          <img src="../assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="../assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+        </p>
       </div>
     </div>
   </div>
+</section>
+
+<!-- Phantom -->
+<section class="section" id="phantom">
+  <h2 class="section-title">Phantom — 對話中切換</h2>
+  <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2rem">
+    用 <code>orrery run claude</code> 啟動 Claude，會有一個 supervisor 守在旁邊。
+    在那個 Claude 裡，<code>/orrery:phantom</code> slash command 可以
+    <strong style="color:var(--text)">不重啟對話</strong>直接換 account 或 sandbox —
+    Claude 退出後 supervisor 帶著新設定與 <code>--resume</code> 把它叫回來，對話無感接續。
+  </p>
+  <div class="code-block" style="max-width:680px;margin:0 auto 1.5rem;font-size:.85rem">
+    <span style="color:var(--muted)"># 在以 `orrery run claude` 啟動的 Claude session 中</span><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom personal<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → 把 claude 帳號切到 'personal'</span><br/><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom codex work<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → 切 codex 帳號</span><br/><br/>
+    <span class="prompt">&gt; </span>/orrery:phantom sandbox client-a<br/>
+    <span style="color:var(--muted)">&nbsp;&nbsp;# → 進入 sandbox 'client-a'</span>
+  </div>
+  <p style="text-align:center;margin:0 auto 1.5rem">
+    <img src="../assets/demo/phatom.gif" alt="/orrery:phantom 對話中切換示範" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+  </p>
+  <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
+    Phantom 是 <code>orrery run claude</code> 的<strong style="color:var(--text)">預設</strong>模式。
+    要關掉（單次執行、無 supervisor）：<code>orrery run --non-phantom claude</code>。
+    slash command 由 <code>orrery mcp setup</code> 自動安裝。
+  </p>
 </section>
 
 <!-- Origin -->
@@ -810,9 +852,9 @@
       <h3>工作 / 個人帳號</h3>
       <p>公司用 Claude Team plan，自己有 Pro 訂閱。兩個都加進池子，之後一行指令切換 — 完全不用登出。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span style="color:var(--muted)"># → 公司 Team plan</span><br/><br/>
-        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
+        <span class="prompt">$ </span>orrery use --claude personal<br/>
         <span style="color:var(--muted)"># → 個人 Pro plan</span>
       </div>
     </div>
@@ -821,11 +863,11 @@
       <h3>切換帳號不中斷對話</h3>
       <p>用工作帳號跟 Claude 對話到一半？切到個人帳號處理事情，再切回來 — session 還在原地等你。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span class="prompt">$ </span>claude<br/>
         <span style="color:var(--muted)"># ... 工作中 ...</span><br/><br/>
-        <span class="prompt">$ </span>orrery use --claude --name personal<br/>
-        <span class="prompt">$ </span>orrery use --claude --name work<br/>
+        <span class="prompt">$ </span>orrery use --claude personal<br/>
+        <span class="prompt">$ </span>orrery use --claude work<br/>
         <span class="prompt">$ </span>claude --resume<br/>
         <span style="color:var(--muted)"># → 接續上次的對話</span>
       </div>
@@ -1040,7 +1082,7 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery add --&lt;tool&gt;</span><span class="cmd-desc">新增帳號（--claude / --codex / --gemini）</span></div>
         <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">列出池子裡的帳號</span></div>
-        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; --name &lt;n&gt;</span><span class="cmd-desc">切換某工具當前的帳號</span></div>
+        <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; &lt;name&gt;</span><span class="cmd-desc">切換某工具當前的帳號</span></div>
         <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">顯示各工具當前的帳號</span></div>
         <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">從帳號池刪除帳號</span></div>
       </div>
