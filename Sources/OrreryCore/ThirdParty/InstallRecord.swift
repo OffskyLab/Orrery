@@ -2,18 +2,30 @@ import Foundation
 
 public struct InstallRecord: Codable, Equatable, Sendable {
     public let packageID: String
+    /// Underlying commit SHA — stable across tag/branch rewrites and used as
+    /// the cache key.
     public let resolvedRef: String
+    /// Literal ref string from the manifest (or `--ref` override). For git
+    /// sources this is typically `"latest"`, a tag name, a branch name, or a
+    /// SHA. Kept verbatim so reinstall + diagnostics show exactly what was
+    /// requested.
     public let manifestRef: String
+    /// Human-friendly label for the install (tag name when pinned to a tag).
+    /// Nil for branch / raw-SHA installs — callers fall back to a short
+    /// `resolvedRef` for display.
+    public let displayRef: String?
     public let installedAt: Date
     public let copiedFiles: [String]
     public let patchedSettings: [SettingsPatchRecord]
 
     public init(packageID: String, resolvedRef: String, manifestRef: String,
+                displayRef: String? = nil,
                 installedAt: Date, copiedFiles: [String],
                 patchedSettings: [SettingsPatchRecord]) {
         self.packageID = packageID
         self.resolvedRef = resolvedRef
         self.manifestRef = manifestRef
+        self.displayRef = displayRef
         self.installedAt = installedAt
         self.copiedFiles = copiedFiles
         self.patchedSettings = patchedSettings

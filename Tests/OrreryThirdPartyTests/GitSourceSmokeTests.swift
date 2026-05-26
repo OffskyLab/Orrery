@@ -12,7 +12,7 @@ struct GitSourceSmokeTests {
             .appendingPathComponent("orrery-git-smoke-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: cacheRoot) }
 
-        let (dir, sha) = try GitSource().fetch(
+        let fetched = try GitSource().fetch(
             source: .git(url: "https://github.com/OffskyLab/orrery-claude-statusline",
                          ref: "latest"),
             cacheRoot: cacheRoot,
@@ -20,7 +20,10 @@ struct GitSourceSmokeTests {
             refOverride: nil,
             forceRefresh: false
         )
-        #expect(sha.count == 40)
-        #expect(FileManager.default.fileExists(atPath: dir.appendingPathComponent("statusline.js").path))
+        #expect(fetched.sha.count == 40)
+        // `latest` should resolve to a tag, so displayLabel is set.
+        #expect(fetched.displayLabel != nil)
+        #expect(FileManager.default.fileExists(
+            atPath: fetched.dir.appendingPathComponent("statusline.js").path))
     }
 }

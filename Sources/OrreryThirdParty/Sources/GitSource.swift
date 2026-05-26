@@ -18,7 +18,7 @@ public struct GitSource: ThirdPartySourceFetcher {
                       cacheRoot: URL,
                       packageID: String,
                       refOverride: String?,
-                      forceRefresh: Bool) throws -> (URL, String) {
+                      forceRefresh: Bool) throws -> FetchedRef {
         guard case .git(let url, let manifestRef) = source else {
             throw ThirdPartyError.sourceFetchFailed(reason: "GitSource only supports git source")
         }
@@ -26,9 +26,13 @@ public struct GitSource: ThirdPartySourceFetcher {
         if requestedRef == "latest" {
             requestedRef = try resolveLatestTag(url: url)
         }
-        let sha = try resolveSHA(url: url, ref: requestedRef)
-        let dir = cacheDir(root: cacheRoot, packageID: packageID, sha: sha)
 
+        // Resolve to a commit SHA + classify (tag / branch / raw SHA) so the
+        // success message can show the tag name when one is available and the
+        // SHA otherwise.
+        let resolved = try resolveRef(url: url, ref: requestedRef)
+
+        let dir = cacheDir(root: cacheRoot, packageID: packageID, sha: resolved.sha)
         let fm = FileManager.default
         if forceRefresh, fm.fileExists(atPath: dir.path) {
             try fm.removeItem(at: dir)
@@ -36,9 +40,10 @@ public struct GitSource: ThirdPartySourceFetcher {
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir.deletingLastPathComponent(),
                                    withIntermediateDirectories: true)
-            try clone(url: url, ref: requestedRef, sha: sha, into: dir)
+            try clone(url: url, ref: requestedRef, sha: resolved.sha, into: dir)
         }
-        return (dir, sha)
+        return FetchedRef(dir: dir, sha: resolved.sha,
+                          displayLabel: resolved.tagName)
     }
 
     /// Picks the newest version tag from the remote, sorted by semver (`-v:refname`).
@@ -63,16 +68,52 @@ public struct GitSource: ThirdPartySourceFetcher {
         )
     }
 
-    private func resolveSHA(url: String, ref: String) throws -> String {
-        if isResolvedSHA(ref) { return ref }
-        let out = try runGit(["ls-remote", url, ref])
-        // ls-remote output: "<sha>\t<ref>\n"; take the first SHA token.
-        guard let line = out.split(separator: "\n").first,
+    /// Resolves `ref` against the remote and returns the underlying commit SHA
+    /// plus the tag name when applicable. One round-trip queries:
+    ///   - `refs/tags/<ref>`       → annotated tag object (or commit for lightweight)
+    ///   - `refs/tags/<ref>^{}`    → peeled commit for annotated tags
+    ///   - `refs/heads/<ref>`      → branch tip
+    ///
+    /// For annotated tags the peeled line is the actual commit; without
+    /// `^{}` peeling we'd hand out the tag-object SHA, which is what was
+    /// previously surfaced in `latest@b7e6d96` — a hash users couldn't find
+    /// in `git log`.
+    private func resolveRef(url: String, ref: String) throws -> (sha: String, tagName: String?) {
+        if isResolvedSHA(ref) {
+            return (sha: ref, tagName: nil)
+        }
+        let out = try runGit(["ls-remote", url,
+                              "refs/tags/\(ref)",
+                              "refs/tags/\(ref)^{}",
+                              "refs/heads/\(ref)"])
+        var tagObject: String? = nil
+        var tagPeeled: String? = nil
+        var branchHead: String? = nil
+        for line in out.split(separator: "\n") {
+            let parts = line.split(separator: "\t")
+            guard parts.count == 2 else { continue }
+            let sha = String(parts[0])
+            guard sha.count == 40 else { continue }
+            let refName = String(parts[1])
+            if refName == "refs/tags/\(ref)^{}" { tagPeeled = sha }
+            else if refName == "refs/tags/\(ref)" { tagObject = sha }
+            else if refName == "refs/heads/\(ref)" { branchHead = sha }
+        }
+        if let sha = tagPeeled ?? tagObject {
+            return (sha: sha, tagName: ref)
+        }
+        if let sha = branchHead {
+            return (sha: sha, tagName: nil)
+        }
+        // Last resort: bare ls-remote (covers things like `HEAD` or remote
+        // refs that don't fit the tag/branch shapes above).
+        let bare = try runGit(["ls-remote", url, ref])
+        guard let line = bare.split(separator: "\n").first,
               let sha = line.split(separator: "\t").first,
               sha.count == 40 else {
             throw ThirdPartyError.sourceFetchFailed(reason: "git ls-remote returned no match for \(ref)")
         }
-        return String(sha)
+        return (sha: String(sha), tagName: nil)
     }
 
     private func clone(url: String, ref: String, sha: String, into dir: URL) throws {
