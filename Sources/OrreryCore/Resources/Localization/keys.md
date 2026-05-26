@@ -33,15 +33,15 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.removeAbstract` | Command help for `orrery remove`. |
 | `account.removeNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. |
 | `account.removeRemoved` | Success after removing an account. `{tool}` = tool name; `{name}` = display name. |
-| `account.removeStillReferenced` | Error when the account is still pinned by one or more envs. `{name}` = display name; `{envs}` = comma-joined env names. |
+| `account.removeStillReferenced` | Error when the account is still pinned by one or more sandboxes. `{name}` = display name; `{envs}` = comma-joined sandbox names (placeholder retained for compat). |
 | `account.showAbstract` | Command help for `orrery show`. |
-| `account.showActiveEnv` | Header line showing the active env name. `{name}` = env name. |
+| `account.showActiveEnv` | Header line showing the active sandbox name. `{name}` = sandbox name. |
 | `account.showRowPinned` | One row when a tool has an account pinned. `{tool}` = tool name; `{name}` = account display name; `{suffix}` = " (email, plan)" or empty string. |
 | `account.showRowUnpinned` | One row when a tool has no account pinned. `{tool}` = tool name. |
 | `account.nameSelectorHelp` | `--name` option help text shared by `use` (and `remove`). |
 | `account.useAbstract` | Command help for `orrery use`. |
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
-| `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = env name. |
+| `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = sandbox name (placeholder retained for compat). |
 | `account.loginManualFallbackHint` | Warning shown when Claude is launched via the Swift `Process` fallback path (bypassing the shell function). `{tool}` = tool name. File path `~/.orrery/activate.sh` is literal — do not translate. |
 | `account.loginReadyHint` | Hint printed by the shell function just before `command claude` is launched for account-add. `/exit` is a literal Claude command — do not translate. |
 | `account.addFinalized` | Success line printed by `_account-add-finalize` when no email or plan is available. `{tool}` = tool name; `{name}` = display name. |
