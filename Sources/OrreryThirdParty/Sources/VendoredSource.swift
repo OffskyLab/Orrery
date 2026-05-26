@@ -11,7 +11,7 @@ public struct VendoredSource: ThirdPartySourceFetcher {
                       cacheRoot: URL,
                       packageID: String,
                       refOverride: String?,
-                      forceRefresh: Bool) throws -> (URL, String) {
+                      forceRefresh: Bool) throws -> FetchedRef {
         guard case .vendored(let path) = source else {
             throw ThirdPartyError.sourceFetchFailed(reason: "VendoredSource only supports vendored source")
         }
@@ -20,6 +20,6 @@ public struct VendoredSource: ThirdPartySourceFetcher {
             throw ThirdPartyError.sourceFetchFailed(reason: "vendored path not found: \(path)")
         }
         let sha = String(repeating: "0", count: 40)
-        return (url, sha)
+        return FetchedRef(dir: url, sha: sha, displayLabel: nil)
     }
 }

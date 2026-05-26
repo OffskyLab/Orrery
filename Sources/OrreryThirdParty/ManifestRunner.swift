@@ -29,10 +29,12 @@ public struct ManifestRunner: ThirdPartyRunner {
 
         let cacheRoot = store.homeURL
             .appendingPathComponent("shared/thirdparty/cache")
-        let (sourceDir, resolvedRef) = try fetcher.fetch(
+        let fetched = try fetcher.fetch(
             source: pkg.source, cacheRoot: cacheRoot,
             packageID: pkg.id, refOverride: refOverride,
             forceRefresh: forceRefresh)
+        let sourceDir = fetched.dir
+        let resolvedRef = fetched.sha
 
         var copied: [String] = []
         var patched: [SettingsPatchRecord] = []
@@ -70,6 +72,7 @@ public struct ManifestRunner: ThirdPartyRunner {
             packageID: pkg.id,
             resolvedRef: resolvedRef,
             manifestRef: refOverride ?? manifestRef,
+            displayRef: fetched.displayLabel,
             installedAt: Date(),
             copiedFiles: copied,
             patchedSettings: patched

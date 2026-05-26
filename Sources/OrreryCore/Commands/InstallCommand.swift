@@ -34,7 +34,11 @@ public struct InstallCommand: ParsableCommand {
         }
         let record = try runner.install(pkg, into: resolvedEnv,
                                         refOverride: ref, forceRefresh: forceRefresh)
-        let shortRef = "\(record.manifestRef)@\(record.resolvedRef.prefix(7))"
+        // Show the tag name when one was resolved (`latest` → `v0.2.7`,
+        // `--ref v0.2.6` → `v0.2.6`); fall back to a short SHA for branch
+        // or raw-SHA installs.
+        let display = record.displayRef ?? String(record.resolvedRef.prefix(7))
+        let shortRef = "\(record.manifestRef)@\(display)"
         print(L10n.Install.success(
             record.packageID,
             shortRef,
