@@ -83,3 +83,66 @@ struct PinCommandTests {
         }
     }
 }
+
+@Suite("PinCommand integration")
+struct PinCommandIntegrationTests {
+    @Test("pin produces complete v3.1 account dir layout")
+    func endToEndLayout() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+
+            // Use the public parse(...).run() entry point like other tests.
+            var cmd = try PinCommand.parse(
+                ["alice", "--workspace", "shared-team"])
+            try cmd.run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "shared-team")
+            let fm = FileManager.default
+
+            // Account dir exists.
+            #expect(fm.fileExists(atPath: acctDir.path))
+
+            // Workspace dir + 5 subdirs exist.
+            #expect(fm.fileExists(atPath: wsDir.path))
+            for sub in ClaudeAccountDirectory.sharedSubdirs {
+                #expect(fm.fileExists(atPath: wsDir.appendingPathComponent(sub).path),
+                    "missing workspace subdir: \(sub)")
+            }
+
+            // 5 symlinks in account dir, each pointing at the right workspace subdir.
+            for sub in ClaudeAccountDirectory.sharedSubdirs {
+                let linkPath = acctDir.appendingPathComponent(sub).path
+                let dest = try fm.destinationOfSymbolicLink(atPath: linkPath)
+                #expect(dest == wsDir.appendingPathComponent(sub).path,
+                    "symlink for \(sub) points to wrong target")
+            }
+
+            // metadata.json on disk has workspace = "shared-team".
+            let metadataURL = acctDir.appendingPathComponent("metadata.json")
+            let data = try Data(contentsOf: metadataURL)
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            #expect(json?["workspace"] as? String == "shared-team")
+
+            // Two accounts pinned to the same workspace share the same symlink targets.
+            let bob = Account(tool: .claude, displayName: "bob")
+            try acctStore.save(bob)
+            var cmd2 = try PinCommand.parse(
+                ["bob", "--workspace", "shared-team"])
+            try cmd2.run()
+
+            let bobDir = acctStore.accountDir(id: bob.id, tool: .claude)
+            for sub in ClaudeAccountDirectory.sharedSubdirs {
+                let aliceLink = try fm.destinationOfSymbolicLink(
+                    atPath: acctDir.appendingPathComponent(sub).path)
+                let bobLink = try fm.destinationOfSymbolicLink(
+                    atPath: bobDir.appendingPathComponent(sub).path)
+                #expect(aliceLink == bobLink, "alice and bob's \(sub) symlinks should match")
+            }
+        }
+    }
+}
