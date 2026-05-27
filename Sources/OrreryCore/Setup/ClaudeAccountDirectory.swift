@@ -93,4 +93,47 @@ public enum ClaudeAccountDirectory {
             try fm.createSymbolicLink(at: linkPath, withDestinationURL: targetPath)
         }
     }
+
+    /// Result of checking that an account's symlinks point at its current
+    /// workspace.
+    public enum SymlinkStatus: Equatable {
+        /// All 5 symlinks present and pointing at the expected workspace dir.
+        case ok
+        /// One or more symlinks are missing entirely (account dir never prepared,
+        /// or symlinks deleted).
+        case missing
+        /// One or more symlinks point at a different workspace than
+        /// `account.workspace` (likely because `workspace` was changed but
+        /// `prepareDirectory` wasn't re-run).
+        case mismatch
+    }
+
+    /// Check whether the account dir's 5 symlinks all point at the workspace
+    /// recorded in `account.workspace`. Pure read; doesn't modify anything.
+    ///
+    /// Returns `.missing` if any symlink is absent, `.mismatch` if any
+    /// points at a different workspace, `.ok` otherwise. The caller decides
+    /// what to do — e.g. `pin` calls `prepareDirectory` to repair.
+    public static func verifySymlinks(
+        account: Account,
+        accountStore: AccountStore,
+        environmentStore: EnvironmentStore
+    ) -> SymlinkStatus {
+        guard account.tool == .claude else { return .missing }
+
+        let fm = FileManager.default
+        let acctDir = accountStore.accountDir(id: account.id, tool: .claude)
+        let expectedTargetBase = environmentStore.claudeWorkspaceDir(workspace: account.workspace)
+
+        var sawMismatch = false
+        for sub in sharedSubdirs {
+            let linkPath = acctDir.appendingPathComponent(sub).path
+            guard let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath) else {
+                return .missing
+            }
+            let expected = expectedTargetBase.appendingPathComponent(sub).path
+            if dest != expected { sawMismatch = true }
+        }
+        return sawMismatch ? .mismatch : .ok
+    }
 }
