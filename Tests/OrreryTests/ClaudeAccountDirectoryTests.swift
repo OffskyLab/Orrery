@@ -211,4 +211,39 @@ struct ClaudeAccountDirectoryVerifyTests {
             #expect(status == .mismatch)
         }
     }
+
+    @Test("returns .notApplicable for non-claude account")
+    func notApplicableForNonClaude() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .codex, displayName: "x")
+            try acctStore.save(acct)
+
+            let status = ClaudeAccountDirectory.verifySymlinks(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+            #expect(status == .notApplicable)
+        }
+    }
+
+    @Test("returns .missing when symlink target dir was deleted (broken link)")
+    func missingWhenBrokenLink() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "t")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            // Nuke the workspace dir entirely — symlinks remain but targets vanish.
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+            try FileManager.default.removeItem(at: wsDir)
+
+            let status = ClaudeAccountDirectory.verifySymlinks(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+            #expect(status == .missing)
+        }
+    }
 }
