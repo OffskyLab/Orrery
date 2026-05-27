@@ -145,4 +145,19 @@ extension ClaudeJsonMerge {
         }
         return SplitResult(identity: identity, shared: shared)
     }
+
+    /// Merge `identity` (per-account fields) and `shared` (workspace fields)
+    /// into a single dict ready to serialize as `.claude.json`.
+    ///
+    /// On key conflict — which shouldn't happen for inputs derived from
+    /// `split` of a well-categorized file — `identity` wins, since identity
+    /// is account-bound and authoritative for that account.
+    public static func merge(
+        identity: [String: Any],
+        shared: [String: Any]
+    ) -> [String: Any] {
+        var result = shared
+        for (k, v) in identity { result[k] = v }
+        return result
+    }
 }
