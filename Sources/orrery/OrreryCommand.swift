@@ -20,6 +20,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             ListCommand.self,
             ShowCommand.self,
             UseCommand.self,
+            PinCommand.self,
             EnterCommand.self,
             ExitCommand.self,
             RemoveCommand.self,
