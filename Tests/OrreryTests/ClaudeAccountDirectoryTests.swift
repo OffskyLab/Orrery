@@ -155,3 +155,60 @@ struct ClaudeAccountDirectoryPrepareTests {
         }
     }
 }
+
+@Suite("ClaudeAccountDirectory.verifySymlinks")
+struct ClaudeAccountDirectoryVerifyTests {
+    @Test("returns .ok for freshly prepared dir")
+    func okAfterPrepare() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "t")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            let status = ClaudeAccountDirectory.verifySymlinks(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+            #expect(status == .ok)
+        }
+    }
+
+    @Test("returns .missing when dir has no symlinks at all")
+    func missingWhenAbsent() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "t")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+            // no prepareDirectory call
+
+            let status = ClaudeAccountDirectory.verifySymlinks(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+            #expect(status == .missing)
+        }
+    }
+
+    @Test("returns .mismatch when symlinks point at wrong workspace")
+    func mismatchWhenWrongTarget() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "t")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            // Manually flip account.workspace without repointing.
+            acct.workspace = "work"
+            try acctStore.save(acct)
+
+            let status = ClaudeAccountDirectory.verifySymlinks(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+            #expect(status == .mismatch)
+        }
+    }
+}
