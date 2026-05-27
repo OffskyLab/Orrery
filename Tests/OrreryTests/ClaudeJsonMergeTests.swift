@@ -94,6 +94,55 @@ struct ClaudeJsonMergeSplitTests {
     }
 }
 
+@Suite("ClaudeJsonMerge.merge")
+struct ClaudeJsonMergeMergeTests {
+    @Test("union of identity and shared dicts")
+    func unionOfBoth() throws {
+        let identity: [String: Any] = [
+            "oauthAccount": ["emailAddress": "a@b.com"],
+            "numStartups": 5,
+        ]
+        let shared: [String: Any] = [
+            "projects": ["/A": ["allowedTools": []]],
+            "tipsHistory": [:],
+        ]
+        let result = ClaudeJsonMerge.merge(identity: identity, shared: shared)
+
+        #expect((result["oauthAccount"] as? [String: Any])?["emailAddress"] as? String == "a@b.com")
+        #expect(result["numStartups"] as? Int == 5)
+        #expect((result["projects"] as? [String: Any])?.keys.contains("/A") == true)
+        #expect(result["tipsHistory"] is [String: Any])
+        #expect(result.count == 4)
+    }
+
+    @Test("on conflicting key, identity wins (defensive)")
+    func identityWinsOnConflict() {
+        let identity: [String: Any] = ["someKey": "identity-value"]
+        let shared: [String: Any]   = ["someKey": "shared-value"]
+        let result = ClaudeJsonMerge.merge(identity: identity, shared: shared)
+        #expect(result["someKey"] as? String == "identity-value")
+    }
+
+    @Test("split then merge is identity for a well-categorized input")
+    func splitMergeRoundTrip() throws {
+        let original: [String: Any] = [
+            "oauthAccount": ["emailAddress": "x@y.com"],
+            "projects": ["/path": ["k": "v"]],
+            "numStartups": 7,
+            "tipsHistory": ["tip1": 1],
+        ]
+        let url = try writeTempJSON(original)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let split = try ClaudeJsonMerge.split(claudeJSONURL: url)
+        let merged = ClaudeJsonMerge.merge(identity: split.identity, shared: split.shared)
+
+        #expect(merged.count == 4)
+        #expect(merged["numStartups"] as? Int == 7)
+        #expect((merged["projects"] as? [String: Any])?["/path"] != nil)
+    }
+}
+
 // Helper used by split + merge tests.
 private func writeTempJSON(_ obj: [String: Any]) throws -> URL {
     let url = FileManager.default.temporaryDirectory
