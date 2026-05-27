@@ -1,5 +1,34 @@
 # Changelog
 
+## v3.0.4 - 2026-05-27
+
+### Fixed
+
+- **`orrery list` / `orrery show` no longer mix email and plan from different
+  identities.** Claude's login state lives in two places — the keychain
+  credential (token + plan) and `.claude.json`'s `oauthAccount` (email + org
+  info). `KeychainCredentialAdapter` only synced the keychain side; the
+  `oauthAccount` block in the active `.claude.json` was left pointing at the
+  previously-active identity. Every `orrery use` drifted the two sources apart,
+  producing displays like `gradyzhuo+team` where the email was from one account
+  and the plan from another, and `refreshInfo` then cached the mixed pair into
+  pool metadata.
+
+  The pool now stores an `oauthAccount.json` snapshot alongside the
+  credential. `prepareMaterialize` writes it into the active `.claude.json`
+  (preserving other top-level keys) so both stores describe the same
+  identity. `prepareSyncBack` and `AccountLoginFlow.importFrom` capture
+  fresh snapshots from the active / staging `.claude.json`. `Account.refreshInfo`
+  reads email from the pool snapshot (no longer from active `.claude.json`),
+  eliminating the cross-source mixing.
+
+  Includes a one-shot backfill: for existing pool slots without snapshots,
+  best-effort capture from any referencing env's `.claude.json` and re-derive
+  cached email/plan. Slots with no referencing env stay un-snapshotted until
+  the user touches them once — pin to a sandbox and `enter` / `exit` (or any
+  `orrery use` cycle) and the post-materialize active state becomes the
+  snapshot.
+
 ## v3.0.3 - 2026-05-27
 
 ### Fixed

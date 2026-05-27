@@ -49,25 +49,23 @@ public enum AccountLoginFlow {
             guard ClaudeKeychain.copyKeychainItem(from: srcService, to: dstService) else {
                 throw LoginError.credentialNotProduced(account.tool)
             }
-            captureInfo(stagingDir: stagingDir, account: account)
+            captureClaudeOAuthSnapshot(stagingDir: stagingDir, account: account)
+            captureInfo(account: account)
             return
         }
         #endif
         try importCredentialFile(stagingDir: stagingDir, into: account)
-        captureInfo(stagingDir: stagingDir, account: account)
+        if account.tool == .claude {
+            captureClaudeOAuthSnapshot(stagingDir: stagingDir, account: account)
+        }
+        captureInfo(account: account)
     }
 
     /// Refresh `email` / `plan` from the just-imported credential and persist.
     /// Best-effort: a failure here must not mask the success of the import.
-    private static func captureInfo(stagingDir: URL, account: Account) {
+    private static func captureInfo(account: Account) {
         var updated = account
-        let claudeJSONURL: URL? = account.tool == .claude
-            ? stagingDir.appendingPathComponent(".claude.json")
-            : nil
-        let changed = updated.refreshInfo(
-            accountStore: AccountStore.default,
-            claudeJSONURL: claudeJSONURL
-        )
+        let changed = updated.refreshInfo(accountStore: AccountStore.default)
         guard changed else { return }
         do {
             try AccountStore.default.save(updated)
@@ -76,6 +74,16 @@ public enum AccountLoginFlow {
                 "orrery: warning: could not persist refreshed account info for '\(account.displayName)': \(error)\n".utf8
             ))
         }
+    }
+
+    /// Capture `oauthAccount` from staging's `.claude.json` into the pool slot.
+    /// Best-effort: the credential is the load-bearing part; missing the
+    /// snapshot only affects display until the next sync-back captures it.
+    private static func captureClaudeOAuthSnapshot(stagingDir: URL, account: Account) {
+        let stagingJSON = stagingDir.appendingPathComponent(".claude.json")
+        let poolDir = AccountStore.default.accountDir(id: account.id, tool: .claude)
+        _ = ClaudeOAuthSnapshot.captureFromActive(
+            activeClaudeJSONURL: stagingJSON, poolDir: poolDir)
     }
 
     /// File-based import: codex, gemini, and Linux claude.

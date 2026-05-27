@@ -70,20 +70,19 @@ public struct Account: Codable, Sendable, Equatable {
 }
 
 extension Account {
-    /// 從憑證來源（Keychain / `auth.json` / `oauth_creds.json` / `.claude.json`）刷新
-    /// `email` / `plan`。回傳是否有任何欄位實際變動（避免無謂的 save）。
+    /// 從 pool-side 來源刷新 `email` / `plan`。回傳是否有任何欄位實際變動
+    /// （避免無謂的 save）。
     ///
-    /// - Parameters:
-    ///   - accountStore: 用來解析 pool 內 account dir 的 store。
-    ///   - claudeJSONURL: Claude 專屬。`.claude.json` 的位置（email 的唯一來源，
-    ///     Claude 的憑證本體不帶 email）。codex / gemini 可忽略。
+    /// 對 Claude：email 優先取 pool snapshot（`<poolDir>/oauthAccount.json`，
+    /// 由 `prepareSyncBack` / `AccountLoginFlow.importFrom` 捕入），讀不到才退
+    /// 而求其次用 credential JWT 的 email claim。plan 一律從 credential JWT
+    /// 的 `subscriptionType` 取。**不再讀 active `.claude.json`** — 那個檔案
+    /// 跟 pool 不一定同步，過去把它當成 email canonical source 是 stored 欄位
+    /// 被 email/plan 不同身份混雜汙染的根因。
     ///
     /// 任何來源讀不到就「保留原值」，永遠不 throw。
     @discardableResult
-    public mutating func refreshInfo(
-        accountStore: AccountStore,
-        claudeJSONURL: URL? = nil
-    ) -> Bool {
+    public mutating func refreshInfo(accountStore: AccountStore) -> Bool {
         var changed = false
 
         switch tool {
@@ -100,26 +99,18 @@ extension Account {
             if let p = info.plan, p != plan { plan = p; changed = true }
 
         case .claude:
-            // PLAN — read the OAuth credential blob (macOS Keychain or Linux file).
             let info = ToolAuth.accountInfo(forPoolAccount: self, accountStore: accountStore)
             if let p = info.plan, p != plan { plan = p; changed = true }
-            // EMAIL from the credential's JWT (best-effort).
-            if let e = info.email, e != email { email = e; changed = true }
-            // EMAIL from `.claude.json` if provided — this is the canonical source.
-            if let url = claudeJSONURL, let e = Self.parseClaudeJSONEmail(at: url), e != email {
+
+            let poolDir = accountStore.accountDir(id: id, tool: .claude)
+            if let snap = ClaudeOAuthSnapshot.loadSnapshot(poolDir: poolDir),
+               let e = snap["emailAddress"] as? String, e != email {
+                email = e; changed = true
+            } else if let e = info.email, e != email {
                 email = e; changed = true
             }
         }
 
         return changed
-    }
-
-    /// 解析 `.claude.json` 裡 `oauthAccount.emailAddress`。讀不到就 nil。
-    private static func parseClaudeJSONEmail(at url: URL) -> String? {
-        guard let data = try? Data(contentsOf: url),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauthAccount = obj["oauthAccount"] as? [String: Any]
-        else { return nil }
-        return oauthAccount["emailAddress"] as? String
     }
 }

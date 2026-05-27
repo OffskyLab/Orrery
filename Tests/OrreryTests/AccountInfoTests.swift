@@ -75,33 +75,30 @@ struct AccountRefreshInfoTests {
         #expect(acct.plan == nil)
     }
 
-    @Test("claude: email is populated from .claude.json when provided")
-    func claudeFromClaudeJSON() throws {
+    @Test("claude: email is populated from the pool oauthAccount snapshot")
+    func claudeFromPoolSnapshot() throws {
         let store = try makeStore()
         var acct = Account(tool: .claude, displayName: "claude-work")
         try store.save(acct)
 
-        // Synthesize a `.claude.json` somewhere outside the pool — it could be
-        // in an env's tool dir or a staging dir.
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("orrery-claudejson-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let url = dir.appendingPathComponent(".claude.json")
-        try Data(#"{"oauthAccount":{"emailAddress":"alice@example.com"}}"#.utf8)
-            .write(to: url)
+        // Write a snapshot into the pool dir (as captureFromActive would).
+        let poolDir = store.accountDir(id: acct.id, tool: .claude)
+        try FileManager.default.createDirectory(at: poolDir, withIntermediateDirectories: true)
+        let snapURL = ClaudeOAuthSnapshot.snapshotURL(poolDir: poolDir)
+        try Data(#"{"emailAddress":"alice@example.com"}"#.utf8).write(to: snapURL)
 
-        let changed = acct.refreshInfo(accountStore: store, claudeJSONURL: url)
+        let changed = acct.refreshInfo(accountStore: store)
         #expect(changed)
         #expect(acct.email == "alice@example.com")
     }
 
-    @Test("claude: without .claude.json email stays nil (no-op on email)")
-    func claudeWithoutClaudeJSON() throws {
+    @Test("claude: without snapshot or credential email stays nil")
+    func claudeWithoutSnapshot() throws {
         let store = try makeStore()
-        var acct = Account(tool: .claude, displayName: "claude-no-json")
+        var acct = Account(tool: .claude, displayName: "claude-no-snap")
         try store.save(acct)
 
-        // No claudeJSONURL passed; no credential blob present either.
+        // No pool snapshot file and no credential — both email and plan stay nil.
         let changed = acct.refreshInfo(accountStore: store)
         #expect(!changed)
         #expect(acct.email == nil)
