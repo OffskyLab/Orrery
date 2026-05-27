@@ -184,6 +184,17 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `mCPSetup.success` | Printed after successful setup. References slash commands `/orrery:delegate` etc. — keep them literal. |
 | `mCPSetup.wroteSettings` | Printed while writing settings. `{path}` = settings file path. Ends with `\n`. |
 
+## pin — `orrery pin`
+
+| Key | Context |
+| --- | --- |
+| `pin.abstract` | Command help. |
+| `pin.flagWorkspaceHelp` | `--workspace` flag help text. |
+| `pin.argAccountHelp` | Positional `<account>` argument help. |
+| `pin.errorAccountNotFound` | Error when the named account isn't in the pool. `{name}` = account name; `{tool}` = tool name. |
+| `pin.errorWorkspaceNotFound` | Error when the workspace doesn't exist. `{name}` = workspace name. |
+| `pin.success` | Success message after pinning. `{account}` = account name; `{workspace}` = workspace name. |
+
 ## memory — `orrery memory`
 
 | Key | Context |
