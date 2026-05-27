@@ -228,9 +228,15 @@ public enum AccountMigration {
         for existing in try acctStore.list(tool: tool) {
             if storedCredential(of: existing, acctStore: acctStore) == credential {
                 // Best-effort top-up: an earlier migrated scope may not have had
-                // a `.claude.json`. If this scope does, refresh.
+                // a `.claude.json`. If this scope does, capture its oauthAccount
+                // into the pool snapshot before refreshing the cached fields.
+                if tool == .claude, let url = claudeJSONURL {
+                    let poolDir = acctStore.accountDir(id: existing.id, tool: .claude)
+                    _ = ClaudeOAuthSnapshot.captureFromActive(
+                        activeClaudeJSONURL: url, poolDir: poolDir)
+                }
                 var refreshed = existing
-                if refreshed.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL) {
+                if refreshed.refreshInfo(accountStore: acctStore) {
                     do {
                         try acctStore.save(refreshed)
                     } catch {
@@ -258,9 +264,16 @@ public enum AccountMigration {
             credential: credential, account: account, tool: tool, acctStore: acctStore
         )
 
+        // Capture the scope's oauthAccount block (Claude only) before refreshing,
+        // so `refreshInfo` can read email from the just-written pool snapshot.
+        if tool == .claude, let url = claudeJSONURL {
+            let poolDir = acctStore.accountDir(id: account.id, tool: .claude)
+            _ = ClaudeOAuthSnapshot.captureFromActive(
+                activeClaudeJSONURL: url, poolDir: poolDir)
+        }
         // Capture email/plan into the freshly-created Account so `list` / `show`
         // don't have to re-parse on first use.
-        account.refreshInfo(accountStore: acctStore, claudeJSONURL: claudeJSONURL)
+        account.refreshInfo(accountStore: acctStore)
         try acctStore.save(account)
         return account.id
     }
@@ -349,10 +362,13 @@ public enum AccountMigration {
                 let credChanged = updated.refreshInfo(accountStore: acctStore)
 
                 // Step 2: Claude-specific — if email is still nil, scan referencing
-                // envs for a `.claude.json` that carries it.
+                // envs for a `.claude.json` whose `oauthAccount` we can capture
+                // into the pool snapshot. The snapshot then drives the next
+                // `refreshInfo` to populate `email`.
                 var claudeJSONChanged = false
                 if tool == .claude, updated.email == nil {
                     let envNames = (try? envStore.envsReferencing(accountID: account.id, tool: .claude)) ?? []
+                    let poolDir = acctStore.accountDir(id: account.id, tool: .claude)
                     for name in envNames {
                         let url: URL
                         if name == ReservedEnvironment.defaultName {
@@ -361,7 +377,9 @@ public enum AccountMigration {
                             url = envStore.toolConfigDir(tool: .claude, environment: name)
                                 .appendingPathComponent(".claude.json")
                         }
-                        if updated.refreshInfo(accountStore: acctStore, claudeJSONURL: url) {
+                        if ClaudeOAuthSnapshot.captureFromActive(
+                            activeClaudeJSONURL: url, poolDir: poolDir),
+                           updated.refreshInfo(accountStore: acctStore) {
                             claudeJSONChanged = true
                         }
                         if updated.email != nil { break }
@@ -386,6 +404,87 @@ public enum AccountMigration {
         } catch {
             FileHandle.standardError.write(Data(
                 "[orrery backfill] warning: could not write flag file: \(error)\n".utf8
+            ))
+        }
+    }
+
+    // MARK: - One-shot Claude oauthAccount snapshot backfill (v3.0.4)
+
+    /// Flag file marking the one-shot Claude oauthAccount-snapshot backfill as done.
+    public static let claudeSnapshotBackfillFlagFileName = ".backfill-claude-snapshot-v1"
+
+    /// Pre-v3.0.4 the Claude pool stored only the credential; `.claude.json`'s
+    /// `oauthAccount` was never snapshotted, so every `orrery use` produced an
+    /// active `.claude.json` whose `oauthAccount.emailAddress` lagged the
+    /// keychain by one switch. Past calls to `refreshInfo` then mixed
+    /// "previous-user email + current-user plan" into the cached fields.
+    ///
+    /// This one-shot pass walks every Claude pool slot and, for slots without
+    /// a snapshot yet, captures one from any referencing env's `.claude.json`,
+    /// then re-runs `refreshInfo` so the cached `email`/`plan` re-derive from
+    /// the (now snapshot-backed) authoritative pool state.
+    public static func runClaudeOAuthSnapshotBackfillIfNeeded(homeURL: URL) {
+        let fm = FileManager.default
+        let flagURL = homeURL.appendingPathComponent(claudeSnapshotBackfillFlagFileName)
+        if fm.fileExists(atPath: flagURL.path) { return }
+        guard fm.fileExists(atPath: homeURL.path) else { return }
+
+        let acctStore = AccountStore(homeURL: homeURL)
+        let envStore = EnvironmentStore(homeURL: homeURL)
+
+        let accounts: [Account]
+        do { accounts = try acctStore.list(tool: .claude) } catch { return }
+
+        for account in accounts {
+            let poolDir = acctStore.accountDir(id: account.id, tool: .claude)
+
+            // Capture an oauthAccount block if none exists, by walking the
+            // envs that reference this slot and trying their `.claude.json`.
+            // The captured block may itself have been polluted by past mismatched
+            // materializes — we have no way to verify, because Anthropic's OAuth
+            // access tokens are opaque (`sk-ant-oat01-...`), not JWTs, so we
+            // can't cross-check identity against the credential. Slots with no
+            // referencing env stay un-snapshotted; the user can recover by
+            // pinning them to a sandbox and `enter`/`exit`-ing once so a fresh
+            // snapshot is captured from the post-materialize active state.
+            if ClaudeOAuthSnapshot.loadSnapshot(poolDir: poolDir) == nil {
+                let envNames = (try? envStore.envsReferencing(
+                    accountID: account.id, tool: .claude)) ?? []
+                for name in envNames {
+                    let url: URL
+                    if name == ReservedEnvironment.defaultName {
+                        url = fm.homeDirectoryForCurrentUser
+                            .appendingPathComponent(".claude.json")
+                    } else {
+                        url = envStore.toolConfigDir(tool: .claude, environment: name)
+                            .appendingPathComponent(".claude.json")
+                    }
+                    if ClaudeOAuthSnapshot.captureFromActive(
+                        activeClaudeJSONURL: url, poolDir: poolDir) {
+                        break
+                    }
+                }
+            }
+
+            // Re-derive cached email/plan so the snapshot drives the display
+            // even if the prior value was set from a polluted `.claude.json`.
+            var updated = account
+            if updated.refreshInfo(accountStore: acctStore) {
+                do {
+                    try acctStore.save(updated)
+                } catch {
+                    FileHandle.standardError.write(Data(
+                        "[orrery backfill] warning: could not save account '\(account.displayName)': \(error)\n".utf8
+                    ))
+                }
+            }
+        }
+
+        do {
+            try Data("v1\n".utf8).write(to: flagURL)
+        } catch {
+            FileHandle.standardError.write(Data(
+                "[orrery backfill] warning: could not write claude-snapshot flag file: \(error)\n".utf8
             ))
         }
     }
