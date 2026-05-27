@@ -80,4 +80,78 @@ struct ClaudeAccountDirectoryPrepareTests {
             }
         }
     }
+
+    @Test("repoints a symlink that previously pointed to a different workspace")
+    func repointsExistingSymlink() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "test")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            // Now flip workspace and re-prepare.
+            acct.workspace = "work"
+            try acctStore.save(acct)
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let fm = FileManager.default
+            let workDir = envStore.claudeWorkspaceDir(workspace: "work")
+            for sub in ClaudeAccountDirectory.sharedSubdirs {
+                let dest = try fm.destinationOfSymbolicLink(
+                    atPath: acctDir.appendingPathComponent(sub).path)
+                #expect(dest == workDir.appendingPathComponent(sub).path,
+                    "after repoint, \(sub) should point at 'work' workspace")
+            }
+        }
+    }
+
+    @Test("refuses to clobber a real directory at a symlink path")
+    func refusesToClobberRealDirectory() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "test")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+
+            // Pre-create a real dir + file at the projects/ path BEFORE
+            // calling prepareDirectory — simulates user data left behind.
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let realDir = acctDir.appendingPathComponent("projects")
+            try FileManager.default.createDirectory(
+                at: realDir, withIntermediateDirectories: true)
+            try Data("important".utf8)
+                .write(to: realDir.appendingPathComponent("user-file.txt"))
+
+            // Now prepareDirectory must throw — not delete the user's file.
+            #expect(throws: ClaudeAccountDirectory.Error.self) {
+                try ClaudeAccountDirectory.prepareDirectory(
+                    account: acct, accountStore: acctStore, environmentStore: envStore)
+            }
+
+            // Confirm the user file is still there.
+            #expect(FileManager.default.fileExists(
+                atPath: realDir.appendingPathComponent("user-file.txt").path))
+        }
+    }
+
+    @Test("throws Error.wrongTool when given non-claude account")
+    func throwsOnWrongTool() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .codex, displayName: "test")
+            try acctStore.save(acct)
+
+            #expect(throws: ClaudeAccountDirectory.Error.self) {
+                try ClaudeAccountDirectory.prepareDirectory(
+                    account: acct, accountStore: acctStore, environmentStore: envStore)
+            }
+        }
+    }
 }
