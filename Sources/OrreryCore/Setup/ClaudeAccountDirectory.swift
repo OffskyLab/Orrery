@@ -97,29 +97,39 @@ public enum ClaudeAccountDirectory {
     /// Result of checking that an account's symlinks point at its current
     /// workspace.
     public enum SymlinkStatus: Equatable {
-        /// All 5 symlinks present and pointing at the expected workspace dir.
+        /// All 5 symlinks present, pointing at the expected workspace dir, and
+        /// their targets exist on disk.
         case ok
-        /// One or more symlinks are missing entirely (account dir never prepared,
-        /// or symlinks deleted).
+        /// One or more symlinks are missing, OR present but their target dir
+        /// doesn't exist (broken symlink). `prepareDirectory` repairs both.
         case missing
         /// One or more symlinks point at a different workspace than
         /// `account.workspace` (likely because `workspace` was changed but
         /// `prepareDirectory` wasn't re-run).
         case mismatch
+        /// The account isn't a claude account — this helper doesn't apply.
+        /// Distinct from `.missing` so callers don't treat it as "repair me".
+        case notApplicable
     }
 
     /// Check whether the account dir's 5 symlinks all point at the workspace
-    /// recorded in `account.workspace`. Pure read; doesn't modify anything.
+    /// recorded in `account.workspace` AND their targets exist on disk.
+    /// Pure read; doesn't modify anything.
     ///
-    /// Returns `.missing` if any symlink is absent, `.mismatch` if any
-    /// points at a different workspace, `.ok` otherwise. The caller decides
-    /// what to do — e.g. `pin` calls `prepareDirectory` to repair.
+    /// Returned status is determined in this priority order:
+    ///   1. `.notApplicable` — non-claude account, helper doesn't apply
+    ///   2. `.missing` — any symlink is absent OR points at a deleted target
+    ///   3. `.mismatch` — any symlink points at a different workspace
+    ///   4. `.ok` — all 5 symlinks present, correct target, target exists
+    ///
+    /// `prepareDirectory` is the universal repair action for `.missing` /
+    /// `.mismatch`.
     public static func verifySymlinks(
         account: Account,
         accountStore: AccountStore,
         environmentStore: EnvironmentStore
     ) -> SymlinkStatus {
-        guard account.tool == .claude else { return .missing }
+        guard account.tool == .claude else { return .notApplicable }
 
         let fm = FileManager.default
         let acctDir = accountStore.accountDir(id: account.id, tool: .claude)
@@ -129,6 +139,11 @@ public enum ClaudeAccountDirectory {
         for sub in sharedSubdirs {
             let linkPath = acctDir.appendingPathComponent(sub).path
             guard let dest = try? fm.destinationOfSymbolicLink(atPath: linkPath) else {
+                return .missing
+            }
+            // Broken symlink (target was deleted) is treated as .missing —
+            // prepareDirectory will recreate the target dir and the symlink.
+            if !fm.fileExists(atPath: dest) {
                 return .missing
             }
             let expected = expectedTargetBase.appendingPathComponent(sub).path
