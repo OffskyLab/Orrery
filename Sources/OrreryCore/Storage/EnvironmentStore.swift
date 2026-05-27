@@ -240,6 +240,16 @@ public struct EnvironmentStore: Sendable {
         return envURL(id: id).appendingPathComponent(tool.subdirectory)
     }
 
+    /// v3.1: the shared-content dir for a workspace's claude content
+    /// (`projects/`, `memory/`, `agents/`, `commands/`, `todos/`).
+    /// All Accounts pinned to this workspace symlink into here.
+    public func claudeWorkspaceDir(workspace: String) -> URL {
+        homeURL
+            .appendingPathComponent("envs")
+            .appendingPathComponent(workspace)
+            .appendingPathComponent("claude-workspace")
+    }
+
     // MARK: - Memory path helpers
 
     /// Shared memory dir for a project: `~/.orrery/shared/memory/{projectKey}/`
