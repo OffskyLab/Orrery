@@ -8,7 +8,7 @@ public struct PinCommand: ParsableCommand {
     )
 
     @Argument(help: ArgumentHelp(L10n.Pin.argAccountHelp))
-    public var accountName: String = ""
+    public var accountName: String
 
     @Option(name: .long, help: ArgumentHelp(L10n.Pin.flagWorkspaceHelp))
     public var workspace: String = "origin"
@@ -23,6 +23,12 @@ public struct PinCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
+        let selected: [Tool] = [claude ? Tool.claude : nil,
+                                codex ? Tool.codex : nil,
+                                gemini ? Tool.gemini : nil].compactMap { $0 }
+        guard selected.count <= 1 else {
+            throw ValidationError("Pass at most one of --claude, --codex, --gemini.")
+        }
         let tool = resolvedTool()
         let acctStore = AccountStore.default
         let envStore = EnvironmentStore.default
