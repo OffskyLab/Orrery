@@ -1113,6 +1113,82 @@
   },
   {
     "path": [
+      "Pin",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Pin",
+      "flagWorkspaceHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Pin",
+      "argAccountHelp"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
+      "Pin",
+      "errorAccountNotFound"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "tool",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Pin",
+      "errorWorkspaceNotFound"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "name",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
+      "Pin",
+      "success"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "account",
+        "type": "String"
+      },
+      {
+        "label": "_",
+        "name": "workspace",
+        "type": "String"
+      }
+    ]
+  },
+  {
+    "path": [
       "Memory",
       "aborted"
     ],
