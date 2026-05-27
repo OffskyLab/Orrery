@@ -20,6 +20,20 @@ public enum ClaudeAccountDirectory {
         "projects", "memory", "agents", "commands", "todos"
     ]
 
+    public enum Error: Swift.Error, LocalizedError {
+        case wrongTool(got: Tool)
+        case existingDirectoryAtSymlinkPath(URL)
+
+        public var errorDescription: String? {
+            switch self {
+            case .wrongTool(let t):
+                return "ClaudeAccountDirectory only handles claude accounts, got \(t.rawValue)."
+            case .existingDirectoryAtSymlinkPath(let url):
+                return "Refusing to overwrite real directory at \(url.path) — move or remove its contents manually, then re-run."
+            }
+        }
+    }
+
     /// Create (or repair) the account dir with symlinks pointing at the
     /// workspace from `account.workspace`. Idempotent.
     ///
@@ -30,8 +44,9 @@ public enum ClaudeAccountDirectory {
         accountStore: AccountStore,
         environmentStore: EnvironmentStore
     ) throws {
-        precondition(account.tool == .claude,
-            "ClaudeAccountDirectory only handles claude accounts")
+        guard account.tool == .claude else {
+            throw Error.wrongTool(got: account.tool)
+        }
 
         let fm = FileManager.default
         let acctDir = accountStore.accountDir(id: account.id, tool: .claude)
@@ -60,13 +75,21 @@ public enum ClaudeAccountDirectory {
                 continue
             }
 
-            // Anything else at the path — symlink to elsewhere, real dir,
-            // or file — gets removed first.
-            if fm.fileExists(atPath: linkPath.path)
-                || (try? fm.destinationOfSymbolicLink(atPath: linkPath.path)) != nil {
+            // Different symlink (pointing somewhere else, or broken) — safe to replace.
+            if (try? fm.destinationOfSymbolicLink(atPath: linkPath.path)) != nil {
                 try fm.removeItem(at: linkPath)
+                try fm.createSymbolicLink(at: linkPath, withDestinationURL: targetPath)
+                continue
             }
 
+            // Path exists but is NOT a symlink — refuse to clobber it. Could
+            // be a real directory the user populated or claude wrote into;
+            // silently deleting would be a data-loss footgun.
+            if fm.fileExists(atPath: linkPath.path) {
+                throw Error.existingDirectoryAtSymlinkPath(linkPath)
+            }
+
+            // Path doesn't exist — fresh symlink.
             try fm.createSymbolicLink(at: linkPath, withDestinationURL: targetPath)
         }
     }
