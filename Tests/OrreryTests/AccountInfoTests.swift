@@ -267,3 +267,43 @@ struct AccountInfoBackfillTests {
         #expect(reloaded.plan == "plus")
     }
 }
+
+@Suite("Account.workspace")
+struct AccountWorkspaceTests {
+    @Test("new Account defaults workspace to 'origin'")
+    func defaultsToOrigin() {
+        let acct = Account(tool: .claude, displayName: "test")
+        #expect(acct.workspace == "origin")
+    }
+
+    @Test("Account decodes legacy metadata.json without workspace field as 'origin'")
+    func decodesLegacyMetadata() throws {
+        let legacyJSON = """
+        {
+          "id": "ABC-123",
+          "tool": "claude",
+          "displayName": "legacy",
+          "createdAt": "2026-01-01T00:00:00Z"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let acct = try decoder.decode(Account.self, from: Data(legacyJSON.utf8))
+        #expect(acct.workspace == "origin")
+    }
+
+    @Test("Account round-trips workspace through Codable")
+    func roundTripsWorkspace() throws {
+        var acct = Account(tool: .claude, displayName: "test")
+        acct.workspace = "work"
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(acct)
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(Account.self, from: data)
+        #expect(decoded.workspace == "work")
+    }
+}

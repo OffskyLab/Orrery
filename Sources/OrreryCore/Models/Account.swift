@@ -23,6 +23,11 @@ public struct Account: Codable, Sendable, Equatable {
     /// 與 `email` 同樣由 `refreshInfo(...)` 自動填入。
     public var plan: String?
 
+    /// 這個 Account 被 pin 到哪個 Workspace（v3.1 之後啟用）。預設 "origin"。
+    /// 決定 Account dir 內的 `projects/`、`memory/`、`agents/`、`commands/`、`todos/`
+    /// symlink 指向哪個 workspace 的 claude-workspace dir。
+    public var workspace: String
+
     public init(
         id: AccountID = UUID().uuidString,
         tool: Tool,
@@ -30,7 +35,8 @@ public struct Account: Codable, Sendable, Equatable {
         createdAt: Date = Date(),
         keychainItem: String? = nil,
         email: String? = nil,
-        plan: String? = nil
+        plan: String? = nil,
+        workspace: String = "origin"
     ) {
         self.id = id
         self.tool = tool
@@ -39,6 +45,7 @@ public struct Account: Codable, Sendable, Equatable {
         self.keychainItem = keychainItem
         self.email = email
         self.plan = plan
+        self.workspace = workspace
     }
 
     // MARK: - Codable
@@ -55,6 +62,7 @@ public struct Account: Codable, Sendable, Equatable {
         case keychainItem
         case email
         case plan
+        case workspace
     }
 
     public init(from decoder: Decoder) throws {
@@ -66,6 +74,7 @@ public struct Account: Codable, Sendable, Equatable {
         self.keychainItem = try c.decodeIfPresent(String.self, forKey: .keychainItem)
         self.email = try c.decodeIfPresent(String.self, forKey: .email)
         self.plan = try c.decodeIfPresent(String.self, forKey: .plan)
+        self.workspace = try c.decodeIfPresent(String.self, forKey: .workspace) ?? "origin"
     }
 }
 
