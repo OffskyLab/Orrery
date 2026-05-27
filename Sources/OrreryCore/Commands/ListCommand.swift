@@ -59,8 +59,24 @@ public struct ListCommand: ParsableCommand {
             let maxNameLen = accts.map(\.displayName.count).max() ?? 0
             let activeID = activePins[tool.rawValue]
 
+            // For the active pin, read email/plan live from the active config dir
+            // so a `/login` (or any other out-of-band credential change) shows up
+            // immediately, without waiting for the next sync-back round trip.
+            let liveActive: ToolAuth.AccountInfo? = activeID.map { _ in
+                ToolAuth.liveActiveInfo(tool: tool, env: activeEnv)
+            }
+
             for acct in accts {
-                let suffix = [acct.email, acct.plan].compactMap { $0 }.joined(separator: ", ")
+                let email: String?
+                let plan: String?
+                if acct.id == activeID, let live = liveActive {
+                    email = live.email ?? acct.email
+                    plan = live.plan ?? acct.plan
+                } else {
+                    email = acct.email
+                    plan = acct.plan
+                }
+                let suffix = [email, plan].compactMap { $0 }.joined(separator: ", ")
                 let tail: String
                 if suffix.isEmpty {
                     tail = ""
