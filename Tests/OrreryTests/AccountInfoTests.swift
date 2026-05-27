@@ -294,16 +294,39 @@ struct AccountWorkspaceTests {
 
     @Test("Account round-trips workspace through Codable")
     func roundTripsWorkspace() throws {
-        var acct = Account(tool: .claude, displayName: "test")
-        acct.workspace = "work"
+        let acct = Account(tool: .claude, displayName: "test", workspace: "work")
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(acct)
 
+        // Sanity-check the raw JSON: catches a typo in CodingKeys that would
+        // otherwise silently let the default kick in on decode.
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"workspace\":\"work\""))
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let decoded = try decoder.decode(Account.self, from: data)
         #expect(decoded.workspace == "work")
+    }
+
+    @Test("Account preserves explicit 'origin' through round-trip (distinct from default fallback)")
+    func explicitOriginRoundTrip() throws {
+        // Distinguishes 'workspace was explicitly written as origin in JSON'
+        // from 'workspace was absent and defaulted to origin'.
+        let acct = Account(tool: .claude, displayName: "test", workspace: "origin")
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(acct)
+
+        let json = String(data: data, encoding: .utf8) ?? ""
+        #expect(json.contains("\"workspace\":\"origin\""))
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(Account.self, from: data)
+        #expect(decoded.workspace == "origin")
     }
 }
