@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.0.3 - 2026-05-27
+
+### Fixed
+
+- **`orrery list` / `orrery show` no longer go stale after a `/login`.** The
+  active pin's `email` / `plan` are now read live from the active config
+  dir (Claude: `.claude.json` for the canonical email + the active Keychain
+  item for plan), instead of from the pool-side stored fields that only
+  refreshed on `orrery run claude` sync-back. Out-of-band credential changes
+  — `/login` inside Claude Code, manual edits — show up immediately on the
+  next `list` / `show`. Non-active rows still use stored fields (cheap).
+
 ## v3.0.2 - 2026-05-22
 
 ### Fixed
