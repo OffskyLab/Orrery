@@ -94,3 +94,55 @@ public enum ClaudeJsonMerge {
         return .perAccount
     }
 }
+
+extension ClaudeJsonMerge {
+
+    /// Result of splitting a merged `.claude.json`.
+    public struct SplitResult {
+        public let identity: [String: Any]
+        public let shared: [String: Any]
+    }
+
+    /// Errors thrown by split / merge.
+    public enum Error: Swift.Error, LocalizedError {
+        case fileMissing(URL)
+        case fileMalformed(URL)
+        case fileWriteFailed(URL)
+
+        public var errorDescription: String? {
+            switch self {
+            case .fileMissing(let u):
+                return "claude.json not found at \(u.path)"
+            case .fileMalformed(let u):
+                return "claude.json at \(u.path) is not a JSON object"
+            case .fileWriteFailed(let u):
+                return "could not write \(u.path)"
+            }
+        }
+    }
+
+    /// Split a merged `.claude.json` into two dicts based on per-key category.
+    ///
+    /// - Throws: `Error.fileMissing` if the file doesn't exist;
+    ///   `Error.fileMalformed` if it's not a JSON object.
+    public static func split(claudeJSONURL url: URL) throws -> SplitResult {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else {
+            throw Error.fileMissing(url)
+        }
+        let data = try Data(contentsOf: url)
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw Error.fileMalformed(url)
+        }
+
+        var identity: [String: Any] = [:]
+        var shared: [String: Any] = [:]
+        for (key, value) in obj {
+            switch fieldCategory(key) {
+            case .perAccount: identity[key] = value
+            case .shared:     shared[key]   = value
+            }
+        }
+        return SplitResult(identity: identity, shared: shared)
+    }
+}
