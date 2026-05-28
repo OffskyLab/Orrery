@@ -75,30 +75,13 @@ struct AccountRefreshInfoTests {
         #expect(acct.plan == nil)
     }
 
-    @Test("claude: email is populated from the pool oauthAccount snapshot")
-    func claudeFromPoolSnapshot() throws {
+    @Test("claude: without credential email stays nil")
+    func claudeWithoutCredential() throws {
         let store = try makeStore()
-        var acct = Account(tool: .claude, displayName: "claude-work")
+        var acct = Account(tool: .claude, displayName: "claude-no-cred")
         try store.save(acct)
 
-        // Write a snapshot into the pool dir (as captureFromActive would).
-        let poolDir = store.accountDir(id: acct.id, tool: .claude)
-        try FileManager.default.createDirectory(at: poolDir, withIntermediateDirectories: true)
-        let snapURL = ClaudeOAuthSnapshot.snapshotURL(poolDir: poolDir)
-        try Data(#"{"emailAddress":"alice@example.com"}"#.utf8).write(to: snapURL)
-
-        let changed = acct.refreshInfo(accountStore: store)
-        #expect(changed)
-        #expect(acct.email == "alice@example.com")
-    }
-
-    @Test("claude: without snapshot or credential email stays nil")
-    func claudeWithoutSnapshot() throws {
-        let store = try makeStore()
-        var acct = Account(tool: .claude, displayName: "claude-no-snap")
-        try store.save(acct)
-
-        // No pool snapshot file and no credential — both email and plan stay nil.
+        // No credential — both email and plan stay nil.
         let changed = acct.refreshInfo(accountStore: store)
         #expect(!changed)
         #expect(acct.email == nil)
@@ -180,38 +163,25 @@ struct AccountInfoBackfillTests {
         return (home, cleanup)
     }
 
-    @Test("backfills Claude email from a referencing env's .claude.json and writes the flag")
-    func backfillsClaudeEmail() throws {
+    @Test("runs for Claude accounts and writes the flag (no credential → email stays nil)")
+    func backfillsClaudeNoOp() throws {
         let (home, cleanup) = makeTempHome()
         defer { cleanup() }
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
 
-        let envStore = EnvironmentStore(homeURL: home)
         let acctStore = AccountStore(homeURL: home)
 
         // Pre-existing Claude account without email/plan, no credential blob.
         let acct = Account(tool: .claude, displayName: "needs-backfill")
         try acctStore.save(acct)
 
-        // A named env that pins this account.
-        var env = OrreryEnvironment(name: "work-env")
-        env.setAccount(acct.id, for: .claude)
-        try envStore.save(env)
-
-        // Drop a `.claude.json` into the env's claude tool dir.
-        let claudeDir = envStore.toolConfigDir(tool: .claude, environment: "work-env")
-        try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
-        try Data(#"{"oauthAccount":{"emailAddress":"backfill@example.com"}}"#.utf8)
-            .write(to: claudeDir.appendingPathComponent(".claude.json"))
-
-        // Run backfill.
+        // Run backfill — no credential to read, so email stays nil.
         AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
 
-        // Account email is now populated.
         let reloaded = try acctStore.load(id: acct.id, tool: .claude)
-        #expect(reloaded.email == "backfill@example.com")
+        #expect(reloaded.email == nil)
 
-        // Flag file written.
+        // Flag file written regardless.
         let flag = home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName)
         #expect(FileManager.default.fileExists(atPath: flag.path))
     }
