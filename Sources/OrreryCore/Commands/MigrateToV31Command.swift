@@ -10,7 +10,7 @@ import Foundation
 public struct MigrateToV31Command: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "migrate-to-v3.1",
-        abstract: "Bring claude pool accounts up to the v3.1 per-account-dir layout (idempotent, additive)."
+        abstract: L10n.Migrate.abstract
     )
 
     public init() {}
