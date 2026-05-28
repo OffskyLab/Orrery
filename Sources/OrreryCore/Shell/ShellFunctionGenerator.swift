@@ -173,7 +173,7 @@ public struct ShellFunctionGenerator {
                 # make the child claude hang waiting for an MCP host.
                 unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH
                 while true; do
-                  command claude "${_phantom_args[@]}"
+                  claude "${_phantom_args[@]}"
                   [ -f "$_phantom_sentinel" ] || break
                   local TARGET_SANDBOX='' TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
                   . "$_phantom_sentinel"
@@ -294,7 +294,9 @@ public struct ShellFunctionGenerator {
         # the real claude. Otherwise, pass through to claude unchanged.
         claude() {
           if [ -n "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$CLAUDE_CONFIG_DIR/metadata.json" ]; then
-            command orrery-bin _prepare-claude-launch --account-dir "$CLAUDE_CONFIG_DIR" 2>/dev/null || true
+            if ! command orrery-bin _prepare-claude-launch --account-dir "$CLAUDE_CONFIG_DIR"; then
+              echo "orrery: prepare-claude-launch failed; launching with existing .claude.json" >&2
+            fi
             command claude "$@"
             local _rc=$?
             command orrery-bin _capture-claude-exit --account-dir "$CLAUDE_CONFIG_DIR" 2>/dev/null || true
