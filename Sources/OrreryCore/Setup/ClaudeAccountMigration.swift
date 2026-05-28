@@ -5,9 +5,7 @@ import Foundation
 ///
 /// Purely additive:
 /// - Creates the 5 workspace-pointing symlinks via `ClaudeAccountDirectory.prepareDirectory`
-/// - Seeds `claude-identity.json` (account dir) with whatever oauthAccount info is
-///   available — prefers the existing `ClaudeOAuthSnapshot` (v3.0.4's per-pool
-///   snapshot of `.claude.json`'s oauthAccount), falls back to `Account.email`,
+/// - Seeds `claude-identity.json` (account dir) from `Account.email` if available,
 ///   else writes an empty `{}`.
 ///
 /// Does NOT move, copy, or delete any existing v3.0.4 state — credentials remain
@@ -34,10 +32,7 @@ public enum ClaudeAccountMigration {
             environmentStore: environmentStore
         )
 
-        // Seed claude-identity.json. Priority:
-        //   1. Existing ClaudeOAuthSnapshot (v3.0.4 per-pool snapshot — most fresh)
-        //   2. Account.email (older v3.0.4 cached field)
-        //   3. Empty {}
+        // Seed claude-identity.json from Account.email if available, else empty {}.
         let poolDir = accountStore.accountDir(id: account.id, tool: .claude)
         let identityURL = ClaudeJsonMerge.identityFileURL(accountDir: poolDir)
 
@@ -48,9 +43,7 @@ public enum ClaudeAccountMigration {
         }
 
         var identity: [String: Any] = [:]
-        if let snap = ClaudeOAuthSnapshot.loadSnapshot(poolDir: poolDir) {
-            identity["oauthAccount"] = snap
-        } else if let email = account.email {
+        if let email = account.email {
             identity["oauthAccount"] = ["emailAddress": email]
         }
 

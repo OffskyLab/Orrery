@@ -82,12 +82,10 @@ extension Account {
     /// 從 pool-side 來源刷新 `email` / `plan`。回傳是否有任何欄位實際變動
     /// （避免無謂的 save）。
     ///
-    /// 對 Claude：email 優先取 pool snapshot（`<poolDir>/oauthAccount.json`，
-    /// 由 `prepareSyncBack` / `AccountLoginFlow.importFrom` 捕入），讀不到才退
-    /// 而求其次用 credential JWT 的 email claim。plan 一律從 credential JWT
-    /// 的 `subscriptionType` 取。**不再讀 active `.claude.json`** — 那個檔案
-    /// 跟 pool 不一定同步，過去把它當成 email canonical source 是 stored 欄位
-    /// 被 email/plan 不同身份混雜汙染的根因。
+    /// 對 Claude：email 和 plan 均從 credential JWT (`subscriptionType` /
+    /// `email` claim) 取。**不再讀 active `.claude.json` 或 pool snapshot** —
+    /// v3.1 起 identity 由 `claude-identity.json` 透過 launch/capture hooks
+    /// 管理，不再經由 pool snapshot 路徑。
     ///
     /// 任何來源讀不到就「保留原值」，永遠不 throw。
     @discardableResult
@@ -110,14 +108,7 @@ extension Account {
         case .claude:
             let info = ToolAuth.accountInfo(forPoolAccount: self, accountStore: accountStore)
             if let p = info.plan, p != plan { plan = p; changed = true }
-
-            let poolDir = accountStore.accountDir(id: id, tool: .claude)
-            if let snap = ClaudeOAuthSnapshot.loadSnapshot(poolDir: poolDir),
-               let e = snap["emailAddress"] as? String, e != email {
-                email = e; changed = true
-            } else if let e = info.email, e != email {
-                email = e; changed = true
-            }
+            if let e = info.email, e != email { email = e; changed = true }
         }
 
         return changed

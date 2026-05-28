@@ -22,11 +22,6 @@ private func runOrreryMain() throws {
     // created (via v3 migration or manual `account add`) before those fields
     // were stored on the `Account` model. Best-effort, never throws.
     AccountMigration.runInfoBackfillIfNeeded(homeURL: orreryHomeURL())
-    // One-shot Claude oauthAccount-snapshot backfill: pre-v3.0.4 the pool
-    // never snapshotted `.claude.json`'s oauthAccount, so cached email/plan
-    // could be from different identities. Capture snapshots from referencing
-    // envs where possible and re-derive cached fields.
-    AccountMigration.runClaudeOAuthSnapshotBackfillIfNeeded(homeURL: orreryHomeURL())
     // One-shot v3.1 account-layout migration: walks all claude pool accounts and
     // brings each to v3.1 layout (per-account dir + workspace symlinks). Guarded
     // by a flag file so it only runs once. Best-effort, never throws.
