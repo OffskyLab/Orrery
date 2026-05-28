@@ -34,7 +34,7 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
         guard let mdData = try? Data(contentsOf: metadataURL),
               let mdObj = try? JSONSerialization.jsonObject(with: mdData) as? [String: Any]
         else {
-            throw ValidationError("Could not read metadata.json at \(metadataURL.path)")
+            throw ValidationError("Could not read metadata.json at \(metadataURL.path). Run `orrery pin <account> --workspace <name>` to create or repair the account dir.")
         }
         let workspace = (mdObj["workspace"] as? String) ?? "origin"
 
