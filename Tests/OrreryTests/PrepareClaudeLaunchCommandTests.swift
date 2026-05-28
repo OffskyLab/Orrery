@@ -1,3 +1,4 @@
+import ArgumentParser
 import Foundation
 import Testing
 @testable import OrreryCore
@@ -74,7 +75,7 @@ struct PrepareClaudeLaunchCommandTests {
     func nonexistentAccountDirThrows() throws {
         var cmd = try PrepareClaudeLaunchCommand.parse(
             ["--account-dir", "/tmp/nope-\(UUID().uuidString)"])
-        #expect(throws: (any Error).self) {
+        #expect(throws: ValidationError.self) {
             try cmd.run()
         }
     }
