@@ -864,25 +864,24 @@
     "kind": "var",
     "parameters": []
   },
-  { "path": ["Sandbox", "abstract"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvAbstract"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvKeyHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvValueHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvSandboxHelp"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvNoActive"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "setEnvOriginNotSupported"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvKeyHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvValueHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvWorkspaceHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvNoActive"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "setEnvOriginNotSupported"], "kind": "var", "parameters": [] },
   {
-    "path": ["Sandbox", "setEnvSuccess"],
+    "path": ["Workspace", "setEnvSuccess"],
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "key", "type": "String" },
       { "label": "_", "name": "name", "type": "String" }
     ]
   },
-  { "path": ["Sandbox", "unsetEnvAbstract"], "kind": "var", "parameters": [] },
-  { "path": ["Sandbox", "unsetEnvKeyHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "unsetEnvAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Workspace", "unsetEnvKeyHelp"], "kind": "var", "parameters": [] },
   {
-    "path": ["Sandbox", "unsetEnvSuccess"],
+    "path": ["Workspace", "unsetEnvSuccess"],
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "key", "type": "String" },

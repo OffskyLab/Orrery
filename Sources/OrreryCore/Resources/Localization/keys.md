@@ -125,21 +125,6 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `delete.nothingSelected` | Shown when the user finishes the multi-select with no items. |
 | `delete.reservedName` | Error when trying to delete `origin`. |
 
-## sandbox — `orrery sandbox` command family
-
-| Key | Context |
-| --- | --- |
-| `sandbox.abstract` | Root command help for `orrery sandbox`. |
-| `sandbox.setEnvAbstract` | Sub-command help for `orrery sandbox set-env`. |
-| `sandbox.setEnvKeyHelp` | Positional `key` argument help for `set-env`. |
-| `sandbox.setEnvValueHelp` | Positional `value` argument help for `set-env`. |
-| `sandbox.setEnvSandboxHelp` | `-s/--sandbox` option help for `set-env` and `unset-env`. |
-| `sandbox.setEnvNoActive` | Error: no active sandbox and `-s` not given. References `orrery enter <name>` — keep literal. |
-| `sandbox.setEnvOriginNotSupported` | Error when targeting the `origin` sandbox. |
-| `sandbox.setEnvSuccess` | Success: variable set. `{key}` = variable name; `{name}` = sandbox name. |
-| `sandbox.unsetEnvAbstract` | Sub-command help for `orrery sandbox unset-env`. |
-| `sandbox.unsetEnvKeyHelp` | Positional `key` argument help for `unset-env`. |
-| `sandbox.unsetEnvSuccess` | Success: variable removed. `{key}` = variable name; `{name}` = sandbox name. |
 
 ## export / unexport — shell integration internals
 
@@ -377,11 +362,21 @@ Shown by ArgumentParser as part of auto-generated help.
 | `which.toolHelp` | Positional `tool` help. Tool names literal. |
 | `which.unknownTool` | Error for unrecognized tool. `{tool}`. |
 
-## workspace — `orrery workspace` (v3.1 alias for sandbox)
+## workspace — `orrery workspace` command family
 
 | Key | Context |
 | --- | --- |
-| `workspace.abstract` | Command help for `orrery workspace` (distinct from `sandbox`, uses workspace vocabulary). |
+| `workspace.abstract` | Root command help for `orrery workspace`. |
+| `workspace.setEnvAbstract` | Sub-command help for `orrery workspace set-env`. |
+| `workspace.setEnvKeyHelp` | Positional `key` argument help for `set-env`. |
+| `workspace.setEnvValueHelp` | Positional `value` argument help for `set-env`. |
+| `workspace.setEnvWorkspaceHelp` | `-s/--sandbox` option help for `set-env` and `unset-env`. References the active workspace. |
+| `workspace.setEnvNoActive` | Error: no active workspace and `-s` not given. References `orrery enter <name>` — keep literal. |
+| `workspace.setEnvOriginNotSupported` | Error when targeting the `origin` workspace. |
+| `workspace.setEnvSuccess` | Success: variable set. `{key}` = variable name; `{name}` = workspace name. |
+| `workspace.unsetEnvAbstract` | Sub-command help for `orrery workspace unset-env`. |
+| `workspace.unsetEnvKeyHelp` | Positional `key` argument help for `unset-env`. |
+| `workspace.unsetEnvSuccess` | Success: variable removed. `{key}` = variable name; `{name}` = workspace name. |
 
 ---
 
