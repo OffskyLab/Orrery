@@ -10,7 +10,7 @@ import Glibc
 public struct SandboxCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "sandbox",
-        abstract: L10n.Sandbox.abstract,
+        abstract: L10n.Workspace.abstract,
         subcommands: [
             SetEnv.self, UnsetEnv.self,
             List.self, Delete.self, Info.self, Rename.self, Current.self,
@@ -26,28 +26,28 @@ public struct SandboxCommand: ParsableCommand {
     public struct SetEnv: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "set-env",
-            abstract: L10n.Sandbox.setEnvAbstract
+            abstract: L10n.Workspace.setEnvAbstract
         )
 
-        @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvKeyHelp)) public var key: String
-        @Argument(help: ArgumentHelp(L10n.Sandbox.setEnvValueHelp)) public var value: String
+        @Argument(help: ArgumentHelp(L10n.Workspace.setEnvKeyHelp)) public var key: String
+        @Argument(help: ArgumentHelp(L10n.Workspace.setEnvValueHelp)) public var value: String
         @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
+                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var sandbox: String?
 
         public init() {}
 
         public func run() throws {
             guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-                throw ValidationError(L10n.Sandbox.setEnvNoActive)
+                throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Sandbox.setEnvOriginNotSupported)
+                throw ValidationError(L10n.Workspace.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
             env.env[key] = value
             try store.save(env)
-            print(L10n.Sandbox.setEnvSuccess(key, envName))
+            print(L10n.Workspace.setEnvSuccess(key, envName))
         }
     }
 
@@ -56,12 +56,12 @@ public struct SandboxCommand: ParsableCommand {
     public struct UnsetEnv: ParsableCommand {
         public static let configuration = CommandConfiguration(
             commandName: "unset-env",
-            abstract: L10n.Sandbox.unsetEnvAbstract
+            abstract: L10n.Workspace.unsetEnvAbstract
         )
 
-        @Argument(help: ArgumentHelp(L10n.Sandbox.unsetEnvKeyHelp)) public var key: String
+        @Argument(help: ArgumentHelp(L10n.Workspace.unsetEnvKeyHelp)) public var key: String
         @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Sandbox.setEnvSandboxHelp)) public var sandbox: String?
+                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var sandbox: String?
 
         public init() {}
 
@@ -70,16 +70,16 @@ public struct SandboxCommand: ParsableCommand {
             // the user-facing strings are tool-action-agnostic and apply equally to unset.
             // If the unset path ever needs different wording, add dedicated keys.
             guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-                throw ValidationError(L10n.Sandbox.setEnvNoActive)
+                throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
-                throw ValidationError(L10n.Sandbox.setEnvOriginNotSupported)
+                throw ValidationError(L10n.Workspace.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
             var env = try store.load(named: envName)
             env.env.removeValue(forKey: key)
             try store.save(env)
-            print(L10n.Sandbox.unsetEnvSuccess(key, envName))
+            print(L10n.Workspace.unsetEnvSuccess(key, envName))
         }
     }
 
