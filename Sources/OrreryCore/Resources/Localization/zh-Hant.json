@@ -14,7 +14,7 @@
   "account.listAbstract": "列出帳號（可指定工具篩選）。",
   "account.listEmpty": "尚未建立任何帳號。執行 'orrery add' 來建立。",
   "account.listRow": "  {marker} {name}{tail}",
-  "account.listSandboxHeader": "sandbox: {name}",
+  "account.listSandboxHeader": "workspace: {name}",
   "account.listToolHeader": "{tool} 帳號：",
   "account.removeAbstract": "從帳號池刪除帳號。",
   "account.removeNotFound": "{tool} 中找不到帳號「{name}」。",

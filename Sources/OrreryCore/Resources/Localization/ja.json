@@ -14,7 +14,7 @@
   "account.listAbstract": "アカウント一覧を表示します（ツールで絞り込み可能）。",
   "account.listEmpty": "アカウントがありません。'orrery add' を実行して作成してください。",
   "account.listRow": "  {marker} {name}{tail}",
-  "account.listSandboxHeader": "sandbox: {name}",
+  "account.listSandboxHeader": "workspace: {name}",
   "account.listToolHeader": "{tool} アカウント：",
   "account.removeAbstract": "アカウントプールからアカウントを削除します。",
   "account.removeNotFound": "{tool} にアカウント「{name}」が見つかりません。",
