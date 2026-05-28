@@ -324,57 +324,23 @@ struct AccountCommandsAllTests {
     struct AccountUseTests {
         init() {}
 
-        @Test("pinsToOrigin: pins claude account to origin when ORRERY_ACTIVE_ENV is unset")
-        func pinsToOrigin() throws {
+        @Test("claudeThrows: UseCommand.run() throws ValidationError for --claude, pointing at shell function")
+        func claudeThrows() throws {
             try withIsolatedHome {
-                // Ensure ORRERY_ACTIVE_ENV is unset
-                let savedEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-                unsetenv("ORRERY_ACTIVE_ENV")
-                defer {
-                    if let saved = savedEnv { setenv("ORRERY_ACTIVE_ENV", saved, 1) }
+                let acct = Account(tool: .claude, displayName: "alice")
+                try AccountStore.default.save(acct)
+
+                // Default tool is claude; explicit --claude flag also hits this path.
+                #expect(throws: ValidationError.self) {
+                    try UseCommand.parse(["alice"]).run()
                 }
-
-                let acct = Account(tool: .claude, displayName: "work")
-                try AccountStore.default.save(acct)
-
-                let cmd = try UseCommand.parse(["work"])
-                try cmd.run()
-
-                let pinned = EnvironmentStore.default.loadOriginConfig().account(for: .claude)
-                #expect(pinned == acct.id)
+                #expect(throws: ValidationError.self) {
+                    try UseCommand.parse(["--claude", "alice"]).run()
+                }
             }
         }
 
-        @Test("pinsToNamedEnv: pins account to named env without touching origin")
-        func pinsToNamedEnv() throws {
-            try withIsolatedHome {
-                let envStore = EnvironmentStore.default
-
-                // Create the named env
-                try envStore.save(OrreryEnvironment(name: "work-env"))
-
-                // Create the account
-                let acct = Account(tool: .claude, displayName: "personal")
-                try AccountStore.default.save(acct)
-
-                // Set ORRERY_ACTIVE_ENV to the named env
-                setenv("ORRERY_ACTIVE_ENV", "work-env", 1)
-                defer { unsetenv("ORRERY_ACTIVE_ENV") }
-
-                let cmd = try UseCommand.parse(["personal"])
-                try cmd.run()
-
-                // Named env should have the pin
-                let loadedEnv = try envStore.load(named: "work-env")
-                #expect(loadedEnv.account(for: .claude) == acct.id)
-
-                // Origin should be untouched
-                let originPin = envStore.loadOriginConfig().account(for: .claude)
-                #expect(originPin == nil)
-            }
-        }
-
-        @Test("notFound: throws when account does not exist")
+        @Test("notFound: throws when codex account does not exist")
         func notFound() throws {
             try withIsolatedHome {
                 let savedEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
@@ -383,13 +349,16 @@ struct AccountCommandsAllTests {
                     if let saved = savedEnv { setenv("ORRERY_ACTIVE_ENV", saved, 1) }
                 }
 
-                let cmd = try UseCommand.parse(["ghost"])
+                let cmd = try UseCommand.parse(["--codex", "ghost"])
                 #expect(throws: ValidationError.self) {
                     try cmd.run()
                 }
             }
         }
 
+        // Removed: `pinsToOrigin`, `pinsToNamedEnv` — tested v3.0.4 claude
+        // pin-via-UseCommand behavior. In v3.1 (Plan 4), UseCommand throws for
+        // claude; account selection is handled by the orrery() shell function.
         // Removed: `syncBackBeforeRepin` — tested v3.0.4 claude syncBack
         // behavior. In v3.1 (Plan 4), claude is fully managed by the per-account
         // dir layout + shell function wrapper; `prepareSyncBack` is a no-op for
