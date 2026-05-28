@@ -288,6 +288,22 @@ public struct ShellFunctionGenerator {
           command orrery-bin _link-memory 2>/dev/null || true
         }
 
+        # v3.1 launch wrapper. If CLAUDE_CONFIG_DIR is set and the dir
+        # contains a metadata.json (v3.1 account dir marker), invoke
+        # orrery-bin _prepare-claude-launch + _capture-claude-exit around
+        # the real claude. Otherwise, pass through to claude unchanged.
+        claude() {
+          if [ -n "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$CLAUDE_CONFIG_DIR/metadata.json" ]; then
+            command orrery-bin _prepare-claude-launch --account-dir "$CLAUDE_CONFIG_DIR" 2>/dev/null || true
+            command claude "$@"
+            local _rc=$?
+            command orrery-bin _capture-claude-exit --account-dir "$CLAUDE_CONFIG_DIR" 2>/dev/null || true
+            return $_rc
+          else
+            command claude "$@"
+          fi
+        }
+
         # gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,
         # so env isolation is achieved by overriding HOME to a per-env wrapper
         # dir whose `.gemini` symlinks back to the env's gemini config.
