@@ -25,6 +25,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             ExitCommand.self,
             RemoveCommand.self,
             SandboxCommand.self,
+            WorkspaceCommand.self,
             ToolsCommand.self,
             WhichCommand.self,
             RunCommand.self,
