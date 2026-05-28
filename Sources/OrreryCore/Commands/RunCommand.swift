@@ -126,9 +126,9 @@ extension RunCommand {
     /// 啟動工具前：依當前 env / origin 的 pin 把憑證 materialize 到工具會讀的位置。
     /// envName == nil 或 "origin" 視為 origin。
     ///
-    /// 對 Claude：除了 keychain credential，還要把 pool 的 `oauthAccount.json`
-    /// snapshot 寫進 active `.claude.json`，否則 `oauthAccount.emailAddress`
-    /// 會卡在前一個帳號，造成 `accountInfo(for:)` 回傳 email/plan 來自不同身份。
+    /// v3.1 起，Claude 的 oauthAccount 由 PrepareClaudeLaunchCommand 透過
+    /// claude-identity.json + shared.json merge 寫入 active `.claude.json`，
+    /// 不再由 RunCommand 處理 snapshot 注入。
     static func prepareMaterialize(tool: Tool, envName: String?) throws {
         guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
             // 沒釘 account — 不阻擋啟動，讓工具自己處理「未登入」。
@@ -137,37 +137,13 @@ extension RunCommand {
         let acctStore = AccountStore.default
         try CredentialAdapters.adapter(for: tool).materialize(
             account: account, configDir: configDir, accountStore: acctStore)
-
-        if tool == .claude {
-            let poolDir = acctStore.accountDir(id: account.id, tool: .claude)
-            let activeJSON = claudeJSONURL(forConfigDir: configDir)
-            // Legacy slots have no snapshot yet; let the helper derive a
-            // minimal one from the credential JWT so display stays consistent
-            // until the first sync-back captures the real block.
-            let fallbackJSON: String?
-            #if os(macOS)
-            if let item = account.keychainItem {
-                fallbackJSON = ClaudeKeychain.password(forService: item)
-            } else {
-                fallbackJSON = nil
-            }
-            #else
-            let credURL = poolDir.appendingPathComponent(".credentials.json")
-            fallbackJSON = (try? String(contentsOf: credURL))
-            #endif
-            _ = ClaudeOAuthSnapshot.applyToActive(
-                poolDir: poolDir,
-                activeClaudeJSONURL: activeJSON,
-                fallbackCredentialJSON: fallbackJSON
-            )
-        }
     }
 
     /// 工具結束後：把工具可能 refresh 過的憑證寫回 pool account。
     /// envName == nil 或 "origin" 視為 origin。沒釘 account 時為 no-op。
     ///
-    /// 對 Claude：除了 credential，也把 active `.claude.json` 的 `oauthAccount`
-    /// block 捕回 pool snapshot，讓下次 materialize 能把它再寫回去。
+    /// v3.1 起，Claude 的 oauthAccount capture 由 CaptureClaudeExitCommand
+    /// 透過 claude-identity.json 處理，不再由 RunCommand 捕 pool snapshot。
     /// 之後刷新 account 上的 `email` / `plan` 反映剛剛可能更新的訂閱資訊。
     static func prepareSyncBack(tool: Tool, envName: String?) throws {
         guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
@@ -176,13 +152,6 @@ extension RunCommand {
         let acctStore = AccountStore.default
         try CredentialAdapters.adapter(for: tool).syncBack(
             account: account, configDir: configDir, accountStore: acctStore)
-
-        if tool == .claude {
-            let poolDir = acctStore.accountDir(id: account.id, tool: .claude)
-            let activeJSON = claudeJSONURL(forConfigDir: configDir)
-            _ = ClaudeOAuthSnapshot.captureFromActive(
-                activeClaudeJSONURL: activeJSON, poolDir: poolDir)
-        }
 
         var refreshed = account
         if refreshed.refreshInfo(accountStore: acctStore) {
@@ -196,11 +165,4 @@ extension RunCommand {
         }
     }
 
-    /// `.claude.json` location for an active config dir (origin → `~/.claude.json`).
-    private static func claudeJSONURL(forConfigDir configDir: String?) -> URL {
-        if let configDir {
-            return URL(fileURLWithPath: configDir).appendingPathComponent(".claude.json")
-        }
-        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
-    }
 }

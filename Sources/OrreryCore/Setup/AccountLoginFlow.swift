@@ -49,15 +49,11 @@ public enum AccountLoginFlow {
             guard ClaudeKeychain.copyKeychainItem(from: srcService, to: dstService) else {
                 throw LoginError.credentialNotProduced(account.tool)
             }
-            captureClaudeOAuthSnapshot(stagingDir: stagingDir, account: account)
             captureInfo(account: account)
             return
         }
         #endif
         try importCredentialFile(stagingDir: stagingDir, into: account)
-        if account.tool == .claude {
-            captureClaudeOAuthSnapshot(stagingDir: stagingDir, account: account)
-        }
         captureInfo(account: account)
     }
 
@@ -74,16 +70,6 @@ public enum AccountLoginFlow {
                 "orrery: warning: could not persist refreshed account info for '\(account.displayName)': \(error)\n".utf8
             ))
         }
-    }
-
-    /// Capture `oauthAccount` from staging's `.claude.json` into the pool slot.
-    /// Best-effort: the credential is the load-bearing part; missing the
-    /// snapshot only affects display until the next sync-back captures it.
-    private static func captureClaudeOAuthSnapshot(stagingDir: URL, account: Account) {
-        let stagingJSON = stagingDir.appendingPathComponent(".claude.json")
-        let poolDir = AccountStore.default.accountDir(id: account.id, tool: .claude)
-        _ = ClaudeOAuthSnapshot.captureFromActive(
-            activeClaudeJSONURL: stagingJSON, poolDir: poolDir)
     }
 
     /// File-based import: codex, gemini, and Linux claude.
