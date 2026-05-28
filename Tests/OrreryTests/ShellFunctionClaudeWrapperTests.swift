@@ -95,4 +95,24 @@ struct ShellFunctionClaudeWrapperTests {
         #expect(hasStderrSurface,
             "prepare failure must surface to stderr (not be silenced by 2>/dev/null)")
     }
+
+    @Test("phantom loop account switch routes through orrery use shell function")
+    func phantomAccountSwitchUsesShellFunction() {
+        let sh = ShellFunctionGenerator.generate()
+        guard let loopStart = sh.range(of: "while true; do") else {
+            Issue.record("phantom loop not found")
+            return
+        }
+        guard let loopEnd = sh.range(of: "done\n", range: loopStart.upperBound..<sh.endIndex) else {
+            Issue.record("phantom loop end not found")
+            return
+        }
+        let body = String(sh[loopStart.upperBound..<loopEnd.lowerBound])
+        // Find the account-switch line — it should NOT use `command orrery-bin use`
+        // (which would bypass our v3.1 `use)` case and leave CLAUDE_CONFIG_DIR stale).
+        if body.contains("TARGET_ACCOUNT_TOOL") {
+            #expect(!body.contains("command orrery-bin use"),
+                "phantom account switch should call `orrery use` (shell function), not `command orrery-bin use`")
+        }
+    }
 }
