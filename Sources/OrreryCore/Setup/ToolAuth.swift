@@ -54,34 +54,6 @@ public enum ToolAuth {
         }
     }
 
-    /// Live read for the currently-active pin's account info.
-    ///
-    /// Reads from the **active** config dir (not the pool), so changes the user makes
-    /// outside orrery's sync-back path — e.g. a `/login` inside Claude Code — surface
-    /// immediately on `orrery list` / `orrery show`.
-    ///
-    /// `env` follows the `ORRERY_ACTIVE_ENV` convention: `nil` or
-    /// `ReservedEnvironment.defaultName` → origin; otherwise a named sandbox.
-    ///
-    /// For Claude, both email and plan come from the active config (email from
-    /// `.claude.json`'s `oauthAccount`, plan from the credential JWT). Their
-    /// agreement is maintained by `prepareMaterialize` / `prepareSyncBack`,
-    /// which keep `.claude.json` and the credential in lockstep via the
-    /// `ClaudeOAuthSnapshot` stored alongside the pool credential.
-    public static func liveActiveInfo(
-        tool: Tool,
-        env: String?,
-        environmentStore: EnvironmentStore = .default
-    ) -> AccountInfo {
-        let configDir: URL
-        if let env, env != ReservedEnvironment.defaultName {
-            configDir = environmentStore.toolConfigDir(tool: tool, environment: env)
-        } else {
-            configDir = environmentStore.originConfigDir(tool: tool)
-        }
-        return accountInfo(tool: tool, configDir: configDir)
-    }
-
     /// Look up account info for a pool account.
     /// Reads from the pool dir (not from the live/env config dir).
     /// Never throws — returns an empty `AccountInfo` on any failure.
