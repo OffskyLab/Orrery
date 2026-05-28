@@ -160,188 +160,37 @@ struct CredentialAdapterFactoryTests {
         #expect(CredentialAdapters.adapter(for: .gemini) is FilesystemCredentialAdapter)
     }
 
-    #if os(macOS)
-    @Test("returns KeychainCredentialAdapter for claude on macOS")
-    func claudeUsesKeychain() {
-        #expect(CredentialAdapters.adapter(for: .claude) is KeychainCredentialAdapter)
+    @Test("returns NoOpCredentialAdapter for claude")
+    func claudeUsesNoOp() {
+        #expect(CredentialAdapters.adapter(for: .claude) is NoOpCredentialAdapter)
     }
-    #else
-    @Test("returns FilesystemCredentialAdapter for claude on non-macOS")
-    func claudeUsesFilesystem() {
-        #expect(CredentialAdapters.adapter(for: .claude) is FilesystemCredentialAdapter)
-    }
-    #endif
 }
 
-#if os(macOS)
-@Suite("KeychainCredentialAdapter (macOS)", .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil))
-struct KeychainCredentialAdapterTests {
+@Suite("NoOpCredentialAdapter")
+struct NoOpCredentialAdapterTests {
     var tmpDir: URL!
     var accountStore: AccountStore!
 
     init() throws {
         tmpDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("orrery-kc-adapter-\(UUID().uuidString)")
+            .appendingPathComponent("orrery-noop-adapter-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         accountStore = AccountStore(homeURL: tmpDir)
     }
 
-    @Test("materialize copies token to the config-dir-derived service")
-    func materializeCopies() throws {
-        let accountID = UUID().uuidString
-        let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
-        let account = Account(id: accountID, tool: .claude, displayName: "test-mac",
-                              keychainItem: orreryService)
+    @Test("materialize is a no-op — does not throw")
+    func materializeIsNoOp() throws {
+        let account = Account(tool: .claude, displayName: "test-noop")
         try accountStore.save(account)
-
-        #expect(ClaudeKeychain.storePassword("dummy-token", forOrreryAccount: accountID))
-
-        let targetConfigDir = tmpDir.appendingPathComponent("claude-config")
-        let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
-        defer {
-            _ = KeychainTestSupport.delete(service: orreryService)
-            _ = KeychainTestSupport.delete(service: targetService)
-        }
-
-        let adapter = KeychainCredentialAdapter()
-        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
-
-        #expect(ClaudeKeychain.password(forService: targetService) == "dummy-token")
+        let adapter = NoOpCredentialAdapter()
+        try adapter.materialize(account: account, configDir: tmpDir.path, accountStore: accountStore)
     }
 
-    @Test("materialize throws when orrery keychain item is absent")
-    func throwsWhenAbsent() throws {
-        let accountID = UUID().uuidString
-        let account = Account(id: accountID, tool: .claude, displayName: "ghost",
-                              keychainItem: ClaudeKeychain.serviceName(forOrreryAccount: accountID))
+    @Test("syncBack is a no-op — does not throw")
+    func syncBackIsNoOp() throws {
+        let account = Account(tool: .claude, displayName: "test-noop-sb")
         try accountStore.save(account)
-        let adapter = KeychainCredentialAdapter()
-        #expect(throws: KeychainCredentialAdapter.Error.self) {
-            try adapter.materialize(account: account,
-                                    configDir: tmpDir.appendingPathComponent("c").path,
-                                    accountStore: accountStore)
-        }
-    }
-
-    @Test("materialize throws for non-claude tool")
-    func throwsWrongTool() throws {
-        let account = Account(tool: .codex, displayName: "x")
-        try accountStore.save(account)
-        let adapter = KeychainCredentialAdapter()
-        #expect(throws: KeychainCredentialAdapter.Error.self) {
-            try adapter.materialize(account: account,
-                                    configDir: tmpDir.appendingPathComponent("c").path,
-                                    accountStore: accountStore)
-        }
-    }
-
-    @Test("syncBack copies the live token back into the pool service")
-    func syncBackCopiesLiveToPool() throws {
-        let accountID = UUID().uuidString
-        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
-        let account = Account(id: accountID, tool: .claude, displayName: "sb-mac",
-                              keychainItem: poolService)
-        try accountStore.save(account)
-
-        // Pool starts with the original (pre-rotation) token; the live slot has
-        // the refreshed token Claude just wrote on its way out.
-        #expect(ClaudeKeychain.storePassword("stale-pool-token", forOrreryAccount: accountID))
-
-        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-syncback")
-        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
-        defer {
-            _ = KeychainTestSupport.delete(service: poolService)
-            _ = KeychainTestSupport.delete(service: liveService)
-        }
-        #expect(ClaudeKeychain.setPassword("refreshed-live-token", service: liveService))
-
-        let adapter = KeychainCredentialAdapter()
-        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
-
-        #expect(ClaudeKeychain.password(forService: poolService) == "refreshed-live-token")
-    }
-
-    @Test("syncBack is a safe no-op when the live slot has no credential")
-    func syncBackNoLiveCredential() throws {
-        let accountID = UUID().uuidString
-        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
-        let account = Account(id: accountID, tool: .claude, displayName: "sb-empty",
-                              keychainItem: poolService)
-        try accountStore.save(account)
-        #expect(ClaudeKeychain.storePassword("untouched", forOrreryAccount: accountID))
-
-        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-empty")
-        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
-        defer { _ = KeychainTestSupport.delete(service: poolService) }
-        // No item ever written at liveService — syncBack must not throw and must
-        // leave the pool untouched.
-        let adapter = KeychainCredentialAdapter()
-        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
-        #expect(ClaudeKeychain.password(forService: poolService) == "untouched")
-        _ = liveService
-    }
-
-    @Test("syncBack is a no-op when pool already matches live — early return, no write")
-    func syncBackIdempotentPoolMatchesLive() throws {
-        let accountID = UUID().uuidString
-        let poolService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
-        let account = Account(id: accountID, tool: .claude, displayName: "sb-idem",
-                              keychainItem: poolService)
-        try accountStore.save(account)
-
-        // Store the same token in both pool and live slots.
-        #expect(ClaudeKeychain.storePassword("same-token", forOrreryAccount: accountID))
-
-        let liveConfigDir = tmpDir.appendingPathComponent("claude-config-syncback-idem")
-        let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
-        defer {
-            _ = KeychainTestSupport.delete(service: poolService)
-            _ = KeychainTestSupport.delete(service: liveService)
-        }
-        #expect(ClaudeKeychain.setPassword("same-token", service: liveService))
-
-        let adapter = KeychainCredentialAdapter()
-        try adapter.syncBack(account: account, configDir: liveConfigDir.path, accountStore: accountStore)
-
-        // Pool should still hold the same token (no write occurred).
-        #expect(ClaudeKeychain.password(forService: poolService) == "same-token")
-    }
-
-    @Test("materialize is idempotent — second call is a safe no-op")
-    func idempotent() throws {
-        let accountID = UUID().uuidString
-        let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
-        let account = Account(id: accountID, tool: .claude, displayName: "idem",
-                              keychainItem: orreryService)
-        try accountStore.save(account)
-        #expect(ClaudeKeychain.storePassword("tok-idem", forOrreryAccount: accountID))
-
-        let targetConfigDir = tmpDir.appendingPathComponent("claude-config-idem")
-        let targetService = ClaudeKeychain.service(for: targetConfigDir.path)
-        defer {
-            _ = KeychainTestSupport.delete(service: orreryService)
-            _ = KeychainTestSupport.delete(service: targetService)
-        }
-
-        let adapter = KeychainCredentialAdapter()
-        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
-        try adapter.materialize(account: account, configDir: targetConfigDir.path, accountStore: accountStore)
-        #expect(ClaudeKeychain.password(forService: targetService) == "tok-idem")
+        let adapter = NoOpCredentialAdapter()
+        try adapter.syncBack(account: account, configDir: tmpDir.path, accountStore: accountStore)
     }
 }
-
-enum KeychainTestSupport {
-    @discardableResult
-    static func delete(service: String) -> Int32 {
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
-        proc.arguments = ["delete-generic-password", "-s", service, "-a", account]
-        proc.standardOutput = FileHandle.nullDevice
-        proc.standardError = FileHandle.nullDevice
-        try? proc.run()
-        proc.waitUntilExit()
-        return proc.terminationStatus
-    }
-}
-#endif

@@ -22,16 +22,33 @@ public protocol CredentialAdapter: Sendable {
     ) throws
 }
 
+/// v3.1: claude is managed by the per-account dir layout + shell wrapper,
+/// not by adapter materialize/syncBack. This no-op is returned by the
+/// factory for claude to keep the call sites in `RunCommand` uniform.
+public struct NoOpCredentialAdapter: CredentialAdapter {
+    public init() {}
+    public func materialize(
+        account: Account,
+        configDir: String?,
+        accountStore: AccountStore
+    ) throws {
+        // intentional no-op
+    }
+    public func syncBack(
+        account: Account,
+        configDir: String?,
+        accountStore: AccountStore
+    ) throws {
+        // intentional no-op
+    }
+}
+
 /// Factory：依工具 + 平台選擇 CredentialAdapter 實作。
 public enum CredentialAdapters {
     public static func adapter(for tool: Tool) -> any CredentialAdapter {
         switch tool {
         case .claude:
-            #if os(macOS)
-            return KeychainCredentialAdapter()
-            #else
-            return FilesystemCredentialAdapter(tool: .claude)
-            #endif
+            return NoOpCredentialAdapter()
         case .codex:
             return FilesystemCredentialAdapter(tool: .codex)
         case .gemini:
