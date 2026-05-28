@@ -161,3 +161,48 @@ extension ClaudeJsonMerge {
         return result
     }
 }
+
+extension ClaudeJsonMerge {
+
+    /// Filename of the per-account identity store (lives in account dir).
+    public static let identityFileName = "claude-identity.json"
+
+    /// Filename of the per-workspace shared store (lives in workspace dir).
+    public static let sharedFileName = "claude-shared.json"
+
+    /// Path to the per-account identity store. The file is the persisted
+    /// `identity` half of a `SplitResult`. Created lazily by `saveJSON`.
+    public static func identityFileURL(accountDir: URL) -> URL {
+        accountDir.appendingPathComponent(identityFileName)
+    }
+
+    /// Path to the per-workspace shared store. The file is the persisted
+    /// `shared` half of a `SplitResult`. Created lazily by `saveJSON`.
+    public static func sharedFileURL(workspaceDir: URL) -> URL {
+        workspaceDir.appendingPathComponent(sharedFileName)
+    }
+
+    /// Read a JSON-object file. Returns nil if the file is missing or its
+    /// contents are not a JSON object — callers treat "nothing there yet"
+    /// the same as "no relevant fields to merge".
+    public static func loadJSON(at url: URL) -> [String: Any]? {
+        guard let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return obj
+    }
+
+    /// Write a JSON-object file atomically. Creates parent dirs as needed.
+    /// Throws on serialization failure or write failure.
+    public static func saveJSON(_ obj: [String: Any], at url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let data = try JSONSerialization.data(
+            withJSONObject: obj,
+            options: [.sortedKeys, .prettyPrinted]
+        )
+        try data.write(to: url, options: .atomic)
+    }
+}
