@@ -488,4 +488,53 @@ public enum AccountMigration {
             ))
         }
     }
+
+    // MARK: - One-shot v3.1 account-layout migration
+
+    /// Flag file marking the one-shot v3.1 account-layout migration as done.
+    public static let v31AccountLayoutFlagFileName = ".v3.1-account-layout-migrated"
+
+    /// One-shot auto-migration of all claude pool accounts to v3.1 layout.
+    /// Guarded by a flag file so subsequent invocations are no-ops.
+    ///
+    /// Best-effort: never throws. Per-account migration errors are written
+    /// to stderr but do not block other accounts from being migrated.
+    public static func runV31AccountLayoutIfNeeded(homeURL: URL) {
+        let fm = FileManager.default
+        let flagURL = homeURL.appendingPathComponent(v31AccountLayoutFlagFileName)
+        if fm.fileExists(atPath: flagURL.path) { return }
+        guard fm.fileExists(atPath: homeURL.path) else { return }
+
+        let acctStore = AccountStore(homeURL: homeURL)
+        let envStore = EnvironmentStore(homeURL: homeURL)
+
+        let accounts: [Account]
+        do {
+            accounts = try acctStore.list(tool: .claude)
+        } catch {
+            FileHandle.standardError.write(Data(
+                "[orrery v3.1 auto-migration] warning: could not list claude accounts: \(error)\n".utf8
+            ))
+            return
+        }
+
+        for acct in accounts {
+            do {
+                try ClaudeAccountMigration.migrateAccount(
+                    acct, accountStore: acctStore, environmentStore: envStore)
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "[orrery v3.1 auto-migration] warning: could not migrate '\(acct.displayName)': \(error)\n".utf8
+                ))
+            }
+        }
+
+        do {
+            try Data("v1\n".utf8).write(to: flagURL)
+        } catch {
+            FileHandle.standardError.write(Data(
+                "[orrery v3.1 auto-migration] warning: could not write flag file: \(error)\n".utf8
+            ))
+        }
+    }
 }

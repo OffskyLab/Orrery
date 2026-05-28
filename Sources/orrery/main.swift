@@ -27,6 +27,10 @@ private func runOrreryMain() throws {
     // could be from different identities. Capture snapshots from referencing
     // envs where possible and re-derive cached fields.
     AccountMigration.runClaudeOAuthSnapshotBackfillIfNeeded(homeURL: orreryHomeURL())
+    // One-shot v3.1 account-layout migration: walks all claude pool accounts and
+    // brings each to v3.1 layout (per-account dir + workspace symlinks). Guarded
+    // by a flag file so it only runs once. Best-effort, never throws.
+    AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
     OrreryThirdPartyRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first
