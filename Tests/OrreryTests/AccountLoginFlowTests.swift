@@ -140,3 +140,20 @@ struct AccountLoginFlowTests {
         return dir
     }
 }
+
+#if os(macOS)
+enum KeychainTestSupport {
+    @discardableResult
+    static func delete(service: String) -> Int32 {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        proc.arguments = ["delete-generic-password", "-s", service, "-a", account]
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        try? proc.run()
+        proc.waitUntilExit()
+        return proc.terminationStatus
+    }
+}
+#endif
