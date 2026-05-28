@@ -66,6 +66,22 @@ struct RunCommandPrepareMaterializeTests {
         }
     }
 
+    @Test("claude: prepareMaterialize is a no-op (v3.1 shell-function managed)")
+    func claudePrepareMaterializeIsNoOp() throws {
+        try withIsolatedHome {
+            // Even with a pinned claude account, prepareMaterialize must be a no-op.
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "claude-noop")
+            try acctStore.save(acct)
+            var env = OrreryEnvironment(name: "noop-env")
+            env.setAccount(acct.id, for: .claude)
+            try envStore.save(env)
+            // Must not throw and must not touch any files beyond what's already there.
+            try RunCommand.prepareMaterialize(tool: .claude, envName: "noop-env")
+        }
+    }
+
     // NOTE: The origin happy-path (materializing a real credential) is intentionally
     // NOT tested here. The origin target is the user's real environment (~/.codex,
     // real Keychain entries) and must never be mutated or read by automated tests.

@@ -106,6 +106,23 @@ struct AccountRefreshInfoTests {
 @Suite("RunCommand.prepareSyncBack refresh-and-save", .serialized)
 struct RunCommandPrepareSyncBackInfoTests {
 
+    @Test("claude: prepareSyncBack is a no-op (v3.1 shell-function managed)")
+    func claudePrepareSyncBackIsNoOp() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "claude-sb-noop")
+            try acctStore.save(acct)
+            var env = OrreryEnvironment(name: "claude-env")
+            env.setAccount(acct.id, for: .claude)
+            try envStore.save(env)
+            // Must not throw and must not modify the account in the store.
+            try RunCommand.prepareSyncBack(tool: .claude, envName: "claude-env")
+            let reloaded = try acctStore.load(id: acct.id, tool: .claude)
+            #expect(reloaded.email == nil)
+        }
+    }
+
     @Test("codex: prepareSyncBack populates email and plan from auth.json JWT")
     func codexSyncBackRefreshesAccountInfo() throws {
         try withIsolatedHome {
