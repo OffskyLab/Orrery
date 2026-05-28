@@ -251,17 +251,26 @@ public struct ShellFunctionGenerator {
                   -h|--help|--version) command orrery-bin "$@"; return $?; ;;
                 esac
               done
-              # v3.1 fast-path: if the named account has been migrated to the
-              # per-account-dir layout, export CLAUDE_CONFIG_DIR in this shell.
-              # Otherwise fall through to v3.0.4 binary path (materialize).
               shift
+              # Codex / gemini route directly to the binary — those tools have
+              # no per-account dir concept in v3.1.
+              for _a in "$@"; do
+                case "$_a" in
+                  --codex|--gemini)
+                    command orrery-bin use "$@"
+                    return $?
+                    ;;
+                esac
+              done
+              # Claude (explicit or default). Let _account-dir's stderr flow to
+              # the user's terminal naturally; capture only stdout into _dir.
+              # On failure _account-dir has already printed an actionable error.
               local _dir
-              _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null) || true
-              if [ -n "$_dir" ]; then
+              if _dir=$(command orrery-bin _account-dir "$@"); then
                 export CLAUDE_CONFIG_DIR="$_dir"
                 echo "orrery: CLAUDE_CONFIG_DIR=$_dir" >&2
               else
-                command orrery-bin use "$@"
+                return 1
               fi
               ;;
             *)
