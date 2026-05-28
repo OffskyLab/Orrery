@@ -47,6 +47,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             // Internal subcommands (hidden from --help, used by shell wrappers)
             PrepareClaudeLaunchCommand.self,
             CaptureClaudeExitCommand.self,
+            AccountDirLookupCommand.self,
         ]
     )
     public init() {}
