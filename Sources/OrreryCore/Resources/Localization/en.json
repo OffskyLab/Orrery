@@ -14,7 +14,7 @@
   "account.listAbstract": "List accounts (optionally filtered by tool).",
   "account.listEmpty": "No accounts yet. Run 'orrery add' to create one.",
   "account.listRow": "  {marker} {name}{tail}",
-  "account.listSandboxHeader": "sandbox: {name}",
+  "account.listSandboxHeader": "workspace: {name}",
   "account.listToolHeader": "{tool} accounts:",
   "account.removeAbstract": "Remove an account from the pool.",
   "account.removeNotFound": "No account '{name}' for {tool}.",

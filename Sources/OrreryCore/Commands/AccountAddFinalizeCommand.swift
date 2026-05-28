@@ -51,6 +51,22 @@ public struct AccountAddFinalizeCommand: ParsableCommand {
         // Reload the refreshed account (importFrom may have updated email/plan).
         let refreshed = (try? AccountStore.default.load(id: accountID, tool: tool)) ?? account
 
+        // For claude accounts, apply v3.1 per-account-dir layout immediately so the
+        // newly-added account doesn't miss out when the global migration flag is already set.
+        if refreshed.tool == .claude {
+            do {
+                try ClaudeAccountMigration.migrateAccount(
+                    refreshed,
+                    accountStore: AccountStore.default,
+                    environmentStore: EnvironmentStore.default
+                )
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "orrery: warning: account added, but v3.1 layout setup failed: \(error). Run `orrery migrate-to-v3.1` to retry.\n".utf8
+                ))
+            }
+        }
+
         // Print success line.
         let parts = [refreshed.email, refreshed.plan].compactMap { $0 }
         if parts.isEmpty {
