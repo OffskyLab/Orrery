@@ -35,11 +35,8 @@ public struct ShowCommand: ParsableCommand {
         for tool in Tool.allCases {
             if let id = pins[tool.rawValue],
                let acct = try? acctStore.load(id: id, tool: tool) {
-                // Live read so a `/login` (or any other out-of-band credential
-                // change) shows up immediately, without waiting for sync-back.
-                let live = ToolAuth.liveActiveInfo(tool: tool, env: activeEnv)
-                let email = live.email ?? acct.email
-                let plan = live.plan ?? acct.plan
+                let email = acct.email
+                let plan = acct.plan
                 let infoSuffix = [email, plan].compactMap { $0 }.joined(separator: ", ")
                 let suffix = infoSuffix.isEmpty ? "" : " (\(infoSuffix))"
                 print(L10n.Account.showRowPinned(tool.rawValue, acct.displayName, suffix))
