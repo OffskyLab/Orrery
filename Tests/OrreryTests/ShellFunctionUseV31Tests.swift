@@ -43,10 +43,28 @@ struct ShellFunctionUseV31Tests {
             Issue.record("use) case not found")
             return
         }
-        let body = String(sh[useStart.upperBound...].prefix(800))
+        let body = String(sh[useStart.upperBound...].prefix(1200))
         // The fallback should re-invoke `command orrery-bin use ...` so the
         // v3.0.4 materialize path still runs for non-migrated accounts.
         #expect(body.contains("command orrery-bin use"),
             "use) should fall back to `command orrery-bin use` when v3.1 lookup fails")
+    }
+
+    @Test("use) bypasses v3.1 fast-path for --help / --version")
+    func bypassesHelpVersion() {
+        let sh = ShellFunctionGenerator.generate()
+        guard let useStart = sh.range(of: "use)") else {
+            Issue.record("use) case not found")
+            return
+        }
+        let body = String(sh[useStart.upperBound...].prefix(1200))
+        // Body should explicitly check for --help / --version BEFORE the
+        // _account-dir / CLAUDE_CONFIG_DIR export logic.
+        let helpIdx = body.range(of: "--help")?.lowerBound
+        let accountDirIdx = body.range(of: "_account-dir")?.lowerBound
+        #expect(helpIdx != nil, "use) should check for --help")
+        if let h = helpIdx, let a = accountDirIdx {
+            #expect(h < a, "--help short-circuit must come BEFORE _account-dir call")
+        }
     }
 }
