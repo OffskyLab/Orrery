@@ -8,15 +8,20 @@ import Glibc
 #endif
 
 public struct SandboxCommand: ParsableCommand {
+    /// Subcommand list. Shared with WorkspaceCommand (the v3.1 alias) so both
+    /// commands route through the same set of operations without referencing
+    /// each other's `configuration.subcommands` by structure.
+    public static let subcommandTypes: [ParsableCommand.Type] = [
+        SetEnv.self, UnsetEnv.self,
+        List.self, Delete.self, Info.self, Rename.self, Current.self,
+        Create.self,
+        Memory.self, Sync.self, Export.self, Unexport.self,
+    ]
+
     public static let configuration = CommandConfiguration(
         commandName: "sandbox",
         abstract: L10n.Workspace.abstract,
-        subcommands: [
-            SetEnv.self, UnsetEnv.self,
-            List.self, Delete.self, Info.self, Rename.self, Current.self,
-            Create.self,
-            Memory.self, Sync.self, Export.self, Unexport.self,
-        ]
+        subcommands: subcommandTypes
     )
 
     public init() {}
@@ -31,13 +36,13 @@ public struct SandboxCommand: ParsableCommand {
 
         @Argument(help: ArgumentHelp(L10n.Workspace.setEnvKeyHelp)) public var key: String
         @Argument(help: ArgumentHelp(L10n.Workspace.setEnvValueHelp)) public var value: String
-        @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var sandbox: String?
+        @Option(name: [.customLong("workspace"), .customShort("w"), .customLong("sandbox"), .customShort("s")],
+                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var workspace: String?
 
         public init() {}
 
         public func run() throws {
-            guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
+            guard let envName = workspace ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
@@ -60,8 +65,8 @@ public struct SandboxCommand: ParsableCommand {
         )
 
         @Argument(help: ArgumentHelp(L10n.Workspace.unsetEnvKeyHelp)) public var key: String
-        @Option(name: [.short, .customLong("sandbox")],
-                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var sandbox: String?
+        @Option(name: [.customLong("workspace"), .customShort("w"), .customLong("sandbox"), .customShort("s")],
+                help: ArgumentHelp(L10n.Workspace.setEnvWorkspaceHelp)) public var workspace: String?
 
         public init() {}
 
@@ -69,7 +74,7 @@ public struct SandboxCommand: ParsableCommand {
             // Borrows `setEnvNoActive` / `setEnvOriginNotSupported` from SetEnv:
             // the user-facing strings are tool-action-agnostic and apply equally to unset.
             // If the unset path ever needs different wording, add dedicated keys.
-            guard let envName = sandbox ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
+            guard let envName = workspace ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
             guard envName != ReservedEnvironment.defaultName else {
