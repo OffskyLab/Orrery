@@ -1602,6 +1602,14 @@
   },
   {
     "path": [
+      "Migrate",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
       "Orrery",
       "abstract"
     ],
@@ -2260,6 +2268,14 @@
         "type": "String"
       }
     ]
+  },
+  {
+    "path": [
+      "Workspace",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
   },
   {
     "path": [

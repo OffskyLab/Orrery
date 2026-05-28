@@ -195,6 +195,12 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `pin.errorWorkspaceNotFound` | Error when the workspace doesn't exist. `{name}` = workspace name. |
 | `pin.success` | Success message after pinning. `{account}` = account name; `{workspace}` = workspace name. |
 
+## migrate — `orrery migrate-to-v3.1`
+
+| Key | Context |
+| --- | --- |
+| `migrate.abstract` | Command help for `orrery migrate-to-v3.1`. |
+
 ## memory — `orrery memory`
 
 | Key | Context |
@@ -370,6 +376,12 @@ Shown by ArgumentParser as part of auto-generated help.
 | `which.noActive` | Error: no active env. |
 | `which.toolHelp` | Positional `tool` help. Tool names literal. |
 | `which.unknownTool` | Error for unrecognized tool. `{tool}`. |
+
+## workspace — `orrery workspace` (v3.1 alias for sandbox)
+
+| Key | Context |
+| --- | --- |
+| `workspace.abstract` | Command help for `orrery workspace` (distinct from `sandbox`, uses workspace vocabulary). |
 
 ---
 

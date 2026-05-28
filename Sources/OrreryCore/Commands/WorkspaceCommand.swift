@@ -9,7 +9,7 @@ import Foundation
 public struct WorkspaceCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "workspace",
-        abstract: L10n.Sandbox.abstract,
+        abstract: L10n.Workspace.abstract,
         subcommands: SandboxCommand.configuration.subcommands,
         defaultSubcommand: SandboxCommand.configuration.defaultSubcommand
     )
