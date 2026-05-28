@@ -130,6 +130,11 @@ extension RunCommand {
     /// claude-identity.json + shared.json merge 寫入 active `.claude.json`，
     /// 不再由 RunCommand 處理 snapshot 注入。
     static func prepareMaterialize(tool: Tool, envName: String?) throws {
+        if tool == .claude {
+            // v3.1: claude is managed by the shell function wrapper + per-account
+            // dir layout — no binary-side prep needed.
+            return
+        }
         guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
             // 沒釘 account — 不阻擋啟動，讓工具自己處理「未登入」。
             return
@@ -146,6 +151,11 @@ extension RunCommand {
     /// 透過 claude-identity.json 處理，不再由 RunCommand 捕 pool snapshot。
     /// 之後刷新 account 上的 `email` / `plan` 反映剛剛可能更新的訂閱資訊。
     static func prepareSyncBack(tool: Tool, envName: String?) throws {
+        if tool == .claude {
+            // v3.1: claude exit capture is handled by CaptureClaudeExitCommand
+            // via claude-identity.json — no binary-side sync needed.
+            return
+        }
         guard let (account, configDir) = try resolvePinnedAccount(tool: tool, envName: envName) else {
             return
         }
