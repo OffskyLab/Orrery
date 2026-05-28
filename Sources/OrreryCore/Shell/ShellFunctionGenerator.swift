@@ -242,6 +242,20 @@ public struct ShellFunctionGenerator {
               fi
               command orrery-bin "$@"
               ;;
+            use)
+              # v3.1 fast-path: if the named account has been migrated to the
+              # per-account-dir layout, export CLAUDE_CONFIG_DIR in this shell.
+              # Otherwise fall through to v3.0.4 binary path (materialize).
+              shift
+              local _dir
+              _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null) || true
+              if [ -n "$_dir" ]; then
+                export CLAUDE_CONFIG_DIR="$_dir"
+                echo "orrery: CLAUDE_CONFIG_DIR=$_dir" >&2
+              else
+                command orrery-bin use "$@"
+              fi
+              ;;
             *)
               command orrery-bin "$@"
               ;;
