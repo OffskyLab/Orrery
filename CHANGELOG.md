@@ -1,5 +1,97 @@
 # Changelog
 
+## v3.1.0-rc.1 - 2026-05-28
+
+**Release candidate.** Inviting real-world feedback on the v3.1 architecture
+before tagging v3.1.0 final. Strongly recommend backing up `~/.orrery/`
+before upgrading — migration is one-way (see "Known limitations" below).
+
+### Changed — architectural rework
+
+- **Each Claude account now has its own `CLAUDE_CONFIG_DIR`.** Pre-v3.1,
+  switching accounts meant overwriting the active keychain item and
+  `oauthAccount` in a shared config dir. That was the root cause of the
+  identity/plan drift bug (e.g. `gradyzhuo@gmail.com, team` displays where
+  email and plan came from different accounts), `/login` poisoning of pool
+  slots, and mid-session `/status` flapping when another shell ran
+  `orrery use`. v3.1 gives every claude account its own dir at
+  `~/.orrery/accounts/claude/<id>/`; switching is just an env-var change.
+
+- **Workspace content is shared via symlinks.** Each account dir contains
+  symlinks for `projects/`, `memory/`, `agents/`, `commands/`, `todos/`
+  pointing at a per-workspace `claude-workspace/` dir
+  (`~/.orrery/envs/<workspace>/claude-workspace/`). Multiple accounts
+  pinned to the same workspace see the same session/memory data.
+
+- **`orrery use` no longer swaps keychain items.** The shell function
+  exports `CLAUDE_CONFIG_DIR=<account-dir>` in the current shell. Running
+  claude sessions in other terminals are unaffected — exactly the property
+  v3.0.x couldn't deliver.
+
+- **`claude` is now a shell-function wrapper** that merges the per-account
+  identity store and the per-workspace shared store into `.claude.json` at
+  launch, then splits the post-session state back into the two stores on
+  exit. Identity and shared state stay physically separate; no more
+  mixed-source displays. Plain `claude` invocations without
+  `CLAUDE_CONFIG_DIR` set continue to work unchanged (legacy passthrough).
+
+- **`orrery workspace` replaces `orrery sandbox`** as the user-facing
+  vocabulary. `orrery sandbox` is removed from `--help`; existing scripts
+  that referenced it must switch. `--workspace` / `-w` flag aliases were
+  added to `set-env` / `unset-env` alongside the older `--sandbox` / `-s`
+  (both work).
+
+### Added — new commands
+
+- `orrery pin <account> --workspace <name>` — pin an account to a workspace
+  (sets its symlinks). Default workspace: `origin`.
+- `orrery migrate-to-v3.1` — manually re-run the v3.1 account-layout
+  migration. Idempotent. Useful for the rare case where an account was
+  added before the auto-migration flag was written.
+- `orrery workspace …` — alias for the (now-removed-from-public) `orrery
+  sandbox …` command set.
+
+### Migration
+
+- **Auto-runs on first invocation** after upgrade. Existing pool accounts
+  get their v3.1 dir + symlinks + `claude-identity.json` seeded
+  automatically. Flag-guarded so subsequent invocations are no-ops.
+- **Non-destructive.** Existing v3.0.4 keychain items, `oauthAccount.json`
+  snapshots, and `metadata.json` files remain in place. If something goes
+  wrong, the user can recover by removing the v3.1 additions (`rm -rf
+  accounts/claude/<id>/{projects,memory,agents,commands,todos,claude-identity.json}`)
+  and downgrading the binary.
+
+### Removed
+
+- `KeychainCredentialAdapter` — the macOS claude `materialize` / `syncBack`
+  pair. Claude no longer needs binary-side credential copies; the per-account
+  dir + shell wrapper handle everything.
+- `ClaudeOAuthSnapshot` — v3.0.4's per-pool `oauthAccount.json` snapshot,
+  superseded by per-account `claude-identity.json`.
+- `ToolAuth.liveActiveInfo` — v3.0.3's live-read shim for display. v3.1
+  reads stored `Account.email` / `plan` directly (refreshed by capture).
+- `orrery sandbox` from `--help` — `orrery workspace` is the canonical entry.
+
+### Known limitations
+
+- **Origin's existing `~/.claude/projects/` session content is NOT migrated**
+  into the new workspace-shared dir. v3.1 sessions start fresh inside each
+  workspace; old sessions remain accessible via direct `~/.claude` use but
+  won't appear under `orrery use origin && claude --resume`. A future plan
+  will address this.
+- **Migration is one-way.** No `migrate-back-to-v3.0.4`. Downgrading the
+  binary alone leaves v3.1 layout files in place that may confuse a v3.0.4
+  binary. Back up `~/.orrery/` before upgrading if you want a clean
+  rollback path.
+- **`EnvironmentStore.loadOriginConfig` reads production-path data** even
+  when `ORRERY_HOME` is set to a non-default location. Pre-existing v3.0.x
+  bug, not introduced by v3.1, but may surface with side-by-side test
+  installs.
+- **`ClaudeJsonMerge` field categorization is hardcoded.** New top-level
+  keys claude adds in future versions default to per-account (conservative).
+  Will need updates as claude evolves.
+
 ## v3.0.4 - 2026-05-27
 
 ### Fixed
