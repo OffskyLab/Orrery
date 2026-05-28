@@ -21,6 +21,20 @@ public struct UseCommand: ParsableCommand {
 
     public func run() throws {
         let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
+
+        // In v3.1, claude account selection is handled entirely by the orrery()
+        // shell function (which exports CLAUDE_CONFIG_DIR). The binary has no
+        // materialize path for claude, so calling `orrery-bin use --claude` would
+        // pin the account in the store but never activate it. Throw early so the
+        // user gets a clear diagnostic instead of a silent no-op.
+        if tool == .claude {
+            throw ValidationError(
+                "claude account selection is handled by the orrery() shell function. " +
+                "Source ~/.orrery/activate.sh and run `orrery use --claude <name>` " +
+                "instead of `orrery-bin use --claude <name>`."
+            )
+        }
+
         let acctStore = AccountStore.default
         guard let acct = try acctStore.findByDisplayName(name, tool: tool) else {
             throw ValidationError(L10n.Account.useNotFound(name, tool.rawValue))
@@ -30,7 +44,7 @@ public struct UseCommand: ParsableCommand {
         let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
 
         // Sync-back the CURRENTLY-pinned account BEFORE repinning, so whatever the
-        // tool last wrote (e.g. a token Claude refreshed) is captured into the old
+        // tool last wrote (e.g. a token it refreshed) is captured into the old
         // account's pool entry. Best-effort — a sync-back failure must not abort
         // the switch.
         do {
@@ -55,10 +69,9 @@ public struct UseCommand: ParsableCommand {
         }
 
         // Materialize the newly-pinned account into the live slot the tool reads,
-        // so a plain `claude`/`codex`/`gemini` invocation picks up the switch
-        // without needing `orrery run`. Best-effort — the pin change already
-        // succeeded and materialize is retryable; warn so the user knows they may
-        // need to log in.
+        // so a plain `codex`/`gemini` invocation picks up the switch without
+        // needing `orrery run`. Best-effort — the pin change already succeeded and
+        // materialize is retryable; warn so the user knows they may need to log in.
         do {
             try RunCommand.prepareMaterialize(tool: tool, envName: targetEnvName)
         } catch {
