@@ -553,6 +553,62 @@ struct AccountCommandsAllTests {
                 #expect(!accounts.contains { $0.displayName == "rollback-test" })
             }
         }
+
+        #if os(macOS)
+        @Test(
+            "finalize applies v3.1 layout to newly-added claude account",
+            .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
+        )
+        func finalizeAppliesV31LayoutToClaudeAccount() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let envStore = EnvironmentStore.default
+
+                // Create a claude account with its own Keychain service (like the production path).
+                let accountID = UUID().uuidString
+                let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
+                let acct = Account(id: accountID, tool: .claude, displayName: "claude-finalize-layout",
+                                   keychainItem: orreryService)
+                try acctStore.save(acct)
+
+                // Create a staging dir with prepare metadata and a fake Keychain entry.
+                let staging = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("orrery-login-test-\(UUID().uuidString)")
+                try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+
+                let metadata: [String: String] = [
+                    "accountID": accountID,
+                    "tool": "claude",
+                    "displayName": "claude-finalize-layout",
+                ]
+                let metaData = try JSONSerialization.data(withJSONObject: metadata)
+                try metaData.write(to: staging.appendingPathComponent(".orrery-prepare.json"))
+
+                let stagingService = ClaudeKeychain.service(for: staging.path)
+                defer {
+                    try? FileManager.default.removeItem(at: staging)
+                    _ = KeychainTestSupport.delete(service: stagingService)
+                    _ = KeychainTestSupport.delete(service: orreryService)
+                }
+
+                // Simulate the tool writing the credential token to the staging service.
+                #expect(ClaudeKeychain.setPassword("claude-fake-token", service: stagingService))
+
+                // Run finalize — this should import the credential AND apply v3.1 layout.
+                let cmd = try AccountAddFinalizeCommand.parse(["--staging", staging.path])
+                try cmd.run()
+
+                // v3.1 layout: symlinks must be valid.
+                #expect(ClaudeAccountDirectory.verifySymlinks(
+                    account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
+
+                // v3.1 layout: claude-identity.json must exist in the account pool dir.
+                let poolDir = acctStore.accountDir(id: accountID, tool: .claude)
+                let identityURL = ClaudeJsonMerge.identityFileURL(accountDir: poolDir)
+                #expect(FileManager.default.fileExists(atPath: identityURL.path))
+            }
+        }
+        #endif
     }
 
     // MARK: RemoveCommand
