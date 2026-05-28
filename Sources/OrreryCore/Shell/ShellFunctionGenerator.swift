@@ -186,7 +186,7 @@ public struct ShellFunctionGenerator {
                     fi
                   fi
                   if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
-                    command orrery-bin use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME" || break
+                    orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME" || break
                   fi
                   # After a phantom switch, --resume <new-session-id> is the only
                   # arg we want — the user's original flags don't carry over (they
@@ -243,6 +243,14 @@ public struct ShellFunctionGenerator {
               command orrery-bin "$@"
               ;;
             use)
+              # Help / version requests must bypass the v3.1 fast-path —
+              # ArgumentParser prints to stdout for --help/--version, and we'd
+              # capture it as a (garbage) CLAUDE_CONFIG_DIR otherwise.
+              for _a in "${@:2}"; do
+                case "$_a" in
+                  -h|--help|--version) command orrery-bin "$@"; return $?; ;;
+                esac
+              done
               # v3.1 fast-path: if the named account has been migrated to the
               # per-account-dir layout, export CLAUDE_CONFIG_DIR in this shell.
               # Otherwise fall through to v3.0.4 binary path (materialize).

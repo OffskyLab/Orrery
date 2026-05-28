@@ -19,7 +19,7 @@ public struct MigrateToV31Command: ParsableCommand {
         let acctStore = AccountStore.default
         let envStore = EnvironmentStore.default
 
-        let claudeAccounts = (try? acctStore.list(tool: .claude)) ?? []
+        let claudeAccounts = try acctStore.list(tool: .claude)
         var migrated = 0
         var alreadyV31 = 0
 
