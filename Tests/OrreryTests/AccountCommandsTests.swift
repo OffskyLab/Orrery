@@ -390,65 +390,11 @@ struct AccountCommandsAllTests {
             }
         }
 
-        #if os(macOS)
-        @Test("syncBack: account use writes the live token into the OLD account's pool before repinning",
-              .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil))
-        func syncBackBeforeRepin() throws {
-            try withIsolatedHome {
-                let envStore = EnvironmentStore.default
-                let acctStore = AccountStore.default
-
-                // Create a named env so all live keychain services are env-specific
-                // (not "Claude Code-credentials") — hermetic, cannot harm the real credential.
-                let envName = "sync-back-env"
-                try envStore.save(OrreryEnvironment(name: envName))
-
-                setenv("ORRERY_ACTIVE_ENV", envName, 1)
-                defer { unsetenv("ORRERY_ACTIVE_ENV") }
-
-                // Create OLD and NEW accounts.
-                let oldID = UUID().uuidString
-                let newID = UUID().uuidString
-                let oldPoolService = ClaudeKeychain.serviceName(forOrreryAccount: oldID)
-                let newPoolService = ClaudeKeychain.serviceName(forOrreryAccount: newID)
-
-                let old = Account(id: oldID, tool: .claude, displayName: "old-account",
-                                  keychainItem: oldPoolService)
-                let new = Account(id: newID, tool: .claude, displayName: "new-account",
-                                  keychainItem: newPoolService)
-                try acctStore.save(old)
-                try acctStore.save(new)
-
-                // Seed pool tokens so materialize has something to work with.
-                #expect(ClaudeKeychain.storePassword("old-pool-token", forOrreryAccount: oldID))
-                #expect(ClaudeKeychain.storePassword("new-pool-token", forOrreryAccount: newID))
-
-                // The live slot for this named env.
-                let liveConfigDir = envStore.toolConfigDir(tool: .claude, environment: envName)
-                let liveService = ClaudeKeychain.service(for: liveConfigDir.path)
-
-                defer {
-                    _ = KeychainTestSupport.delete(service: oldPoolService)
-                    _ = KeychainTestSupport.delete(service: newPoolService)
-                    _ = KeychainTestSupport.delete(service: liveService)
-                }
-
-                // Pin OLD in the named env.
-                var env = try envStore.load(named: envName)
-                env.setAccount(old.id, for: .claude)
-                try envStore.save(env)
-
-                // Simulate Claude having refreshed its token in the live slot.
-                #expect(ClaudeKeychain.setPassword("live-fresh-token", service: liveService))
-
-                // Run `account use --name new-account` — must sync-back live→old first.
-                try UseCommand.parse(["new-account"]).run()
-
-                // Assert: old's pool entry now holds the live slot's pre-switch token.
-                #expect(ClaudeKeychain.password(forService: oldPoolService) == "live-fresh-token")
-            }
-        }
-        #endif
+        // Removed: `syncBackBeforeRepin` — tested v3.0.4 claude syncBack
+        // behavior. In v3.1 (Plan 4), claude is fully managed by the per-account
+        // dir layout + shell function wrapper; `prepareSyncBack` is a no-op for
+        // claude. Codex/gemini still exercise the syncBack path via the
+        // materializesCredential test below.
 
         @Test("materializes: account use places the codex credential into the live config dir")
         func materializesCredential() throws {
