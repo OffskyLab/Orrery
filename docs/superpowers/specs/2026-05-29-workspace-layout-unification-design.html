@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orrery rc.2 設計：Workspace Layout 統一</title>
+<style>
+  :root {
+    --bg: #0e0f12;
+    --panel: #16181d;
+    --panel-2: #1c1e24;
+    --border: #2a2d34;
+    --text: #e6e6e6;
+    --muted: #9aa0a8;
+    --accent: #d97757;
+    --good: #6cc04a;
+    --bad: #e25d5d;
+    --warn: #e2b94a;
+    --acct: #4aa3e2;
+    --wsp: #b577e2;
+    --pin: #e2b94a;
+    --origin: #6cc04a;
+    --code-bg: #1c1e24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 1140px; margin: 0 auto; padding: 40px 24px 80px;
+  }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  h2 { font-size: 22px; margin: 56px 0 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 17px; margin: 32px 0 10px; color: var(--accent); }
+  h4 { font-size: 14px; margin: 20px 0 6px; }
+  p { margin: 8px 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 0.92em; }
+  pre {
+    background: var(--code-bg); padding: 14px 18px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.55;
+    border: 1px solid var(--border); margin: 12px 0;
+  }
+  .lead { color: var(--muted); font-size: 16px; margin-bottom: 24px; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .meta-line { color: var(--muted); font-size: 13px; margin: 2px 0; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; border: 1px solid var(--border);
+    background: var(--panel); color: var(--warn);
+  }
+
+  /* Concept boxes */
+  .concept-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .concept-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .concept {
+    padding: 14px 18px; border-radius: 10px; background: var(--panel);
+    border: 2px solid var(--border);
+  }
+  .concept.bad-c  { border-color: var(--bad); }
+  .concept.good-c { border-color: var(--good); }
+  .concept h4 { margin: 0 0 6px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .concept .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .concept.bad-c .dot { background: var(--bad); }
+  .concept.good-c .dot { background: var(--good); }
+  .concept .what { font-size: 13px; color: var(--muted); margin: 6px 0; }
+  .concept .holds {
+    font-size: 12px; color: var(--text);
+    padding: 8px 10px; background: var(--panel-2); border-radius: 6px; margin-top: 8px;
+    font-family: ui-monospace, monospace; word-break: break-all;
+  }
+
+  /* Dir tree */
+  pre.tree { background: var(--code-bg); padding: 16px 20px; border-radius: 8px; line-height: 1.5; }
+  .tree .acct-color { color: var(--acct); font-weight: 600; }
+  .tree .wsp-color  { color: var(--wsp); font-weight: 600; }
+  .tree .link-color { color: var(--pin); }
+  .tree .comment    { color: var(--muted); }
+  .tree .origin-color { color: var(--origin); font-weight: 600; }
+  .tree .bad-color  { color: var(--bad); font-weight: 600; }
+
+  /* symlink vis */
+  .symlink-vis {
+    display: flex; gap: 16px; align-items: center; margin: 18px 0;
+    background: var(--panel); padding: 20px; border-radius: 10px; border: 1px solid var(--border);
+  }
+  .symlink-col { flex: 1; }
+  .symlink-col h4 { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  .symlink-item {
+    padding: 6px 10px; background: var(--panel-2); border-radius: 4px;
+    margin-bottom: 4px; font-family: ui-monospace, monospace; font-size: 12px;
+    border-left: 3px solid var(--border);
+  }
+  .symlink-item.acct { border-color: var(--acct); }
+  .symlink-item.wsp  { border-color: var(--wsp); }
+  .symlink-arrow { font-size: 24px; color: var(--pin); padding: 0 4px; }
+
+  /* comparison / path table */
+  table.cmp { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  table.cmp th, table.cmp td {
+    padding: 8px 12px; border: 1px solid var(--border); text-align: left; vertical-align: top;
+  }
+  table.cmp th { background: var(--panel); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  table.cmp td.path { font-family: ui-monospace, monospace; font-size: 12px; }
+  table.cmp .yes { color: var(--good); }
+  table.cmp .no  { color: var(--bad); }
+  table.cmp .un  { color: var(--muted); }
+  td.changed { background: rgba(217, 119, 87, 0.10); }
+  td.same { background: rgba(108, 192, 74, 0.07); }
+
+  /* Migration ordering flow */
+  .chain { margin: 20px 0; }
+  .chain-step {
+    display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: stretch;
+    margin: 0;
+  }
+  .chain-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; background: var(--panel-2); border-radius: 8px;
+    font-family: ui-monospace, monospace; font-weight: 600; color: var(--muted);
+    position: relative;
+  }
+  .chain-step:not(:last-child) .chain-num::after {
+    content: ''; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
+    width: 2px; height: 14px; background: var(--border);
+  }
+  .chain-body {
+    padding: 12px 16px; margin-bottom: 14px; border-radius: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+  }
+  .chain-body .name { font-family: ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+  .chain-body .desc { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .chain-body.phaseA { border-color: var(--accent); border-width: 2px; }
+  .chain-body.phaseB { border-color: var(--wsp); border-width: 2px; }
+  .chain-body .tag {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 8px;
+    border-radius: 10px; margin-left: 8px; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .chain-body.phaseA .tag { background: var(--accent); color: #1a0f0a; }
+  .chain-body.phaseB .tag { background: var(--wsp); color: #170a1f; }
+  .dep-note {
+    font-size: 11.5px; color: var(--warn); margin-top: 6px;
+    padding-left: 18px; position: relative;
+  }
+  .dep-note::before { content: '⚠'; position: absolute; left: 0; }
+
+  .callout {
+    background: rgba(74, 163, 226, 0.10); border-left: 3px solid var(--acct);
+    padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 14px 0; font-size: 14px;
+  }
+  .callout.good  { background: rgba(108, 192, 74, 0.10); border-color: var(--good); }
+  .callout.warn  { background: rgba(226, 185, 74, 0.10); border-color: var(--warn); }
+  .callout.bad   { background: rgba(226, 93, 93, 0.10); border-color: var(--bad); }
+  .callout .ttl { font-weight: 600; display: block; margin-bottom: 4px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 16px; font-size: 12px; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .scope-box { padding: 14px 18px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); }
+  .scope-box.in  { border-left: 4px solid var(--good); }
+  .scope-box.out { border-left: 4px solid var(--muted); opacity: 0.92; }
+  .scope-box h4 { margin: 0 0 8px; }
+  .scope-box ul { margin: 0; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>orrery rc.2 設計：Workspace Layout 統一</h1>
+<p class="lead">把「sandbox/env」與 v3.1「workspace」兩個撞名的概念合併成單一 <code>workspace</code>，並讓 <code>origin</code> 成為零特例的成員——使用者原本的 <code>~/.claude</code> 就是 origin workspace。</p>
+<p class="meta-line">日期：2026-05-29　·　目標版本：<span class="badge">v3.1.0-rc.2</span>（RC，僅供自我驗證，不給真實使用者）　·　狀態：設計待 review</p>
+
+<div class="legend">
+  <span><span class="swatch" style="background:var(--origin)"></span> origin（takeover）</span>
+  <span><span class="swatch" style="background:var(--wsp)"></span> workspace（共享內容）</span>
+  <span><span class="swatch" style="background:var(--acct)"></span> account（身份）</span>
+  <span><span class="swatch" style="background:var(--pin)"></span> symlink</span>
+  <span><span class="swatch" style="background:var(--bad)"></span> 要消滅的東西</span>
+</div>
+
+<!-- =============================================================== -->
+<h2>1 · 問題：一個名字，三個身體</h2>
+
+<p>v3.1 引入了兩個都叫「workspace」的東西，加上 origin 的特例處理，結果 <strong>origin 同時存在於三個地方</strong>，彼此看不到對方的 session。</p>
+
+<div class="concept-row three">
+  <div class="concept bad-c">
+    <h4><span class="dot"></span> sandbox / env</h4>
+    <div class="what">隔離單位：一組環境變數 + 各工具 config dir。rc.1 把使用者面詞彙 rename 成 “workspace”。</div>
+    <div class="holds"><span style="color:var(--muted)">PATH</span><br>~/.orrery/envs/&lt;UUID&gt;/{claude,codex,gemini}/</div>
+  </div>
+  <div class="concept bad-c">
+    <h4><span class="dot"></span> v3.1 “workspace”</h4>
+    <div class="what">claude 的共享<em>內容</em>命名空間（projects/memory/…），pin 的 account symlink 指進來。</div>
+    <div class="holds"><span style="color:var(--muted)">PATH</span><br>~/.orrery/envs/&lt;UUID&gt;/claude-workspace/</div>
+  </div>
+  <div class="concept bad-c">
+    <h4><span class="dot"></span> origin（takeover）</h4>
+    <div class="what">使用者真實的 <code>~/.claude</code>，被接管進來。但 rc.1 又另外建了一個 envs/origin/claude-workspace/。</div>
+    <div class="holds"><span style="color:var(--muted)">PATH</span><br>~/.orrery/origin/claude/<br><span class="no">＋ envs/origin/claude-workspace/ ⟵ 多餘</span></div>
+  </div>
+</div>
+
+<div class="callout bad">
+  <span class="ttl">後果</span>
+  用 plain <code>claude</code> 寫的 session（在 takeover root）跟 <code>orrery use &lt;origin-pinned-account&gt;</code> 寫的 session（在 <code>envs/origin/claude-workspace/</code>）<strong>互相看不到</strong>——明明都叫 “origin”，卻是兩個物理位置。程式碼裡到處是 <code>if workspace == "origin"</code> 的特例分支。
+</div>
+
+<h3>根本洞察</h3>
+<p>沒有兩個概念。<strong>workspace 就是那個隔離單位</strong>——它同時包含「給 codex/gemini 的環境變數/config」<em>和</em>「給 claude 的共享內容」。<code>origin</code> 只是<strong>那個物理根目錄等於 takeover root 的預設 workspace</strong>：使用者既有的 <code>~/.claude</code> 變成 origin workspace。從來就不該為它另外開一個 v3.1 workspace 目錄。</p>
+
+<!-- =============================================================== -->
+<h2>2 · 目標：一種 layout，origin 零特例</h2>
+
+<pre class="tree"><span class="comment"># 統一後：workspace = 一個 root，底下放 claude/codex/gemini</span>
+~/.orrery/
+  <span class="wsp-color">workspaces/</span>                       <span class="comment">（從 envs/ 改名）</span>
+    <span class="origin-color">origin/</span>                         <span class="comment">保留名目錄 = takeover workspace</span>
+      claude/                       <span class="link-color">← ~/.claude symlink 指這裡（takeover root）</span>
+      codex/                        <span class="comment">← CODEX_HOME / CODEX_CONFIG_DIR</span>
+      gemini/                       <span class="comment">← GEMINI_CONFIG_DIR</span>
+      workspace.json                <span class="comment">metadata（取代 origin/config.json）</span>
+    <span class="wsp-color">&lt;UUID&gt;/</span>                         <span class="comment">named workspace；目錄名「一律」UUID</span>
+      claude/                       <span class="comment">projects/ memory/ agents/ commands/ todos/</span>
+      codex/  gemini/
+      workspace.json                <span class="comment">{ "name": "work", … } 顯示名，可重複</span>
+  <span class="acct-color">accounts/</span>
+    claude/&lt;id&gt;/                    <span class="comment">per-account dir = CLAUDE_CONFIG_DIR</span>
+      projects/ <span class="link-color">→</span> ../../../workspaces/&lt;pinned&gt;/claude/projects
+      memory/   <span class="link-color">→</span> …                 <span class="comment">（agents commands todos 同理）</span>
+      metadata.json                 <span class="comment">Account model（含 workspace 欄位）</span>
+  <span class="comment">shared/                           不動 — claude session jsonl 實體存這，</span>
+  <span class="comment">                                  workspaces/&lt;ws&gt;/claude/projects symlink 指進來</span></pre>
+
+<h3>關鍵不變式</h3>
+<ul>
+  <li><strong>workspace 目錄名永遠是 UUID</strong>，只有保留字 <code>origin</code> 例外。顯示名放在 <code>workspace.json.name</code>，<strong>可自由重複</strong>——UUID 負責區分。（開發機看到的 <code>personal/</code>、<code>work/</code> 等非 UUID 目錄是上線前的 0.x 遺留，真實使用者沒有。）</li>
+  <li><strong>origin 是一般 workspace</strong>，結構與 named 完全相同（<code>&lt;root&gt;/{claude,codex,gemini}/</code> + <code>workspace.json</code>）。唯一差別：保留名 <code>origin</code> + 它的 <code>claude/</code> 是 takeover root。<strong>不再有 <code>if workspace == "origin"</code> 路徑分支</strong>，只剩解析 workspace 時的保留名檢查。</li>
+  <li><code>account.workspace</code> 存 UUID 或字面 <code>"origin"</code>。account dir symlink 解析到 <code>workspaces/&lt;account.workspace&gt;/claude/&lt;subdir&gt;</code>。</li>
+  <li>codex/gemini <strong>沒有</strong> per-account dir，用整包 config dir，由 workspace enter 時的環境變數指向。</li>
+</ul>
+
+<div class="symlink-vis">
+  <div class="symlink-col">
+    <h4>account dir（per-account）</h4>
+    <div class="symlink-item acct">accounts/claude/&lt;id&gt;/projects</div>
+    <div class="symlink-item acct">accounts/claude/&lt;id&gt;/memory</div>
+    <div class="symlink-item acct">accounts/claude/&lt;id&gt;/agents</div>
+    <div class="symlink-item acct">…/commands　…/todos</div>
+  </div>
+  <div class="symlink-arrow">→</div>
+  <div class="symlink-col">
+    <h4>pinned workspace 的 claude/</h4>
+    <div class="symlink-item wsp">workspaces/&lt;pinned&gt;/claude/projects</div>
+    <div class="symlink-item wsp">workspaces/&lt;pinned&gt;/claude/memory</div>
+    <div class="symlink-item wsp">workspaces/&lt;pinned&gt;/claude/agents</div>
+    <div class="symlink-item wsp">…/commands　…/todos</div>
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<h2>3 · 路徑常數 before / after</h2>
+<p><code>EnvironmentStore.swift</code> 的路徑常數變更。注意 <code>origin</code> 改到 <code>workspaces/</code> 底下後，<code>originDir</code> 可用與 named workspace 相同的 base 表達，正是零特例的底層體現。</p>
+
+<table class="cmp">
+  <tr><th>常數</th><th>Before</th><th>After</th></tr>
+  <tr><td><code>envsURL</code></td><td class="path">~/.orrery/envs/</td><td class="path changed">~/.orrery/workspaces/</td></tr>
+  <tr><td><code>originDir</code></td><td class="path">~/.orrery/origin/</td><td class="path changed">~/.orrery/workspaces/origin/</td></tr>
+  <tr><td><code>originConfigURL</code></td><td class="path">origin/config.json</td><td class="path changed">workspaces/origin/workspace.json</td></tr>
+  <tr><td><code>claudeWorkspaceDir(ws)</code></td><td class="path">envs/&lt;ws&gt;/claude-workspace/</td><td class="path changed">workspaces/&lt;ws&gt;/claude/</td></tr>
+  <tr><td><code>originConfigDir(tool)</code></td><td class="path">origin/&lt;tool&gt;/</td><td class="path changed">workspaces/origin/&lt;tool&gt;/</td></tr>
+  <tr><td><code>toolConfigDir(tool, env)</code></td><td class="path">envs/&lt;id&gt;/&lt;tool&gt;/</td><td class="path changed">workspaces/&lt;id&gt;/&lt;tool&gt;/</td></tr>
+  <tr><td><code>sharedURL</code> / shared* / accounts*</td><td class="path same" colspan="2">不變</td></tr>
+</table>
+
+<div class="callout">
+  <code>claudeWorkspaceDir(ws)</code> 變更後對 named 與 origin <strong>都</strong>回傳 <code>workspaces/&lt;ws&gt;/claude/</code>——不再有獨立的 “claude-workspace” 子目錄。takeover root 的 <code>claude/</code> 就是 origin workspace 的 claude 內容目錄。
+</div>
+
+<!-- =============================================================== -->
+<h2>4 · Metadata 統一：兩個 model 合一</h2>
+<p><code>OriginConfig</code>（origin/config.json）與 <code>OrreryEnvironment</code>（env.json）欄位幾乎相同。合併成單一 <code>Workspace</code> model，序列化為 <code>workspace.json</code>。</p>
+
+<div class="concept-row">
+  <div class="concept bad-c">
+    <h4><span class="dot"></span> Before：兩個 struct</h4>
+    <div class="holds"><span style="color:var(--bad)">OriginConfig</span> → origin/config.json<br>　isolateMemory, memoryStoragePath,<br>　isolatedSessionTools, accounts<br><br><span style="color:var(--bad)">OrreryEnvironment</span> → env.json<br>　＋ id, name, description,<br>　createdAt, lastUsed, tools, env</div>
+  </div>
+  <div class="concept good-c">
+    <h4><span class="dot"></span> After：單一 Workspace</h4>
+    <div class="holds"><span style="color:var(--good)">Workspace</span> → workspace.json<br>　id（UUID 或 "origin"）, name,<br>　description, createdAt, lastUsed,<br>　tools, env, isolatedSessionTools,<br>　isolateMemory, memoryStoragePath,<br>　accounts[Tool.rawValue → AccountID]</div>
+  </div>
+</div>
+<ul>
+  <li>移除 <code>OriginConfig</code>；origin 讀寫同一個 <code>Workspace</code> model。</li>
+  <li>解碼寬容：缺新欄位的 <code>workspace.json</code>（即遷移自舊 <code>config.json</code>）把 <code>id</code>/<code>name</code> 預設為 <code>"origin"</code>。</li>
+  <li>型別 <code>OrreryEnvironment</code> → <code>Workspace</code>、檔名 <code>env.json</code> → <code>workspace.json</code> 全碼改名。<code>OrreryEnvironment.defaultName</code>（<code>"origin"</code>）→ <code>Workspace.reservedOriginName</code>。</li>
+</ul>
+
+<!-- =============================================================== -->
+<h2>5 · Migration：兩階段，順序是關鍵</h2>
+<p>把任何<strong>真實使用者</strong>的狀態（v3.0.x 的 <code>envs/&lt;UUID&gt;/</code> + <code>accounts/</code> pool + <code>origin/</code>）冪等收斂到 <code>workspaces/</code> layout。RC 從未給真實使用者，所以 rc.1 的 <code>claude-workspace/</code>（與誤建的 <code>envs/origin/</code>）中間態<strong>直接忽略</strong>——不為不存在的狀態加補償層。rc.1 那支 <code>runV31AccountLayoutIfNeeded</code> 在源頭被正確版本<strong>取代</strong>，而非疊層修補。</p>
+
+<div class="callout warn">
+  <span class="ttl">為什麼必須拆兩階段</span>
+  單一 migration 放在 <code>main.swift</code> chain 的任一位置都會錯，因為兩個依賴互相矛盾：<br>
+  ① <strong>結構搬遷</strong>（改名、搬 takeover root、重指 <code>~/.claude</code>）必須在 <code>OriginTakeoverBootstrap</code> <em>之前</em>——否則 takeover 用新的 <code>originDir</code> 常數（<code>workspaces/origin/</code>）動作，但實體還在 <code>origin/</code>、<code>~/.claude</code> 還指舊位置，takeover 誤判並跟還沒跑的遷移打架。<br>
+  ② <strong>account symlink 重指</strong>依賴 account pool 已存在，而那是 <code>AccountMigration.runIfNeeded</code>（v2→v3）在 chain 中<em>較晚</em>才建的。
+</div>
+
+<p>於是 <code>main.swift</code> 的遷移鏈變成（兩階段皆 flag-guarded、best-effort、永不 throw）：</p>
+
+<div class="chain">
+  <div class="chain-step"><div class="chain-num">1</div>
+    <div class="chain-body"><span class="name">LegacyOrbitalMigration.runIfNeeded()</span>
+      <div class="desc">orbital → orrery 改名遷移（既有）</div></div></div>
+  <div class="chain-step"><div class="chain-num">2</div>
+    <div class="chain-body phaseA"><span class="name">runWorkspaceStructureRelocationIfNeeded()</span><span class="tag">Phase A · 新</span>
+      <div class="desc">envs/→workspaces/；origin/→workspaces/origin/（若目標已存在則不覆蓋 takeover root，log 衝突）；重指 ~/.claude；config.json/env.json→workspace.json；claude-workspace/ 併入 claude/。flag：<code>.workspace-structure-relocated</code></div>
+      <div class="dep-note">必須在 takeover 之前：先把實體路徑就位，後續用新常數的 code 才正確</div></div></div>
+  <div class="chain-step"><div class="chain-num">3</div>
+    <div class="chain-body"><span class="name">OriginTakeoverBootstrap.runIfNeeded()</span>
+      <div class="desc">此時 isOriginManaged==true（或對全新使用者乾淨 takeover 進新位置）→ no-op-或-正確，不打架</div></div></div>
+  <div class="chain-step"><div class="chain-num">4</div>
+    <div class="chain-body"><span class="name">AccountMigration.runIfNeeded()</span>
+      <div class="desc">v2→v3 account-pool 遷移（建立 pool）</div></div></div>
+  <div class="chain-step"><div class="chain-num">5</div>
+    <div class="chain-body"><span class="name">runInfoBackfillIfNeeded()</span>
+      <div class="desc">email/plan 事後補齊（既有）</div></div></div>
+  <div class="chain-step"><div class="chain-num">6</div>
+    <div class="chain-body phaseB"><span class="name">runWorkspaceAccountSymlinksIfNeeded()</span><span class="tag">Phase B · 取代 rc.1</span>
+      <div class="desc">每個 claude account：重建 5 條 symlink 指向 workspaces/&lt;account.workspace&gt;/claude/&lt;subdir&gt;。flag：<code>.workspace-account-symlinks</code></div>
+      <div class="dep-note">必須在 account pool 存在之後</div></div></div>
+</div>
+
+<div class="callout">
+  <span class="ttl">不認得的目錄 → 留著不動 + log</span>
+  非 UUID 名目錄、或缺 <code>env.json</code>/<code>workspace.json</code> 的 UUID 目錄：兩階段都<strong>原樣保留並記錄</strong>。Migration <strong>絕不刪除使用者目錄</strong>——為真實使用者不可能有的狀態承擔不可逆刪除風險不值得。開發機殘骸由<strong>獨立手動腳本</strong>清理。
+</div>
+
+<!-- =============================================================== -->
+<h2>6 · Uninstall round-trip：免費的好處</h2>
+<p><code>originRelease</code> / <code>originTakeover</code> / <code>isOriginManaged</code> 自動跟隨變更後的 <code>originConfigDir</code> 常數 → 從 <code>workspaces/origin/&lt;tool&gt;/</code> release 回 <code>~/.claude</code>。</p>
+<div class="callout good">
+  <span class="ttl">結構性消除孤兒 session</span>
+  因為 origin 的 claude 內容（含 v3.1 wrapper 寫入的 session）現在<strong>一直都在 takeover root 裡</strong>，uninstall 既有的 release 邏輯把所有東西折回 <code>~/.claude/projects/</code>，<strong>不需要任何額外的 merge-back 程式碼</strong>。rc.1 的「孤兒 v3.1 session」問題從結構上消失。
+</div>
+
+<!-- =============================================================== -->
+<h2>7 · Hardcode 字串掃描</h2>
+<table class="cmp">
+  <tr><th>字串</th><th>位置</th><th>處理</th></tr>
+  <tr><td class="path">"claude-workspace"</td><td>EnvironmentStore.swift:249（唯一）</td><td class="no">移除</td></tr>
+  <tr><td class="path">"envs"</td><td>EnvironmentStore.swift:19、AccountMigration.swift:36、LegacyOrbitalMigration</td><td class="changed">→ "workspaces"。<strong>注意</strong>：LegacyOrbital 的 envs 是 orbital→orrery 歷史遷移一環，須驗證兩個遷移可串接</td></tr>
+  <tr><td class="path">"origin"</td><td>ShellFunctionGenerator（9 處）、RunCommand、ListCommand、ManifestRunner、Account/Pin/Capture/Prepare…</td><td class="un">保留名改為 <code>Workspace.reservedOriginName</code>；移除路徑分支，保留解析時的保留名檢查</td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2>8 · 範圍：明確的進與不進</h2>
+<div class="scope-grid">
+  <div class="scope-box in">
+    <h4 style="color:var(--good)">✓ rc.2 範圍內</h4>
+    <ul>
+      <li>路徑結構統一（envs→workspaces、origin 納入、claude-workspace→claude）</li>
+      <li>metadata 合一（→ <code>Workspace</code> / <code>workspace.json</code>）</li>
+      <li>兩階段冪等 migration</li>
+      <li>takeover root 搬遷 + <code>~/.claude</code> 重指</li>
+      <li>account symlink 重指</li>
+      <li>uninstall release 路徑</li>
+    </ul>
+  </div>
+  <div class="scope-box out">
+    <h4 style="color:var(--muted)">✗ 明確延後</h4>
+    <ul>
+      <li>使用者面指令詞彙收斂（<code>enter</code>/<code>exit</code>/<code>use</code>/<code>pin</code>/<code>workspace</code>）— 獨立 UX 設計</li>
+      <li>「sandbox = (workspace, account) 高級封裝」— 自己的 brainstorm</li>
+      <li>origin 歷史 <code>~/.claude/projects/</code> 額外遷移（已在 takeover root）</li>
+      <li>反向遷移（workspaces→envs）— 維持單向</li>
+    </ul>
+  </div>
+</div>
+<p class="meta-line">指令的語義與詞彙這次<strong>完全不動</strong>——<code>enter</code>/<code>exit</code>/<code>use</code>/<code>run</code> 透過變更後的常數解析新路徑即可運作。</p>
+
+<!-- =============================================================== -->
+<h2>9 · 測試策略</h2>
+<ul>
+  <li><strong>Unit</strong>：<code>Workspace</code> model encode/decode，含寬容解碼舊 <code>config.json</code>（缺 id/name）與舊 <code>env.json</code>。</li>
+  <li><strong>Migration（temp ORRERY_HOME）</strong>：給定合成的 v3.0.x 樹，斷言 — <code>workspaces/</code> 在、<code>envs/</code> 消失；<code>workspaces/origin/</code> 在、<code>origin/</code> 消失；每個 <code>workspace.json</code> 可解碼、<code>claude-workspace/</code> 不存在；account symlink 解析到 <code>workspaces/&lt;ws&gt;/claude/&lt;subdir&gt;</code>；兩個 flag 都寫、各 phase 二次執行為 no-op；Phase A 在 takeover 前不打架（chain 後 <code>isOriginManaged</code>）、Phase B 在 pool 存在後；不認得的目錄留著 + log（不刪）。</li>
+  <li><strong>冪等</strong>：跑兩次 migration 得到同一棵樹。</li>
+  <li><strong>Uninstall round-trip</strong>：takeover → 經 wrapper 寫一個 session → uninstall → 斷言 session 內容回到 <code>~/.claude/projects/</code>。</li>
+  <li><strong>L10n build gate</strong> 維持綠（all-locales-have-all-keys）；完整 <code>swift test</code>（315 baseline）通過。</li>
+</ul>
+
+<!-- =============================================================== -->
+<h2>10 · 已知限制 · 版本</h2>
+<ul>
+  <li>單向遷移；升級前備份 <code>~/.orrery/</code>。</li>
+  <li><code>loadOriginConfig</code> 在 test <code>ORRERY_HOME</code> 下仍讀 production path — v3.0.x 既有 bug，本次不處理。</li>
+  <li><code>ClaudeJsonMerge</code> 欄位分類仍 hardcode（不變）。</li>
+</ul>
+<p>出 <span class="badge">v3.1.0-rc.2</span>（延續自我驗證）。bump：<code>Version.swift</code>、<code>docs/index.html</code>、<code>docs/zh_TW.html</code>、<code>CHANGELOG.md</code>。跳過 homebrew formula（RC 慣例）。</p>
+
+<p class="meta-line" style="margin-top:40px; border-top:1px solid var(--border); padding-top:16px;">對應 Markdown spec：<code>docs/superpowers/specs/2026-05-29-workspace-layout-unification-design.md</code></p>
+
+</body>
+</html>
