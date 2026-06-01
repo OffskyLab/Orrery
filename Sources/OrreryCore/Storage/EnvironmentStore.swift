@@ -342,16 +342,23 @@ public struct EnvironmentStore: Sendable {
 
     private var originConfigURL: URL { originDir.appendingPathComponent("config.json") }
 
-    public func loadOriginConfig() -> OriginConfig {
+    public func loadOriginConfig() -> OrreryEnvironment {
         guard let data = try? Data(contentsOf: originConfigURL),
-              let config = try? JSONDecoder().decode(OriginConfig.self, from: data)
-        else { return OriginConfig() }
-        return config
+              let env = try? { () -> OrreryEnvironment in
+                  let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+                  return try d.decode(OrreryEnvironment.self, from: data)
+              }()
+        // NB: explicitly isolateMemory: false to preserve the historical origin
+        // default (old OriginConfig() defaulted false; OrreryEnvironment.init
+        // defaults isolateMemory: true, which would silently flip origin's behavior).
+        else { return OrreryEnvironment(name: ReservedEnvironment.defaultName, isolateMemory: false) }
+        return env
     }
 
-    public func saveOriginConfig(_ config: OriginConfig) throws {
+    public func saveOriginConfig(_ config: OrreryEnvironment) throws {
         try FileManager.default.createDirectory(at: originDir, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(config)
         try data.write(to: originConfigURL)

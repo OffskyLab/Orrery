@@ -21,6 +21,22 @@ struct OrreryEnvironmentTests {
         #expect(decoded.tools == [.claude, .codex])
         #expect(decoded.env["ANTHROPIC_API_KEY"] == "sk-test")
     }
+
+    @Test("decodes a legacy origin config.json missing id/name as the reserved origin env")
+    func decodeLegacyOriginConfig() throws {
+        // Old origin/config.json shape: only the 4 OriginConfig fields, no id/name.
+        let legacy = """
+        {"isolateMemory":true,"isolatedSessionTools":["gemini"],"accounts":{"claude":"ABC"}}
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let env = try decoder.decode(OrreryEnvironment.self, from: legacy)
+        #expect(env.id == "origin")
+        #expect(env.name == "origin")
+        #expect(env.isolateMemory == true)
+        #expect(env.isolatedSessionTools == [.gemini])
+        #expect(env.account(for: .claude) == "ABC")
+    }
 }
 
 @Suite("Tool")

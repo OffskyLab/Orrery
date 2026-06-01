@@ -4,56 +4,6 @@ public enum ReservedEnvironment {
     public static let defaultName = "origin"
 }
 
-/// Persisted settings for the reserved `origin` environment.
-/// Stored at `~/.orrery/origin/config.json`.
-public struct OriginConfig: Codable, Sendable {
-    public var isolateMemory: Bool
-    public var memoryStoragePath: String?
-    /// Tools whose sessions are isolated (not symlinked to shared).
-    /// Absent from the set → shared (default).
-    public var isolatedSessionTools: Set<Tool>
-    /// 每個工具釘住的 account id。Key 為 Tool.rawValue。
-    public var accounts: [String: AccountID]
-
-    public init(
-        isolateMemory: Bool = false,
-        memoryStoragePath: String? = nil,
-        isolatedSessionTools: Set<Tool> = [],
-        accounts: [String: AccountID] = [:]
-    ) {
-        self.isolateMemory = isolateMemory
-        self.memoryStoragePath = memoryStoragePath
-        self.isolatedSessionTools = isolatedSessionTools
-        self.accounts = accounts
-    }
-
-    public func isolateSessions(for tool: Tool) -> Bool {
-        isolatedSessionTools.contains(tool)
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case isolateMemory, memoryStoragePath, isolatedSessionTools, accounts
-    }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        isolateMemory = try c.decodeIfPresent(Bool.self, forKey: .isolateMemory) ?? false
-        memoryStoragePath = try c.decodeIfPresent(String.self, forKey: .memoryStoragePath)
-        isolatedSessionTools = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) ?? []
-        accounts = try c.decodeIfPresent([String: AccountID].self, forKey: .accounts) ?? [:]
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(isolateMemory, forKey: .isolateMemory)
-        try c.encodeIfPresent(memoryStoragePath, forKey: .memoryStoragePath)
-        try c.encode(isolatedSessionTools, forKey: .isolatedSessionTools)
-        if !accounts.isEmpty {
-            try c.encode(accounts, forKey: .accounts)
-        }
-    }
-}
-
 public struct OrreryEnvironment: Codable, Sendable {
     public var id: String
     public var name: String
@@ -115,13 +65,13 @@ public struct OrreryEnvironment: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        name = try c.decode(String.self, forKey: .name)
-        description = try c.decode(String.self, forKey: .description)
-        createdAt = try c.decode(Date.self, forKey: .createdAt)
-        lastUsed = try c.decode(Date.self, forKey: .lastUsed)
-        tools = try c.decode([Tool].self, forKey: .tools)
-        env = try c.decode([String: String].self, forKey: .env)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ReservedEnvironment.defaultName
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ReservedEnvironment.defaultName
+        description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date(timeIntervalSince1970: 0)
+        lastUsed = try c.decodeIfPresent(Date.self, forKey: .lastUsed) ?? Date(timeIntervalSince1970: 0)
+        tools = try c.decodeIfPresent([Tool].self, forKey: .tools) ?? []
+        env = try c.decodeIfPresent([String: String].self, forKey: .env) ?? [:]
 
         if let newField = try c.decodeIfPresent(Set<Tool>.self, forKey: .isolatedSessionTools) {
             isolatedSessionTools = newField
@@ -156,22 +106,6 @@ public struct OrreryEnvironment: Codable, Sendable {
 }
 
 extension OrreryEnvironment {
-    /// 取得指定工具釘住的 account id。
-    public func account(for tool: Tool) -> AccountID? {
-        accounts[tool.rawValue]
-    }
-
-    /// 設定（或以 nil 清除）指定工具釘住的 account。
-    public mutating func setAccount(_ id: AccountID?, for tool: Tool) {
-        if let id {
-            accounts[tool.rawValue] = id
-        } else {
-            accounts.removeValue(forKey: tool.rawValue)
-        }
-    }
-}
-
-extension OriginConfig {
     /// 取得指定工具釘住的 account id。
     public func account(for tool: Tool) -> AccountID? {
         accounts[tool.rawValue]
