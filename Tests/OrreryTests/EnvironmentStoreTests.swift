@@ -125,8 +125,10 @@ struct EnvironmentAccountsTests {
         {"isolateMemory":true,"isolatedSessionTools":[]}
         """
         let decoder = JSONDecoder()
-        let cfg = try decoder.decode(OriginConfig.self, from: Data(json.utf8))
+        decoder.dateDecodingStrategy = .iso8601
+        let cfg = try decoder.decode(OrreryEnvironment.self, from: Data(json.utf8))
         #expect(cfg.accounts.isEmpty)
+        #expect(cfg.name == "origin")
     }
 
     @Test("account(for:) and setAccount(_:for:) helpers")
