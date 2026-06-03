@@ -47,4 +47,22 @@ struct WorkspaceStructureRelocationTests {
         AccountMigration.runWorkspaceStructureRelocationIfNeeded(homeURL: home)
         #expect(fm.fileExists(atPath: home.appendingPathComponent("workspaces/origin/workspace.json").path))
     }
+
+    @Test("Phase B rebuilds account symlinks into workspaces/<ws>/claude")
+    func phaseBSymlinks() throws {
+        let fm = FileManager.default
+        let home = tmpHome()
+        let acctStore = AccountStore(homeURL: home)
+        let acct = Account(id: "ACCT1", tool: .claude, displayName: "me", workspace: "origin")
+        try acctStore.save(acct)
+
+        AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: home)
+
+        let acctDir = acctStore.accountDir(id: "ACCT1", tool: .claude)
+        for sub in ClaudeAccountDirectory.sharedSubdirs {
+            let dest = try fm.destinationOfSymbolicLink(atPath: acctDir.appendingPathComponent(sub).path)
+            #expect(dest == home.appendingPathComponent("workspaces/origin/claude/\(sub)").path)
+        }
+        #expect(fm.fileExists(atPath: home.appendingPathComponent(".workspace-account-symlinks").path))
+    }
 }

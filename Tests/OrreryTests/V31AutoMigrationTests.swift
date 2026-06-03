@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import OrreryCore
 
-@Suite("AccountMigration.runV31AccountLayoutIfNeeded")
+@Suite("AccountMigration.runWorkspaceAccountSymlinksIfNeeded")
 struct V31AutoMigrationTests {
 
     @Test("first call migrates all claude accounts and writes the flag")
@@ -14,12 +14,12 @@ struct V31AutoMigrationTests {
             let acct = Account(tool: .claude, displayName: "alice", email: "alice@x.com")
             try acctStore.save(acct)
 
-            AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
+            AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
 
             #expect(ClaudeAccountDirectory.verifySymlinks(
                 account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
             let flag = orreryHomeURL().appendingPathComponent(
-                AccountMigration.v31AccountLayoutFlagFileName)
+                AccountMigration.workspaceAccountSymlinksFlagFileName)
             #expect(FileManager.default.fileExists(atPath: flag.path))
         }
     }
@@ -32,7 +32,7 @@ struct V31AutoMigrationTests {
             let acct = Account(tool: .claude, displayName: "alice", email: "alice@x.com")
             try acctStore.save(acct)
 
-            AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
+            AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
 
             let identityURL = ClaudeJsonMerge.identityFileURL(
                 accountDir: acctStore.accountDir(id: acct.id, tool: .claude))
@@ -41,7 +41,7 @@ struct V31AutoMigrationTests {
 
             Thread.sleep(forTimeInterval: 0.05)
 
-            AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
+            AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
 
             let afterMtime = (try? FileManager.default
                 .attributesOfItem(atPath: identityURL.path)[.modificationDate] as? Date) ?? Date()
@@ -54,7 +54,7 @@ struct V31AutoMigrationTests {
     func neverThrows() throws {
         try withIsolatedHome {
             #expect(throws: Never.self) {
-                AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
+                AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
             }
         }
     }

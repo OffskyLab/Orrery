@@ -25,10 +25,9 @@ private func runOrreryMain() throws {
     // created (via v3 migration or manual `account add`) before those fields
     // were stored on the `Account` model. Best-effort, never throws.
     AccountMigration.runInfoBackfillIfNeeded(homeURL: orreryHomeURL())
-    // One-shot v3.1 account-layout migration: walks all claude pool accounts and
-    // brings each to v3.1 layout (per-account dir + workspace symlinks). Guarded
-    // by a flag file so it only runs once. Best-effort, never throws.
-    AccountMigration.runV31AccountLayoutIfNeeded(homeURL: orreryHomeURL())
+    // Phase B of the workspace-layout migration: rebuild each claude account's
+    // workspace symlinks against the unified layout (needs the account pool).
+    AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
     OrreryThirdPartyRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first
