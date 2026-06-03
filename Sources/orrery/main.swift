@@ -6,6 +6,9 @@ import OrreryThirdParty
 @MainActor
 private func runOrreryMain() throws {
     LegacyOrbitalMigration.runIfNeeded()
+    // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
+    // unified workspaces/ layout BEFORE takeover, so takeover sees the new paths.
+    AccountMigration.runWorkspaceStructureRelocationIfNeeded(homeURL: orreryHomeURL())
     // Takeover MUST run before AccountMigration: takeover populates ~/.orrery/origin/
     // with the user's real credentials (via symlinks from ~/.claude, ~/.codex, ~/.gemini).
     // Migration's "nothing to migrate" check looks at ~/.orrery/origin/. If migration

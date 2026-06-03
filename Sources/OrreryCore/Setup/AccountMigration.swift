@@ -414,4 +414,95 @@ public enum AccountMigration {
             ))
         }
     }
+
+    // MARK: - Phase A: workspace structure relocation (runs before origin takeover)
+
+    public static let workspaceStructureFlagFileName = ".workspace-structure-relocated"
+
+    /// One-shot relocation of the v3.0.x tree to the unified `workspaces/` layout.
+    /// Runs BEFORE OriginTakeoverBootstrap so takeover sees the new locations.
+    /// Best-effort: never throws.
+    public static func runWorkspaceStructureRelocationIfNeeded(homeURL: URL) {
+        let fm = FileManager.default
+        let flag = homeURL.appendingPathComponent(workspaceStructureFlagFileName)
+        if fm.fileExists(atPath: flag.path) { return }
+        guard fm.fileExists(atPath: homeURL.path) else { return }
+
+        let oldEnvs = homeURL.appendingPathComponent("envs")
+        let newWorkspaces = homeURL.appendingPathComponent("workspaces")
+        let oldOrigin = homeURL.appendingPathComponent("origin")
+        let newOrigin = newWorkspaces.appendingPathComponent("origin")
+
+        func warn(_ m: String) {
+            FileHandle.standardError.write(Data("[orrery workspace relocation] \(m)\n".utf8))
+        }
+
+        // 1. envs/ -> workspaces/ (only if workspaces/ doesn't already exist).
+        if fm.fileExists(atPath: oldEnvs.path) && !fm.fileExists(atPath: newWorkspaces.path) {
+            do { try fm.moveItem(at: oldEnvs, to: newWorkspaces) }
+            catch { warn("could not move envs/ -> workspaces/: \(error)") }
+        }
+        try? fm.createDirectory(at: newWorkspaces, withIntermediateDirectories: true)
+
+        // 2. origin/ -> workspaces/origin/ (do not overwrite an existing target —
+        //    only possible from an rc artifact, never for real users).
+        if fm.fileExists(atPath: oldOrigin.path) {
+            if fm.fileExists(atPath: newOrigin.path) {
+                warn("workspaces/origin already exists; leaving legacy origin/ in place")
+            } else {
+                do {
+                    try fm.moveItem(at: oldOrigin, to: newOrigin)
+                    // Repoint ~/.claude (and codex/gemini if origin-managed) to the new root.
+                    let store = EnvironmentStore(homeURL: homeURL)
+                    for tool in Tool.allCases {
+                        let link = tool.defaultConfigDir
+                        if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
+                           dest.contains("/origin/\(tool.subdirectory)"),
+                           !dest.contains("/workspaces/origin/") {
+                            try? fm.removeItem(at: link)
+                            try? fm.createSymbolicLink(at: link, withDestinationURL: store.originConfigDir(tool: tool))
+                        }
+                    }
+                } catch { warn("could not move origin/ -> workspaces/origin/: \(error)") }
+            }
+        }
+
+        // 3. Per-workspace dir: env.json/config.json -> workspace.json;
+        //    fold rc-artifact claude-workspace/ into claude/.
+        if let dirs = try? fm.contentsOfDirectory(atPath: newWorkspaces.path) {
+            for dir in dirs {
+                let wsDir = newWorkspaces.appendingPathComponent(dir)
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: wsDir.path, isDirectory: &isDir), isDir.boolValue else { continue }
+
+                for legacy in ["env.json", "config.json"] {
+                    let from = wsDir.appendingPathComponent(legacy)
+                    let to = wsDir.appendingPathComponent("workspace.json")
+                    if fm.fileExists(atPath: from.path) && !fm.fileExists(atPath: to.path) {
+                        try? fm.moveItem(at: from, to: to)
+                    }
+                }
+
+                let cw = wsDir.appendingPathComponent("claude-workspace")
+                let claude = wsDir.appendingPathComponent("claude")
+                if fm.fileExists(atPath: cw.path) {
+                    if !fm.fileExists(atPath: claude.path) {
+                        try? fm.moveItem(at: cw, to: claude)
+                    } else {
+                        // merge subdirs that don't already exist, then remove
+                        let subs = (try? fm.contentsOfDirectory(atPath: cw.path)) ?? []
+                        for s in subs {
+                            let src = cw.appendingPathComponent(s)
+                            let dst = claude.appendingPathComponent(s)
+                            if !fm.fileExists(atPath: dst.path) { try? fm.moveItem(at: src, to: dst) }
+                        }
+                        try? fm.removeItem(at: cw)
+                    }
+                }
+            }
+        }
+
+        do { try Data("v1\n".utf8).write(to: flag) }
+        catch { warn("could not write flag: \(error)") }
+    }
 }
