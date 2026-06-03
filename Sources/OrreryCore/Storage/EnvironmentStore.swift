@@ -16,7 +16,7 @@ public struct EnvironmentStore: Sendable {
         EnvironmentStore(homeURL: orreryHomeURL())
     }
 
-    private var envsURL: URL { homeURL.appendingPathComponent("envs") }
+    private var envsURL: URL { homeURL.appendingPathComponent("workspaces") }
     private var currentURL: URL { homeURL.appendingPathComponent("current") }
     private var sharedURL: URL { homeURL.appendingPathComponent("shared") }
 
@@ -31,10 +31,10 @@ public struct EnvironmentStore: Sendable {
     }
 
     private func envJSONURL(id: String) -> URL {
-        envURL(id: id).appendingPathComponent("env.json")
+        envURL(id: id).appendingPathComponent("workspace.json")
     }
 
-    // Scan all UUID dirs and find the one whose env.json has the given name
+    // Scan all UUID dirs and find the one whose workspace.json has the given name
     private func resolveID(for name: String) throws -> String {
         guard FileManager.default.fileExists(atPath: envsURL.path) else {
             throw Error.environmentNotFound(name)
@@ -43,7 +43,7 @@ public struct EnvironmentStore: Sendable {
         decoder.dateDecodingStrategy = .iso8601
         let dirs = try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
         for dir in dirs {
-            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("env.json")
+            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("workspace.json")
             guard FileManager.default.fileExists(atPath: jsonURL.path) else { continue }
             if let data = try? Data(contentsOf: jsonURL),
                let env = try? decoder.decode(OrreryEnvironment.self, from: data),
@@ -78,7 +78,7 @@ public struct EnvironmentStore: Sendable {
         decoder.dateDecodingStrategy = .iso8601
         let dirs = try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
         return dirs.compactMap { dir -> String? in
-            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("env.json")
+            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("workspace.json")
             guard let data = try? Data(contentsOf: jsonURL),
                   let env = try? decoder.decode(OrreryEnvironment.self, from: data)
             else { return nil }
@@ -244,9 +244,7 @@ public struct EnvironmentStore: Sendable {
     /// (`projects/`, `memory/`, `agents/`, `commands/`, `todos/`).
     /// The directory is not created by this method.
     public func claudeWorkspaceDir(workspace: String) -> URL {
-        envsURL
-            .appendingPathComponent(workspace)
-            .appendingPathComponent("claude-workspace")
+        envsURL.appendingPathComponent(workspace).appendingPathComponent("claude")
     }
 
     // MARK: - Memory path helpers
@@ -337,10 +335,10 @@ public struct EnvironmentStore: Sendable {
 
     // MARK: - Origin management
 
-    /// Storage directory for origin tool configs: `~/.orrery/origin/`
-    public var originDir: URL { homeURL.appendingPathComponent("origin") }
+    /// Storage directory for origin tool configs: `~/.orrery/workspaces/origin/`
+    public var originDir: URL { envsURL.appendingPathComponent(ReservedEnvironment.defaultName) }
 
-    private var originConfigURL: URL { originDir.appendingPathComponent("config.json") }
+    private var originConfigURL: URL { originDir.appendingPathComponent("workspace.json") }
 
     public func loadOriginConfig() -> OrreryEnvironment {
         guard let data = try? Data(contentsOf: originConfigURL),

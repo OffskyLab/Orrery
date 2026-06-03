@@ -14,7 +14,7 @@ struct EnvironmentStoreTests {
         store = EnvironmentStore(homeURL: tmpDir)
     }
 
-    @Test("creates environment directory and env.json")
+    @Test("creates environment directory and workspace.json")
     func createEnvironment() throws {
         let env = OrreryEnvironment(name: "work", description: "Work")
         try store.save(env)
@@ -71,9 +71,9 @@ struct EnvironmentStoreTests {
         try store.save(OrreryEnvironment(name: "work"))
         let path = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(path.lastPathComponent == "claude")
-        // Parent is a UUID dir, not the env name — just verify it's under envsURL
-        let envsURL = tmpDir.appendingPathComponent("envs")
-        #expect(path.path.hasPrefix(envsURL.path))
+        // Parent is a UUID dir, not the env name — just verify it's under workspaces/
+        let workspacesURL = tmpDir.appendingPathComponent("workspaces")
+        #expect(path.path.hasPrefix(workspacesURL.path))
     }
 }
 
@@ -89,7 +89,7 @@ struct EnvironmentAccountsTests {
         store = EnvironmentStore(homeURL: tmpDir)
     }
 
-    @Test("env.json round-trips accounts field")
+    @Test("workspace.json round-trips accounts field")
     func roundTripAccounts() throws {
         var env = OrreryEnvironment(name: "work")
         env.accounts = ["claude": "acct-123", "codex": "acct-456"]
@@ -108,7 +108,7 @@ struct EnvironmentAccountsTests {
         #expect(loaded.accounts.isEmpty)
     }
 
-    @Test("decodes legacy env.json without accounts key")
+    @Test("decodes legacy workspace.json without accounts key")
     func legacyDecode() throws {
         let json = """
         {"id":"x","name":"old","description":"","createdAt":"2026-01-01T00:00:00Z","lastUsed":"2026-01-01T00:00:00Z","tools":[],"env":{},"isolatedSessionTools":[],"isolateMemory":false}
@@ -166,13 +166,13 @@ struct EnvironmentAccountsTests {
         #expect(refs.contains(ReservedEnvironment.defaultName))
     }
 
-    @Test("empty accounts is omitted from env.json")
+    @Test("empty accounts is omitted from workspace.json")
     func emptyAccountsOmitted() throws {
         let env = OrreryEnvironment(name: "noacct")
         try store.save(env)
-        let envsDir = tmpDir.appendingPathComponent("envs")
-        let idDir = try FileManager.default.contentsOfDirectory(atPath: envsDir.path).first!
-        let jsonURL = envsDir.appendingPathComponent(idDir).appendingPathComponent("env.json")
+        let workspacesDir = tmpDir.appendingPathComponent("workspaces")
+        let idDir = try FileManager.default.contentsOfDirectory(atPath: workspacesDir.path).first!
+        let jsonURL = workspacesDir.appendingPathComponent(idDir).appendingPathComponent("workspace.json")
         let raw = try String(contentsOf: jsonURL, encoding: .utf8)
         #expect(!raw.contains("\"accounts\""))
     }
