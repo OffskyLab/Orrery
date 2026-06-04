@@ -39,7 +39,7 @@ public struct RunCommand: ParsableCommand {
 
         // Build environment variables
         var envVars: [String: String] = [:]
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             let env = try store.load(named: envName)
             for tool in env.tools {
                 envVars[tool.envVarName] = store.toolConfigDir(tool: tool, environment: envName).path
@@ -64,7 +64,7 @@ public struct RunCommand: ParsableCommand {
         // Inherit current environment + overlay orrery env vars
         var processEnv = ProcessInfo.processInfo.environment
         // Strip inherited API key so the environment's own credentials take effect
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             processEnv.removeValue(forKey: "ANTHROPIC_API_KEY")
         }
         for (key, value) in envVars {
@@ -75,7 +75,7 @@ public struct RunCommand: ParsableCommand {
         processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
         processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
         // If using default, unset tool config dirs
-        if let envName, envName == ReservedEnvironment.defaultName {
+        if let envName, envName == Workspace.reservedOriginName {
             for tool in Tool.allCases {
                 processEnv.removeValue(forKey: tool.envVarName)
             }
@@ -107,14 +107,14 @@ extension RunCommand {
 
         let pinnedID: AccountID?
         let configDir: String?
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             let env = try envStore.load(named: envName)
             pinnedID = env.account(for: tool)
             configDir = envStore.toolConfigDir(tool: tool, environment: envName).path
         } else {
             // origin: 工具執行時 config-dir env var 是 unset 的，
             // 所以傳 nil — adapter 會對應到工具預設位置 / 預設 Keychain service。
-            pinnedID = envStore.loadOriginConfig().account(for: tool)
+            pinnedID = envStore.loadOriginWorkspace().account(for: tool)
             configDir = nil
         }
 

@@ -123,13 +123,13 @@ public struct SetupCommand: ParsableCommand {
         // and sessions must be available to any sandbox that opts into sharing;
         // if origin kept them isolated, a sandbox set to "shared" would have
         // nothing to share with.
-        var config = store.loadOriginConfig()
+        var config = store.loadOriginWorkspace()
         config.isolateMemory = false
         for tool in newlyTakenOver {
             config.isolatedSessionTools.remove(tool)
             try? store.ensureSharedSessionLinksForOrigin(tool: tool)
         }
-        try? store.saveOriginConfig(config)
+        try? store.saveOriginWorkspace(config)
 
         stderrWrite("\n\(L10n.Setup.originHeader)\n")
         stderrWrite("\(L10n.Setup.originSharedDefault)\n")

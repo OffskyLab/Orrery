@@ -2,12 +2,12 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-@Suite("OrreryEnvironment")
-struct OrreryEnvironmentTests {
+@Suite("Workspace")
+struct WorkspaceTests {
 
     @Test("round-trips through JSON")
     func jsonRoundTrip() throws {
-        let env = OrreryEnvironment(
+        let env = Workspace(
             name: "work",
             description: "Work account",
             createdAt: Date(timeIntervalSince1970: 0),
@@ -16,7 +16,7 @@ struct OrreryEnvironmentTests {
             env: ["ANTHROPIC_API_KEY": "sk-test"]
         )
         let data = try JSONEncoder().encode(env)
-        let decoded = try JSONDecoder().decode(OrreryEnvironment.self, from: data)
+        let decoded = try JSONDecoder().decode(Workspace.self, from: data)
         #expect(decoded.name == "work")
         #expect(decoded.tools == [.claude, .codex])
         #expect(decoded.env["ANTHROPIC_API_KEY"] == "sk-test")
@@ -30,7 +30,7 @@ struct OrreryEnvironmentTests {
         """.data(using: .utf8)!
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let env = try decoder.decode(OrreryEnvironment.self, from: legacy)
+        let env = try decoder.decode(Workspace.self, from: legacy)
         #expect(env.id == "origin")
         #expect(env.name == "origin")
         #expect(env.isolateMemory == true)

@@ -68,7 +68,7 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
         // No-arg form: list envs and bail with a hint. The slash command will
         // catch this output and re-prompt the user.
         guard let target = args.first, !target.isEmpty else {
-            let names = ([ReservedEnvironment.defaultName] + ((try? store.listNames().sorted()) ?? []))
+            let names = ([Workspace.reservedOriginName] + ((try? store.listNames().sorted()) ?? []))
             print(L10n.Phantom.availableHeader)
             for n in names { print("  - \(n)") }
             print("")
@@ -77,7 +77,7 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
         }
 
         // Validate target env exists (origin is always valid).
-        if target != ReservedEnvironment.defaultName {
+        if target != Workspace.reservedOriginName {
             _ = try store.load(named: target)
         }
 

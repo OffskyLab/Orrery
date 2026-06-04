@@ -10,7 +10,7 @@ struct ManifestRunnerInstallTests {
             .appendingPathComponent("orrery-runner-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        let env = OrreryEnvironment(name: "dev")
+        let env = Workspace(name: "dev")
         try store.save(env)
         try FileManager.default.createDirectory(
             at: store.toolConfigDir(tool: .claude, environment: "dev"),

@@ -16,7 +16,7 @@ struct ListCommandTests {
 
     @Test("formats environment row with name and tools")
     func formatsRow() throws {
-        let env = OrreryEnvironment(name: "work", description: "Work", tools: [.claude, .codex])
+        let env = Workspace(name: "work", description: "Work", tools: [.claude, .codex])
         try store.save(env)
 
         let rows = try SandboxCommand.List.environmentRows(activeEnv: nil, store: store)
@@ -29,8 +29,8 @@ struct ListCommandTests {
 
     @Test("marks active environment")
     func marksActive() throws {
-        try store.save(OrreryEnvironment(name: "work"))
-        try store.save(OrreryEnvironment(name: "personal"))
+        try store.save(Workspace(name: "work"))
+        try store.save(Workspace(name: "personal"))
 
         let rows = try SandboxCommand.List.environmentRows(activeEnv: "work", store: store)
         let workRow = rows.first { $0.contains("work") }!

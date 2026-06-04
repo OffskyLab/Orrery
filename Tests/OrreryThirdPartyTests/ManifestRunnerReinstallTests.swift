@@ -11,7 +11,7 @@ struct ManifestRunnerReinstallTests {
             .appendingPathComponent("orrery-reinst-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        try store.save(OrreryEnvironment(name: "dev"))
+        try store.save(Workspace(name: "dev"))
         try FileManager.default.createDirectory(
             at: store.toolConfigDir(tool: .claude, environment: "dev"),
             withIntermediateDirectories: true)

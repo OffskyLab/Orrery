@@ -60,7 +60,7 @@ struct AccountMigrationTests {
 
         // Build a real env with a codex credential — would normally be migrated.
         let envStore = EnvironmentStore(homeURL: home)
-        let env = OrreryEnvironment(name: "work", tools: [.codex])
+        let env = Workspace(name: "work", tools: [.codex])
         try envStore.save(env)
         let codexDir = envStore.toolConfigDir(tool: .codex, environment: "work")
         try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)
@@ -83,7 +83,7 @@ struct AccountMigrationTests {
         defer { cleanup() }
 
         let envStore = EnvironmentStore(homeURL: home)
-        let env = OrreryEnvironment(name: "work", tools: [.codex])
+        let env = Workspace(name: "work", tools: [.codex])
         try envStore.save(env)
 
         let codexDir = envStore.toolConfigDir(tool: .codex, environment: "work")
@@ -124,7 +124,7 @@ struct AccountMigrationTests {
         let shared = Data(#"{"token":"shared-codex-token"}"#.utf8)
 
         for name in ["alpha", "beta"] {
-            let env = OrreryEnvironment(name: name, tools: [.codex])
+            let env = Workspace(name: name, tools: [.codex])
             try envStore.save(env)
             let codexDir = envStore.toolConfigDir(tool: .codex, environment: name)
             try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)
@@ -150,7 +150,7 @@ struct AccountMigrationTests {
         defer { cleanup() }
 
         let envStore = EnvironmentStore(homeURL: home)
-        let env = OrreryEnvironment(name: "rerun", tools: [.codex])
+        let env = Workspace(name: "rerun", tools: [.codex])
         try envStore.save(env)
 
         let codexDir = envStore.toolConfigDir(tool: .codex, environment: "rerun")
@@ -226,7 +226,7 @@ struct AccountMigrationTests {
         defer { cleanup() }
 
         let envStore = EnvironmentStore(homeURL: home)
-        let env = OrreryEnvironment(name: "work", tools: [.codex])
+        let env = Workspace(name: "work", tools: [.codex])
         try envStore.save(env)
         let codexDir = envStore.toolConfigDir(tool: .codex, environment: "work")
         try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)

@@ -45,7 +45,7 @@ public struct SandboxCommand: ParsableCommand {
             guard let envName = workspace ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
-            guard envName != ReservedEnvironment.defaultName else {
+            guard envName != Workspace.reservedOriginName else {
                 throw ValidationError(L10n.Workspace.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
@@ -77,7 +77,7 @@ public struct SandboxCommand: ParsableCommand {
             guard let envName = workspace ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
                 throw ValidationError(L10n.Workspace.setEnvNoActive)
             }
-            guard envName != ReservedEnvironment.defaultName else {
+            guard envName != Workspace.reservedOriginName else {
                 throw ValidationError(L10n.Workspace.setEnvOriginNotSupported)
             }
             let store = EnvironmentStore.default
@@ -123,7 +123,7 @@ public struct SandboxCommand: ParsableCommand {
 
         public static func environmentRows(activeEnv: String?, store: EnvironmentStore) throws -> [String] {
             let names = try store.listNames().sorted()
-            let defaultName = ReservedEnvironment.defaultName
+            let defaultName = Workspace.reservedOriginName
             let defaultActive = activeEnv == defaultName || activeEnv == nil ? "*" : " "
 
             let df = DateFormatter()
@@ -131,7 +131,7 @@ public struct SandboxCommand: ParsableCommand {
             df.timeStyle = .short
 
             // Load env metadata serially (cheap JSON reads).
-            let loadedEnvs: [(name: String, env: OrreryEnvironment)] = try names.map {
+            let loadedEnvs: [(name: String, env: Workspace)] = try names.map {
                 ($0, try store.load(named: $0))
             }
 
@@ -291,7 +291,7 @@ public struct SandboxCommand: ParsableCommand {
         // MARK: - Single-target
 
         static func deleteOne(name: String, force: Bool, store: EnvironmentStore) throws {
-            if name == ReservedEnvironment.defaultName {
+            if name == Workspace.reservedOriginName {
                 throw ValidationError(L10n.Delete.reservedName)
             }
             if !force {
@@ -374,7 +374,7 @@ public struct SandboxCommand: ParsableCommand {
             } else {
                 throw ValidationError(L10n.Info.noActive)
             }
-            guard resolvedName != ReservedEnvironment.defaultName else {
+            guard resolvedName != Workspace.reservedOriginName else {
                 Self.printOriginInfo()
                 return
             }
@@ -439,7 +439,7 @@ public struct SandboxCommand: ParsableCommand {
             let store = EnvironmentStore.default
             let none = L10n.Info.none
 
-            print("\(L10n.Info.labelName)\(ReservedEnvironment.defaultName)")
+            print("\(L10n.Info.labelName)\(Workspace.reservedOriginName)")
             print("\(L10n.Info.labelPath)\(store.originDir.path)")
             print("\(L10n.Info.labelDescription)\(L10n.Create.defaultDescription)")
 
@@ -473,8 +473,8 @@ public struct SandboxCommand: ParsableCommand {
             // Memory: origin respects OriginConfig
             let projectKey = FileManager.default.currentDirectoryPath
                 .replacingOccurrences(of: "/", with: "-")
-            let memoryDir = store.memoryDir(projectKey: projectKey, envName: ReservedEnvironment.defaultName)
-            let originConfig = store.loadOriginConfig()
+            let memoryDir = store.memoryDir(projectKey: projectKey, envName: Workspace.reservedOriginName)
+            let originConfig = store.loadOriginWorkspace()
             let memoryMode = originConfig.isolateMemory ? L10n.Info.modeIsolated : L10n.Info.modeShared
             print("\(L10n.Info.labelMemoryMode)\(memoryMode)")
             print("\(L10n.Info.labelMemoryPath)\(memoryDir.path)")
@@ -540,7 +540,7 @@ public struct SandboxCommand: ParsableCommand {
         public init() {}
 
         public func run() throws {
-            if name == ReservedEnvironment.defaultName || newName == ReservedEnvironment.defaultName {
+            if name == Workspace.reservedOriginName || newName == Workspace.reservedOriginName {
                 throw ValidationError(L10n.Rename.reservedName)
             }
             let store = EnvironmentStore.default
@@ -605,7 +605,7 @@ public struct SandboxCommand: ParsableCommand {
         public func run() throws {
             let store = EnvironmentStore.default
 
-            if name == ReservedEnvironment.defaultName {
+            if name == Workspace.reservedOriginName {
                 throw ValidationError(L10n.Create.reservedName)
             }
             if (try? store.load(named: name)) != nil {
@@ -637,7 +637,7 @@ public struct SandboxCommand: ParsableCommand {
             }
 
             // Create empty env — per-tool flags populated during apply()
-            let env = OrreryEnvironment(name: name, description: description)
+            let env = Workspace(name: name, description: description)
             try store.save(env)
             print(L10n.Create.created(name))
 
@@ -723,7 +723,7 @@ public struct SandboxCommand: ParsableCommand {
             isolateMemory: Bool = false,
             store: EnvironmentStore
         ) throws {
-            let env = OrreryEnvironment(
+            let env = Workspace(
                 name: name,
                 description: description,
                 isolatedSessionTools: isolateSessions ? [tool] : [],
@@ -760,8 +760,8 @@ public struct SandboxCommand: ParsableCommand {
 
             let isIsolated: Bool
             let storagePath: String?
-            if let envName, envName == ReservedEnvironment.defaultName {
-                let config = store.loadOriginConfig()
+            if let envName, envName == Workspace.reservedOriginName {
+                let config = store.loadOriginWorkspace()
                 isIsolated = config.isolateMemory
                 storagePath = config.memoryStoragePath
             } else if let envName, let env = try? store.load(named: envName) {
@@ -837,7 +837,7 @@ public struct SandboxCommand: ParsableCommand {
                 let memoryFile = memoryDir.appendingPathComponent("MEMORY.md")
 
                 let isIsolated: Bool
-                if let envName, envName != ReservedEnvironment.defaultName,
+                if let envName, envName != Workspace.reservedOriginName,
                    let env = try? store.load(named: envName) {
                     isIsolated = env.isolateMemory
                 } else {
@@ -912,8 +912,8 @@ public struct SandboxCommand: ParsableCommand {
                 let projectKey = FileManager.default.currentDirectoryPath
                     .replacingOccurrences(of: "/", with: "-")
 
-                if envName == ReservedEnvironment.defaultName {
-                    var config = store.loadOriginConfig()
+                if envName == Workspace.reservedOriginName {
+                    var config = store.loadOriginWorkspace()
                     guard !config.isolateMemory else {
                         print(L10n.Memory.alreadyIsolated)
                         return
@@ -933,7 +933,7 @@ public struct SandboxCommand: ParsableCommand {
                     }
                     try applyMigration(merge: choice == 0, fromDir: sharedDir, toDir: isolatedDir)
                     config.isolateMemory = true
-                    try store.saveOriginConfig(config)
+                    try store.saveOriginWorkspace(config)
                     print(L10n.Memory.migrationDone(envName, true))
                     return
                 }
@@ -993,8 +993,8 @@ public struct SandboxCommand: ParsableCommand {
                 let projectKey = FileManager.default.currentDirectoryPath
                     .replacingOccurrences(of: "/", with: "-")
 
-                if envName == ReservedEnvironment.defaultName {
-                    var config = store.loadOriginConfig()
+                if envName == Workspace.reservedOriginName {
+                    var config = store.loadOriginWorkspace()
                     guard config.isolateMemory else {
                         print(L10n.Memory.alreadyShared)
                         return
@@ -1014,7 +1014,7 @@ public struct SandboxCommand: ParsableCommand {
                     }
                     try applyMigration(merge: choice == 0, fromDir: isolatedDir, toDir: sharedDir)
                     config.isolateMemory = false
-                    try store.saveOriginConfig(config)
+                    try store.saveOriginWorkspace(config)
                     print(L10n.Memory.migrationDone(envName, false))
                     return
                 }
@@ -1078,11 +1078,11 @@ public struct SandboxCommand: ParsableCommand {
 
                 let store = EnvironmentStore.default
 
-                if envName == ReservedEnvironment.defaultName {
-                    var config = store.loadOriginConfig()
+                if envName == Workspace.reservedOriginName {
+                    var config = store.loadOriginWorkspace()
                     if reset {
                         config.memoryStoragePath = nil
-                        try store.saveOriginConfig(config)
+                        try store.saveOriginWorkspace(config)
                         print(L10n.Memory.storageReset)
                         return
                     }
@@ -1092,7 +1092,7 @@ public struct SandboxCommand: ParsableCommand {
                     }
                     try applyStoragePath(path, currentEnvName: envName, store: store,
                         getPath: { config.memoryStoragePath },
-                        setPath: { config.memoryStoragePath = $0; try store.saveOriginConfig(config) })
+                        setPath: { config.memoryStoragePath = $0; try store.saveOriginWorkspace(config) })
                     return
                 }
 
@@ -1230,7 +1230,7 @@ public struct SandboxCommand: ParsableCommand {
         }
 
         public static func exportLines(for name: String, store: EnvironmentStore) throws -> [String] {
-            guard name != ReservedEnvironment.defaultName else { return [] }
+            guard name != Workspace.reservedOriginName else { return [] }
             var env = try store.load(named: name)
             env.lastUsed = Date()
             try store.save(env)
@@ -1282,7 +1282,7 @@ public struct SandboxCommand: ParsableCommand {
         }
 
         public static func unexportLines(for name: String, store: EnvironmentStore) throws -> [String] {
-            guard name != ReservedEnvironment.defaultName else { return [] }
+            guard name != Workspace.reservedOriginName else { return [] }
             let env = try store.load(named: name)
             var lines: [String] = []
 

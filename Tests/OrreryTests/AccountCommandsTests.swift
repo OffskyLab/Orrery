@@ -209,9 +209,9 @@ struct AccountCommandsAllTests {
                 let other = Account(tool: .claude, displayName: "other-one")
                 try store.save(active)
                 try store.save(other)
-                var origin = EnvironmentStore.default.loadOriginConfig()
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["claude"] = active.id
-                try EnvironmentStore.default.saveOriginConfig(origin)
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ListCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
@@ -244,9 +244,9 @@ struct AccountCommandsAllTests {
             try withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "pinned-account")
                 try AccountStore.default.save(acct)
-                var origin = EnvironmentStore.default.loadOriginConfig()
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["claude"] = acct.id
-                try EnvironmentStore.default.saveOriginConfig(origin)
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("pinned-account"))
@@ -264,9 +264,9 @@ struct AccountCommandsAllTests {
                 try acctStore.save(acct)
 
                 // Pin the account to origin.
-                var origin = EnvironmentStore.default.loadOriginConfig()
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["codex"] = acct.id
-                try EnvironmentStore.default.saveOriginConfig(origin)
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
@@ -281,9 +281,9 @@ struct AccountCommandsAllTests {
             try withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "bare-account")
                 try AccountStore.default.save(acct)
-                var origin = EnvironmentStore.default.loadOriginConfig()
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["claude"] = acct.id
-                try EnvironmentStore.default.saveOriginConfig(origin)
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("bare-account"))
@@ -302,7 +302,7 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "env-pinned-account")
                 try acctStore.save(acct)
 
-                var env = OrreryEnvironment(name: "work-env")
+                var env = Workspace(name: "work-env")
                 env.accounts["claude"] = acct.id
                 try envStore.save(env)
 
@@ -374,7 +374,7 @@ struct AccountCommandsAllTests {
                 // A named env so the live config dir is inside the isolated home
                 // (origin would resolve to the real ~/.codex). The materialize
                 // path is identical for origin and named envs.
-                try envStore.save(OrreryEnvironment(name: "work-env"))
+                try envStore.save(Workspace(name: "work-env"))
 
                 // Create the codex account and seed a credential file in its pool dir.
                 let acct = Account(tool: .codex, displayName: "codex-work")
@@ -637,9 +637,9 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "in-use")
                 try AccountStore.default.save(acct)
 
-                var origin = EnvironmentStore.default.loadOriginConfig()
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.setAccount(acct.id, for: .claude)
-                try EnvironmentStore.default.saveOriginConfig(origin)
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try RemoveCommand.parse(["in-use"])
                 #expect(throws: ValidationError.self) {
@@ -657,7 +657,7 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "named-ref")
                 try AccountStore.default.save(acct)
 
-                var env = OrreryEnvironment(name: "work-env")
+                var env = Workspace(name: "work-env")
                 env.setAccount(acct.id, for: .claude)
                 try EnvironmentStore.default.save(env)
 

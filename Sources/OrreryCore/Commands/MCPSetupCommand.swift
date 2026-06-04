@@ -70,7 +70,7 @@ public struct MCPSetupCommand: ParsableCommand {
             // List available environments for the prompt
             let store = EnvironmentStore.default
             let envNames = (try? store.listNames().sorted()) ?? []
-            let envList = ([ReservedEnvironment.defaultName] + envNames)
+            let envList = ([Workspace.reservedOriginName] + envNames)
                 .map { "- \($0)" }
                 .joined(separator: "\n")
 

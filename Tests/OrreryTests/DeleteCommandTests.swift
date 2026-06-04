@@ -16,7 +16,7 @@ struct DeleteCommandTests {
 
     @Test("deletes environment when force is true")
     func forceDelete() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try SandboxCommand.Delete.deleteEnvironment(name: "work", force: true, store: store)
         let names = try store.listNames()
         #expect(names.isEmpty)

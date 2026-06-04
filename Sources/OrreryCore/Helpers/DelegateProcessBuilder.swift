@@ -73,7 +73,7 @@ public struct DelegateProcessBuilder {
         // Build process environment (full port from DelegateCommand)
         let envName = environment
         var envVars: [String: String] = [:]
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             let env = try store.load(named: envName)
             for t in env.tools {
                 envVars[t.envVarName] = store.toolConfigDir(tool: t, environment: envName).path
@@ -102,7 +102,7 @@ public struct DelegateProcessBuilder {
 
         var processEnv = ProcessInfo.processInfo.environment
         // Strip inherited API key so the environment's own credentials take effect
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             processEnv.removeValue(forKey: "ANTHROPIC_API_KEY")
         }
         // Propagate the explicit -e <name> selection to the child via
@@ -119,7 +119,7 @@ public struct DelegateProcessBuilder {
         processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
         processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
         // When using the default environment, strip all tool config dir vars
-        if let envName, envName == ReservedEnvironment.defaultName {
+        if let envName, envName == Workspace.reservedOriginName {
             for t in Tool.allCases {
                 processEnv.removeValue(forKey: t.envVarName)
             }

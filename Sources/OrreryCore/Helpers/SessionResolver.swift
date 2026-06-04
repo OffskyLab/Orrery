@@ -66,7 +66,7 @@ public struct SessionResolver {
         files.append(contentsOf: SessionsCommand.jsonlFiles(in: sharedDir))
 
         // Active environment only (skip symlinked dirs)
-        if let envName = activeEnvironment, envName != ReservedEnvironment.defaultName {
+        if let envName = activeEnvironment, envName != Workspace.reservedOriginName {
             let projectsDir = store.toolConfigDir(tool: .claude, environment: envName)
                 .appendingPathComponent("projects")
             if !SessionsCommand.isSymlink(projectsDir) {
@@ -94,7 +94,7 @@ public struct SessionResolver {
         files.append(contentsOf: SessionsCommand.findRecursiveJsonl(in: sharedDir, prefix: "rollout-"))
 
         // Active environment only
-        if let envName = activeEnvironment, envName != ReservedEnvironment.defaultName {
+        if let envName = activeEnvironment, envName != Workspace.reservedOriginName {
             let sessionsDir = store.toolConfigDir(tool: .codex, environment: envName)
                 .appendingPathComponent("sessions")
             if !SessionsCommand.isSymlink(sessionsDir) {
@@ -122,7 +122,7 @@ public struct SessionResolver {
         files.append(contentsOf: SessionsCommand.findGeminiCheckpoints(in: sharedTmp))
 
         // Active environment only
-        if let envName = activeEnvironment, envName != ReservedEnvironment.defaultName {
+        if let envName = activeEnvironment, envName != Workspace.reservedOriginName {
             let tmpDir = store.toolConfigDir(tool: .gemini, environment: envName)
                 .appendingPathComponent("tmp")
             if !SessionsCommand.isSymlink(tmpDir) {

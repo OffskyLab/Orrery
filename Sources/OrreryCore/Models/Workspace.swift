@@ -1,10 +1,9 @@
 import Foundation
 
-public enum ReservedEnvironment {
-    public static let defaultName = "origin"
-}
+public struct Workspace: Codable, Sendable {
+    /// Reserved workspace name whose physical root is the takeover root.
+    public static let reservedOriginName = "origin"
 
-public struct OrreryEnvironment: Codable, Sendable {
     public var id: String
     public var name: String
     public var description: String
@@ -65,8 +64,8 @@ public struct OrreryEnvironment: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ReservedEnvironment.defaultName
-        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ReservedEnvironment.defaultName
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? Workspace.reservedOriginName
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? Workspace.reservedOriginName
         description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date(timeIntervalSince1970: 0)
         lastUsed = try c.decodeIfPresent(Date.self, forKey: .lastUsed) ?? Date(timeIntervalSince1970: 0)
@@ -105,7 +104,7 @@ public struct OrreryEnvironment: Codable, Sendable {
     }
 }
 
-extension OrreryEnvironment {
+extension Workspace {
     /// 取得指定工具釘住的 account id。
     public func account(for tool: Tool) -> AccountID? {
         accounts[tool.rawValue]

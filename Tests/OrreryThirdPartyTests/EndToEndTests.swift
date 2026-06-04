@@ -11,7 +11,7 @@ struct EndToEndTests {
             .appendingPathComponent("orrery-e2e-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        try store.save(OrreryEnvironment(name: "dev"))
+        try store.save(Workspace(name: "dev"))
         let claudeDir = store.toolConfigDir(tool: .claude, environment: "dev")
         try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 

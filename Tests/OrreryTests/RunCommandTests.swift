@@ -22,8 +22,8 @@ struct RunCommandPrepareMaterializeTests {
             let credsURL = accountDir.appendingPathComponent("auth.json")
             try "{}".data(using: .utf8)!.write(to: credsURL)
 
-            // Create an OrreryEnvironment and pin the account
-            var env = OrreryEnvironment(name: "work")
+            // Create an Workspace and pin the account
+            var env = Workspace(name: "work")
             env.setAccount(acct.id, for: .codex)
             try envStore.save(env)
 
@@ -55,7 +55,7 @@ struct RunCommandPrepareMaterializeTests {
             let envStore = EnvironmentStore.default
 
             // Pin a ghost account id — do NOT create the account in AccountStore
-            var env = OrreryEnvironment(name: "work")
+            var env = Workspace(name: "work")
             env.setAccount("ghost-id", for: .codex)
             try envStore.save(env)
 
@@ -74,7 +74,7 @@ struct RunCommandPrepareMaterializeTests {
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "claude-noop")
             try acctStore.save(acct)
-            var env = OrreryEnvironment(name: "noop-env")
+            var env = Workspace(name: "noop-env")
             env.setAccount(acct.id, for: .claude)
             try envStore.save(env)
             // Must not throw and must not touch any files beyond what's already there.
@@ -89,9 +89,9 @@ struct RunCommandPrepareMaterializeTests {
     @Test("origin: throws when origin pins a missing account")
     func originPinnedAccountMissingThrows() throws {
         try withIsolatedHome {
-            var origin = EnvironmentStore.default.loadOriginConfig()
+            var origin = EnvironmentStore.default.loadOriginWorkspace()
             origin.setAccount("ghost-origin-id", for: .codex)
-            try EnvironmentStore.default.saveOriginConfig(origin)
+            try EnvironmentStore.default.saveOriginWorkspace(origin)
 
             #expect(throws: (any Error).self) {
                 try RunCommand.prepareMaterialize(tool: .codex, envName: nil)

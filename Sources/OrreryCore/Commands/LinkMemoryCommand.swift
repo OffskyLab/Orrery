@@ -19,7 +19,7 @@ public struct LinkMemoryCommand: ParsableCommand {
         let claudeConfigDir = URL(fileURLWithPath: claudeConfigDirPath)
         EnvironmentStore.default.linkOrreryMemory(
             projectKey: projectKey,
-            envName: envName ?? ReservedEnvironment.defaultName,
+            envName: envName ?? Workspace.reservedOriginName,
             claudeConfigDir: claudeConfigDir
         )
     }

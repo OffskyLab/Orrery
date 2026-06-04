@@ -56,16 +56,16 @@ public struct UseCommand: ParsableCommand {
 
         // Repin to the new account.
         let targetEnvName: String
-        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
+        if let activeEnv, activeEnv != Workspace.reservedOriginName {
             var env = try envStore.load(named: activeEnv)
             env.setAccount(acct.id, for: tool)
             try envStore.save(env)
             targetEnvName = activeEnv
         } else {
-            var origin = envStore.loadOriginConfig()
+            var origin = envStore.loadOriginWorkspace()
             origin.setAccount(acct.id, for: tool)
-            try envStore.saveOriginConfig(origin)
-            targetEnvName = ReservedEnvironment.defaultName
+            try envStore.saveOriginWorkspace(origin)
+            targetEnvName = Workspace.reservedOriginName
         }
 
         // Materialize the newly-pinned account into the live slot the tool reads,

@@ -16,7 +16,7 @@ struct ExportCommandTests {
 
     @Test("exports CLAUDE_CONFIG_DIR when claude tool is configured")
     func exportClaudeDir() throws {
-        let env = OrreryEnvironment(name: "work", tools: [.claude])
+        let env = Workspace(name: "work", tools: [.claude])
         try store.save(env)
         try store.addTool(.claude, to: "work")
 
@@ -27,7 +27,7 @@ struct ExportCommandTests {
 
     @Test("exports custom env vars")
     func exportCustomVars() throws {
-        let env = OrreryEnvironment(name: "work", env: ["ANTHROPIC_API_KEY": "sk-test"])
+        let env = Workspace(name: "work", env: ["ANTHROPIC_API_KEY": "sk-test"])
         try store.save(env)
 
         let lines = try SandboxCommand.Export.exportLines(for: "work", store: store)
@@ -36,7 +36,7 @@ struct ExportCommandTests {
 
     @Test("unexport lines for tool vars and custom vars")
     func unexportLines() throws {
-        let env = OrreryEnvironment(name: "work", tools: [.claude], env: ["ANTHROPIC_API_KEY": "sk-test"])
+        let env = Workspace(name: "work", tools: [.claude], env: ["ANTHROPIC_API_KEY": "sk-test"])
         try store.save(env)
         try store.addTool(.claude, to: "work")
 
@@ -48,7 +48,7 @@ struct ExportCommandTests {
     @Test("export updates lastUsed timestamp")
     func updatesLastUsed() throws {
         let before = Date()
-        let env = OrreryEnvironment(name: "work", tools: [])
+        let env = Workspace(name: "work", tools: [])
         try store.save(env)
 
         // Add delay to ensure time passes between creating and exporting
