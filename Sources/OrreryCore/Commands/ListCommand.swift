@@ -24,12 +24,12 @@ public struct ListCommand: ParsableCommand {
         // is shown only for a non-origin sandbox.
         let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
         let activePins: [String: AccountID]
-        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
+        if let activeEnv, activeEnv != Workspace.reservedOriginName {
             activePins = (try? EnvironmentStore.default.load(named: activeEnv).accounts) ?? [:]
             print(L10n.Account.listSandboxHeader(activeEnv))
             print("")
         } else {
-            activePins = EnvironmentStore.default.loadOriginConfig().accounts
+            activePins = EnvironmentStore.default.loadOriginWorkspace().accounts
         }
 
         // 只有「剛好一個」flag 才視為過濾；0 或 >1 → 顯示全部。

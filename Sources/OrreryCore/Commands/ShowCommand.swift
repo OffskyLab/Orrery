@@ -16,7 +16,7 @@ public struct ShowCommand: ParsableCommand {
         let activeEnvName: String
         let pins: [String: AccountID]
         let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        if let activeEnv, activeEnv != ReservedEnvironment.defaultName {
+        if let activeEnv, activeEnv != Workspace.reservedOriginName {
             activeEnvName = activeEnv
             var resolved: [String: AccountID] = [:]
             do {
@@ -27,8 +27,8 @@ public struct ShowCommand: ParsableCommand {
             }
             pins = resolved
         } else {
-            activeEnvName = ReservedEnvironment.defaultName
-            pins = envStore.loadOriginConfig().accounts
+            activeEnvName = Workspace.reservedOriginName
+            pins = envStore.loadOriginWorkspace().accounts
         }
 
         print(L10n.Account.showActiveEnv(activeEnvName))

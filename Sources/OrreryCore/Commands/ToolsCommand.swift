@@ -93,7 +93,7 @@ private func resolveEnv(environment: String?) throws -> String {
     guard let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
         throw ValidationError(L10n.Tools.noActive)
     }
-    guard envName != ReservedEnvironment.defaultName else {
+    guard envName != Workspace.reservedOriginName else {
         throw ValidationError(L10n.Tools.defaultNotSupported)
     }
     return envName

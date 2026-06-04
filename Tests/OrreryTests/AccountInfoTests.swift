@@ -113,7 +113,7 @@ struct RunCommandPrepareSyncBackInfoTests {
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "claude-sb-noop")
             try acctStore.save(acct)
-            var env = OrreryEnvironment(name: "claude-env")
+            var env = Workspace(name: "claude-env")
             env.setAccount(acct.id, for: .claude)
             try envStore.save(env)
             // Must not throw and must not modify the account in the store.
@@ -145,7 +145,7 @@ struct RunCommandPrepareSyncBackInfoTests {
                 .write(to: poolDir.appendingPathComponent("auth.json"))
 
             // 3. Create a named env that pins this account and set ORRERY_ACTIVE_ENV.
-            var env = OrreryEnvironment(name: "sb-env")
+            var env = Workspace(name: "sb-env")
             env.setAccount(acct.id, for: .codex)
             try envStore.save(env)
 

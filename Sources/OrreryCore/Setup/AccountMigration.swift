@@ -3,7 +3,7 @@ import Foundation
 /// One-time v2→v3 migration: lifts credentials that used to live directly inside
 /// each env's tool dir (`~/.orrery/envs/<UUID>/<tool>/` and `~/.orrery/origin/<tool>/`)
 /// into the shared accounts pool (`~/.orrery/accounts/<tool>/<id>/`), then pins each
-/// env/origin to the resulting account via `OrreryEnvironment.accounts` /
+/// env/origin to the resulting account via `Workspace.accounts` /
 /// `OriginConfig.accounts`.
 ///
 /// Safety properties:
@@ -109,7 +109,7 @@ public enum AccountMigration {
         acctStore: AccountStore
     ) throws {
         // Skip if already pinned (idempotent re-run).
-        var config = envStore.loadOriginConfig()
+        var config = envStore.loadOriginWorkspace()
         guard config.account(for: tool) == nil else { return }
 
         let configDir = envStore.originConfigDir(tool: tool)
@@ -128,7 +128,7 @@ public enum AccountMigration {
             claudeJSONURL: claudeJSON
         )
         config.setAccount(id, for: tool)
-        try envStore.saveOriginConfig(config)
+        try envStore.saveOriginWorkspace(config)
     }
 
     /// Migrates a named env's credential for `tool` into the pool and pins it.

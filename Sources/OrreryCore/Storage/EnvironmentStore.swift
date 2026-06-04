@@ -46,7 +46,7 @@ public struct EnvironmentStore: Sendable {
             let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("workspace.json")
             guard FileManager.default.fileExists(atPath: jsonURL.path) else { continue }
             if let data = try? Data(contentsOf: jsonURL),
-               let env = try? decoder.decode(OrreryEnvironment.self, from: data),
+               let env = try? decoder.decode(Workspace.self, from: data),
                env.name == name {
                 return dir
             }
@@ -54,7 +54,7 @@ public struct EnvironmentStore: Sendable {
         throw Error.environmentNotFound(name)
     }
 
-    public func save(_ environment: OrreryEnvironment) throws {
+    public func save(_ environment: Workspace) throws {
         let dir = envURL(id: environment.id)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
@@ -64,12 +64,12 @@ public struct EnvironmentStore: Sendable {
         try data.write(to: envJSONURL(id: environment.id))
     }
 
-    public func load(named name: String) throws -> OrreryEnvironment {
+    public func load(named name: String) throws -> Workspace {
         let id = try resolveID(for: name)
         let data = try Data(contentsOf: envJSONURL(id: id))
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(OrreryEnvironment.self, from: data)
+        return try decoder.decode(Workspace.self, from: data)
     }
 
     public func listNames() throws -> [String] {
@@ -80,7 +80,7 @@ public struct EnvironmentStore: Sendable {
         return dirs.compactMap { dir -> String? in
             let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("workspace.json")
             guard let data = try? Data(contentsOf: jsonURL),
-                  let env = try? decoder.decode(OrreryEnvironment.self, from: data)
+                  let env = try? decoder.decode(Workspace.self, from: data)
             else { return nil }
             return env.name
         }
@@ -268,8 +268,8 @@ public struct EnvironmentStore: Sendable {
     /// fragment files written by any tool land here and can be synced across machines.
     public func memoryDir(projectKey: String, envName: String?) -> URL {
         if let envName {
-            if envName == ReservedEnvironment.defaultName {
-                let config = loadOriginConfig()
+            if envName == Workspace.reservedOriginName {
+                let config = loadOriginWorkspace()
                 if let storagePath = config.memoryStoragePath {
                     return URL(fileURLWithPath: storagePath)
                 }
@@ -336,24 +336,24 @@ public struct EnvironmentStore: Sendable {
     // MARK: - Origin management
 
     /// Storage directory for origin tool configs: `~/.orrery/workspaces/origin/`
-    public var originDir: URL { envsURL.appendingPathComponent(ReservedEnvironment.defaultName) }
+    public var originDir: URL { envsURL.appendingPathComponent(Workspace.reservedOriginName) }
 
     private var originConfigURL: URL { originDir.appendingPathComponent("workspace.json") }
 
-    public func loadOriginConfig() -> OrreryEnvironment {
+    public func loadOriginWorkspace() -> Workspace {
         guard let data = try? Data(contentsOf: originConfigURL),
-              let env = try? { () -> OrreryEnvironment in
+              let env = try? { () -> Workspace in
                   let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
-                  return try d.decode(OrreryEnvironment.self, from: data)
+                  return try d.decode(Workspace.self, from: data)
               }()
         // NB: explicitly isolateMemory: false to preserve the historical origin
-        // default (old OriginConfig() defaulted false; OrreryEnvironment.init
+        // default (old OriginConfig() defaulted false; Workspace.init
         // defaults isolateMemory: true, which would silently flip origin's behavior).
-        else { return OrreryEnvironment(name: ReservedEnvironment.defaultName, isolateMemory: false) }
+        else { return Workspace(name: Workspace.reservedOriginName, isolateMemory: false) }
         return env
     }
 
-    public func saveOriginConfig(_ config: OrreryEnvironment) throws {
+    public func saveOriginWorkspace(_ config: Workspace) throws {
         try FileManager.default.createDirectory(at: originDir, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -476,8 +476,8 @@ extension EnvironmentStore {
                 names.append(name)
             }
         }
-        if loadOriginConfig().account(for: tool) == accountID {
-            names.append(ReservedEnvironment.defaultName)
+        if loadOriginWorkspace().account(for: tool) == accountID {
+            names.append(Workspace.reservedOriginName)
         }
         return names
     }

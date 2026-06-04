@@ -10,7 +10,7 @@ struct SandboxCommandTests {
     func setEnvStoresOnEnv() throws {
         try withIsolatedHome {
             let store = EnvironmentStore.default
-            try store.save(OrreryEnvironment(name: "work"))
+            try store.save(Workspace(name: "work"))
 
             let saved = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
             setenv("ORRERY_ACTIVE_ENV", "work", 1)
@@ -30,7 +30,7 @@ struct SandboxCommandTests {
     func setEnvUsesSandboxFlag() throws {
         try withIsolatedHome {
             let store = EnvironmentStore.default
-            try store.save(OrreryEnvironment(name: "alt"))
+            try store.save(Workspace(name: "alt"))
 
             let saved = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
             unsetenv("ORRERY_ACTIVE_ENV")
@@ -58,7 +58,7 @@ struct SandboxCommandTests {
     func unsetEnvRemovesKey() throws {
         try withIsolatedHome {
             let store = EnvironmentStore.default
-            var seedEnv = OrreryEnvironment(name: "work")
+            var seedEnv = Workspace(name: "work")
             seedEnv.env["FOO"] = "bar"
             try store.save(seedEnv)
 

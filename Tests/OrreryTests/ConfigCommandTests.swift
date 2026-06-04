@@ -12,7 +12,7 @@ struct ConfigCommandTests {
             .appendingPathComponent("orrery-config-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
         store = EnvironmentStore(homeURL: tmpDir)
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
     }
 
     @Test("set env stores key-value in env.json")

@@ -16,7 +16,7 @@ struct EnvironmentStoreTests {
 
     @Test("creates environment directory and workspace.json")
     func createEnvironment() throws {
-        let env = OrreryEnvironment(name: "work", description: "Work")
+        let env = Workspace(name: "work", description: "Work")
         try store.save(env)
         let loaded = try store.load(named: "work")
         #expect(loaded.name == "work")
@@ -25,15 +25,15 @@ struct EnvironmentStoreTests {
 
     @Test("lists all environments")
     func listEnvironments() throws {
-        try store.save(OrreryEnvironment(name: "work"))
-        try store.save(OrreryEnvironment(name: "personal"))
+        try store.save(Workspace(name: "work"))
+        try store.save(Workspace(name: "personal"))
         let names = try store.listNames()
         #expect(names.sorted() == ["personal", "work"])
     }
 
     @Test("deletes environment")
     func deleteEnvironment() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try store.delete(named: "work")
         let names = try store.listNames()
         #expect(names.isEmpty)
@@ -48,7 +48,7 @@ struct EnvironmentStoreTests {
 
     @Test("saves and loads current environment name")
     func currentEnvironment() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try store.setCurrent("work")
         #expect(try store.current() == "work")
     }
@@ -60,7 +60,7 @@ struct EnvironmentStoreTests {
 
     @Test("creates tool subdirectory")
     func createToolDirectory() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try store.addTool(.claude, to: "work")
         let toolDir = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(FileManager.default.fileExists(atPath: toolDir.path))
@@ -68,7 +68,7 @@ struct EnvironmentStoreTests {
 
     @Test("tool config dir path")
     func toolConfigDirPath() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         let path = store.toolConfigDir(tool: .claude, environment: "work")
         #expect(path.lastPathComponent == "claude")
         // Parent is a UUID dir, not the env name — just verify it's under workspaces/
@@ -91,7 +91,7 @@ struct EnvironmentAccountsTests {
 
     @Test("workspace.json round-trips accounts field")
     func roundTripAccounts() throws {
-        var env = OrreryEnvironment(name: "work")
+        var env = Workspace(name: "work")
         env.accounts = ["claude": "acct-123", "codex": "acct-456"]
         try store.save(env)
         let loaded = try store.load(named: "work")
@@ -102,7 +102,7 @@ struct EnvironmentAccountsTests {
 
     @Test("default empty accounts")
     func defaultEmpty() throws {
-        let env = OrreryEnvironment(name: "empty")
+        let env = Workspace(name: "empty")
         try store.save(env)
         let loaded = try store.load(named: "empty")
         #expect(loaded.accounts.isEmpty)
@@ -115,7 +115,7 @@ struct EnvironmentAccountsTests {
         """
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let env = try decoder.decode(OrreryEnvironment.self, from: Data(json.utf8))
+        let env = try decoder.decode(Workspace.self, from: Data(json.utf8))
         #expect(env.accounts.isEmpty)
     }
 
@@ -126,14 +126,14 @@ struct EnvironmentAccountsTests {
         """
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let cfg = try decoder.decode(OrreryEnvironment.self, from: Data(json.utf8))
+        let cfg = try decoder.decode(Workspace.self, from: Data(json.utf8))
         #expect(cfg.accounts.isEmpty)
         #expect(cfg.name == "origin")
     }
 
     @Test("account(for:) and setAccount(_:for:) helpers")
     func helpers() throws {
-        var env = OrreryEnvironment(name: "h")
+        var env = Workspace(name: "h")
         env.setAccount("a1", for: .claude)
         #expect(env.account(for: .claude) == "a1")
         env.setAccount(nil, for: .claude)
@@ -142,14 +142,14 @@ struct EnvironmentAccountsTests {
 
     @Test("envsReferencing returns envs that pin given account")
     func envsReferencing() throws {
-        var work = OrreryEnvironment(name: "work")
+        var work = Workspace(name: "work")
         work.accounts["claude"] = "shared-acct"
         try store.save(work)
-        var play = OrreryEnvironment(name: "play")
+        var play = Workspace(name: "play")
         play.accounts["claude"] = "shared-acct"
         play.accounts["codex"] = "other"
         try store.save(play)
-        var lonely = OrreryEnvironment(name: "lonely")
+        var lonely = Workspace(name: "lonely")
         lonely.accounts["codex"] = "different"
         try store.save(lonely)
 
@@ -159,16 +159,16 @@ struct EnvironmentAccountsTests {
 
     @Test("envsReferencing includes origin when origin pins the account")
     func envsReferencingOrigin() throws {
-        var origin = store.loadOriginConfig()
+        var origin = store.loadOriginWorkspace()
         origin.accounts["claude"] = "origin-acct"
-        try store.saveOriginConfig(origin)
+        try store.saveOriginWorkspace(origin)
         let refs = try store.envsReferencing(accountID: "origin-acct", tool: .claude)
-        #expect(refs.contains(ReservedEnvironment.defaultName))
+        #expect(refs.contains(Workspace.reservedOriginName))
     }
 
     @Test("empty accounts is omitted from workspace.json")
     func emptyAccountsOmitted() throws {
-        let env = OrreryEnvironment(name: "noacct")
+        let env = Workspace(name: "noacct")
         try store.save(env)
         let workspacesDir = tmpDir.appendingPathComponent("workspaces")
         let idDir = try FileManager.default.contentsOfDirectory(atPath: workspacesDir.path).first!

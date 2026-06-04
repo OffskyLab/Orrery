@@ -400,7 +400,7 @@ public struct SessionsCommand: ParsableCommand {
             let store = EnvironmentStore.default
             let toName = to
                 ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-                ?? ReservedEnvironment.defaultName
+                ?? Workspace.reservedOriginName
 
             if from == toName {
                 print("Source and destination are the same env (\(from)) — nothing to do.")
@@ -408,10 +408,10 @@ public struct SessionsCommand: ParsableCommand {
             }
 
             // Validate envs exist (origin is always valid).
-            if from != ReservedEnvironment.defaultName {
+            if from != Workspace.reservedOriginName {
                 _ = try store.load(named: from)
             }
-            if toName != ReservedEnvironment.defaultName {
+            if toName != Workspace.reservedOriginName {
                 _ = try store.load(named: toName)
             }
 
@@ -451,7 +451,7 @@ public struct SessionsCommand: ParsableCommand {
         /// tool. Returns one URL per `tool.sessionSubdirectories` entry (Claude
         /// has projects/sessions/session-env, Codex/Gemini have one each).
         static func sessionRoots(envName: String, tool: Tool, store: EnvironmentStore) throws -> [URL] {
-            if envName == ReservedEnvironment.defaultName {
+            if envName == Workspace.reservedOriginName {
                 return tool.sessionSubdirectories.map {
                     tool.defaultConfigDir.appendingPathComponent($0)
                 }

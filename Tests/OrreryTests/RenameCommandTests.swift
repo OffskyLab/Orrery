@@ -16,7 +16,7 @@ struct RenameCommandTests {
 
     @Test("renames environment directory and updates name field")
     func renamesEnvironment() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 
         let env = try store.load(named: "office")
@@ -28,7 +28,7 @@ struct RenameCommandTests {
 
     @Test("preserves tool config directories after rename")
     func preservesToolDirs() throws {
-        try store.save(OrreryEnvironment(name: "work", tools: [.claude]))
+        try store.save(Workspace(name: "work", tools: [.claude]))
         try store.addTool(.claude, to: "work")
         try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 
@@ -38,7 +38,7 @@ struct RenameCommandTests {
 
     @Test("updates current pointer when renaming active environment")
     func updatesCurrentPointer() throws {
-        try store.save(OrreryEnvironment(name: "work"))
+        try store.save(Workspace(name: "work"))
         try store.setCurrent("work")
         try SandboxCommand.Rename.renameEnvironment(from: "work", to: "office", store: store)
 

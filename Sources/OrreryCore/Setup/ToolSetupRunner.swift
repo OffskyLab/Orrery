@@ -127,7 +127,7 @@ public enum ToolSetupRunner {
     /// the full (Keychain-touching) `accountInfo` lookup entirely if the email is already
     /// known — so N duplicate-account envs don't trigger N slow Keychain subprocesses.
     static func askLoginCopySource(tool: Tool, store: EnvironmentStore) -> String? {
-        let defaultName = ReservedEnvironment.defaultName
+        let defaultName = Workspace.reservedOriginName
 
         // Yellow loading indicator, erased after queries are done.
         let loading = "\u{1B}[1;33m\(L10n.Create.queryingLoginStatus)\u{1B}[0m"
@@ -180,7 +180,7 @@ public enum ToolSetupRunner {
     }
 
     static func askCloneSource(tool: Tool, store: EnvironmentStore) -> String? {
-        let defaultName = ReservedEnvironment.defaultName
+        let defaultName = Workspace.reservedOriginName
         var options = [L10n.Create.cloneNone]
         var sources: [String?] = [nil]
 
@@ -226,14 +226,14 @@ public enum ToolSetupRunner {
 
     /// For login copy: origin → nil (flow handles origin specially), else the env's tool config dir.
     private static func loginSourceDir(for source: String, tool: Tool, store: EnvironmentStore) -> URL? {
-        source == ReservedEnvironment.defaultName
+        source == Workspace.reservedOriginName
             ? nil
             : store.toolConfigDir(tool: tool, environment: source)
     }
 
     /// For clone: origin → tool's default config dir, else the env's tool config dir.
     private static func cloneSourceDir(for source: String, tool: Tool, store: EnvironmentStore) -> URL {
-        source == ReservedEnvironment.defaultName
+        source == Workspace.reservedOriginName
             ? tool.defaultConfigDir
             : store.toolConfigDir(tool: tool, environment: source)
     }

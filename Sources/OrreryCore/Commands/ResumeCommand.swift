@@ -128,7 +128,7 @@ public struct ResumeCommand: ParsableCommand {
 
         let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
         var processEnv = ProcessInfo.processInfo.environment
-        if let envName, envName != ReservedEnvironment.defaultName {
+        if let envName, envName != Workspace.reservedOriginName {
             let env = try store.load(named: envName)
             for t in env.tools {
                 processEnv[t.envVarName] = store.toolConfigDir(tool: t, environment: envName).path
