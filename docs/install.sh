@@ -1,4 +1,15 @@
 #!/bin/bash
+# Orrery installation script
+#
+# Usage:
+#   curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash
+#   curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash -s -- --pre-release
+#   curl -fsSL https://offskylab.github.io/Orrery/install.sh | bash -s -- --main
+#
+# Flags:
+#   --pre-release, --rc   Install latest release (including RC/beta)
+#   --main                Build from source (main branch)
+#
 set -e
 
 REPO="OffskyLab/Orrery"
@@ -6,6 +17,7 @@ INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="orrery-bin"
 OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
+INCLUDE_PRERELEASE=false
 
 # orrery-magi sidecar — required runtime dependency for `orrery magi`.
 # Installed under ~/.orrery/bin/ (user-scope, no sudo) where the orrery
@@ -18,6 +30,7 @@ MAGI_DIR="$HOME/.orrery/bin"
 for arg in "$@"; do
   case "$arg" in
     --main) BUILD_FROM_SOURCE=true ;;
+    --pre-release|--rc) INCLUDE_PRERELEASE=true ;;
   esac
 done
 
@@ -89,9 +102,27 @@ if [[ "$BUILD_FROM_SOURCE" == "true" ]]; then
   build_from_source
 else
   ASSET_NAME="orrery-${os}-${arch}.tar.gz"
-  DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
 
-  info "Downloading pre-built binary..."
+  # Determine which version to install
+  if [[ "$INCLUDE_PRERELEASE" == "true" ]]; then
+    # Install latest release (including pre-releases)
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
+    info "Downloading latest release (including pre-releases)..."
+  else
+    # Install latest stable release (excluding pre-releases)
+    info "Fetching latest stable release..."
+    LATEST_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" 2>/dev/null | \
+      grep -o '"tag_name": *"[^"]*"' | grep -v 'rc\|beta\|alpha' | head -1 | \
+      sed 's/"tag_name": *"\([^"]*\)"/\1/')
+
+    if [[ -z "$LATEST_TAG" ]]; then
+      error "Could not determine latest stable release. Try with --pre-release flag."
+    fi
+
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ASSET_NAME}"
+    info "Downloading ${LATEST_TAG}..."
+  fi
+
   if curl -fsSL -o "$TMP_DIR/$ASSET_NAME" "$DOWNLOAD_URL" 2>/dev/null; then
     tar -xzf "$TMP_DIR/$ASSET_NAME" -C "$TMP_DIR"
     # Tarball may contain either `orrery-bin` (>= 2.4) or the legacy `orrery`
