@@ -4,7 +4,7 @@ import OrreryCore
 import OrreryThirdParty
 
 @MainActor
-private func runOrreryMain() throws {
+private func runOrreryMain() async throws {
     LegacyOrbitalMigration.runIfNeeded()
     // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
     // unified workspaces/ layout BEFORE takeover, so takeover sees the new paths.
@@ -36,6 +36,10 @@ private func runOrreryMain() throws {
         // Best-effort: register sidecar-forwarded tools if sidecar is
         // available; otherwise skip and let built-in tools serve alone.
         MagiMCPTools.register(on: MCPServer.self)
+        // Launch MCP server directly without going through ArgumentParser
+        // (workaround for AsyncParsableCommand nested in AsyncParsableCommand issue)
+        await MCPServer.run()
+        Foundation.exit(0)
     }
 
     if let arg = firstArgument, ["magi", "spec", "spec-run", "_spec-finalize"].contains(arg) {
@@ -44,14 +48,18 @@ private func runOrreryMain() throws {
         Foundation.exit(0)
     }
 
-    OrreryCommand.main()
+    await OrreryCommand.main()
 }
 
-do {
-    try runOrreryMain()
-} catch let exitCode as ExitCode {
-    Foundation.exit(exitCode.rawValue)
-} catch {
-    FileHandle.standardError.write(Data("\(error)\n".utf8))
-    Foundation.exit(1)
+Task { @MainActor in
+    do {
+        try await runOrreryMain()
+    } catch let exitCode as ExitCode {
+        Foundation.exit(exitCode.rawValue)
+    } catch {
+        FileHandle.standardError.write(Data("\(error)\n".utf8))
+        Foundation.exit(1)
+    }
 }
+
+RunLoop.main.run()
