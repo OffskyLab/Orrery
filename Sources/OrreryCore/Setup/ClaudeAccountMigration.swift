@@ -43,9 +43,32 @@ public enum ClaudeAccountMigration {
         }
 
         var identity: [String: Any] = [:]
-        if let email = account.email {
+
+        // Load full OAuth credentials from keychain/credentials file if available.
+        // This preserves refreshToken/accessToken so users don't need to re-login.
+        #if os(macOS)
+        if let keychainItem = account.keychainItem,
+           let credJSON = ClaudeKeychain.password(forService: keychainItem),
+           let credData = credJSON.data(using: .utf8),
+           let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
+           let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
+            // Full credentials available from keychain
+            identity["oauthAccount"] = fullOauth
+        } else if let email = account.email {
+            // Fallback: just email (user will need to login)
             identity["oauthAccount"] = ["emailAddress": email]
         }
+        #else
+        // Linux: try .credentials.json
+        let credURL = poolDir.appendingPathComponent(".credentials.json")
+        if let credData = try? Data(contentsOf: credURL),
+           let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
+           let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
+            identity["oauthAccount"] = fullOauth
+        } else if let email = account.email {
+            identity["oauthAccount"] = ["emailAddress": email]
+        }
+        #endif
 
         try ClaudeJsonMerge.saveJSON(identity, at: identityURL)
     }
