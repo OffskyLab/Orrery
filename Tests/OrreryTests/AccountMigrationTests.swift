@@ -188,8 +188,8 @@ struct AccountMigrationTests {
         let (home, cleanup) = makeTempHome()
         defer { cleanup() }
 
-        // Create only origin/codex/ (no envs/) — exactly what takeover produces.
-        let originCodexDir = home.appendingPathComponent("origin/codex")
+        // Create only workspaces/origin/codex/ (no envs/) — exactly what takeover produces.
+        let originCodexDir = home.appendingPathComponent("workspaces/origin/codex")
         try FileManager.default.createDirectory(at: originCodexDir, withIntermediateDirectories: true)
         let credentialContent = Data(#"{"token": "fake"}"#.utf8)
         let authFile = originCodexDir.appendingPathComponent("auth.json")
