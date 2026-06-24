@@ -217,7 +217,7 @@ if ! command -v "$BINARY_NAME" &>/dev/null; then
   warn "Add to your shell profile: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
 
-VERSION=$($BINARY_NAME --version 2>/dev/null || true)
+VERSION=$($INSTALL_DIR/$BINARY_NAME --version 2>/dev/null || true)
 
 echo ""
 if [[ -n "$VERSION" ]]; then
