@@ -23,13 +23,31 @@ public struct ListCommand: ParsableCommand {
         // ORRERY_ACTIVE_ENV unset or "origin" → origin; the sandbox header
         // is shown only for a non-origin sandbox.
         let activeEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
-        let activePins: [String: AccountID]
+        var activePins: [String: AccountID]
         if let activeEnv, activeEnv != Workspace.reservedOriginName {
             activePins = (try? EnvironmentStore.default.load(named: activeEnv).accounts) ?? [:]
             print(L10n.Account.listSandboxHeader(activeEnv))
             print("")
         } else {
             activePins = EnvironmentStore.default.loadOriginWorkspace().accounts
+        }
+
+        // In v3.1, claude account selection is handled by the shell function via
+        // CLAUDE_CONFIG_DIR. If that env var is set, read the account ID from
+        // metadata.json and use it as the active claude account (overriding the
+        // pin from workspace metadata).
+        if let claudeConfigDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"] {
+            let metadataURL = URL(fileURLWithPath: claudeConfigDir)
+                .appendingPathComponent("metadata.json")
+            do {
+                let data = try Data(contentsOf: metadataURL)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let account = try decoder.decode(Account.self, from: data)
+                activePins[Tool.claude.rawValue] = account.id
+            } catch {
+                // Silently fall back to workspace metadata on decode failure
+            }
         }
 
         // 只有「剛好一個」flag 才視為過濾；0 或 >1 → 顯示全部。
@@ -60,8 +78,31 @@ public struct ListCommand: ParsableCommand {
             let activeID = activePins[tool.rawValue]
 
             for acct in accts {
-                let email = acct.email
-                let plan = acct.plan
+                let isActive = acct.id == activeID
+
+                // For the active account, read fresh info from the live config dir
+                // (so `/login` changes in Claude Code are reflected immediately).
+                // Fall back to cached metadata if dynamic read returns nil.
+                // For inactive accounts, use cached metadata to avoid I/O overhead.
+                let email: String?
+                let plan: String?
+                if isActive && tool == .claude {
+                    // For claude, read from the live CLAUDE_CONFIG_DIR (not the pool copy)
+                    // so `/login` changes are reflected immediately.
+                    let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
+                    let freshInfo = ClaudeKeychain.accountInfo(for: configDir)
+                    email = freshInfo.email ?? acct.email
+                    plan = freshInfo.plan ?? acct.plan
+                } else if isActive {
+                    // For codex/gemini, read from pool (they don't have live config dirs in v3.1)
+                    let freshInfo = ToolAuth.accountInfo(forPoolAccount: acct, accountStore: store)
+                    email = freshInfo.email ?? acct.email
+                    plan = freshInfo.plan ?? acct.plan
+                } else {
+                    email = acct.email
+                    plan = acct.plan
+                }
+
                 let suffix = [email, plan].compactMap { $0 }.joined(separator: ", ")
                 let tail: String
                 if suffix.isEmpty {
@@ -70,7 +111,7 @@ public struct ListCommand: ParsableCommand {
                     let padding = String(repeating: " ", count: max(0, maxNameLen - acct.displayName.count + 2))
                     tail = "\(padding)\(suffix)"
                 }
-                let marker = acct.id == activeID ? "●" : "-"
+                let marker = isActive ? "●" : "-"
                 print(L10n.Account.listRow(marker, acct.displayName, tail))
             }
         }

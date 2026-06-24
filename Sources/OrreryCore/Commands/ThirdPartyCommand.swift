@@ -73,8 +73,7 @@ public struct ThirdPartyCommand: ParsableCommand {
 }
 
 private func currentEnvOrThrow() throws -> String {
-    guard let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"] else {
-        throw ValidationError("No active environment. Use --env <env> or switch with `orrery enter <env>`.")
-    }
-    return env
+    let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+    // ORRERY_ACTIVE_ENV unset or "origin" → origin workspace
+    return env ?? Workspace.reservedOriginName
 }

@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.1.0-rc.2 - 2026-06-24
+
+### Fixed
+
+- **`orrery list` now correctly shows the active Claude account** after `orrery use`. 
+  In v3.1, Claude account selection is handled by the shell function via 
+  `CLAUDE_CONFIG_DIR`, but `list` was only reading from workspace metadata. 
+  Now reads the account ID from the live `CLAUDE_CONFIG_DIR` and uses ISO8601 
+  date decoding for metadata.json.
+
+- **`orrery list` now reflects `/login` changes immediately**. Previously, 
+  `list` read email/plan from the orrery pool's keychain copy (which doesn't 
+  update when you `/login` in Claude Code). Now reads from the live 
+  `CLAUDE_CONFIG_DIR` for active accounts, falling back to cached metadata 
+  if unavailable.
+
+### Added
+
+- **Local testing installation scripts** for deploying development builds to 
+  other machines:
+  - `scripts/package-local.sh` — build and package release binary as tarball
+  - `scripts/install-local.sh` — install from local tarball
+  - `scripts/README.md` — usage instructions
+
 ## v3.1.0-rc.1 - 2026-05-28
 
 **Release candidate.** Inviting real-world feedback on the v3.1 architecture
