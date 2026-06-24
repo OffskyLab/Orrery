@@ -32,12 +32,14 @@ public enum AccountMigration {
         // Already migrated.
         if fm.fileExists(atPath: flagURL.path) { return }
 
-        // Nothing to migrate: home doesn't exist, or has neither envs nor origin.
+        // Nothing to migrate: home doesn't exist, or has neither workspaces nor legacy envs/origin.
+        // Phase A migration (if needed) runs before this, so check both old and new paths.
         let envsURL = homeURL.appendingPathComponent("envs")
         let originURL = homeURL.appendingPathComponent("origin")
-        let hasEnvs = fm.fileExists(atPath: envsURL.path)
-        let hasOrigin = fm.fileExists(atPath: originURL.path)
-        guard fm.fileExists(atPath: homeURL.path), hasEnvs || hasOrigin else {
+        let workspacesURL = homeURL.appendingPathComponent("workspaces")
+        let hasLegacy = fm.fileExists(atPath: envsURL.path) || fm.fileExists(atPath: originURL.path)
+        let hasWorkspaces = fm.fileExists(atPath: workspacesURL.path)
+        guard fm.fileExists(atPath: homeURL.path), hasLegacy || hasWorkspaces else {
             // Fresh install (or home not created yet) — mark done so we never rescan.
             if fm.fileExists(atPath: homeURL.path) {
                 try writeFlag(at: flagURL)
