@@ -51,9 +51,16 @@ private func runOrreryMain() async throws {
     await OrreryCommand.main()
 }
 
+// Only keep RunLoop alive for mcp-server; other commands should exit after completion
+let firstArgument = CommandLine.arguments.dropFirst().first
+let isMCPServer = firstArgument == "mcp-server"
+
 Task { @MainActor in
     do {
         try await runOrreryMain()
+        if !isMCPServer {
+            Foundation.exit(0)
+        }
     } catch let exitCode as ExitCode {
         Foundation.exit(exitCode.rawValue)
     } catch {
@@ -62,4 +69,9 @@ Task { @MainActor in
     }
 }
 
-RunLoop.main.run()
+if isMCPServer {
+    RunLoop.main.run()
+} else {
+    // For non-MCP commands, wait for the task to complete and exit
+    dispatchMain()
+}
