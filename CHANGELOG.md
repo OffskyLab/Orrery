@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.0-rc.5 - 2026-06-26
+
+### Fixed
+
+- **`orrery add` now prepares account directory after login**. Critical fix: 
+  after `orrery add --claude --name foo` completed its login/onboarding flow, 
+  the account directory was not prepared (missing symlinks and claude-identity.json), 
+  causing `orrery use foo` to require re-login. Now automatically calls 
+  `ClaudeAccountMigration.migrateAccount` after successful login to create the 
+  account directory structure with workspace symlinks and identity file seeded 
+  from keychain. Newly created accounts are immediately usable without re-login.
+
 ## v3.1.0-rc.4 - 2026-06-24
 
 ### Fixed
