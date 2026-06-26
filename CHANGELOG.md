@@ -1,16 +1,34 @@
 # Changelog
 
-## v3.1.0-rc.5 - 2026-06-26
+## v3.1.0-rc.8 - 2026-06-26
+
+> Supersedes the withdrawn rc.5–rc.7 (those carried mis-targeted fixes that did
+> not address the real root causes). rc.8 is the first build that fixes both the
+> onboarding-loss and stale-email issues at their source.
 
 ### Fixed
 
-- **`orrery add` now prepares account directory after login**. Critical fix: 
-  after `orrery add --claude --name foo` completed its login/onboarding flow, 
-  the account directory was not prepared (missing symlinks and claude-identity.json), 
-  causing `orrery use foo` to require re-login. Now automatically calls 
-  `ClaudeAccountMigration.migrateAccount` after successful login to create the 
-  account directory structure with workspace symlinks and identity file seeded 
-  from keychain. Newly created accounts are immediately usable without re-login.
+- **`orrery add` no longer drops you back into the welcome/onboarding screen.**
+  Root cause: `_account-add-finalize` imported only the keychain credential and
+  then deleted the login staging dir, discarding the `.claude.json` Claude wrote
+  during the session (`hasCompletedOnboarding`, onboarding flags, full
+  `oauthAccount`). The account's identity file was seeded from the keychain
+  alone, so every onboarding field was lost and `orrery use <name>` re-ran
+  onboarding. finalize now captures that staging `.claude.json` (same split
+  mechanism as `_capture-claude-exit`) into the identity + shared stores, keeping
+  the keychain credential overlaid so tokens stay fresh. A newly added account is
+  immediately usable — no welcome screen, no re-login.
+
+- **`orrery list` now shows each Claude account's real current login.** The email
+  and plan came from the `metadata.json` cache, which drifts: newer Claude
+  versions stopped writing `oauthAccount.emailAddress` anywhere the pool refresh
+  could re-derive it, so an account re-logged from one identity to another kept
+  showing the old one. `list` now reads from the authoritative source —
+  `claude-identity.json` (`oauthAccount.emailAddress` / `subscriptionType`),
+  refreshed by `_capture-claude-exit` after every session — falling back to the
+  live `CLAUDE_CONFIG_DIR` for the active account and the metadata cache only as a
+  last resort. Logging out/in inside Claude is now reflected in `orrery list` with
+  no manual step.
 
 ## v3.1.0-rc.4 - 2026-06-24
 
