@@ -11,8 +11,11 @@ struct EndToEndTests {
             .appendingPathComponent("orrery-e2e-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        try store.save(Workspace(name: "dev"))
-        let claudeDir = store.toolConfigDir(tool: .claude, environment: "dev")
+        var ws = Workspace(name: "dev")
+        ws.setAccount("test-acct", for: .claude)
+        try store.save(ws)
+        // v3.1: third-party installs target the account dir, not the workspace.
+        let claudeDir = AccountStore(homeURL: home).accountDir(id: "test-acct", tool: .claude)
         try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
         let before = snapshot(at: claudeDir)

@@ -18,9 +18,12 @@ struct ManifestRunnerUninstallTests {
             .appendingPathComponent("orrery-runner-uninst-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        try store.save(Workspace(name: "dev"))
+        var ws = Workspace(name: "dev")
+        ws.setAccount("test-acct", for: .claude)
+        try store.save(ws)
+        // v3.1: third-party installs target the account dir, not the workspace.
         try FileManager.default.createDirectory(
-            at: store.toolConfigDir(tool: .claude, environment: "dev"),
+            at: AccountStore(homeURL: home).accountDir(id: "test-acct", tool: .claude),
             withIntermediateDirectories: true)
 
         let src = home.appendingPathComponent("src")
@@ -54,7 +57,7 @@ struct ManifestRunnerUninstallTests {
                                  refOverride: nil, forceRefresh: false)
         try f.runner.uninstall(packageID: "cc-statusline", from: f.envName)
 
-        let claudeDir = f.store.toolConfigDir(tool: .claude, environment: f.envName)
+        let claudeDir = AccountStore(homeURL: f.store.homeURL).accountDir(id: "test-acct", tool: .claude)
         let fm = FileManager.default
         #expect(fm.fileExists(atPath: claudeDir.appendingPathComponent("statusline.js").path) == false)
         #expect(fm.fileExists(atPath: claudeDir.appendingPathComponent("hooks/a.js").path) == false)
