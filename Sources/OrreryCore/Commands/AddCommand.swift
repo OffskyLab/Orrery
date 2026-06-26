@@ -47,22 +47,6 @@ public struct AddCommand: ParsableCommand {
             }
         }
 
-        // v3.1: After login, prepare the account directory with symlinks + identity file
-        // so the account is immediately usable without requiring re-login on first use.
-        if tool == .claude {
-            do {
-                try ClaudeAccountMigration.migrateAccount(
-                    account,
-                    accountStore: AccountStore.default,
-                    environmentStore: EnvironmentStore.default
-                )
-            } catch {
-                FileHandle.standardError.write(Data(
-                    "orrery: warning: could not prepare account directory for '\(displayName)': \(error)\n".utf8
-                ))
-            }
-        }
-
         print(L10n.Account.addCreated(tool.rawValue, displayName))
     }
 
