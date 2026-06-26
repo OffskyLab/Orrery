@@ -80,19 +80,29 @@ public struct ListCommand: ParsableCommand {
             for acct in accts {
                 let isActive = acct.id == activeID
 
-                // For the active account, read fresh info from the live config dir
-                // (so `/login` changes in Claude Code are reflected immediately).
-                // Fall back to cached metadata if dynamic read returns nil.
-                // For inactive accounts, use cached metadata to avoid I/O overhead.
+                // Resolve email/plan. The authoritative current login lives in the
+                // account's identity store, which `_capture-claude-exit` refreshes
+                // after every session — newer Claude versions stopped writing
+                // `emailAddress` anywhere `refreshInfo` can re-derive it, so the
+                // `metadata.json` cache (acct.email/plan) drifts and is only a
+                // last-resort fallback.
                 let email: String?
                 let plan: String?
-                if isActive && tool == .claude {
-                    // For claude, read from the live CLAUDE_CONFIG_DIR (not the pool copy)
-                    // so `/login` changes are reflected immediately.
-                    let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
-                    let freshInfo = ClaudeKeychain.accountInfo(for: configDir)
-                    email = freshInfo.email ?? acct.email
-                    plan = freshInfo.plan ?? acct.plan
+                if tool == .claude {
+                    // Prefer the live CLAUDE_CONFIG_DIR for the active account (reflects an
+                    // in-session `/login` immediately), then the persisted identity store
+                    // (fresh as of the last session exit), then the metadata cache.
+                    var liveEmail: String?
+                    var livePlan: String?
+                    if isActive {
+                        let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
+                        let freshInfo = ClaudeKeychain.accountInfo(for: configDir)
+                        liveEmail = freshInfo.email
+                        livePlan = freshInfo.plan
+                    }
+                    let idInfo = ListCommand.claudeIdentityInfo(for: acct, store: store)
+                    email = liveEmail ?? idInfo.email ?? acct.email
+                    plan = livePlan ?? idInfo.plan ?? acct.plan
                 } else if isActive {
                     // For codex/gemini, read from pool (they don't have live config dirs in v3.1)
                     let freshInfo = ToolAuth.accountInfo(forPoolAccount: acct, accountStore: store)
@@ -115,5 +125,22 @@ public struct ListCommand: ParsableCommand {
                 print(L10n.Account.listRow(marker, acct.displayName, tail))
             }
         }
+    }
+
+    /// Read email + plan for a claude account from its persisted identity store
+    /// (`claude-identity.json` → `oauthAccount.emailAddress` / `subscriptionType`).
+    /// `_capture-claude-exit` refreshes this after every session, so it is the
+    /// authoritative local source for the account's current login. Returns nils
+    /// when the file or fields are absent (callers fall back to the metadata cache).
+    private static func claudeIdentityInfo(
+        for account: Account, store: AccountStore
+    ) -> (email: String?, plan: String?) {
+        let accountDir = store.accountDir(id: account.id, tool: .claude)
+        let identityURL = ClaudeJsonMerge.identityFileURL(accountDir: accountDir)
+        guard let identity = ClaudeJsonMerge.loadJSON(at: identityURL),
+              let oauth = identity["oauthAccount"] as? [String: Any] else {
+            return (nil, nil)
+        }
+        return (oauth["emailAddress"] as? String, oauth["subscriptionType"] as? String)
     }
 }
