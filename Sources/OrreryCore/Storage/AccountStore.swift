@@ -25,7 +25,7 @@ public struct AccountStore: Sendable {
         accountsRoot().appendingPathComponent(tool.rawValue)
     }
 
-    func accountDir(id: AccountID, tool: Tool) -> URL {
+    public func accountDir(id: AccountID, tool: Tool) -> URL {
         toolDir(tool).appendingPathComponent(id)
     }
 

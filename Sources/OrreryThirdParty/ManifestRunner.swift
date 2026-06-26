@@ -138,13 +138,40 @@ public struct ManifestRunner: ThirdPartyRunner {
 
     // MARK: - Helpers
 
+    /// Resolve the install target. In v3.1 the target is the *account* dir —
+    /// the `CLAUDE_CONFIG_DIR` Claude actually reads — never the shared workspace.
+    /// An account chooses which workspace it links to (default origin), not the
+    /// other way around, so third-party files (the settings.json patch and the
+    /// statusline script) must land in the account dir to take effect: there
+    /// `settings.json` and the script are real files, not symlinks back to the
+    /// workspace, so installing into the workspace would be invisible to Claude.
     private func resolveClaudeDir(env: String) throws -> URL {
-        if env == "origin" {
-            return store.originConfigDir(tool: .claude)
+        let fm = FileManager.default
+
+        // Preferred: the live active account dir exported by `orrery use`.
+        if let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"],
+           !configDir.isEmpty {
+            let dir = URL(fileURLWithPath: configDir)
+            if fm.fileExists(atPath: dir.appendingPathComponent("metadata.json").path) {
+                return dir
+            }
         }
-        do { _ = try store.envDir(for: env) }
-        catch { throw ThirdPartyError.envNotFound(env) }
-        return store.toolConfigDir(tool: .claude, environment: env)
+
+        // Fallback (no active claude account selected, e.g. plain origin):
+        // resolve the claude account pinned to `env` and use its account dir.
+        let pins: [String: AccountID]
+        if env == Workspace.reservedOriginName {
+            pins = store.loadOriginWorkspace().accounts
+        } else {
+            do { pins = try store.load(named: env).accounts }
+            catch { throw ThirdPartyError.envNotFound(env) }
+        }
+        guard let accountID = pins[Tool.claude.rawValue] else {
+            throw ThirdPartyError.envNotFound(env)
+        }
+        // Use the same home as the injected EnvironmentStore (keeps tests and
+        // custom ORRERY_HOME installs consistent — never the process default).
+        return AccountStore(homeURL: store.homeURL).accountDir(id: accountID, tool: .claude)
     }
 
     private func lockFileURL(claudeDir: URL, packageID: String) -> URL {

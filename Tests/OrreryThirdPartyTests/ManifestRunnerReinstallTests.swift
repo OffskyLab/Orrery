@@ -11,9 +11,12 @@ struct ManifestRunnerReinstallTests {
             .appendingPathComponent("orrery-reinst-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        try store.save(Workspace(name: "dev"))
+        var ws = Workspace(name: "dev")
+        ws.setAccount("test-acct", for: .claude)
+        try store.save(ws)
+        // v3.1: third-party installs target the account dir, not the workspace.
         try FileManager.default.createDirectory(
-            at: store.toolConfigDir(tool: .claude, environment: "dev"),
+            at: AccountStore(homeURL: home).accountDir(id: "test-acct", tool: .claude),
             withIntermediateDirectories: true)
         let src = home.appendingPathComponent("src")
         try FileManager.default.createDirectory(at: src, withIntermediateDirectories: true)
@@ -29,7 +32,7 @@ struct ManifestRunnerReinstallTests {
         try Data("v2".utf8).write(to: src.appendingPathComponent("statusline.js"))
         _ = try runner.install(pkg, into: "dev", refOverride: nil, forceRefresh: false)
 
-        let claudeDir = store.toolConfigDir(tool: .claude, environment: "dev")
+        let claudeDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
         let content = try String(contentsOf: claudeDir.appendingPathComponent("statusline.js"),
                                  encoding: .utf8)
         #expect(content == "v2")

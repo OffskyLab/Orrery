@@ -10,10 +10,12 @@ struct ManifestRunnerInstallTests {
             .appendingPathComponent("orrery-runner-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
         let store = EnvironmentStore(homeURL: home)
-        let env = Workspace(name: "dev")
+        var env = Workspace(name: "dev")
+        env.setAccount("test-acct", for: .claude)
         try store.save(env)
+        // v3.1: third-party installs target the account dir, not the workspace.
         try FileManager.default.createDirectory(
-            at: store.toolConfigDir(tool: .claude, environment: "dev"),
+            at: AccountStore(homeURL: home).accountDir(id: "test-acct", tool: .claude),
             withIntermediateDirectories: true
         )
 
@@ -50,7 +52,7 @@ struct ManifestRunnerInstallTests {
         #expect(record.copiedFiles.contains("statusline.js"))
         #expect(record.copiedFiles.contains("hooks/file-tracker.js"))
 
-        let claudeDir = store.toolConfigDir(tool: .claude, environment: envName)
+        let claudeDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
         #expect(FileManager.default.fileExists(
             atPath: claudeDir.appendingPathComponent("statusline.js").path))
         #expect(FileManager.default.fileExists(
