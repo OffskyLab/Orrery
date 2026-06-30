@@ -1,5 +1,6 @@
 import Foundation
 import OrreryCore
+import Synchronization
 
 public struct GitSource: ThirdPartySourceFetcher {
     public init() {}
@@ -132,17 +133,48 @@ public struct GitSource: ThirdPartySourceFetcher {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         p.arguments = ["git"] + args
+
+        // Never let git (or an ssh it spawns) block on an interactive prompt.
+        // On a machine without cached GitHub credentials or a known_hosts entry —
+        // or with a `url.insteadOf` https→ssh rewrite — git would otherwise hang
+        // forever waiting on a terminal. Detach stdin and force non-interactive
+        // mode so it fails fast with an error instead.
+        p.standardInput = FileHandle.nullDevice
+        var env = ProcessInfo.processInfo.environment
+        env["GIT_TERMINAL_PROMPT"] = "0"           // no https credential prompt
+        env["GCM_INTERACTIVE"] = "Never"           // git-credential-manager
+        let sshPrefix = env["GIT_SSH_COMMAND"].map { $0 + " " } ?? ""
+        env["GIT_SSH_COMMAND"] = sshPrefix
+            + "ssh -oBatchMode=yes -oStrictHostKeyChecking=accept-new"
+        p.environment = env
+
         let out = Pipe()
         let err = Pipe()
         p.standardOutput = out
         p.standardError = err
         try p.run()
+
+        // Drain both pipes while git runs. Reading only after waitUntilExit() can
+        // deadlock: a large clone/ls-remote output fills the ~64 KB pipe buffer,
+        // git blocks on write, and the process never exits. Read stderr on a
+        // background thread and stdout on this one so neither buffer fills.
+        let errBox = Mutex(Data())
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            let data = err.fileHandleForReading.readDataToEndOfFile()
+            errBox.withLock { $0 = data }
+            group.leave()
+        }
+        let outData = out.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
+        group.wait()
+        let errData = errBox.withLock { $0 }
+
         guard p.terminationStatus == 0 else {
-            let msg = String(data: err.fileHandleForReading.readDataToEndOfFile(),
-                             encoding: .utf8) ?? "git failed"
+            let msg = String(data: errData, encoding: .utf8) ?? "git failed"
             throw ThirdPartyError.sourceFetchFailed(reason: msg.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return String(data: outData, encoding: .utf8) ?? ""
     }
 }
