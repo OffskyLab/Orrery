@@ -43,7 +43,7 @@ public struct InstallCommand: ParsableCommand {
             record.packageID,
             shortRef,
             record.copiedFiles.count,
-            resolvedEnv
+            claudeAccountLabel(forEnv: resolvedEnv)
         ))
     }
 }
@@ -52,4 +52,29 @@ func installCurrentEnvOrThrow() throws -> String {
     let env = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
     // ORRERY_ACTIVE_ENV unset or "origin" → origin workspace
     return env ?? Workspace.reservedOriginName
+}
+
+/// The claude account add-ons are actually installed into / removed from (the
+/// account dir, not the workspace). Resolves the active `CLAUDE_CONFIG_DIR`, else
+/// the claude account pinned to `env`, and returns its display name. Falls back
+/// to the env name when no account can be resolved.
+func claudeAccountLabel(forEnv env: String) -> String {
+    let configDir: String?
+    if let live = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"], !live.isEmpty {
+        configDir = live
+    } else {
+        let store = EnvironmentStore.default
+        let pins = (env == Workspace.reservedOriginName)
+            ? store.loadOriginWorkspace().accounts
+            : ((try? store.load(named: env).accounts) ?? [:])
+        configDir = pins[Tool.claude.rawValue]
+            .map { AccountStore.default.accountDir(id: $0, tool: .claude).path }
+    }
+    guard let configDir,
+          let data = try? Data(contentsOf: URL(fileURLWithPath: configDir)
+              .appendingPathComponent("metadata.json")),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let name = obj["displayName"] as? String
+    else { return env }
+    return name
 }
