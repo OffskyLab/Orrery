@@ -32,12 +32,16 @@ public struct ListCommand: ParsableCommand {
             activePins = EnvironmentStore.default.loadOriginWorkspace().accounts
         }
 
-        // In v3.1, claude account selection is handled by the shell function via
-        // CLAUDE_CONFIG_DIR. If that env var is set, read the account ID from
-        // metadata.json and use it as the active claude account (overriding the
-        // pin from workspace metadata).
-        if let claudeConfigDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"] {
-            let metadataURL = URL(fileURLWithPath: claudeConfigDir)
+        // In v3.1, the active claude account is whichever config dir claude
+        // itself would read: CLAUDE_CONFIG_DIR when a sandbox/account is selected,
+        // otherwise the origin default ~/.claude (which v3.1 points at the origin
+        // account dir). Recover the account id from that dir's metadata.json so a
+        // fresh shell at origin shows origin as the active default — not blank.
+        let isOriginScope = activeEnv == nil || activeEnv == Workspace.reservedOriginName
+        let activeClaudeDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
+            ?? (isOriginScope ? Tool.claude.defaultConfigDir.path : nil)
+        if let activeClaudeDir {
+            let metadataURL = URL(fileURLWithPath: activeClaudeDir)
                 .appendingPathComponent("metadata.json")
             do {
                 let data = try Data(contentsOf: metadataURL)
@@ -46,7 +50,8 @@ public struct ListCommand: ParsableCommand {
                 let account = try decoder.decode(Account.self, from: data)
                 activePins[Tool.claude.rawValue] = account.id
             } catch {
-                // Silently fall back to workspace metadata on decode failure
+                // ~/.claude isn't a v3.1 account dir (legacy layout or broken
+                // symlink) — keep the workspace pin already in activePins.
             }
         }
 
