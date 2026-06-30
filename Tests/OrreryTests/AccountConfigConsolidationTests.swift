@@ -193,4 +193,72 @@ struct AccountConfigConsolidationTests {
         #expect((result["theme"] as? String) == "dark")   // untouched
         #expect(result.count == 1)
     }
+
+    // MARK: - Phase D: origin-pin repair
+
+    @Test("repairOriginPins pins the 'origin' account per tool when the workspace has none")
+    func repairPinsOrigin() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent("orrery-pinrepair-\(UUID().uuidString)")
+        try fm.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: home) }
+
+        let acctStore = AccountStore(homeURL: home)
+        let envStore = EnvironmentStore(homeURL: home)
+
+        let claudeOrigin = Account(tool: .claude, displayName: "origin")
+        let codexOrigin = Account(tool: .codex, displayName: "origin")
+        try acctStore.save(claudeOrigin)
+        try acctStore.save(codexOrigin)
+
+        // No origin workspace.json yet → no pins (the 3.0.4-damaged state).
+        #expect(envStore.loadOriginWorkspace().account(for: .claude) == nil)
+
+        AccountMigration.repairOriginPins(homeURL: home)
+
+        let origin = envStore.loadOriginWorkspace()
+        #expect(origin.account(for: .claude) == claudeOrigin.id)
+        #expect(origin.account(for: .codex) == codexOrigin.id)
+    }
+
+    @Test("repairOriginPins leaves an already-pinned tool untouched")
+    func repairKeepsExistingPin() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent("orrery-pinrepair2-\(UUID().uuidString)")
+        try fm.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: home) }
+
+        let acctStore = AccountStore(homeURL: home)
+        let envStore = EnvironmentStore(homeURL: home)
+
+        let existing = Account(tool: .claude, displayName: "myaccount")
+        let originAcct = Account(tool: .claude, displayName: "origin")
+        try acctStore.save(existing)
+        try acctStore.save(originAcct)
+
+        var ws = envStore.loadOriginWorkspace()
+        ws.setAccount(existing.id, for: .claude)
+        try envStore.saveOriginWorkspace(ws)
+
+        AccountMigration.repairOriginPins(homeURL: home)
+
+        // Existing pin wins; we never override a tool that is already pinned.
+        #expect(envStore.loadOriginWorkspace().account(for: .claude) == existing.id)
+    }
+
+    @Test("repairOriginPins is a no-op when there is no 'origin' account")
+    func repairNoOriginAccount() throws {
+        let fm = FileManager.default
+        let home = fm.temporaryDirectory.appendingPathComponent("orrery-pinrepair3-\(UUID().uuidString)")
+        try fm.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: home) }
+
+        let acctStore = AccountStore(homeURL: home)
+        let envStore = EnvironmentStore(homeURL: home)
+        try acctStore.save(Account(tool: .claude, displayName: "personal"))
+
+        AccountMigration.repairOriginPins(homeURL: home)
+
+        #expect(envStore.loadOriginWorkspace().account(for: .claude) == nil)
+    }
 }
