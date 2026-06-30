@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.1.0-rc.12 - 2026-06-30
+
+### Fixed
+
+- **`~/.claude` pointing at the origin account dir is now an ongoing invariant,
+  not a one-shot migration.** Pointing `~/.claude` at the workspace is legacy
+  behaviour; v3.1 wants it on the origin account dir (so bare `claude` at origin
+  reads the same settings/statusline as `orrery use origin`). The repoint used to
+  live inside a flag-guarded migration, so an install that still had `~/.claude`
+  on the old workspace target stayed stuck once the flag was set. Now it self-heals
+  on every `orrery` command. The origin takeover also recognises an account-dir
+  `~/.claude` as managed, so it no longer tries to reclaim a repointed link.
+
 ## v3.1.0-rc.11 - 2026-06-30
 
 ### Fixed
