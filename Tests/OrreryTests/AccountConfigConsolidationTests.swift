@@ -246,6 +246,28 @@ struct AccountConfigConsolidationTests {
         #expect(envStore.loadOriginWorkspace().account(for: .claude) == existing.id)
     }
 
+    @Test("isManagedSymlinkDest: workspace and account-dir targets are managed; foreign is not")
+    func managedSymlinkDest() {
+        let home = URL(fileURLWithPath: "/Users/x/.orrery")
+        let workspace = home.appendingPathComponent("workspaces/origin/claude")
+        let accountDir = home.appendingPathComponent("accounts/claude/ID")
+        let linkParent = URL(fileURLWithPath: "/Users/x")
+
+        // takeover workspace target → managed
+        #expect(EnvironmentStore.isManagedSymlinkDest(
+            workspace.path, homeURL: home, workspaceTarget: workspace, linkParent: linkParent))
+        // v3.1 account dir target → managed (so takeover won't clobber a repointed ~/.claude)
+        #expect(EnvironmentStore.isManagedSymlinkDest(
+            accountDir.path, homeURL: home, workspaceTarget: workspace, linkParent: linkParent))
+        // foreign target (e.g. a stale temp dir) → NOT managed
+        #expect(!EnvironmentStore.isManagedSymlinkDest(
+            "/var/folders/tmp/orrery-test-XYZ/workspaces/origin/claude",
+            homeURL: home, workspaceTarget: workspace, linkParent: linkParent))
+        // a sibling path that merely shares a prefix but isn't inside home → NOT managed
+        #expect(!EnvironmentStore.isManagedSymlinkDest(
+            "/Users/x/.orrery-backup/x", homeURL: home, workspaceTarget: workspace, linkParent: linkParent))
+    }
+
     @Test("repairOriginPins is a no-op when there is no 'origin' account")
     func repairNoOriginAccount() throws {
         let fm = FileManager.default
