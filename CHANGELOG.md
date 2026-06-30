@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.1.0-rc.13 - 2026-06-30
+
+### Fixed
+
+- **`orrery install` no longer hangs.** `git` was run with an open stdin and the
+  user's environment, so a fresh machine (or one with a `url.insteadOf`
+  https→ssh rewrite and no `known_hosts` entry) could leave git/ssh blocked on an
+  interactive prompt forever. `install` now runs git non-interactively
+  (`GIT_TERMINAL_PROMPT=0`, ssh `BatchMode`, detached stdin) and drains its output
+  without deadlocking, so it succeeds or fails fast with the git error.
+
 ## v3.1.0-rc.12 - 2026-06-30
 
 ### Fixed
