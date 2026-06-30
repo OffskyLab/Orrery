@@ -393,10 +393,26 @@ public struct EnvironmentStore: Sendable {
         guard let dest = try? FileManager.default.destinationOfSymbolicLink(
             atPath: tool.defaultConfigDir.path
         ) else { return false }
-        let target = originConfigDir(tool: tool)
-        // Accept both absolute and relative dest paths
-        return dest == target.path ||
-               URL(fileURLWithPath: dest, relativeTo: tool.defaultConfigDir.deletingLastPathComponent()) == target
+        return EnvironmentStore.isManagedSymlinkDest(
+            dest,
+            homeURL: homeURL,
+            workspaceTarget: originConfigDir(tool: tool),
+            linkParent: tool.defaultConfigDir.deletingLastPathComponent()
+        )
+    }
+
+    /// Whether a config symlink destination is orrery-managed. Managed when it
+    /// points anywhere inside this orrery home — the takeover-created workspace
+    /// dir, OR the per-account dir v3.1 repoints `~/.claude` at. Without the
+    /// latter, the takeover would treat a repointed `~/.claude` as unmanaged and
+    /// clobber it on the next run. Foreign/broken targets are not managed.
+    static func isManagedSymlinkDest(
+        _ dest: String, homeURL: URL, workspaceTarget: URL, linkParent: URL
+    ) -> Bool {
+        if dest.hasPrefix(homeURL.path + "/") { return true }
+        // Accept both absolute and relative dest paths for the workspace target.
+        return dest == workspaceTarget.path ||
+               URL(fileURLWithPath: dest, relativeTo: linkParent) == workspaceTarget
     }
 
     /// Move `tool.defaultConfigDir` into orrery origin storage and replace it with a symlink.

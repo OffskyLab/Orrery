@@ -434,7 +434,6 @@ public enum AccountMigration {
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
         consolidateClaudeAccountSettings(homeURL: homeURL)
-        repointDefaultClaudeDirToOriginAccount(homeURL: homeURL)
 
         do { try Data("v1\n".utf8).write(to: flag) }
         catch {
@@ -455,10 +454,17 @@ public enum AccountMigration {
         return dir
     }
 
-    /// Repoint the real `~/.claude` at the origin account dir, so bare/origin
-    /// claude (no `CLAUDE_CONFIG_DIR`) reads the same account dir that
-    /// `orrery use` selects.
-    private static func repointDefaultClaudeDirToOriginAccount(homeURL: URL) {
+    /// Ongoing invariant (runs every invocation, NOT flag-guarded): keep the
+    /// origin workspace pinned and `~/.claude` pointing at the origin account dir.
+    /// The takeover (legacy behaviour) leaves `~/.claude` pointing at the
+    /// workspace; this corrects it to the account dir as soon as that dir exists,
+    /// and re-pins a lost "origin" pin. Because it runs every time, an install
+    /// that finds `~/.claude` still on the old workspace target self-heals on the
+    /// next `orrery` command rather than waiting on a one-shot migration flag.
+    /// Idempotent and cheap; never throws.
+    public static func enforceOriginClaudeDir(homeURL: URL) {
+        guard FileManager.default.fileExists(atPath: homeURL.path) else { return }
+        repairOriginPins(homeURL: homeURL)
         repointClaudeDirSymlink(link: Tool.claude.defaultConfigDir, homeURL: homeURL)
     }
 
@@ -518,34 +524,7 @@ public enum AccountMigration {
         return result
     }
 
-    // MARK: - Phase D: repair lost origin pins (upgraded / 3.0.4-damaged installs)
-
-    /// Flag marking the one-shot origin-pin repair as done.
-    public static let originPinRepairedFlagFileName = ".origin-pin-repaired"
-
-    /// Repair installs upgraded from older/broken versions (e.g. a 3.0.4-damaged
-    /// account pool) where the origin workspace lost its account pins — its
-    /// `workspace.json` is missing or has no pins. Symptoms: `orrery list` shows
-    /// no active default at origin, and `~/.claude` is never repointed at the
-    /// account dir. Re-pins the pool account named "origin" for each tool, then
-    /// re-runs the account-dir consolidation + `~/.claude` repoint so the install
-    /// reaches the same state a clean migration would. Flag-guarded, best-effort.
-    public static func runOriginPinRepairIfNeeded(homeURL: URL) {
-        let fm = FileManager.default
-        let flag = homeURL.appendingPathComponent(originPinRepairedFlagFileName)
-        if fm.fileExists(atPath: flag.path) { return }
-        guard fm.fileExists(atPath: homeURL.path) else { return }
-
-        repairOriginPins(homeURL: homeURL)
-        consolidateClaudeAccountSettings(homeURL: homeURL)
-        repointClaudeDirSymlink(link: Tool.claude.defaultConfigDir, homeURL: homeURL)
-
-        do { try Data("v1\n".utf8).write(to: flag) }
-        catch {
-            FileHandle.standardError.write(Data(
-                "[orrery origin-pin repair] could not write flag: \(error)\n".utf8))
-        }
-    }
+    // MARK: - Origin pin repair (upgraded / 3.0.4-damaged installs)
 
     /// Pin the pool account named "origin" to the origin workspace for any tool
     /// that currently has no pin. The v2→v3 migration names the origin-scope

@@ -32,11 +32,11 @@ private func runOrreryMain() async throws {
     // dir and point ~/.claude at the origin account dir, so origin reads the same
     // account dir that `orrery use` selects (statusline + settings consistent).
     AccountMigration.runAccountConfigConsolidationIfNeeded(homeURL: orreryHomeURL())
-    // Phase D: repair installs upgraded from older/broken versions where the
-    // origin workspace lost its account pins (no active default; ~/.claude not
-    // repointed). Re-pins the "origin" account per tool, then consolidates +
-    // repoints. Flag-guarded; runs once on affected machines.
-    AccountMigration.runOriginPinRepairIfNeeded(homeURL: orreryHomeURL())
+    // Ongoing invariant (every run, not flag-guarded): keep origin pinned and
+    // ~/.claude pointing at the origin account dir. A ~/.claude still on the old
+    // workspace target (upgrades / 3.0.4-damaged installs) self-heals here on the
+    // next command, instead of being stuck behind a one-shot migration flag.
+    AccountMigration.enforceOriginClaudeDir(homeURL: orreryHomeURL())
     OrreryThirdPartyRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first
