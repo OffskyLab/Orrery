@@ -1,5 +1,26 @@
 # Changelog
 
+## v3.1.0-rc.10 - 2026-06-30
+
+### Fixed
+
+- **Origin now reads the same account dir as `orrery use origin`, so statusline and
+  settings are consistent.** The origin takeover captured your real `settings.json`
+  (permissions, hooks, env, plugins) into the workspace, but Claude reads settings
+  from the account dir (`CLAUDE_CONFIG_DIR`) — so add-ons installed into the origin
+  account dir (rc.9) never showed for a bare `claude` at origin, which read the
+  workspace instead. A one-time migration now:
+  - folds each pinned workspace's `settings.json` into the account dir's
+    `settings.json` (your values win; the workspace's `statusLine` is not inherited
+    since it is per-account, owned by `orrery install`)
+  - repoints `~/.claude` at the origin account dir, but only when it is the
+    takeover-managed symlink into the workspace (never touches a real directory or a
+    foreign symlink target)
+
+  Result: bare `claude` at origin and `orrery use origin` read the same account dir;
+  the workspace is left holding only the shared session/memory folders that account
+  dirs symlink into. Runs automatically once on your next `orrery` command.
+
 ## v3.1.0-rc.9 - 2026-06-30
 
 ### Fixed
