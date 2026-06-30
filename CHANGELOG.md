@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.1.0-rc.14 - 2026-06-30
+
+### Fixed
+
+- **`orrery install` / `orrery thirdparty uninstall` now say "account" with the
+  account name**, not "env 'origin'". Add-ons land in the account dir, so the
+  confirmation now names the claude account (resolved from the active
+  `CLAUDE_CONFIG_DIR`, else the env's pinned account).
+
 ## v3.1.0-rc.13 - 2026-06-30
 
 ### Fixed
