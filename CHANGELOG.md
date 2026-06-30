@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.1.0-rc.9 - 2026-06-30
+
+### Fixed
+
+- **Third-party add-ons (e.g. `statusline`) now install into the account dir, not
+  the workspace.** Claude reads `settings.json` and the statusline script only from
+  `CLAUDE_CONFIG_DIR` (the account dir) — those are real files there, while only
+  `projects`/`memory`/`agents`/`commands`/`todos` symlink to the shared workspace.
+  Installing into the workspace was therefore invisible to Claude and the statusline
+  never appeared. `orrery install` now targets the active account dir (the live
+  `CLAUDE_CONFIG_DIR` exported by `orrery use`, else the claude account pinned to the
+  env, origin by default). Add-ons are now per-account: run `orrery install <id>`
+  while the target account is active. Existing installs in the workspace are orphaned
+  and can be removed manually.
+
 ## v3.1.0-rc.8 - 2026-06-26
 
 > Supersedes the withdrawn rc.5–rc.7 (those carried mis-targeted fixes that did
