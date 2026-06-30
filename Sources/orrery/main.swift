@@ -28,6 +28,10 @@ private func runOrreryMain() async throws {
     // Phase B of the workspace-layout migration: rebuild each claude account's
     // workspace symlinks against the unified layout (needs the account pool).
     AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
+    // Phase C: fold the takeover-captured workspace settings into each account
+    // dir and point ~/.claude at the origin account dir, so origin reads the same
+    // account dir that `orrery use` selects (statusline + settings consistent).
+    AccountMigration.runAccountConfigConsolidationIfNeeded(homeURL: orreryHomeURL())
     OrreryThirdPartyRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first

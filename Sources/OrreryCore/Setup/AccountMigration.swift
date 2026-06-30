@@ -410,6 +410,114 @@ public enum AccountMigration {
         }
     }
 
+    // MARK: - Phase C: consolidate config into the account dir
+
+    /// Flag marking the one-shot account-config consolidation as done.
+    public static let accountConfigConsolidatedFlagFileName = ".account-config-consolidated"
+
+    /// Phase C: make each claude account dir the authoritative config home.
+    ///
+    /// The origin takeover captured the user's real `settings.json` (permissions,
+    /// hooks, env, plugins, …) into the workspace, but Claude reads settings from
+    /// the *account* dir (`CLAUDE_CONFIG_DIR`). This folds the workspace settings
+    /// into each pinned account's `settings.json` so the account dir is complete —
+    /// a prerequisite for pointing `~/.claude` at the origin account dir. The
+    /// workspace then only needs to hold the shared session/memory folders that
+    /// account dirs symlink into.
+    ///
+    /// Best-effort, flag-guarded, never throws. Does not delete the workspace
+    /// copies (they become harmless orphans).
+    public static func runAccountConfigConsolidationIfNeeded(homeURL: URL) {
+        let fm = FileManager.default
+        let flag = homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName)
+        if fm.fileExists(atPath: flag.path) { return }
+        guard fm.fileExists(atPath: homeURL.path) else { return }
+
+        consolidateClaudeAccountSettings(homeURL: homeURL)
+        repointDefaultClaudeDirToOriginAccount(homeURL: homeURL)
+
+        do { try Data("v1\n".utf8).write(to: flag) }
+        catch {
+            FileHandle.standardError.write(Data(
+                "[orrery config consolidation] could not write flag: \(error)\n".utf8))
+        }
+    }
+
+    /// The claude account dir that `~/.claude` should point at: the account
+    /// pinned to the origin workspace. Returns nil if there is no origin claude
+    /// pin or its dir isn't built yet. Pure path resolution — does not touch `~`.
+    static func originAccountClaudeDir(homeURL: URL) -> URL? {
+        let envStore = EnvironmentStore(homeURL: homeURL)
+        guard let originID = envStore.loadOriginWorkspace().account(for: .claude) else { return nil }
+        let dir = AccountStore(homeURL: homeURL).accountDir(id: originID, tool: .claude)
+        guard FileManager.default.fileExists(
+            atPath: dir.appendingPathComponent("metadata.json").path) else { return nil }
+        return dir
+    }
+
+    /// Repoint the real `~/.claude` at the origin account dir, so bare/origin
+    /// claude (no `CLAUDE_CONFIG_DIR`) reads the same account dir that
+    /// `orrery use` selects.
+    private static func repointDefaultClaudeDirToOriginAccount(homeURL: URL) {
+        repointClaudeDirSymlink(link: Tool.claude.defaultConfigDir, homeURL: homeURL)
+    }
+
+    /// Point `link` at the origin account dir. Guarded: only acts when `link` is
+    /// currently the takeover-managed symlink into this home's workspace claude
+    /// dir — never clobbers a real directory or a foreign symlink target.
+    /// `link` is parameterized so the logic is unit-testable without touching the
+    /// real `~/.claude`.
+    static func repointClaudeDirSymlink(link: URL, homeURL: URL) {
+        let fm = FileManager.default
+        guard let target = originAccountClaudeDir(homeURL: homeURL) else { return }
+
+        guard let dest = try? fm.destinationOfSymbolicLink(atPath: link.path) else { return }
+        if dest == target.path { return }   // already correct
+
+        // Only repoint the exact takeover symlink (→ this home's workspace claude dir).
+        let workspaceClaude = EnvironmentStore(homeURL: homeURL).originConfigDir(tool: .claude).path
+        guard dest == workspaceClaude else { return }
+
+        try? fm.removeItem(at: link)
+        try? fm.createSymbolicLink(at: link, withDestinationURL: target)
+    }
+
+    /// Merge each claude account's pinned-workspace `settings.json` into the
+    /// account dir's `settings.json`. Account values win; `statusLine` is never
+    /// carried over from the workspace (it is per-account, owned by `orrery
+    /// install`, and the workspace copy is typically a stale path).
+    static func consolidateClaudeAccountSettings(homeURL: URL) {
+        let acctStore = AccountStore(homeURL: homeURL)
+        let envStore = EnvironmentStore(homeURL: homeURL)
+        let accounts = (try? acctStore.list(tool: .claude)) ?? []
+
+        for acct in accounts {
+            let accountSettings = acctStore.accountDir(id: acct.id, tool: .claude)
+                .appendingPathComponent("settings.json")
+            let workspaceSettings = envStore.claudeWorkspaceDir(workspace: acct.workspace)
+                .appendingPathComponent("settings.json")
+
+            // Nothing captured in the workspace → nothing to consolidate.
+            guard let wsObj = ClaudeJsonMerge.loadJSON(at: workspaceSettings) else { continue }
+            let acctObj = ClaudeJsonMerge.loadJSON(at: accountSettings) ?? [:]
+            let merged = mergedClaudeSettings(workspace: wsObj, account: acctObj)
+            try? ClaudeJsonMerge.saveJSON(merged, at: accountSettings)
+        }
+    }
+
+    /// Pure merge: workspace settings as the base (minus `statusLine`), with the
+    /// account's own settings overlaid on top (account keys win).
+    static func mergedClaudeSettings(
+        workspace: [String: Any], account: [String: Any]
+    ) -> [String: Any] {
+        var result = workspace
+        // statusLine is per-account (installed via `orrery install`); never inherit
+        // the workspace's, which points at a stale/foreign script path.
+        result.removeValue(forKey: "statusLine")
+        for (key, value) in account { result[key] = value }
+        return result
+    }
+
     // MARK: - Phase A: workspace structure relocation (runs before origin takeover)
 
     public static let workspaceStructureFlagFileName = ".workspace-structure-relocated"
