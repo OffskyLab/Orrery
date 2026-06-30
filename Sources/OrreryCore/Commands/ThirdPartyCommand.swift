@@ -27,7 +27,7 @@ public struct ThirdPartyCommand: ParsableCommand {
             let resolvedEnv = try env ?? currentEnvOrThrow()
             let runner = try ThirdPartyRuntime.runner()
             try runner.uninstall(packageID: id, from: resolvedEnv)
-            print(L10n.Thirdparty.uninstallSuccess(id, resolvedEnv))
+            print(L10n.Thirdparty.uninstallSuccess(id, claudeAccountLabel(forEnv: resolvedEnv)))
         }
     }
 
