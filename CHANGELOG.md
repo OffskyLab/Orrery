@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.0-rc.11 - 2026-06-30
+
+### Fixed
+
+- **`orrery list` shows the origin account as the active default again, and
+  upgraded/3.0.4-damaged installs self-repair.** On installs upgraded through a
+  3.0.4-damaged state, the origin workspace had lost its account pins (its
+  `workspace.json` was missing), so `orrery list` showed no active default for any
+  tool and `~/.claude` never got repointed at the origin account dir. Two changes:
+  - `orrery list` now resolves the origin default active account from the config
+    dir claude actually uses — `CLAUDE_CONFIG_DIR`, else `~/.claude` — instead of
+    leaving it blank.
+  - A one-time repair re-pins the pool account named `origin` to the origin
+    workspace for each tool (recreating `workspace.json`), then re-runs the
+    account-dir settings consolidation and the `~/.claude` repoint. Runs once
+    automatically on the next `orrery` command.
+
 ## v3.1.0-rc.10 - 2026-06-30
 
 ### Fixed
