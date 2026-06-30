@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.0 - 2026-06-30
+
+First stable v3.1 release. Per-account configuration directories: every Claude
+account has its own `CLAUDE_CONFIG_DIR`, so switching accounts is a per-shell
+environment change instead of a global keychain swap — no more cross-terminal
+drift or mixed identity/plan displays. Workspaces hold the shared
+session/memory/agents/commands/todos folders that account dirs symlink into, and
+`~/.claude` points at the origin account dir so a bare `claude` at origin reads
+the same config as `orrery use origin`. Third-party add-ons (e.g. `statusline`)
+install into the account dir. See the rc.1–rc.14 entries below for the full set
+of fixes folded into this release.
+
 ## v3.1.0-rc.14 - 2026-06-30
 
 ### Fixed
