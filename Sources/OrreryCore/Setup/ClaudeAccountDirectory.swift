@@ -161,23 +161,19 @@ public enum ClaudeAccountDirectory {
 
     public enum Error: Swift.Error, LocalizedError {
         case wrongTool(got: Tool)
-        case existingDirectoryAtSymlinkPath(URL)
 
         public var errorDescription: String? {
             switch self {
             case .wrongTool(let t):
                 return "ClaudeAccountDirectory only handles claude accounts, got \(t.rawValue)."
-            case .existingDirectoryAtSymlinkPath(let url):
-                return "Refusing to overwrite real directory at \(url.path) — move or remove its contents manually, then re-run."
             }
         }
     }
 
-    /// Create (or repair) the account dir with symlinks pointing at the
-    /// workspace from `account.workspace`. Idempotent.
-    ///
-    /// Throws on filesystem failures (permission, missing parent, etc.) so the
-    /// caller can surface a clear error to the user.
+    /// Create (or repair) the account dir so every shareable subdir is a symlink
+    /// into the workspace from `account.workspace`. Real dirs / mislinked
+    /// symlinks are moved+relinked via `linkAccountDirsToWorkspace`; the standard
+    /// base set is additionally ensured for fresh accounts. Idempotent.
     public static func prepareDirectory(
         account: Account,
         accountStore: AccountStore,
@@ -191,45 +187,26 @@ public enum ClaudeAccountDirectory {
         let acctDir = accountStore.accountDir(id: account.id, tool: .claude)
         let wsDir = environmentStore.claudeWorkspaceDir(workspace: account.workspace)
 
-        // 1. Ensure account dir exists.
         try fm.createDirectory(at: acctDir, withIntermediateDirectories: true)
-
-        // 2. Ensure workspace's claude-workspace dir exists with all subdirs.
         try fm.createDirectory(at: wsDir, withIntermediateDirectories: true)
+
+        // Move/relink any shareable dir already present in the account dir.
+        linkAccountDirsToWorkspace(accountDir: acctDir, workspaceDir: wsDir)
+
+        // Ensure the standard base set exists as symlinks even on a fresh
+        // account where claude hasn't created those dirs yet (nothing to move).
         for sub in sharedSubdirs {
-            try fm.createDirectory(
-                at: wsDir.appendingPathComponent(sub),
-                withIntermediateDirectories: true
-            )
-        }
-
-        // 3. Create or repoint each symlink.
-        for sub in sharedSubdirs {
-            let linkPath = acctDir.appendingPathComponent(sub)
-            let targetPath = wsDir.appendingPathComponent(sub)
-
-            // Already a symlink pointing at the right place? Skip.
-            if let existing = try? fm.destinationOfSymbolicLink(atPath: linkPath.path),
-               existing == targetPath.path {
-                continue
+            let target = wsDir.appendingPathComponent(sub)
+            try fm.createDirectory(at: target, withIntermediateDirectories: true)
+            let link = acctDir.appendingPathComponent(sub)
+            if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path) {
+                if dest != target.path {
+                    try fm.removeItem(at: link)
+                    try fm.createSymbolicLink(at: link, withDestinationURL: target)
+                }
+            } else if !fm.fileExists(atPath: link.path) {
+                try fm.createSymbolicLink(at: link, withDestinationURL: target)
             }
-
-            // Different symlink (pointing somewhere else, or broken) — safe to replace.
-            if (try? fm.destinationOfSymbolicLink(atPath: linkPath.path)) != nil {
-                try fm.removeItem(at: linkPath)
-                try fm.createSymbolicLink(at: linkPath, withDestinationURL: targetPath)
-                continue
-            }
-
-            // Path exists but is NOT a symlink — refuse to clobber it. Could
-            // be a real directory the user populated or claude wrote into;
-            // silently deleting would be a data-loss footgun.
-            if fm.fileExists(atPath: linkPath.path) {
-                throw Error.existingDirectoryAtSymlinkPath(linkPath)
-            }
-
-            // Path doesn't exist — fresh symlink.
-            try fm.createSymbolicLink(at: linkPath, withDestinationURL: targetPath)
         }
     }
 

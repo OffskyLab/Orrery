@@ -110,8 +110,8 @@ struct ClaudeAccountDirectoryPrepareTests {
         }
     }
 
-    @Test("refuses to clobber a real directory at a symlink path")
-    func refusesToClobberRealDirectory() throws {
+    @Test("moves a pre-existing real directory into the workspace and symlinks it")
+    func movesPreexistingRealDirectory() throws {
         try withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
@@ -119,8 +119,6 @@ struct ClaudeAccountDirectoryPrepareTests {
             acct.workspace = "origin"
             try acctStore.save(acct)
 
-            // Pre-create a real dir + file at the projects/ path BEFORE
-            // calling prepareDirectory — simulates user data left behind.
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let realDir = acctDir.appendingPathComponent("projects")
             try FileManager.default.createDirectory(
@@ -128,15 +126,19 @@ struct ClaudeAccountDirectoryPrepareTests {
             try Data("important".utf8)
                 .write(to: realDir.appendingPathComponent("user-file.txt"))
 
-            // Now prepareDirectory must throw — not delete the user's file.
-            #expect(throws: ClaudeAccountDirectory.Error.self) {
-                try ClaudeAccountDirectory.prepareDirectory(
-                    account: acct, accountStore: acctStore, environmentStore: envStore)
-            }
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
 
-            // Confirm the user file is still there.
-            #expect(FileManager.default.fileExists(
-                atPath: realDir.appendingPathComponent("user-file.txt").path))
+            let fm = FileManager.default
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+            // account/projects is now a symlink into the workspace.
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("projects").path)
+            #expect(dest == wsDir.appendingPathComponent("projects").path)
+            // The user's file was moved into the workspace, not lost.
+            let moved = wsDir.appendingPathComponent("projects/user-file.txt")
+            #expect(fm.fileExists(atPath: moved.path))
+            #expect((try? String(contentsOf: moved, encoding: .utf8)) == "important")
         }
     }
 
