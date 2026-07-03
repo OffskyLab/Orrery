@@ -142,6 +142,41 @@ struct ClaudeAccountDirectoryPrepareTests {
         }
     }
 
+    @Test("backs up a plain file sitting at a base subdir path, then symlinks it")
+    func backsUpPlainFileAtBasePath() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "test")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            try FileManager.default.createDirectory(
+                at: acctDir, withIntermediateDirectories: true)
+            // A plain FILE (not dir/symlink) occupies the base "projects" path.
+            try Data("stray".utf8)
+                .write(to: acctDir.appendingPathComponent("projects"))
+
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            let fm = FileManager.default
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+            // projects is now a proper symlink to the workspace.
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("projects").path)
+            #expect(dest == wsDir.appendingPathComponent("projects").path)
+            // the stray file was preserved under backups/premerge-*/projects
+            let backups = acctDir.appendingPathComponent("backups")
+            let premerge = (try? fm.contentsOfDirectory(
+                at: backups, includingPropertiesForKeys: nil))?
+                .first { $0.lastPathComponent.hasPrefix("premerge-") }
+            let saved = try #require(premerge).appendingPathComponent("projects")
+            #expect((try? String(contentsOf: saved, encoding: .utf8)) == "stray")
+        }
+    }
+
     @Test("throws Error.wrongTool when given non-claude account")
     func throwsOnWrongTool() throws {
         try withIsolatedHome {

@@ -204,7 +204,20 @@ public enum ClaudeAccountDirectory {
                     try fm.removeItem(at: link)
                     try fm.createSymbolicLink(at: link, withDestinationURL: target)
                 }
-            } else if !fm.fileExists(atPath: link.path) {
+            } else if fm.fileExists(atPath: link.path) {
+                // A plain file (or a real dir the linker could not move) sits at
+                // the base path. Preserve it under backups so the account can
+                // self-heal instead of staying permanently `.missing`.
+                let backup = acctDir
+                    .appendingPathComponent("backups")
+                    .appendingPathComponent("premerge-\(premergeStamp())")
+                    .appendingPathComponent(sub)
+                try fm.createDirectory(
+                    at: backup.deletingLastPathComponent(),
+                    withIntermediateDirectories: true)
+                try fm.moveItem(at: link, to: backup)
+                try fm.createSymbolicLink(at: link, withDestinationURL: target)
+            } else {
                 try fm.createSymbolicLink(at: link, withDestinationURL: target)
             }
         }
