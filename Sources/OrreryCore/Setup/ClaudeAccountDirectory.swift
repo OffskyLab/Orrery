@@ -20,6 +20,145 @@ public enum ClaudeAccountDirectory {
         "projects", "memory", "agents", "commands", "todos"
     ]
 
+    /// Top-level subdir names that stay per-account and are NEVER shared to the
+    /// workspace. Everything else that is a directory is moved into the pinned
+    /// workspace and replaced with a symlink.
+    public static let privateSubdirs: Set<String> = ["backups", "cache"]
+
+    /// Move every shareable top-level directory in `accountDir` into
+    /// `workspaceDir` and replace it with a symlink pointing there. Shareable =
+    /// a directory (or existing symlink) whose name is not dot-prefixed and not
+    /// in `privateSubdirs`. Top-level files are never touched.
+    ///
+    /// Merge is a union with the workspace winning: files present only in the
+    /// account move over; on a same-path conflict the workspace copy is kept and
+    /// the account copy is moved to `backups/premerge-<timestamp>/`.
+    ///
+    /// Best-effort: never throws. Returns a human-readable warning per entry
+    /// that could not be linked, so callers can surface them without blocking
+    /// claude startup.
+    @discardableResult
+    public static func linkAccountDirsToWorkspace(
+        accountDir: URL,
+        workspaceDir: URL
+    ) -> [String] {
+        let fm = FileManager.default
+        var warnings: [String] = []
+
+        guard let entries = try? fm.contentsOfDirectory(
+            at: accountDir,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: []
+        ) else {
+            return ["could not read account dir \(accountDir.path)"]
+        }
+
+        let backupBase = accountDir
+            .appendingPathComponent("backups")
+            .appendingPathComponent("premerge-\(premergeStamp())")
+
+        for entry in entries {
+            let name = entry.lastPathComponent
+            if name.hasPrefix(".") { continue }
+            if privateSubdirs.contains(name) { continue }
+
+            let vals = try? entry.resourceValues(
+                forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+            let isSymlink = vals?.isSymbolicLink ?? false
+            let isDir = vals?.isDirectory ?? false
+            if !isSymlink && !isDir { continue }   // plain file → leave alone
+
+            let target = workspaceDir.appendingPathComponent(name)
+            do {
+                if isSymlink {
+                    try relinkSymlink(link: entry, target: target, fm: fm)
+                } else {
+                    try fm.createDirectory(
+                        at: target, withIntermediateDirectories: true)
+                    try mergeTree(
+                        from: entry, into: target,
+                        backupRoot: backupBase.appendingPathComponent(name),
+                        fm: fm)
+                    try fm.removeItem(at: entry)   // now empty
+                    try fm.createSymbolicLink(
+                        at: entry, withDestinationURL: target)
+                }
+            } catch {
+                warnings.append("\(name): \(error.localizedDescription)")
+            }
+        }
+        return warnings
+    }
+
+    /// Point `link` (an existing symlink) at `target`, creating `target` if
+    /// needed. No-op when it already points there.
+    private static func relinkSymlink(link: URL, target: URL, fm: FileManager) throws {
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
+           dest == target.path {
+            return
+        }
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        try? fm.removeItem(at: link)
+        try fm.createSymbolicLink(at: link, withDestinationURL: target)
+    }
+
+    /// Recursively merge `from` into `into` (union, `into` wins). Children only
+    /// in `from` move into `into`; when both sides have a real directory the
+    /// merge recurses; any other same-path conflict moves the `from` copy under
+    /// `backupRoot`, preserving relative structure.
+    private static func mergeTree(
+        from: URL, into: URL, backupRoot: URL, fm: FileManager
+    ) throws {
+        let children = (try? fm.contentsOfDirectory(
+            at: from,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: [])) ?? []
+
+        for child in children {
+            let name = child.lastPathComponent
+            let dest = into.appendingPathComponent(name)
+            let childVals = try? child.resourceValues(
+                forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+            let childIsRealDir =
+                (childVals?.isDirectory ?? false)
+                && !(childVals?.isSymbolicLink ?? false)
+
+            if !fm.fileExists(atPath: dest.path) {
+                try fm.moveItem(at: child, to: dest)
+            } else if childIsRealDir && isRealDir(dest, fm: fm) {
+                try mergeTree(
+                    from: child, into: dest,
+                    backupRoot: backupRoot.appendingPathComponent(name), fm: fm)
+            } else {
+                let backup = backupRoot.appendingPathComponent(name)
+                try fm.createDirectory(
+                    at: backup.deletingLastPathComponent(),
+                    withIntermediateDirectories: true)
+                try fm.moveItem(at: child, to: backup)
+            }
+        }
+    }
+
+    private static func isRealDir(_ url: URL, fm: FileManager) -> Bool {
+        let v = try? url.resourceValues(
+            forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        return (v?.isDirectory ?? false) && !(v?.isSymbolicLink ?? false)
+    }
+
+    /// Test-only accessor for the private `isRealDir` check.
+    static func isRealDirForTest(_ url: URL) -> Bool {
+        isRealDir(url, fm: .default)
+    }
+
+    /// Filename-safe UTC timestamp for the premerge backup dir.
+    private static func premergeStamp() -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyyMMdd-HHmmss-SSS"
+        return f.string(from: Date())
+    }
+
     public enum Error: Swift.Error, LocalizedError {
         case wrongTool(got: Tool)
         case existingDirectoryAtSymlinkPath(URL)

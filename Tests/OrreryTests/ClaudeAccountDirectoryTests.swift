@@ -247,3 +247,161 @@ struct ClaudeAccountDirectoryVerifyTests {
         }
     }
 }
+
+@Suite("ClaudeAccountDirectory.linkAccountDirsToWorkspace")
+struct ClaudeAccountDirectoryLinkTests {
+
+    /// 建立一對隔離的 acct / ws 暫存目錄;測試結束自動清掉。
+    private func makeTempPair() throws -> (acct: URL, ws: URL, base: URL) {
+        let base = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("linktest-\(UUID().uuidString)")
+        let acct = base.appendingPathComponent("acct")
+        let ws = base.appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: acct, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        return (acct, ws, base)
+    }
+
+    /// 在 backups/ 底下找出這次執行產生的 premerge-* 目錄。
+    private func premergeDir(in acct: URL) -> URL? {
+        let backups = acct.appendingPathComponent("backups")
+        let kids = (try? FileManager.default.contentsOfDirectory(
+            at: backups, includingPropertiesForKeys: nil)) ?? []
+        return kids.first { $0.lastPathComponent.hasPrefix("premerge-") }
+    }
+
+    @Test("moves a brand-new real dir into the workspace and symlinks it")
+    func movesNewDir() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let skills = acct.appendingPathComponent("skills")
+        try fm.createDirectory(at: skills, withIntermediateDirectories: true)
+        try Data("hello".utf8).write(to: skills.appendingPathComponent("foo.md"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("skills").path)
+        #expect(dest == ws.appendingPathComponent("skills").path)
+        let moved = ws.appendingPathComponent("skills/foo.md")
+        #expect(fm.fileExists(atPath: moved.path))
+        #expect((try? String(contentsOf: moved, encoding: .utf8)) == "hello")
+    }
+
+    @Test("union merge keeps the workspace copy and backs up the account copy")
+    func unionWorkspaceWins() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let acctAgents = acct.appendingPathComponent("agents")
+        let wsAgents = ws.appendingPathComponent("agents")
+        try fm.createDirectory(at: acctAgents, withIntermediateDirectories: true)
+        try fm.createDirectory(at: wsAgents, withIntermediateDirectories: true)
+        try Data("acct".utf8).write(to: acctAgents.appendingPathComponent("shared.md"))
+        try Data("acct-only".utf8).write(to: acctAgents.appendingPathComponent("only.md"))
+        try Data("ws".utf8).write(to: wsAgents.appendingPathComponent("shared.md"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+
+        let shared = ws.appendingPathComponent("agents/shared.md")
+        #expect((try? String(contentsOf: shared, encoding: .utf8)) == "ws")
+        let only = ws.appendingPathComponent("agents/only.md")
+        #expect((try? String(contentsOf: only, encoding: .utf8)) == "acct-only")
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("agents").path)
+        #expect(dest == wsAgents.path)
+        let backup = try #require(premergeDir(in: acct))
+        let backedUp = backup.appendingPathComponent("agents/shared.md")
+        #expect((try? String(contentsOf: backedUp, encoding: .utf8)) == "acct")
+    }
+
+    @Test("nested dirs merge recursively (both children survive)")
+    func nestedMerge() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("plugins/foo"), withIntermediateDirectories: true)
+        try Data("b".utf8).write(to: acct.appendingPathComponent("plugins/foo/bar.txt"))
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("plugins/foo"), withIntermediateDirectories: true)
+        try Data("z".utf8).write(to: ws.appendingPathComponent("plugins/foo/baz.txt"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        #expect(fm.fileExists(atPath: ws.appendingPathComponent("plugins/foo/bar.txt").path))
+        #expect(fm.fileExists(atPath: ws.appendingPathComponent("plugins/foo/baz.txt").path))
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("plugins").path)
+        #expect(dest == ws.appendingPathComponent("plugins").path)
+    }
+
+    @Test("already-correct symlink is a no-op (no backup created)")
+    func correctSymlinkNoop() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let target = ws.appendingPathComponent("projects")
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(
+            at: acct.appendingPathComponent("projects"), withDestinationURL: target)
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("projects").path)
+        #expect(dest == target.path)
+        #expect(premergeDir(in: acct) == nil)
+    }
+
+    @Test("symlink pointing at the wrong place is repointed")
+    func repointsWrongSymlink() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let wrong = base.appendingPathComponent("elsewhere")
+        try fm.createDirectory(at: wrong, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(
+            at: acct.appendingPathComponent("projects"), withDestinationURL: wrong)
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("projects").path)
+        #expect(dest == ws.appendingPathComponent("projects").path)
+    }
+
+    @Test("private dirs and dotfiles and top-level files are untouched")
+    func privateAndFilesUntouched() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("cache"), withIntermediateDirectories: true)
+        try Data("c".utf8).write(to: acct.appendingPathComponent("cache/x"))
+        try fm.createDirectory(
+            at: acct.appendingPathComponent(".hidden"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: acct.appendingPathComponent("settings.json"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        #expect(ClaudeAccountDirectory.isRealDirForTest(acct.appendingPathComponent("cache")))
+        #expect(fm.fileExists(atPath: acct.appendingPathComponent("cache/x").path))
+        #expect(!fm.fileExists(atPath: ws.appendingPathComponent("cache").path))
+        #expect(ClaudeAccountDirectory.isRealDirForTest(acct.appendingPathComponent(".hidden")))
+        #expect(fm.fileExists(atPath: acct.appendingPathComponent("settings.json").path))
+        #expect(!fm.fileExists(atPath: ws.appendingPathComponent("settings.json").path))
+    }
+}
