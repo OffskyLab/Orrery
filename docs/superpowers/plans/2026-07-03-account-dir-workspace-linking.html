@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account 資料夾一律 link 到 pinned workspace — Implementation Plan</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --ink: #1f2328; --muted: #656d76;
+    --line: #e3e6ea; --code-bg: #eef1f4; --coral: #d97757;
+    --ok: #1a7f52; --ok-bg: #e6f4ec; --warn: #9a6700; --warn-bg: #fef4e0;
+    --step-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.7; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 44px 24px 96px; }
+  h1 { font-size: 26px; margin: 0 0 14px; letter-spacing: -0.01em; line-height: 1.35; }
+
+  .banner {
+    background: #1f2328; color: #e6edf3; border-radius: 10px;
+    padding: 14px 18px; font-size: 13.5px; margin-bottom: 22px;
+  }
+  .banner b { color: #ffd9a0; }
+
+  .meta-box {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 6px 24px 18px; margin-bottom: 26px;
+  }
+  .meta-box dl { margin: 0; }
+  .meta-box dt { font-weight: 700; font-size: 13px; color: var(--coral);
+    text-transform: uppercase; letter-spacing: .04em; margin-top: 14px; }
+  .meta-box dd { margin: 4px 0 0; font-size: 15px; }
+
+  h2 { font-size: 20px; margin: 40px 0 8px; }
+  .task-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 26px 22px; margin: 16px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .task-card > h2 { margin-top: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+
+  .files { background: var(--step-bg); border-radius: 8px; padding: 10px 16px; margin: 14px 0; font-size: 14px; }
+  .files b { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .files ul { margin: 6px 0 0; padding-left: 20px; }
+  .files li { margin: 3px 0; }
+
+  .step { margin: 18px 0; }
+  .step-h {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 8px;
+  }
+  .chk {
+    flex: 0 0 auto; width: 17px; height: 17px; border: 2px solid var(--muted);
+    border-radius: 4px; display: inline-block;
+  }
+
+  code {
+    background: var(--code-bg); border-radius: 5px; padding: 1.5px 6px;
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #1f2328; color: #e6edf3; border-radius: 10px;
+    padding: 15px 17px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; margin: 10px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: 12.5px; }
+  pre.sh { background: #0d1117; }
+
+  .run {
+    font-size: 14px; margin: 8px 0; padding: 10px 14px; border-radius: 8px;
+    background: var(--step-bg); border-left: 3px solid var(--coral);
+  }
+  .run .exp { color: var(--muted); }
+
+  .callout {
+    border-left: 4px solid var(--warn); background: var(--warn-bg);
+    border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 14px; color: #6b4b00;
+  }
+  .callout b { color: var(--warn); }
+  .note {
+    border: 1px solid var(--line); border-left: 4px solid var(--coral);
+    background: #fff; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 14px;
+  }
+  p { font-size: 15px; }
+  footer { margin-top: 46px; color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Account 資料夾一律 link 到 pinned workspace — Implementation Plan</h1>
+
+  <div class="banner">
+    <b>For agentic workers:</b> REQUIRED SUB-SKILL — 用 superpowers:subagent-driven-development(推薦)或 superpowers:executing-plans 逐 task 實作。步驟為 checkbox 追蹤。
+  </div>
+
+  <div class="meta-box">
+    <dl>
+      <dt>Goal</dt>
+      <dd>claude 啟動時,把 account 資料夾裡「除帳號私有以外的所有資料夾」搬進 pinned workspace 並改成 symlink,改用反向名單讓未來新資料夾(skills…)自動涵蓋。</dd>
+      <dt>Architecture</dt>
+      <dd>新增 <code>ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir:workspaceDir:)</code>,反向名單掃描頂層資料夾、聯集合併(workspace 優先)搬入 workspace、再 symlink。<code>prepareDirectory</code> 收斂到同一支 linker;<code>_prepare-claude-launch</code> 在寫完 <code>.claude.json</code> 後 best-effort 呼叫它。</dd>
+      <dt>Tech Stack</dt>
+      <dd>Swift、swift-testing(<code>import Testing</code> / <code>@Suite</code> / <code>@Test</code> / <code>#expect</code>)、<code>FileManager</code>。測試用既有 <code>withIsolatedHome { }</code>。</dd>
+      <dt>Spec</dt>
+      <dd><code>docs/superpowers/specs/2026-07-03-account-dir-workspace-linking-design.md</code>(linker 回傳型別在此計畫細化為 <code>[String]</code> 警告字串,語意不變)</dd>
+    </dl>
+  </div>
+
+  <h2>File Structure</h2>
+  <div class="files">
+    <ul>
+      <li><b>Modify</b> <code>Sources/OrreryCore/Setup/ClaudeAccountDirectory.swift</code> — 新增 <code>privateSubdirs</code>、<code>linkAccountDirsToWorkspace</code> 與私有 helper;改寫 <code>prepareDirectory</code>;移除未用的 <code>Error.existingDirectoryAtSymlinkPath</code></li>
+      <li><b>Modify</b> <code>Sources/OrreryCore/Commands/PrepareClaudeLaunchCommand.swift</code> — merge 後 best-effort 呼叫 linker</li>
+      <li><b>Modify</b> <code>Tests/OrreryTests/ClaudeAccountDirectoryTests.swift</code> — 新增 linker suite;clobber 測試改 move</li>
+      <li><b>Modify</b> <code>Tests/OrreryTests/PrepareClaudeLaunchCommandTests.swift</code> — launch link 整合測試</li>
+    </ul>
+  </div>
+
+  <!-- ========== TASK 1 ========== -->
+  <div class="task-card">
+    <h2>Task 1:核心 linker <code>linkAccountDirsToWorkspace</code></h2>
+    <div class="files"><b>Files</b>
+      <ul>
+        <li>Modify: <code>Sources/OrreryCore/Setup/ClaudeAccountDirectory.swift</code></li>
+        <li>Test: <code>Tests/OrreryTests/ClaudeAccountDirectoryTests.swift</code></li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 1:寫失敗測試(新 suite,加在檔案最後)</div>
+<pre><code>@Suite("ClaudeAccountDirectory.linkAccountDirsToWorkspace")
+struct ClaudeAccountDirectoryLinkTests {
+
+    /// 建立一對隔離的 acct / ws 暫存目錄;測試結束自動清掉。
+    private func makeTempPair() throws -&gt; (acct: URL, ws: URL, base: URL) {
+        let base = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("linktest-\(UUID().uuidString)")
+        let acct = base.appendingPathComponent("acct")
+        let ws = base.appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: acct, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        return (acct, ws, base)
+    }
+
+    /// 在 backups/ 底下找出這次執行產生的 premerge-* 目錄。
+    private func premergeDir(in acct: URL) -&gt; URL? {
+        let backups = acct.appendingPathComponent("backups")
+        let kids = (try? FileManager.default.contentsOfDirectory(
+            at: backups, includingPropertiesForKeys: nil)) ?? []
+        return kids.first { $0.lastPathComponent.hasPrefix("premerge-") }
+    }
+
+    @Test("moves a brand-new real dir into the workspace and symlinks it")
+    func movesNewDir() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let skills = acct.appendingPathComponent("skills")
+        try fm.createDirectory(at: skills, withIntermediateDirectories: true)
+        try Data("hello".utf8).write(to: skills.appendingPathComponent("foo.md"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("skills").path)
+        #expect(dest == ws.appendingPathComponent("skills").path)
+        let moved = ws.appendingPathComponent("skills/foo.md")
+        #expect(fm.fileExists(atPath: moved.path))
+        #expect((try? String(contentsOf: moved, encoding: .utf8)) == "hello")
+    }
+
+    @Test("union merge keeps the workspace copy and backs up the account copy")
+    func unionWorkspaceWins() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let acctAgents = acct.appendingPathComponent("agents")
+        let wsAgents = ws.appendingPathComponent("agents")
+        try fm.createDirectory(at: acctAgents, withIntermediateDirectories: true)
+        try fm.createDirectory(at: wsAgents, withIntermediateDirectories: true)
+        try Data("acct".utf8).write(to: acctAgents.appendingPathComponent("shared.md"))
+        try Data("acct-only".utf8).write(to: acctAgents.appendingPathComponent("only.md"))
+        try Data("ws".utf8).write(to: wsAgents.appendingPathComponent("shared.md"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+
+        let shared = ws.appendingPathComponent("agents/shared.md")
+        #expect((try? String(contentsOf: shared, encoding: .utf8)) == "ws")
+        let only = ws.appendingPathComponent("agents/only.md")
+        #expect((try? String(contentsOf: only, encoding: .utf8)) == "acct-only")
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("agents").path)
+        #expect(dest == wsAgents.path)
+        let backup = try #require(premergeDir(in: acct))
+        let backedUp = backup.appendingPathComponent("agents/shared.md")
+        #expect((try? String(contentsOf: backedUp, encoding: .utf8)) == "acct")
+    }
+
+    @Test("nested dirs merge recursively (both children survive)")
+    func nestedMerge() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("plugins/foo"), withIntermediateDirectories: true)
+        try Data("b".utf8).write(to: acct.appendingPathComponent("plugins/foo/bar.txt"))
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("plugins/foo"), withIntermediateDirectories: true)
+        try Data("z".utf8).write(to: ws.appendingPathComponent("plugins/foo/baz.txt"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        #expect(fm.fileExists(atPath: ws.appendingPathComponent("plugins/foo/bar.txt").path))
+        #expect(fm.fileExists(atPath: ws.appendingPathComponent("plugins/foo/baz.txt").path))
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("plugins").path)
+        #expect(dest == ws.appendingPathComponent("plugins").path)
+    }
+
+    @Test("already-correct symlink is a no-op (no backup created)")
+    func correctSymlinkNoop() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let target = ws.appendingPathComponent("projects")
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(
+            at: acct.appendingPathComponent("projects"), withDestinationURL: target)
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("projects").path)
+        #expect(dest == target.path)
+        #expect(premergeDir(in: acct) == nil)
+    }
+
+    @Test("symlink pointing at the wrong place is repointed")
+    func repointsWrongSymlink() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        let wrong = base.appendingPathComponent("elsewhere")
+        try fm.createDirectory(at: wrong, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(
+            at: acct.appendingPathComponent("projects"), withDestinationURL: wrong)
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("projects").path)
+        #expect(dest == ws.appendingPathComponent("projects").path)
+    }
+
+    @Test("private dirs and dotfiles and top-level files are untouched")
+    func privateAndFilesUntouched() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("cache"), withIntermediateDirectories: true)
+        try Data("c".utf8).write(to: acct.appendingPathComponent("cache/x"))
+        try fm.createDirectory(
+            at: acct.appendingPathComponent(".hidden"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: acct.appendingPathComponent("settings.json"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        #expect(ClaudeAccountDirectory.isRealDirForTest(acct.appendingPathComponent("cache")))
+        #expect(fm.fileExists(atPath: acct.appendingPathComponent("cache/x").path))
+        #expect(!fm.fileExists(atPath: ws.appendingPathComponent("cache").path))
+        #expect(ClaudeAccountDirectory.isRealDirForTest(acct.appendingPathComponent(".hidden")))
+        #expect(fm.fileExists(atPath: acct.appendingPathComponent("settings.json").path))
+        #expect(!fm.fileExists(atPath: ws.appendingPathComponent("settings.json").path))
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 2:跑測試,確認編譯失敗(函式尚未存在)</div>
+      <div class="run"><code>swift test --filter ClaudeAccountDirectoryLinkTests 2>&1 | tail -20</code><br>
+        <span class="exp">Expected:編譯失敗 —「type 'ClaudeAccountDirectory' has no member 'linkAccountDirsToWorkspace'」等。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 3:在 <code>ClaudeAccountDirectory</code> 內實作 linker 與 helper</div>
+      <p>在 <code>sharedSubdirs</code> 常數後、<code>prepareDirectory</code> 前插入:</p>
+<pre><code>    /// Top-level subdir names that stay per-account and are NEVER shared to the
+    /// workspace. Everything else that is a directory is moved into the pinned
+    /// workspace and replaced with a symlink.
+    public static let privateSubdirs: Set&lt;String&gt; = ["backups", "cache"]
+
+    /// Move every shareable top-level directory in `accountDir` into
+    /// `workspaceDir` and replace it with a symlink pointing there. Shareable =
+    /// a directory (or existing symlink) whose name is not dot-prefixed and not
+    /// in `privateSubdirs`. Top-level files are never touched.
+    ///
+    /// Merge is a union with the workspace winning: files present only in the
+    /// account move over; on a same-path conflict the workspace copy is kept and
+    /// the account copy is moved to `backups/premerge-&lt;timestamp&gt;/`.
+    ///
+    /// Best-effort: never throws. Returns a human-readable warning per entry
+    /// that could not be linked, so callers can surface them without blocking
+    /// claude startup.
+    @discardableResult
+    public static func linkAccountDirsToWorkspace(
+        accountDir: URL,
+        workspaceDir: URL
+    ) -&gt; [String] {
+        let fm = FileManager.default
+        var warnings: [String] = []
+
+        guard let entries = try? fm.contentsOfDirectory(
+            at: accountDir,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: []
+        ) else {
+            return ["could not read account dir \(accountDir.path)"]
+        }
+
+        let backupBase = accountDir
+            .appendingPathComponent("backups")
+            .appendingPathComponent("premerge-\(premergeStamp())")
+
+        for entry in entries {
+            let name = entry.lastPathComponent
+            if name.hasPrefix(".") { continue }
+            if privateSubdirs.contains(name) { continue }
+
+            let vals = try? entry.resourceValues(
+                forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+            let isSymlink = vals?.isSymbolicLink ?? false
+            let isDir = vals?.isDirectory ?? false
+            if !isSymlink && !isDir { continue }   // plain file → leave alone
+
+            let target = workspaceDir.appendingPathComponent(name)
+            do {
+                if isSymlink {
+                    try relinkSymlink(link: entry, target: target, fm: fm)
+                } else {
+                    try fm.createDirectory(
+                        at: target, withIntermediateDirectories: true)
+                    try mergeTree(
+                        from: entry, into: target,
+                        backupRoot: backupBase.appendingPathComponent(name),
+                        fm: fm)
+                    try fm.removeItem(at: entry)   // now empty
+                    try fm.createSymbolicLink(
+                        at: entry, withDestinationURL: target)
+                }
+            } catch {
+                warnings.append("\(name): \(error.localizedDescription)")
+            }
+        }
+        return warnings
+    }
+
+    /// Point `link` (an existing symlink) at `target`, creating `target` if
+    /// needed. No-op when it already points there.
+    private static func relinkSymlink(link: URL, target: URL, fm: FileManager) throws {
+        if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
+           dest == target.path {
+            return
+        }
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        try? fm.removeItem(at: link)
+        try fm.createSymbolicLink(at: link, withDestinationURL: target)
+    }
+
+    /// Recursively merge `from` into `into` (union, `into` wins). Children only
+    /// in `from` move into `into`; when both sides have a real directory the
+    /// merge recurses; any other same-path conflict moves the `from` copy under
+    /// `backupRoot`, preserving relative structure.
+    private static func mergeTree(
+        from: URL, into: URL, backupRoot: URL, fm: FileManager
+    ) throws {
+        let children = (try? fm.contentsOfDirectory(
+            at: from,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: [])) ?? []
+
+        for child in children {
+            let name = child.lastPathComponent
+            let dest = into.appendingPathComponent(name)
+            let childVals = try? child.resourceValues(
+                forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
+            let childIsRealDir =
+                (childVals?.isDirectory ?? false)
+                && !(childVals?.isSymbolicLink ?? false)
+
+            if !fm.fileExists(atPath: dest.path) {
+                try fm.moveItem(at: child, to: dest)
+            } else if childIsRealDir && isRealDir(dest, fm: fm) {
+                try mergeTree(
+                    from: child, into: dest,
+                    backupRoot: backupRoot.appendingPathComponent(name), fm: fm)
+            } else {
+                let backup = backupRoot.appendingPathComponent(name)
+                try fm.createDirectory(
+                    at: backup.deletingLastPathComponent(),
+                    withIntermediateDirectories: true)
+                try fm.moveItem(at: child, to: backup)
+            }
+        }
+    }
+
+    private static func isRealDir(_ url: URL, fm: FileManager) -&gt; Bool {
+        let v = try? url.resourceValues(
+            forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        return (v?.isDirectory ?? false) && !(v?.isSymbolicLink ?? false)
+    }
+
+    /// Test-only accessor for the private `isRealDir` check.
+    static func isRealDirForTest(_ url: URL) -&gt; Bool {
+        isRealDir(url, fm: .default)
+    }
+
+    /// Filename-safe UTC timestamp for the premerge backup dir.
+    private static func premergeStamp() -&gt; String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyyMMdd-HHmmss-SSS"
+        return f.string(from: Date())
+    }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 4:跑測試,確認通過</div>
+      <div class="run"><code>swift test --filter ClaudeAccountDirectoryLinkTests 2>&1 | tail -20</code><br>
+        <span class="exp">Expected:PASS(6 個測試全過)。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 5:Commit</div>
+<pre class="sh"><code>git add Sources/OrreryCore/Setup/ClaudeAccountDirectory.swift \
+        Tests/OrreryTests/ClaudeAccountDirectoryTests.swift
+git commit -m "feat: linkAccountDirsToWorkspace — deny-list move+link account dirs into workspace"</code></pre>
+    </div>
+  </div>
+
+  <!-- ========== TASK 2 ========== -->
+  <div class="task-card">
+    <h2>Task 2:<code>prepareDirectory</code> 收斂到 linker</h2>
+    <div class="files"><b>Files</b>
+      <ul>
+        <li>Modify: <code>Sources/OrreryCore/Setup/ClaudeAccountDirectory.swift:42-95</code></li>
+        <li>Modify: <code>Tests/OrreryTests/ClaudeAccountDirectoryTests.swift</code>(改寫 clobber 測試)</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 1:改寫舊的 clobber 測試為 move 語意</div>
+      <p>把整個 <code>refusesToClobberRealDirectory()</code> 測試替換成:</p>
+<pre><code>    @Test("moves a pre-existing real directory into the workspace and symlinks it")
+    func movesPreexistingRealDirectory() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "test")
+            acct.workspace = "origin"
+            try acctStore.save(acct)
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let realDir = acctDir.appendingPathComponent("projects")
+            try FileManager.default.createDirectory(
+                at: realDir, withIntermediateDirectories: true)
+            try Data("important".utf8)
+                .write(to: realDir.appendingPathComponent("user-file.txt"))
+
+            try ClaudeAccountDirectory.prepareDirectory(
+                account: acct, accountStore: acctStore, environmentStore: envStore)
+
+            let fm = FileManager.default
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("projects").path)
+            #expect(dest == wsDir.appendingPathComponent("projects").path)
+            let moved = wsDir.appendingPathComponent("projects/user-file.txt")
+            #expect(fm.fileExists(atPath: moved.path))
+            #expect((try? String(contentsOf: moved, encoding: .utf8)) == "important")
+        }
+    }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 2:跑測試,確認新測試因舊行為(throw)而失敗</div>
+      <div class="run"><code>swift test --filter movesPreexistingRealDirectory 2>&1 | tail -20</code><br>
+        <span class="exp">Expected:FAIL —<code>prepareDirectory</code> 仍 throw <code>existingDirectoryAtSymlinkPath</code>。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 3:改寫 <code>prepareDirectory</code> 委派給 linker</div>
+      <p>把整個 <code>public static func prepareDirectory(...) throws { ... }</code>(約 42–95 行)替換成:</p>
+<pre><code>    /// Create (or repair) the account dir so every shareable subdir is a symlink
+    /// into the workspace from `account.workspace`. Real dirs / mislinked
+    /// symlinks are moved+relinked via `linkAccountDirsToWorkspace`; the standard
+    /// base set is additionally ensured for fresh accounts. Idempotent.
+    public static func prepareDirectory(
+        account: Account,
+        accountStore: AccountStore,
+        environmentStore: EnvironmentStore
+    ) throws {
+        guard account.tool == .claude else {
+            throw Error.wrongTool(got: account.tool)
+        }
+
+        let fm = FileManager.default
+        let acctDir = accountStore.accountDir(id: account.id, tool: .claude)
+        let wsDir = environmentStore.claudeWorkspaceDir(workspace: account.workspace)
+
+        try fm.createDirectory(at: acctDir, withIntermediateDirectories: true)
+        try fm.createDirectory(at: wsDir, withIntermediateDirectories: true)
+
+        // Move/relink any shareable dir already present in the account dir.
+        linkAccountDirsToWorkspace(accountDir: acctDir, workspaceDir: wsDir)
+
+        // Ensure the standard base set exists as symlinks even on a fresh
+        // account where claude hasn't created those dirs yet (nothing to move).
+        for sub in sharedSubdirs {
+            let target = wsDir.appendingPathComponent(sub)
+            try fm.createDirectory(at: target, withIntermediateDirectories: true)
+            let link = acctDir.appendingPathComponent(sub)
+            if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path) {
+                if dest != target.path {
+                    try fm.removeItem(at: link)
+                    try fm.createSymbolicLink(at: link, withDestinationURL: target)
+                }
+            } else if !fm.fileExists(atPath: link.path) {
+                try fm.createSymbolicLink(at: link, withDestinationURL: target)
+            }
+        }
+    }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 4:移除已不再使用的 Error case</div>
+      <div class="run"><code>grep -rn "existingDirectoryAtSymlinkPath" Sources Tests</code><br>
+        <span class="exp">Expected:只剩 enum 宣告與 errorDescription 兩處。</span></div>
+      <p>若如上,刪除 enum case <code>case existingDirectoryAtSymlinkPath(URL)</code> 與其 errorDescription 分支。若仍有其他引用則保留、略過本步。</p>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 5:跑相關測試,確認全過</div>
+      <div class="run"><code>swift test --filter ClaudeAccountDirectory 2>&1 | tail -25</code><br>
+        <span class="exp">Expected:PASS — 既有 prepareDirectory / verifySymlinks + 新 movesPreexistingRealDirectory + Task 1 linker 測試皆通過。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 6:Commit</div>
+<pre class="sh"><code>git add Sources/OrreryCore/Setup/ClaudeAccountDirectory.swift \
+        Tests/OrreryTests/ClaudeAccountDirectoryTests.swift
+git commit -m "refactor: prepareDirectory delegates to linkAccountDirsToWorkspace (move semantics)"</code></pre>
+    </div>
+
+    <div class="note"><b>刻意的行為變更:</b>舊的 clobber-guard(遇真實資料夾就 throw)改為「搬進 workspace + 衝突備份」,同樣不遺失資料,但主動整併而非中止。</div>
+  </div>
+
+  <!-- ========== TASK 3 ========== -->
+  <div class="task-card">
+    <h2>Task 3:接入 <code>_prepare-claude-launch</code></h2>
+    <div class="files"><b>Files</b>
+      <ul>
+        <li>Modify: <code>Sources/OrreryCore/Commands/PrepareClaudeLaunchCommand.swift:83-89</code></li>
+        <li>Test: <code>Tests/OrreryTests/PrepareClaudeLaunchCommandTests.swift</code></li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 1:寫失敗的整合測試</div>
+      <p>在 <code>struct PrepareClaudeLaunchCommandTests</code> 內(最後一個測試後)加入:</p>
+<pre><code>    @Test("launch links a new shareable account dir into the workspace")
+    func linksNewShareableDir() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            try PinCommand.parse(["alice", "--workspace", "work"]).run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+
+            // Simulate claude having created a brand-new folder in the account dir.
+            let skills = acctDir.appendingPathComponent("skills")
+            try FileManager.default.createDirectory(
+                at: skills, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: skills.appendingPathComponent("a.md"))
+
+            var cmd = try PrepareClaudeLaunchCommand.parse(["--account-dir", acctDir.path])
+            try cmd.run()
+
+            let fm = FileManager.default
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("skills").path)
+            #expect(dest == wsDir.appendingPathComponent("skills").path)
+            #expect(fm.fileExists(
+                atPath: wsDir.appendingPathComponent("skills/a.md").path))
+        }
+    }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 2:跑測試,確認失敗</div>
+      <div class="run"><code>swift test --filter linksNewShareableDir 2>&1 | tail -20</code><br>
+        <span class="exp">Expected:FAIL —<code>skills</code> 仍是真實資料夾,不是 symlink。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 3:在 <code>run()</code> 尾端呼叫 linker</div>
+      <p>把 <code>.claude.json</code> 寫出那段結尾替換為:</p>
+<pre><code>        // Merge and write out.
+        let merged = ClaudeJsonMerge.merge(identity: identity, shared: shared)
+        try ClaudeJsonMerge.saveJSON(
+            merged,
+            at: acctDirURL.appendingPathComponent(".claude.json")
+        )
+
+        // v3.1: generalize workspace linking. Move any shareable account dir
+        // (skills, plugins, or anything claude adds later) into the pinned
+        // workspace and symlink it, so accounts on the same workspace share it.
+        // Best-effort — link failures must never block claude launch.
+        let linkWarnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acctDirURL, workspaceDir: wsDir)
+        for w in linkWarnings {
+            FileHandle.standardError.write(
+                Data("orrery: link-workspace: \(w)\n".utf8))
+        }
+    }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 4:跑測試,確認通過</div>
+      <div class="run"><code>swift test --filter linksNewShareableDir 2>&1 | tail -20</code><br>
+        <span class="exp">Expected:PASS。</span></div>
+    </div>
+
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 5:Commit</div>
+<pre class="sh"><code>git add Sources/OrreryCore/Commands/PrepareClaudeLaunchCommand.swift \
+        Tests/OrreryTests/PrepareClaudeLaunchCommandTests.swift
+git commit -m "feat: _prepare-claude-launch links account dirs into workspace at launch"</code></pre>
+    </div>
+  </div>
+
+  <!-- ========== TASK 4 ========== -->
+  <div class="task-card">
+    <h2>Task 4:全套建置與測試</h2>
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 1:完整建置</div>
+      <div class="run"><code>swift build 2>&1 | tail -15</code><br>
+        <span class="exp">Expected:<code>Build complete!</code>,無錯誤/警告。</span></div>
+    </div>
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 2:完整測試套件</div>
+      <div class="run"><code>swift test 2>&1 | tail -30</code><br>
+        <span class="exp">Expected:全數通過。特別確認 <code>PrepareClaudeLaunchCommand</code>、<code>v3.1 launch+capture round trip</code>、<code>ClaudeAccountDirectory.*</code> 未回歸。</span></div>
+    </div>
+    <div class="step">
+      <div class="step-h"><span class="chk"></span>Step 3:(若有失敗)修正後重跑,直到全綠</div>
+    </div>
+  </div>
+
+  <h2>Self-Review 註記</h2>
+  <div class="note">
+    <p><b>Spec 覆蓋:</b>反向名單(Task 1)、private 清單含檔案/backups/cache/dot(<code>privateAndFilesUntouched</code>)、聯集 workspace 優先 + 備份(<code>unionWorkspaceWins</code>)、巢狀合併(<code>nestedMerge</code>)、接入 launch(Task 3)、<code>prepareDirectory</code> 收斂(Task 2)、<code>verifySymlinks</code> 維持現狀、<code>_link-memory</code> 不受影響。</p>
+    <p><b>型別一致:</b>全程 <code>linkAccountDirsToWorkspace(accountDir:workspaceDir:) -&gt; [String]</code>;helper 私有;測試經 <code>isRealDirForTest</code> 存取 <code>isRealDir</code>。</p>
+    <p><b>無 placeholder:</b>每個程式步驟皆附完整程式碼與確切指令/預期輸出。</p>
+  </div>
+
+  <footer>Orrery 實作計畫 · docs/superpowers/plans/2026-07-03-account-dir-workspace-linking</footer>
+
+</div>
+</body>
+</html>
