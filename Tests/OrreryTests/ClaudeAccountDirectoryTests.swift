@@ -484,4 +484,43 @@ struct ClaudeAccountDirectoryLinkTests {
         #expect((try? String(contentsOf: acctSkills.appendingPathComponent("foo.md"),
                              encoding: .utf8)) == "keep")
     }
+
+    @Test("dangling symlink at a nested workspace path does not abort the merge")
+    func danglingSymlinkNoAbort() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        // account/plugins/foo (real dir) with a file.
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("plugins/foo"),
+            withIntermediateDirectories: true)
+        try Data("data".utf8)
+            .write(to: acct.appendingPathComponent("plugins/foo/x.txt"))
+        // workspace/plugins/foo exists as a DANGLING symlink (target deleted).
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("plugins"),
+            withIntermediateDirectories: true)
+        let deadTarget = base.appendingPathComponent("gone")
+        try fm.createSymbolicLink(
+            at: ws.appendingPathComponent("plugins/foo"),
+            withDestinationURL: deadTarget)
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        // No permanent abort: account/plugins becomes a symlink to the workspace.
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("plugins").path)
+        #expect(dest == ws.appendingPathComponent("plugins").path)
+        // The conflicting account subtree was preserved under backups (not lost).
+        let backups = acct.appendingPathComponent("backups")
+        let premerge = (try? fm.contentsOfDirectory(
+            at: backups, includingPropertiesForKeys: nil))?
+            .first { $0.lastPathComponent.hasPrefix("premerge-") }
+        let saved = try #require(premerge)
+            .appendingPathComponent("plugins/foo/x.txt")
+        #expect((try? String(contentsOf: saved, encoding: .utf8)) == "data")
+    }
 }

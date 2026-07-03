@@ -79,9 +79,20 @@ public enum ClaudeAccountDirectory {
                         from: entry, into: target,
                         backupRoot: backupBase.appendingPathComponent(name),
                         fm: fm)
-                    try fm.removeItem(at: entry)   // now empty
-                    try fm.createSymbolicLink(
-                        at: entry, withDestinationURL: target)
+                    // Only convert to a symlink once the account dir fully
+                    // drained. A non-empty remnant means a merge conflict left
+                    // items or a concurrent writer added some — leave it in
+                    // place (visible, recoverable) and self-heal on a later run,
+                    // rather than recursively deleting a possibly-live dir.
+                    let remnant = (try? fm.contentsOfDirectory(atPath: entry.path)) ?? []
+                    if remnant.isEmpty {
+                        try fm.removeItem(at: entry)
+                        try fm.createSymbolicLink(
+                            at: entry, withDestinationURL: target)
+                    } else {
+                        warnings.append(
+                            "\(name): left in place — \(remnant.count) item(s) remain after merge")
+                    }
                 }
             } catch {
                 warnings.append("\(name): \(error.localizedDescription)")
@@ -123,12 +134,20 @@ public enum ClaudeAccountDirectory {
                 (childVals?.isDirectory ?? false)
                 && !(childVals?.isSymbolicLink ?? false)
 
-            if !fm.fileExists(atPath: dest.path) {
+            // lstat-aware: a dangling symlink still occupies `dest`, so treat it
+            // as present (fileExists follows symlinks and would miss it).
+            let destOccupied = fm.fileExists(atPath: dest.path)
+                || (try? fm.destinationOfSymbolicLink(atPath: dest.path)) != nil
+
+            if !destOccupied {
                 try fm.moveItem(at: child, to: dest)
             } else if childIsRealDir && isRealDir(dest, fm: fm) {
                 try mergeTree(
                     from: child, into: dest,
                     backupRoot: backupRoot.appendingPathComponent(name), fm: fm)
+                // Drop the now-drained source subdir so the parent can become
+                // empty and be converted to a symlink.
+                removeDirIfEmpty(child, fm: fm)
             } else {
                 let backup = backupRoot.appendingPathComponent(name)
                 try fm.createDirectory(
@@ -136,6 +155,14 @@ public enum ClaudeAccountDirectory {
                     withIntermediateDirectories: true)
                 try fm.moveItem(at: child, to: backup)
             }
+        }
+    }
+
+    /// Remove `url` only when it is an empty directory. Never deletes content —
+    /// avoids clobbering files a concurrent process may have written.
+    private static func removeDirIfEmpty(_ url: URL, fm: FileManager) {
+        if let kids = try? fm.contentsOfDirectory(atPath: url.path), kids.isEmpty {
+            try? fm.removeItem(at: url)
         }
     }
 
@@ -190,8 +217,15 @@ public enum ClaudeAccountDirectory {
         try fm.createDirectory(at: acctDir, withIntermediateDirectories: true)
         try fm.createDirectory(at: wsDir, withIntermediateDirectories: true)
 
-        // Move/relink any shareable dir already present in the account dir.
-        linkAccountDirsToWorkspace(accountDir: acctDir, workspaceDir: wsDir)
+        // Move/relink any shareable dir already present in the account dir, and
+        // surface any warnings (partial / failed migrations) to stderr rather
+        // than silently succeeding.
+        let linkWarnings = linkAccountDirsToWorkspace(
+            accountDir: acctDir, workspaceDir: wsDir)
+        for w in linkWarnings {
+            FileHandle.standardError.write(
+                Data("orrery: link-workspace: \(w)\n".utf8))
+        }
 
         // Ensure the standard base set exists as symlinks even on a fresh
         // account where claude hasn't created those dirs yet (nothing to move).
@@ -205,9 +239,15 @@ public enum ClaudeAccountDirectory {
                     try fm.createSymbolicLink(at: link, withDestinationURL: target)
                 }
             } else if fm.fileExists(atPath: link.path) {
-                // A plain file (or a real dir the linker could not move) sits at
-                // the base path. Preserve it under backups so the account can
-                // self-heal instead of staying permanently `.missing`.
+                if isRealDir(link, fm: fm) {
+                    // The linker could not fully migrate this real dir (it emits
+                    // a warning above). Leave the data in place and visible —
+                    // NEVER hide a real data directory in backups — a later run
+                    // retries the merge.
+                    continue
+                }
+                // A stray plain file sits at a base path — back it up, then
+                // symlink so the account self-heals instead of staying `.missing`.
                 let backup = acctDir
                     .appendingPathComponent("backups")
                     .appendingPathComponent("premerge-\(premergeStamp())")
