@@ -93,11 +93,11 @@ public enum ClaudeAccountDirectory {
     /// Point `link` (an existing symlink) at `target`, creating `target` if
     /// needed. No-op when it already points there.
     private static func relinkSymlink(link: URL, target: URL, fm: FileManager) throws {
+        try fm.createDirectory(at: target, withIntermediateDirectories: true)
         if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
            dest == target.path {
             return
         }
-        try fm.createDirectory(at: target, withIntermediateDirectories: true)
         try? fm.removeItem(at: link)
         try fm.createSymbolicLink(at: link, withDestinationURL: target)
     }
@@ -109,10 +109,10 @@ public enum ClaudeAccountDirectory {
     private static func mergeTree(
         from: URL, into: URL, backupRoot: URL, fm: FileManager
     ) throws {
-        let children = (try? fm.contentsOfDirectory(
+        let children = try fm.contentsOfDirectory(
             at: from,
             includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
-            options: [])) ?? []
+            options: [])
 
         for child in children {
             let name = child.lastPathComponent

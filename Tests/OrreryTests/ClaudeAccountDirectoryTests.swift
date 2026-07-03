@@ -404,4 +404,47 @@ struct ClaudeAccountDirectoryLinkTests {
         #expect(fm.fileExists(atPath: acct.appendingPathComponent("settings.json").path))
         #expect(!fm.fileExists(atPath: ws.appendingPathComponent("settings.json").path))
     }
+
+    @Test("links multiple shareable dirs in a single call")
+    func linksMultipleDirs() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+        for name in ["skills", "plugins"] {
+            let d = acct.appendingPathComponent(name)
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try Data(name.utf8).write(to: d.appendingPathComponent("f.md"))
+        }
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+        for name in ["skills", "plugins"] {
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acct.appendingPathComponent(name).path)
+            #expect(dest == ws.appendingPathComponent(name).path)
+            #expect(fm.fileExists(atPath: ws.appendingPathComponent("\(name)/f.md").path))
+        }
+    }
+
+    @Test("returns a warning and leaves the account dir intact when linking fails")
+    func warningOnFailure() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        // A plain FILE occupies the workspace target path → createDirectory fails.
+        try Data("x".utf8).write(to: ws.appendingPathComponent("skills"))
+        let acctSkills = acct.appendingPathComponent("skills")
+        try fm.createDirectory(at: acctSkills, withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: acctSkills.appendingPathComponent("foo.md"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        #expect(warnings.count == 1)
+        #expect(warnings.first?.hasPrefix("skills:") == true)
+        #expect(ClaudeAccountDirectory.isRealDirForTest(acctSkills))
+        #expect((try? String(contentsOf: acctSkills.appendingPathComponent("foo.md"),
+                             encoding: .utf8)) == "keep")
+    }
 }
