@@ -79,6 +79,36 @@ struct PrepareClaudeLaunchCommandTests {
             try cmd.run()
         }
     }
+
+    @Test("launch links a new shareable account dir into the workspace")
+    func linksNewShareableDir() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            try PinCommand.parse(["alice", "--workspace", "work"]).run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+
+            // Simulate claude having created a brand-new folder in the account dir.
+            let skills = acctDir.appendingPathComponent("skills")
+            try FileManager.default.createDirectory(
+                at: skills, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: skills.appendingPathComponent("a.md"))
+
+            var cmd = try PrepareClaudeLaunchCommand.parse(["--account-dir", acctDir.path])
+            try cmd.run()
+
+            let fm = FileManager.default
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("skills").path)
+            #expect(dest == wsDir.appendingPathComponent("skills").path)
+            #expect(fm.fileExists(
+                atPath: wsDir.appendingPathComponent("skills/a.md").path))
+        }
+    }
 }
 
 @Suite("v3.1 launch+capture round trip")

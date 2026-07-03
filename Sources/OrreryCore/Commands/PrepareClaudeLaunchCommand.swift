@@ -86,5 +86,16 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
             merged,
             at: acctDirURL.appendingPathComponent(".claude.json")
         )
+
+        // v3.1: generalize workspace linking. Move any shareable account dir
+        // (skills, plugins, or anything claude adds later) into the pinned
+        // workspace and symlink it, so accounts on the same workspace share it.
+        // Best-effort — link failures must never block claude launch.
+        let linkWarnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acctDirURL, workspaceDir: wsDir)
+        for w in linkWarnings {
+            FileHandle.standardError.write(
+                Data("orrery: link-workspace: \(w)\n".utf8))
+        }
     }
 }
