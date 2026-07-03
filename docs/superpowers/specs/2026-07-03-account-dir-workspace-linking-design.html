@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account 資料夾一律 link 到 pinned workspace(launch 時)</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1f2328;
+    --muted: #656d76;
+    --line: #e3e6ea;
+    --code-bg: #eef1f4;
+    --coral: #d97757;
+    --ok: #1a7f52;
+    --ok-bg: #e6f4ec;
+    --warn: #9a6700;
+    --warn-bg: #fef4e0;
+    --na: #57606a;
+    --na-bg: #eceef1;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 48px 24px 96px; }
+  h1 { font-size: 27px; margin: 0 0 6px; letter-spacing: -0.01em; line-height: 1.3; }
+  .meta { color: var(--muted); font-size: 14px; margin: 0 0 32px; }
+  .meta .badge {
+    display: inline-block; background: var(--warn-bg); color: var(--warn);
+    font-weight: 700; font-size: 12px; border-radius: 999px; padding: 2px 10px; margin-left: 8px;
+  }
+
+  h2 {
+    font-size: 20px; margin: 40px 0 14px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+  }
+  h3 { font-size: 16px; margin: 26px 0 10px; }
+  p { margin: 12px 0; font-size: 15.5px; }
+  ul, ol { margin: 12px 0; padding-left: 24px; }
+  li { margin: 7px 0; font-size: 15.5px; }
+  li > ul, li > ol { margin: 6px 0; }
+
+  code {
+    background: var(--code-bg); border-radius: 5px; padding: 1.5px 6px;
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+  }
+  pre {
+    background: #1f2328; color: #e6edf3; border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+    margin: 16px 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: 13px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 4px 26px 20px; margin: 18px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .callout {
+    border-left: 4px solid var(--warn); background: var(--warn-bg);
+    border-radius: 8px; padding: 14px 18px; margin: 18px 0; font-size: 14.5px; color: #6b4b00;
+  }
+  .callout b { color: var(--warn); }
+  .note {
+    border-left: 4px solid var(--coral); background: #fff; border: 1px solid var(--line);
+    border-left: 4px solid var(--coral); border-radius: 8px; padding: 14px 18px; margin: 18px 0; font-size: 14.5px;
+  }
+
+  .pill { font-weight: 700; font-size: 12px; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .p-share { background: var(--ok-bg); color: var(--ok); }
+  .p-priv  { background: var(--na-bg); color: var(--na); }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #fafbfc; font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  tr:last-child td { border-bottom: none; }
+
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Account 資料夾一律 link 到 pinned workspace(launch 時)</h1>
+  <p class="meta">日期:2026-07-03 · 設計文件<span class="badge">設計待實作</span></p>
+
+  <h2>背景</h2>
+  <p>Orrery v3.1 架構:Claude 的進入點是 <b>account 資料夾</b>(<code>~/.orrery/accounts/claude/&lt;id&gt;/</code>,即 <code>CLAUDE_CONFIG_DIR</code>),每個 account pin/link 到一個 <b>workspace</b>(<code>~/.orrery/workspaces/&lt;ws&gt;/claude/</code>)。同一 workspace 底下的多個 account 應共享工作內容(projects、agents、commands、skills…),只有帳號私有的東西(憑證、身分、設定)各自獨立。</p>
+  <p>目前 <code>ClaudeAccountDirectory</code> 用<b>固定白名單</b>決定哪些子目錄 symlink 到 workspace:</p>
+  <pre><code>public static let sharedSubdirs: [String] = [
+    "projects", "memory", "agents", "commands", "todos"
+]</code></pre>
+  <p><b>問題:</b>Claude 發展中會新增資料夾(如 <code>skills/</code>、<code>plugins/</code>)。固定白名單涵蓋不到,新資料夾會停在 account 本地、不會在同 workspace 的帳號間共享。此外現行 <code>prepareDirectory</code> 遇到「account 已有真實資料夾」會直接拒絕(throw),不會把既有內容搬進 workspace。</p>
+
+  <h2>目標</h2>
+  <p>在 <b>claude 啟動時</b>,把 account 資料夾裡「除了帳號私有以外的所有資料夾」搬進 pinned workspace 並改成 symlink。改用<b>反向名單(deny-list)</b>取代固定白名單,讓 Claude 未來新增的資料夾自動被涵蓋,不需改 code。</p>
+
+  <h2>決策(已與使用者確認)</h2>
+  <ol>
+    <li><b>反向名單</b>:掃描 account dir 頂層,除 private 清單以外的<b>資料夾</b>一律共用。</li>
+    <li>
+      <b>Private 清單(留在 account,不搬)</b>:
+      <table>
+        <thead><tr><th>類別</th><th>內容</th><th>處置</th></tr></thead>
+        <tbody>
+          <tr><td>頂層檔案</td><td><code>.claude.json</code>、<code>.credentials.json</code>、<code>settings.json</code>、<code>history.jsonl</code>、<code>metadata.json</code>、<code>claude-identity.json</code>…</td><td><span class="pill p-priv">不碰</span></td></tr>
+          <tr><td>資料夾</td><td><code>backups/</code>、<code>cache/</code></td><td><span class="pill p-priv">private</span></td></tr>
+          <tr><td>dot 開頭項目</td><td>任何 <code>.</code> 開頭的頂層項目</td><td><span class="pill p-priv">跳過</span></td></tr>
+          <tr><td>其餘資料夾</td><td><code>projects</code>、<code>memory</code>、<code>agents</code>、<code>commands</code>、<code>todos</code>、<code>plugins</code>、<code>statsig</code>、<code>shell-snapshots</code>、<code>ide</code>、及未來新資料夾</td><td><span class="pill p-share">共用</span></td></tr>
+        </tbody>
+      </table>
+    </li>
+    <li><b>合併策略</b>:聯集,<b>workspace 優先</b>。account 有、workspace 沒有 → 搬過去;同路徑衝突 → 保留 workspace 版本,account 重複檔搬到備份。</li>
+    <li><b>執行時機</b>:<code>_prepare-claude-launch</code>(每次啟動 claude 前,<code>claude()</code> wrapper 已呼叫;此時 <code>CLAUDE_CONFIG_DIR</code> 一定指向正確 account)。</li>
+  </ol>
+
+  <h2>詳細設計</h2>
+
+  <h3>新函式:<code>ClaudeAccountDirectory.linkAccountDirsToWorkspace</code></h3>
+  <pre><code>static func linkAccountDirsToWorkspace(
+    accountDir: URL,
+    workspaceDir: URL
+) -> [LinkOutcome]   // best-effort;回傳每項結果 / 錯誤,絕不 throw 中斷全部</code></pre>
+  <p>Private 資料夾常數:</p>
+  <pre><code>static let privateSubdirs: Set&lt;String&gt; = ["backups", "cache"]</code></pre>
+
+  <p>演算法 — 對 <code>accountDir</code> 每個頂層項目 <code>E</code>:</p>
+  <div class="card">
+    <ol>
+      <li><b>跳過</b>:<code>E</code> 是檔案、或名稱以 <code>.</code> 開頭、或名稱 ∈ <code>privateSubdirs</code>。</li>
+      <li><b><code>E</code> 已是 symlink</b>:
+        <ul>
+          <li>指向 <code>workspaceDir/E</code> → OK,跳過。</li>
+          <li>指向別處 → 移除並重建指向 <code>workspaceDir/E</code>(repoint);先確保目標存在。</li>
+        </ul>
+      </li>
+      <li><b><code>E</code> 是真實資料夾</b>:
+        <ul>
+          <li>確保 <code>workspaceDir/E</code> 存在。</li>
+          <li><b>聯集合併(workspace 優先)</b>,遞迴走訪 <code>E</code>:
+            <ul>
+              <li><b>檔案 / symlink</b>:workspace 沒有 → <code>moveItem</code> 搬過去;已有 → 保留 workspace 版本,account 複本搬到 <code>accountDir/backups/premerge-&lt;ISO8601&gt;/E/&lt;relpath&gt;</code>。</li>
+              <li><b>子目錄</b>:workspace 沒有 → 整棵子樹 <code>moveItem</code>;有 → 遞迴進去。</li>
+            </ul>
+          </li>
+          <li>合併後刪掉已清空的 <code>accountDir/E</code>。</li>
+          <li>建立 symlink <code>accountDir/E → workspaceDir/E</code>。</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+  <p>備份放在 <code>backups/</code>(private,不外流),<code>premerge-&lt;timestamp&gt;</code> 以避免多次執行互相覆蓋。</p>
+
+  <h3>接入 <code>PrepareClaudeLaunchCommand</code></h3>
+  <ol>
+    <li><b>先</b>做既有的 <code>.claude.json</code> merge(關鍵路徑,維持不變)。</li>
+    <li><b>再</b>呼叫 <code>linkAccountDirsToWorkspace(accountDir:, workspaceDir:)</code>。
+      <ul><li>best-effort:逐項 catch,失敗只往 stderr 印警告,<b>絕不 throw</b>,不影響已寫好的 <code>.claude.json</code>,也不擋 claude 啟動(shell wrapper 本就容忍 prepare 失敗)。</li></ul>
+    </li>
+  </ol>
+  <p><code>wsDir</code> 已由現有程式從 <code>metadata.json</code> 的 <code>workspace</code> 欄位解析(<code>envStore.claudeWorkspaceDir(workspace:)</code>),直接沿用。</p>
+
+  <h3><code>prepareDirectory</code> 收斂到同一支 linker</h3>
+  <p>現行 <code>prepareDirectory</code>(pin/use 時呼叫)仍用固定 5 項白名單,且遇真實資料夾會 throw。為讓 pin 時與 launch 時<b>行為一致</b>,改為委派給 <code>linkAccountDirsToWorkspace</code>(搬移語意),移除「遇真實資料夾就拒絕」的舊行為。</p>
+  <div class="note"><b>刻意的行為變更:</b>舊的 clobber-guard 是資料遺失保護;新語意改為「搬進 workspace + 衝突備份」,同樣不遺失資料,但會主動整併而非中止。</div>
+  <p><code>verifySymlinks</code>(read-only 健康檢查)維持現狀,仍檢查已知的 <code>sharedSubdirs</code> 集合,本次不擴大範圍——它只是狀態回報,repair 一律走 <code>linkAccountDirsToWorkspace</code>。</p>
+
+  <h3>不受影響</h3>
+  <ul>
+    <li><code>_link-memory</code>:把 orrery 記憶 link 進 claude 的 memory 位置,層級不同,維持不變。</li>
+    <li>頂層檔案(憑證、設定、身分):完全不碰。</li>
+  </ul>
+
+  <h2>測試</h2>
+  <p>新增 <code>linkAccountDirsToWorkspace</code> 單元測試:</p>
+  <ol>
+    <li>全新帳號(只有既有 symlink / 無多餘資料夾)→ 既有 symlink no-op。</li>
+    <li>account 有真實 <code>skills/</code>、workspace 沒有 → 整個搬移 + symlink。</li>
+    <li>雙方都有 <code>agents/</code>,含重疊檔與相異檔 → 聯集;workspace 版本保留;account 重疊檔出現在 <code>backups/premerge-*/agents/</code>;相異檔搬進 workspace。</li>
+    <li>既有正確 symlink → no-op。</li>
+    <li>symlink 指向錯誤 workspace → repoint。</li>
+    <li>private 清單(<code>backups/</code>、<code>cache/</code>)與 dot 開頭項目 → 完全不動。</li>
+    <li>頂層檔案 → 完全不動。</li>
+    <li>巢狀子目錄合併(account 有 <code>plugins/foo/bar</code>,workspace 有 <code>plugins/foo/baz</code>)→ 兩者並存於 workspace。</li>
+  </ol>
+
+  <h2>未涵蓋(YAGNI)</h2>
+  <ul>
+    <li>不做跨 workspace 遷移工具(切 pin 走既有 <code>prepareDirectory</code> 路徑即可)。</li>
+    <li>不新增設定讓使用者自訂 private 清單;寫死在 code,新增機器本地資料夾時再改 <code>privateSubdirs</code> 常數。</li>
+  </ul>
+
+  <footer>Orrery 設計文件 · docs/superpowers/specs/2026-07-03-account-dir-workspace-linking-design</footer>
+
+</div>
+</body>
+</html>
