@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.1.1 - 2026-07-04
+
+### Added
+
+- **Account config dirs now share *every* non-private folder with the pinned
+  workspace, not a fixed list.** At launch, a deny-list linker moves each
+  shareable top-level account dir into the workspace and symlinks it, so folders
+  Claude adds over time (e.g. `skills`, `plugins`) are shared automatically
+  across accounts on the same workspace — no code change needed. Only per-account
+  state stays local: top-level files, dot-prefixed entries, and `backups/` +
+  `cache/`. Merges are a union with the workspace winning; account-side conflicts
+  are preserved under `backups/premerge-<timestamp>/`.
+
+### Fixed
+
+- Merge existence checks are now lstat-aware, so a dangling symlink in the
+  workspace no longer aborts the merge (previously it failed permanently and
+  never self-healed).
+- The linker converts a directory to a symlink only after it fully drains, so a
+  file written by a concurrently running session is never deleted; a non-empty
+  remnant is left in place with a warning instead.
+- `prepareDirectory` never relocates a real data directory into `backups/`, and
+  now surfaces link warnings instead of silently succeeding.
+
 ## v3.1.0 - 2026-06-30
 
 First stable v3.1 release. Per-account configuration directories: every Claude
