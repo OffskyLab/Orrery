@@ -523,4 +523,58 @@ struct ClaudeAccountDirectoryLinkTests {
             .appendingPathComponent("plugins/foo/x.txt")
         #expect((try? String(contentsOf: saved, encoding: .utf8)) == "data")
     }
+
+    @Test("cc-statusline stays per-account (never shared to the workspace)")
+    func ccStatuslineStaysPrivate() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: acct.appendingPathComponent("cc-statusline"),
+            withIntermediateDirectories: true)
+        try Data("state".utf8)
+            .write(to: acct.appendingPathComponent("cc-statusline/state.json"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+
+        // Stays a real per-account dir with its content; not symlinked/shared.
+        #expect(ClaudeAccountDirectory.isRealDirForTest(
+            acct.appendingPathComponent("cc-statusline")))
+        #expect(fm.fileExists(
+            atPath: acct.appendingPathComponent("cc-statusline/state.json").path))
+        #expect(!fm.fileExists(
+            atPath: ws.appendingPathComponent("cc-statusline").path))
+    }
+
+    @Test("an already-shared cc-statusline symlink is un-shared back to a per-account dir")
+    func ccStatuslineUnshared() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        // Pre-fix state: workspace holds cc-statusline; account symlinks into it.
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("cc-statusline"),
+            withIntermediateDirectories: true)
+        try Data("shared".utf8)
+            .write(to: ws.appendingPathComponent("cc-statusline/shared.json"))
+        try fm.createSymbolicLink(
+            at: acct.appendingPathComponent("cc-statusline"),
+            withDestinationURL: ws.appendingPathComponent("cc-statusline"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        // account/cc-statusline is now a real per-account dir, not a symlink.
+        #expect((try? fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("cc-statusline").path)) == nil)
+        #expect(ClaudeAccountDirectory.isRealDirForTest(
+            acct.appendingPathComponent("cc-statusline")))
+        // Removing the symlink never deletes the workspace target's data.
+        #expect(fm.fileExists(
+            atPath: ws.appendingPathComponent("cc-statusline/shared.json").path))
+    }
 }

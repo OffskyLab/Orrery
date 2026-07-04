@@ -22,8 +22,9 @@ public enum ClaudeAccountDirectory {
 
     /// Top-level subdir names that stay per-account and are NEVER shared to the
     /// workspace. Everything else that is a directory is moved into the pinned
-    /// workspace and replaced with a symlink.
-    public static let privateSubdirs: Set<String> = ["backups", "cache"]
+    /// workspace and replaced with a symlink. `cc-statusline` holds per-account
+    /// statusline runtime state, so it must not be pooled across accounts.
+    public static let privateSubdirs: Set<String> = ["backups", "cache", "cc-statusline"]
 
     /// Move every shareable top-level directory in `accountDir` into
     /// `workspaceDir` and replace it with a symlink pointing there. Shareable =
@@ -60,7 +61,24 @@ public enum ClaudeAccountDirectory {
         for entry in entries {
             let name = entry.lastPathComponent
             if name.hasPrefix(".") { continue }
-            if privateSubdirs.contains(name) { continue }
+            if privateSubdirs.contains(name) {
+                // Private dirs stay per-account. If an earlier version shared
+                // this dir (left it as a symlink into the workspace), un-share
+                // it: drop the symlink — safe, removing a symlink never deletes
+                // the target's data — and recreate an empty per-account dir for
+                // the owning tool to repopulate.
+                if let dest = try? fm.destinationOfSymbolicLink(atPath: entry.path),
+                   dest.hasPrefix(workspaceDir.path + "/") {
+                    do {
+                        try fm.removeItem(at: entry)
+                        try fm.createDirectory(at: entry, withIntermediateDirectories: true)
+                    } catch {
+                        warnings.append(
+                            "\(name): could not un-share into a per-account dir: \(error.localizedDescription)")
+                    }
+                }
+                continue
+            }
 
             let vals = try? entry.resourceValues(
                 forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
