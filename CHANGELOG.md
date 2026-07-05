@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.2 - 2026-07-05
+
+### Fixed
+
+- **Statusline runtime state (`cc-statusline/`) is now kept per-account** instead
+  of being shared to the workspace. v3.1.1's launch-time linker pooled it across
+  accounts pinned to the same workspace; it is now on the deny-list. Accounts
+  already shared by 3.1.1 self-heal on the next `claude` launch — the workspace
+  symlink is converted back to a per-account directory (the workspace copy is
+  left untouched; removing a symlink never deletes data). `statusline.js` and the
+  `settings.json` `statusLine` key were already per-account.
+
 ## v3.1.1 - 2026-07-04
 
 ### Added
