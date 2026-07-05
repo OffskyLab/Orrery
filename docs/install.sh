@@ -105,9 +105,20 @@ else
 
   # Determine which version to install
   if [[ "$INCLUDE_PRERELEASE" == "true" ]]; then
-    # Install latest release (including pre-releases)
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ASSET_NAME}"
-    info "Downloading latest release (including pre-releases)..."
+    # Latest release INCLUDING pre-releases. GitHub's /releases/latest excludes
+    # pre-releases, so resolve the newest tag from the full /releases list
+    # (returned newest-first) WITHOUT filtering out rc/beta/alpha.
+    info "Fetching latest release (including pre-releases)..."
+    LATEST_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" 2>/dev/null | \
+      grep -o '"tag_name": *"[^"]*"' | head -1 | \
+      sed 's/"tag_name": *"\([^"]*\)"/\1/')
+
+    if [[ -z "$LATEST_TAG" ]]; then
+      error "Could not determine latest release (including pre-releases)."
+    fi
+
+    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ASSET_NAME}"
+    info "Downloading ${LATEST_TAG} (pre-release included)..."
   else
     # Install latest stable release (excluding pre-releases)
     info "Fetching latest stable release..."
