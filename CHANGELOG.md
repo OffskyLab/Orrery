@@ -1,5 +1,25 @@
 # Changelog
 
+## v3.1.3 - 2026-07-05
+
+### Fixed
+
+- **`/orrery:phantom` works again when Claude Code reports its process name as
+  the version string** (e.g. `2.1.201`) instead of `claude`. The supervised-claude
+  detection no longer depends on the process name: it still prefers a `claude`
+  comm, but falls back to the supervisor's direct child in the ancestry, so
+  account/sandbox switching works regardless of what the process calls itself.
+- **`install.sh --pre-release` actually installs pre-releases now.** It previously
+  downloaded from `/releases/latest`, which GitHub resolves to the latest *stable*
+  release (pre-releases excluded); it now resolves the newest tag from the full
+  release list, including RCs.
+
+### Added
+
+- **`orrery update --pre` (alias `--rc`)** installs the latest pre-release (RC)
+  build. It bypasses Homebrew (the tap ships only stable releases) and uses the
+  install script with `--pre-release`.
+
 ## v3.1.2 - 2026-07-05
 
 ### Fixed
