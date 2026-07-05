@@ -126,6 +126,76 @@ struct PhantomTriggerTests {
             #expect(!info.comm.contains("/"))
         }
     }
+
+    // MARK: - resolveClaudePid (pure ancestry walk)
+
+    /// Build a synthetic (pid -> ppid, comm) lookup for the pure walk tests.
+    private func lookup(_ tree: [Int32: (ppid: Int32, comm: String)])
+        -> (Int32) -> (ppid: Int32, comm: String)? {
+        { tree[$0] }
+    }
+
+    @Test("resolveClaudePid: renamed claude (version comm) resolves via supervisor's child")
+    func resolveRenamedClaude() {
+        // The real-world break: claude reports its comm as the version string
+        // (e.g. "2.1.201"), not "claude". 100(zsh) -> 200(claude) -> 300(supervisor).
+        let tree: [Int32: (ppid: Int32, comm: String)] = [
+            100: (200, "zsh"),
+            200: (300, "2.1.201"),
+            300: (400, "zsh"),
+        ]
+        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+            start: 100, supervisorPid: 300, lookup: lookup(tree))
+        #expect(r.reachedSupervisor)
+        #expect(r.claudePid == 200)
+    }
+
+    @Test("resolveClaudePid: claude named 'claude' resolves via name match")
+    func resolveNamedClaude() {
+        let tree: [Int32: (ppid: Int32, comm: String)] = [
+            100: (200, "zsh"),
+            200: (300, "claude"),
+            300: (400, "zsh"),
+        ]
+        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+            start: 100, supervisorPid: 300, lookup: lookup(tree))
+        #expect(r.claudePid == 200)
+    }
+
+    @Test("resolveClaudePid: a name match wins over the supervisor's child (wrapper case)")
+    func resolveNamedClaudeBehindWrapper() {
+        // supervisor -> caffeinate -> claude: return the real claude, not caffeinate.
+        // 100(zsh) -> 200(claude) -> 250(caffeinate) -> 300(supervisor).
+        let tree: [Int32: (ppid: Int32, comm: String)] = [
+            100: (200, "zsh"),
+            200: (250, "claude"),
+            250: (300, "caffeinate"),
+            300: (400, "zsh"),
+        ]
+        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+            start: 100, supervisorPid: 300, lookup: lookup(tree))
+        #expect(r.claudePid == 200)
+    }
+
+    @Test("resolveClaudePid: nil when the supervisor is never reached")
+    func resolveSupervisorNotReached() {
+        let tree: [Int32: (ppid: Int32, comm: String)] = [
+            100: (200, "zsh"),
+            200: (1, "zsh"),
+        ]
+        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+            start: 100, supervisorPid: 999, lookup: lookup(tree))
+        #expect(!r.reachedSupervisor)
+        #expect(r.claudePid == nil)
+    }
+
+    @Test("isClaudeComm accepts claude/claude.exe, rejects version and helper names")
+    func isClaudeCommMatching() {
+        #expect(PhantomSandboxTriggerCommand.isClaudeComm("claude"))
+        #expect(PhantomSandboxTriggerCommand.isClaudeComm("claude.exe"))
+        #expect(!PhantomSandboxTriggerCommand.isClaudeComm("2.1.201"))
+        #expect(!PhantomSandboxTriggerCommand.isClaudeComm("claude-helper"))
+    }
 }
 
 @Suite("ShellFunctionGenerator run case (phantom-by-default)")

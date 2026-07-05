@@ -224,14 +224,55 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     }
 
     static func findClaudeAncestor(supervisorPid: Int32) -> Int32? {
-        var pid = getppid()
+        let result = resolveClaudePid(
+            start: getppid(),
+            supervisorPid: supervisorPid,
+            lookup: { Self.readProcessInfo(pid: $0) })
+        if result.claudePid == nil {
+            if result.reachedSupervisor {
+                stderrWrite("orrery: phantom: reached supervisor \(supervisorPid) "
+                    + "but found no claude in the ancestry; walked: "
+                    + result.walked.joined(separator: " -> ") + "\n")
+            } else {
+                stderrWrite("orrery: phantom: walked off the process tree without "
+                    + "reaching supervisor \(supervisorPid); walked: "
+                    + result.walked.joined(separator: " -> ") + "\n")
+            }
+        }
+        return result.claudePid
+    }
+
+    /// Pure, testable ancestry resolution. Walks from `start` up the parent
+    /// chain (via `lookup`) until it reaches `supervisorPid`.
+    ///
+    /// Identifying claude by its comm being "claude" is unreliable: Claude Code
+    /// is a Node/Bun app that reports its process name as the version string
+    /// (e.g. "2.1.201"), so `isClaudeComm` alone misses it. We still PREFER a
+    /// comm that names claude — that keeps the right target when a wrapper (e.g.
+    /// `caffeinate`) sits between claude and the supervisor — but when nothing
+    /// in the chain matched by name, we FALL BACK to the supervisor's direct
+    /// child in this chain. The supervisor's loop launches claude in the
+    /// foreground, so that hop is the process to signal regardless of what it
+    /// calls itself.
+    ///
+    /// Returns the resolved claude pid (nil only when the supervisor is never
+    /// reached), whether the supervisor was reached, and the walked `pid:comm`
+    /// hops for diagnostics.
+    static func resolveClaudePid(
+        start: Int32,
+        supervisorPid: Int32,
+        maxHops: Int = 32,
+        lookup: (Int32) -> (ppid: Int32, comm: String)?
+    ) -> (claudePid: Int32?, reachedSupervisor: Bool, walked: [String]) {
+        var pid = start
         var outermostClaude: Int32? = nil
+        var prev: Int32? = nil
         // Record each (pid:comm) hop so a failure prints the actual ancestry —
-        // the claudeNotFound error is then debuggable from its own output.
+        // the error is then debuggable from its own output.
         var walked: [String] = []
-        for _ in 0..<32 {
+        for _ in 0..<maxHops {
             guard pid > 1 else { break }
-            guard let info = Self.readProcessInfo(pid: pid) else {
+            guard let info = lookup(pid) else {
                 walked.append("\(pid):<unreadable>")
                 break
             }
@@ -241,19 +282,14 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
                 outermostClaude = pid
             }
             if pid == supervisorPid {
-                if outermostClaude == nil {
-                    stderrWrite("orrery: phantom: reached supervisor \(supervisorPid) "
-                        + "but found no claude in the ancestry; walked: "
-                        + walked.joined(separator: " -> ") + "\n")
-                }
-                return outermostClaude
+                // `prev` is the hop we visited right before the supervisor —
+                // i.e. the supervisor's direct child in this chain.
+                return (outermostClaude ?? prev, true, walked)
             }
+            prev = pid
             pid = info.ppid
         }
-        stderrWrite("orrery: phantom: walked off the process tree without "
-            + "reaching supervisor \(supervisorPid); walked: "
-            + walked.joined(separator: " -> ") + "\n")
-        return nil
+        return (nil, false, walked)
     }
 
     /// Read `(ppid, comm)` for a given pid via `ps`. `comm` is normalized to
