@@ -16,7 +16,8 @@ public struct ManifestRunner: ThirdPartyRunner {
                         refOverride: String?,
                         forceRefresh: Bool) throws -> InstallRecord {
         let claudeDir = try resolveClaudeDir(env: env)
-        let workspaceDir = try resolveWorkspaceClaudeDir(env: env)
+        let workspaceName = try resolveWorkspaceName(accountDir: claudeDir)
+        let workspaceDir = store.claudeWorkspaceDir(workspace: workspaceName)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: pkg.id)
 
         // Already installed? Reinstall = uninstall + install (spec decision 7c-B).
@@ -79,7 +80,8 @@ public struct ManifestRunner: ThirdPartyRunner {
             displayRef: fetched.displayLabel,
             installedAt: Date(),
             copiedFiles: copied,
-            patchedSettings: patched
+            patchedSettings: patched,
+            workspace: workspaceName
         )
         try writeLock(record, to: lockURL)
         return record
@@ -87,7 +89,6 @@ public struct ManifestRunner: ThirdPartyRunner {
 
     public func uninstall(packageID: String, from env: String) throws {
         let claudeDir = try resolveClaudeDir(env: env)
-        let workspaceDir = try resolveWorkspaceClaudeDir(env: env)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: packageID)
         let fm = FileManager.default
         guard fm.fileExists(atPath: lockURL.path) else {
@@ -98,10 +99,25 @@ public struct ManifestRunner: ThirdPartyRunner {
         let record = try decoder.decode(InstallRecord.self,
                                         from: Data(contentsOf: lockURL))
 
+        // Resolve workspace-marker files against the workspace recorded AT
+        // INSTALL time (not the account's current pin), so a re-pinned account
+        // removes the file it actually installed.
+        let workspaceName = record.workspace
+            ?? (try? resolveWorkspaceName(accountDir: claudeDir))
+            ?? Workspace.reservedOriginName
+        let workspaceDir = store.claudeWorkspaceDir(workspace: workspaceName)
+
         for patchRec in record.patchedSettings.reversed() {
             try? PatchSettingsExecutor.rollback(record: patchRec, claudeDir: claudeDir)
         }
         for p in record.copiedFiles {
+            // A shared workspace file must survive while any OTHER account still
+            // references it — refcount before removing.
+            if p.hasPrefix(CopyFileExecutor.workspaceMarker),
+               otherAccountReferences(markerPath: p, workspace: workspaceName,
+                                      excludingAccountDir: claudeDir) {
+                continue
+            }
             try? fm.removeItem(at: CopyFileExecutor.resolveInstalledPath(
                 p, claudeDir: claudeDir, workspaceDir: workspaceDir))
         }
@@ -152,7 +168,7 @@ public struct ManifestRunner: ThirdPartyRunner {
     /// actually reads. The `settings.json` patch must land here because it is a
     /// real per-account file. Individual `copyFile` steps may instead target the
     /// pinned workspace via a `<WORKSPACE_CLAUDE_DIR>/…` `to` path (see
-    /// `resolveWorkspaceClaudeDir`), which the account's settings then reference
+    /// `resolveWorkspaceName`), which the account's settings then reference
     /// by absolute path — that is how the shared statusline program is installed.
     private func resolveClaudeDir(env: String) throws -> URL {
         let fm = FileManager.default
@@ -183,19 +199,51 @@ public struct ManifestRunner: ThirdPartyRunner {
         return AccountStore(homeURL: store.homeURL).accountDir(id: accountID, tool: .claude)
     }
 
-    /// Resolve the workspace claude dir the target account is pinned to. Reads
-    /// the account dir's `metadata.json` `workspace` field (absent ⇒ origin) and
-    /// maps it via the injected store, mirroring `_prepare-claude-launch`.
-    private func resolveWorkspaceClaudeDir(env: String) throws -> URL {
-        let claudeDir = try resolveClaudeDir(env: env)
+    /// The workspace name the target account is pinned to (account
+    /// `metadata.json` `workspace`, absent ⇒ origin). Validates a non-origin
+    /// workspace exists so a stale/typo pin errors instead of mis-writing into a
+    /// phantom dir.
+    private func resolveWorkspaceName(accountDir: URL) throws -> String {
         var workspace = Workspace.reservedOriginName
-        let mdURL = claudeDir.appendingPathComponent("metadata.json")
+        let mdURL = accountDir.appendingPathComponent("metadata.json")
         if let data = try? Data(contentsOf: mdURL),
            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let ws = obj["workspace"] as? String, !ws.isEmpty {
             workspace = ws
         }
-        return store.claudeWorkspaceDir(workspace: workspace)
+        if workspace != Workspace.reservedOriginName {
+            do { _ = try store.load(named: workspace) }
+            catch { throw ThirdPartyError.envNotFound(workspace) }
+        }
+        return workspace
+    }
+
+    /// True if some account OTHER than `excludingAccountDir` has an install lock
+    /// recording the same workspace AND the same workspace-marker file — i.e. a
+    /// co-tenant still uses the shared file, so it must not be deleted yet.
+    private func otherAccountReferences(markerPath: String, workspace: String,
+                                        excludingAccountDir: URL) -> Bool {
+        let acctStore = AccountStore(homeURL: store.homeURL)
+        let accounts = (try? acctStore.list(tool: .claude)) ?? []
+        let fm = FileManager.default
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let excluded = excludingAccountDir.standardizedFileURL.path
+        for acct in accounts {
+            let dir = acctStore.accountDir(id: acct.id, tool: .claude)
+            if dir.standardizedFileURL.path == excluded { continue }
+            let thirdDir = dir.appendingPathComponent(".thirdparty")
+            guard let entries = try? fm.contentsOfDirectory(atPath: thirdDir.path) else { continue }
+            for name in entries where name.hasSuffix(".lock.json") {
+                let url = thirdDir.appendingPathComponent(name)
+                guard let rec = try? decoder.decode(InstallRecord.self,
+                                                    from: Data(contentsOf: url)) else { continue }
+                if rec.workspace == workspace && rec.copiedFiles.contains(markerPath) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private func lockFileURL(claudeDir: URL, packageID: String) -> URL {
