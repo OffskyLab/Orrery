@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.4 - 2026-07-06
+
+### Changed
+
+- **The statusline program is now shared once per workspace** instead of copied
+  into every account. `orrery install statusline` places `statusline.js` in the
+  pinned workspace's claude dir and points each account's (per-account)
+  `settings.json` at it. Third-party manifests gained a `<WORKSPACE_CLAUDE_DIR>`
+  copy target / patch placeholder for this. Uninstall reference-counts the shared
+  file (removed only when the last account referencing it uninstalls), records
+  the install-time workspace in the lock (so re-pinned accounts remove the right
+  file), and a stale/invalid workspace pin now errors instead of writing into a
+  phantom directory.
+- **`orrery install` now names the account and its workspace** in the success
+  message (e.g. 帳號「work」所在的 workspace「team」), making it clear a shared
+  add-on lands in the workspace while the settings patch is per-account.
+
 ## v3.1.3 - 2026-07-05
 
 ### Fixed
