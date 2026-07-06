@@ -43,7 +43,8 @@ public struct InstallCommand: ParsableCommand {
             record.packageID,
             shortRef,
             record.copiedFiles.count,
-            claudeAccountLabel(forEnv: resolvedEnv)
+            claudeAccountLabel(forEnv: resolvedEnv),
+            claudeWorkspaceLabel(forEnv: resolvedEnv)
         ))
     }
 }
@@ -54,27 +55,42 @@ func installCurrentEnvOrThrow() throws -> String {
     return env ?? Workspace.reservedOriginName
 }
 
-/// The claude account add-ons are actually installed into / removed from (the
-/// account dir, not the workspace). Resolves the active `CLAUDE_CONFIG_DIR`, else
-/// the claude account pinned to `env`, and returns its display name. Falls back
-/// to the env name when no account can be resolved.
-func claudeAccountLabel(forEnv env: String) -> String {
-    let configDir: String?
+/// Resolve the claude account dir add-ons install into / are removed from (the
+/// account dir, not the workspace): the active `CLAUDE_CONFIG_DIR`, else the
+/// claude account pinned to `env`. Nil when no account can be resolved.
+func claudeAccountDirPath(forEnv env: String) -> String? {
     if let live = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"], !live.isEmpty {
-        configDir = live
-    } else {
-        let store = EnvironmentStore.default
-        let pins = (env == Workspace.reservedOriginName)
-            ? store.loadOriginWorkspace().accounts
-            : ((try? store.load(named: env).accounts) ?? [:])
-        configDir = pins[Tool.claude.rawValue]
-            .map { AccountStore.default.accountDir(id: $0, tool: .claude).path }
+        return live
     }
-    guard let configDir,
-          let data = try? Data(contentsOf: URL(fileURLWithPath: configDir)
+    let store = EnvironmentStore.default
+    let pins = (env == Workspace.reservedOriginName)
+        ? store.loadOriginWorkspace().accounts
+        : ((try? store.load(named: env).accounts) ?? [:])
+    return pins[Tool.claude.rawValue]
+        .map { AccountStore.default.accountDir(id: $0, tool: .claude).path }
+}
+
+/// The resolved account's `metadata.json` as a dict, if readable.
+private func claudeAccountMetadata(forEnv env: String) -> [String: Any]? {
+    guard let dir = claudeAccountDirPath(forEnv: env),
+          let data = try? Data(contentsOf: URL(fileURLWithPath: dir)
               .appendingPathComponent("metadata.json")),
-          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let name = obj["displayName"] as? String
-    else { return env }
-    return name
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return nil }
+    return obj
+}
+
+/// Display name of the account add-ons install into. Falls back to the env name.
+func claudeAccountLabel(forEnv env: String) -> String {
+    claudeAccountMetadata(forEnv: env)?["displayName"] as? String ?? env
+}
+
+/// The workspace the target account is pinned to (`metadata.json` `workspace`,
+/// absent ⇒ origin) — where the shared add-on files (e.g. the statusline
+/// program) actually land.
+func claudeWorkspaceLabel(forEnv env: String) -> String {
+    guard let ws = claudeAccountMetadata(forEnv: env)?["workspace"] as? String,
+          !ws.isEmpty
+    else { return Workspace.reservedOriginName }
+    return ws
 }

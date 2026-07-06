@@ -24,6 +24,14 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(value.contains("foo"))
     }
 
+    func testInstallSuccessNamesAccountAndWorkspace() {
+        // `orrery install` reports the account AND the workspace it's pinned to.
+        let msg = L10n.Install.success("statusline", "latest@v0.2.9", 1, "work", "team")
+        XCTAssertTrue(msg.contains("statusline"))
+        XCTAssertTrue(msg.contains("work"), "should name the account")
+        XCTAssertTrue(msg.contains("team"), "should name the workspace")
+    }
+
     func testBothLocalesContainKnownKeys() {
         // Strings are compiled directly into the binary via codegen; the
         // generated `L10nData` holds the per-locale dictionaries.
