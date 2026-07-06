@@ -17,7 +17,9 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
 
     /// The system default config directory (when not using Orrery).
     public var defaultConfigDir: URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        // userHomeURL() is overridable (ORRERY_USER_HOME) so tests can isolate
+        // ~/.claude etc. from the developer's real home; unchanged in production.
+        let home = userHomeURL()
         switch self {
         case .claude: return home.appendingPathComponent(".claude")
         case .codex:  return home.appendingPathComponent(".codex")
