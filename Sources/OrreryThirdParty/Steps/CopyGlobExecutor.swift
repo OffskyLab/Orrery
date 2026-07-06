@@ -31,6 +31,8 @@ public enum CopyGlobExecutor {
     }
 
     public static func rollback(paths: [String], claudeDir: URL) {
-        CopyFileExecutor.rollback(paths: paths, claudeDir: claudeDir)
+        // copyGlob only ever produces account-relative paths (no workspace
+        // marker), so passing claudeDir as the workspace arg is a safe no-op.
+        CopyFileExecutor.rollback(paths: paths, claudeDir: claudeDir, workspaceDir: claudeDir)
     }
 }
