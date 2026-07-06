@@ -20,18 +20,13 @@ public enum CopyFileExecutor {
 
     /// Copies the file and returns its destination path — verbatim from the
     /// manifest, so a `<WORKSPACE_CLAUDE_DIR>/…` marker is preserved in the lock.
-    ///
-    /// `workspaceDir` defaults to `claudeDir` when omitted so existing call
-    /// sites that don't yet know about the pinned workspace (wired in a later
-    /// task) keep compiling with unchanged behaviour: no current manifest step
-    /// produces a `<WORKSPACE_CLAUDE_DIR>/…` path through those call sites.
     public static func apply(_ step: ThirdPartyStep,
-                             sourceDir: URL, claudeDir: URL, workspaceDir: URL? = nil) throws -> [String] {
+                             sourceDir: URL, claudeDir: URL, workspaceDir: URL) throws -> [String] {
         guard case .copyFile(let from, let to) = step else {
             throw ThirdPartyError.stepFailed(reason: "not a copyFile step")
         }
         let src = sourceDir.appendingPathComponent(from)
-        let dst = resolveInstalledPath(to, claudeDir: claudeDir, workspaceDir: workspaceDir ?? claudeDir)
+        let dst = resolveInstalledPath(to, claudeDir: claudeDir, workspaceDir: workspaceDir)
         let fm = FileManager.default
         try fm.createDirectory(at: dst.deletingLastPathComponent(),
                                withIntermediateDirectories: true)
@@ -40,10 +35,10 @@ public enum CopyFileExecutor {
         return [to]
     }
 
-    public static func rollback(paths: [String], claudeDir: URL, workspaceDir: URL? = nil) {
+    public static func rollback(paths: [String], claudeDir: URL, workspaceDir: URL) {
         let fm = FileManager.default
         for p in paths {
-            try? fm.removeItem(at: resolveInstalledPath(p, claudeDir: claudeDir, workspaceDir: workspaceDir ?? claudeDir))
+            try? fm.removeItem(at: resolveInstalledPath(p, claudeDir: claudeDir, workspaceDir: workspaceDir))
         }
     }
 }
