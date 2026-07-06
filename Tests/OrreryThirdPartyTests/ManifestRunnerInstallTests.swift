@@ -69,4 +69,74 @@ struct ManifestRunnerInstallTests {
         }
         #expect(cmd.hasPrefix("node \(claudeDir.path)/"))
     }
+
+    /// A package whose steps target the workspace via the marker.
+    private func workspacePkg(_ srcDir: URL) -> ThirdPartyPackage {
+        ThirdPartyPackage(
+            id: "statusline",
+            displayName: "statusline",
+            description: "",
+            source: .vendored(bundlePath: srcDir.path),
+            steps: [
+                .copyFile(from: "statusline.js", to: "<WORKSPACE_CLAUDE_DIR>/statusline.js"),
+                .patchSettings(file: "settings.json", patch: .object([
+                    "statusLine": .object([
+                        "command": .string("node <WORKSPACE_CLAUDE_DIR>/statusline.js")
+                    ])
+                ]))
+            ]
+        )
+    }
+
+    /// The fixture pins `test-acct` to workspace `dev`; a real pinned account
+    /// records that in metadata.json, so write it (resolveWorkspaceClaudeDir
+    /// reads this field).
+    private func writeAccountWorkspace(_ store: EnvironmentStore, _ workspace: String) throws {
+        let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
+        try Data("{\"workspace\":\"\(workspace)\"}".utf8)
+            .write(to: acctDir.appendingPathComponent("metadata.json"))
+    }
+
+    @Test("workspace-targeted install lands the script in the workspace and points account settings at it")
+    func workspaceInstall() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        try writeAccountWorkspace(store, "dev")
+
+        let record = try runner.install(workspacePkg(srcDir), into: envName,
+                                        refOverride: nil, forceRefresh: false)
+        let fm = FileManager.default
+        let wsDir = store.claudeWorkspaceDir(workspace: "dev")
+        let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
+
+        // Script is in the workspace, NOT the account dir.
+        #expect(fm.fileExists(atPath: wsDir.appendingPathComponent("statusline.js").path))
+        #expect(!fm.fileExists(atPath: acctDir.appendingPathComponent("statusline.js").path))
+        // Lock keeps the marker verbatim.
+        #expect(record.copiedFiles == ["<WORKSPACE_CLAUDE_DIR>/statusline.js"])
+        // settings.json is in the ACCOUNT dir and points at the workspace path.
+        let settings = try JSONDecoder().decode(
+            JSONValue.self, from: Data(contentsOf: acctDir.appendingPathComponent("settings.json")))
+        guard case .object(let o) = settings, case .object(let sl) = o["statusLine"],
+              case .string(let cmd) = sl["command"] else { Issue.record("shape"); return }
+        #expect(cmd == "node \(wsDir.path)/statusline.js")
+    }
+
+    @Test("uninstall removes the workspace script and reverts account settings")
+    func uninstallWorkspace() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        try writeAccountWorkspace(store, "dev")
+        _ = try runner.install(workspacePkg(srcDir), into: envName, refOverride: nil, forceRefresh: false)
+        try runner.uninstall(packageID: "statusline", from: envName)
+
+        let fm = FileManager.default
+        let wsDir = store.claudeWorkspaceDir(workspace: "dev")
+        let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
+        #expect(!fm.fileExists(atPath: wsDir.appendingPathComponent("statusline.js").path))
+        #expect(!fm.fileExists(atPath: acctDir.appendingPathComponent(".thirdparty/statusline.lock.json").path))
+        // statusLine removed from account settings (file removed if it became empty).
+        if let data = try? Data(contentsOf: acctDir.appendingPathComponent("settings.json")),
+           case .object(let o) = try JSONDecoder().decode(JSONValue.self, from: data) {
+            #expect(o["statusLine"] == nil)
+        }
+    }
 }
