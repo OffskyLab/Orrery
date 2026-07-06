@@ -19,11 +19,20 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
     @Option(name: .long, help: "Absolute path to the account directory (CLAUDE_CONFIG_DIR).")
     public var accountDir: String
 
+    @Flag(name: .long, help: "Only sync workspace symlinks; skip the .claude.json merge. Used for bare origin launches where claude reads ~/.claude.json, not <accountDir>/.claude.json.")
+    public var linksOnly: Bool = false
+
     public init() {}
 
     public func run() throws {
-        let acctDirURL = URL(fileURLWithPath: accountDir)
         let fm = FileManager.default
+
+        // Resolve symlinks up front: bare origin launches pass ~/.claude, which
+        // is a symlink to the origin account dir. FileManager.contentsOfDirectory
+        // (at:) does not traverse a symlinked directory, so the metadata read and
+        // the workspace linker must operate on the real path. No-op for a real
+        // (non-symlink) account dir.
+        let acctDirURL = URL(fileURLWithPath: accountDir).resolvingSymlinksInPath()
 
         guard fm.fileExists(atPath: acctDirURL.path) else {
             throw ValidationError("Account dir does not exist: \(accountDir)")
@@ -49,43 +58,49 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
         let envStore = EnvironmentStore.default
         let wsDir = envStore.claudeWorkspaceDir(workspace: workspace)
 
-        // Load both stores (nil if absent — treat as empty).
-        var identity = ClaudeJsonMerge.loadJSON(
-            at: ClaudeJsonMerge.identityFileURL(accountDir: acctDirURL)) ?? [:]
-        let shared = ClaudeJsonMerge.loadJSON(
-            at: ClaudeJsonMerge.sharedFileURL(workspaceDir: wsDir)) ?? [:]
+        // The .claude.json merge is skipped for --links-only: bare origin
+        // launches (CLAUDE_CONFIG_DIR unset) read ~/.claude.json, NOT
+        // <accountDir>/.claude.json, so merging here would target the wrong
+        // file. Those launches only need the workspace symlinks synced below.
+        if !linksOnly {
+            // Load both stores (nil if absent — treat as empty).
+            var identity = ClaudeJsonMerge.loadJSON(
+                at: ClaudeJsonMerge.identityFileURL(accountDir: acctDirURL)) ?? [:]
+            let shared = ClaudeJsonMerge.loadJSON(
+                at: ClaudeJsonMerge.sharedFileURL(workspaceDir: wsDir)) ?? [:]
 
-        // v3.1 fix: If claude-identity.json has incomplete oauthAccount (missing
-        // refreshToken), load the full credentials from keychain/credentials file.
-        // This handles accounts created before the identity/shared split was added.
-        if let oauthDict = identity["oauthAccount"] as? [String: Any],
-           !oauthDict.keys.contains("refreshToken"),
-           let account = account {
-            // Load full credentials from keychain (macOS) or credentials file (Linux)
-            #if os(macOS)
-            if let keychainItem = account.keychainItem,
-               let credJSON = ClaudeKeychain.password(forService: keychainItem),
-               let credData = credJSON.data(using: .utf8),
-               let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
-               let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-                identity["oauthAccount"] = fullOauth
+            // v3.1 fix: If claude-identity.json has incomplete oauthAccount (missing
+            // refreshToken), load the full credentials from keychain/credentials file.
+            // This handles accounts created before the identity/shared split was added.
+            if let oauthDict = identity["oauthAccount"] as? [String: Any],
+               !oauthDict.keys.contains("refreshToken"),
+               let account = account {
+                // Load full credentials from keychain (macOS) or credentials file (Linux)
+                #if os(macOS)
+                if let keychainItem = account.keychainItem,
+                   let credJSON = ClaudeKeychain.password(forService: keychainItem),
+                   let credData = credJSON.data(using: .utf8),
+                   let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
+                   let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
+                    identity["oauthAccount"] = fullOauth
+                }
+                #else
+                let credURL = acctDirURL.appendingPathComponent(".credentials.json")
+                if let credData = try? Data(contentsOf: credURL),
+                   let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
+                   let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
+                    identity["oauthAccount"] = fullOauth
+                }
+                #endif
             }
-            #else
-            let credURL = acctDirURL.appendingPathComponent(".credentials.json")
-            if let credData = try? Data(contentsOf: credURL),
-               let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
-               let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-                identity["oauthAccount"] = fullOauth
-            }
-            #endif
+
+            // Merge and write out.
+            let merged = ClaudeJsonMerge.merge(identity: identity, shared: shared)
+            try ClaudeJsonMerge.saveJSON(
+                merged,
+                at: acctDirURL.appendingPathComponent(".claude.json")
+            )
         }
-
-        // Merge and write out.
-        let merged = ClaudeJsonMerge.merge(identity: identity, shared: shared)
-        try ClaudeJsonMerge.saveJSON(
-            merged,
-            at: acctDirURL.appendingPathComponent(".claude.json")
-        )
 
         // v3.1: generalize workspace linking. Move any shareable account dir
         // (skills, plugins, or anything claude adds later) into the pinned

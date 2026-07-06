@@ -332,6 +332,14 @@ public struct ShellFunctionGenerator {
             local _rc=$?
             command orrery-bin _capture-claude-exit --account-dir "$CLAUDE_CONFIG_DIR" 2>/dev/null || true
             return $_rc
+          elif [ -z "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$HOME/.claude/metadata.json" ]; then
+            # Bare launch on origin: ~/.claude points at the origin account dir.
+            # claude reads ~/.claude.json here (NOT ~/.claude/.claude.json), so we
+            # must NOT merge .claude.json — only sync the workspace symlinks so
+            # origin shares plugins/sessions/etc. like a pinned account.
+            # Best-effort: link failures/warnings never block the launch.
+            command orrery-bin _prepare-claude-launch --account-dir "$HOME/.claude" --links-only || true
+            command claude "$@"
           else
             command claude "$@"
           fi

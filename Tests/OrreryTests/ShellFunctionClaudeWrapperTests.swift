@@ -96,6 +96,23 @@ struct ShellFunctionClaudeWrapperTests {
             "prepare failure must surface to stderr (not be silenced by 2>/dev/null)")
     }
 
+    @Test("claude() wrapper links workspace for bare origin launch (CLAUDE_CONFIG_DIR unset)")
+    func linksWorkspaceForBareOriginLaunch() {
+        let sh = ShellFunctionGenerator.generate()
+        guard let claudeFnStart = sh.range(of: "claude() {") else {
+            Issue.record("claude() function not found")
+            return
+        }
+        let body = String(sh[claudeFnStart.lowerBound...])
+        // When CLAUDE_CONFIG_DIR is unset, ~/.claude is the origin account dir.
+        // The wrapper must still sync workspace symlinks against it, using
+        // --links-only (bare origin reads ~/.claude.json, so NO .claude.json merge).
+        #expect(body.contains("$HOME/.claude/metadata.json"),
+            "wrapper should detect the origin account dir at ~/.claude when CLAUDE_CONFIG_DIR is unset")
+        #expect(body.contains("--links-only"),
+            "bare origin launch should sync workspace symlinks via --links-only")
+    }
+
     @Test("phantom loop account switch routes through orrery use shell function")
     func phantomAccountSwitchUsesShellFunction() {
         let sh = ShellFunctionGenerator.generate()
