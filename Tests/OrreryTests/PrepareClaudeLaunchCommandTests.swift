@@ -109,6 +109,85 @@ struct PrepareClaudeLaunchCommandTests {
                 atPath: wsDir.appendingPathComponent("skills/a.md").path))
         }
     }
+
+    @Test("--links-only syncs workspace symlinks without merging .claude.json")
+    func linksOnlySkipsClaudeJsonMerge() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            try PinCommand.parse(["alice", "--workspace", "work"]).run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+
+            // Seed an identity store — a FULL prepare would merge this into
+            // .claude.json. --links-only must NOT.
+            try ClaudeJsonMerge.saveJSON(["userID": "uid-alice"],
+                at: ClaudeJsonMerge.identityFileURL(accountDir: acctDir))
+
+            // A brand-new shareable folder in the account dir (like plugins).
+            let plugins = acctDir.appendingPathComponent("plugins")
+            try FileManager.default.createDirectory(
+                at: plugins, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: plugins.appendingPathComponent("config.json"))
+
+            var cmd = try PrepareClaudeLaunchCommand.parse(
+                ["--account-dir", acctDir.path, "--links-only"])
+            try cmd.run()
+
+            let fm = FileManager.default
+            // plugins is now a symlink into the workspace (linker ran).
+            let dest = try fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("plugins").path)
+            #expect(dest == wsDir.appendingPathComponent("plugins").path)
+            #expect(fm.fileExists(
+                atPath: wsDir.appendingPathComponent("plugins/config.json").path))
+
+            // .claude.json was NOT merged — identity fields must be absent.
+            let claudeJSON = ClaudeJsonMerge.loadJSON(
+                at: acctDir.appendingPathComponent(".claude.json"))
+            #expect(claudeJSON?["userID"] == nil,
+                "--links-only must not merge the identity store into .claude.json")
+        }
+    }
+
+    @Test("--account-dir follows a symlinked account dir (the ~/.claude origin case)")
+    func followsSymlinkedAccountDir() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            try PinCommand.parse(["alice", "--workspace", "origin"]).run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+
+            let plugins = acctDir.appendingPathComponent("plugins")
+            try FileManager.default.createDirectory(
+                at: plugins, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: plugins.appendingPathComponent("config.json"))
+
+            // Simulate ~/.claude: a symlink that points at the account dir.
+            let link = acctDir.deletingLastPathComponent()
+                .appendingPathComponent("dot-claude-link")
+            try FileManager.default.createSymbolicLink(
+                at: link, withDestinationURL: acctDir)
+
+            // Launch through the SYMLINK path, as the wrapper does for bare origin.
+            var cmd = try PrepareClaudeLaunchCommand.parse(
+                ["--account-dir", link.path, "--links-only"])
+            try cmd.run()
+
+            // The REAL account dir's plugins must now be a symlink into the workspace.
+            let dest = try FileManager.default.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("plugins").path)
+            #expect(dest == wsDir.appendingPathComponent("plugins").path,
+                "linker must follow the symlinked account dir and link plugins")
+        }
+    }
 }
 
 @Suite("v3.1 launch+capture round trip")
