@@ -16,6 +16,7 @@ public struct ManifestRunner: ThirdPartyRunner {
                         refOverride: String?,
                         forceRefresh: Bool) throws -> InstallRecord {
         let claudeDir = try resolveClaudeDir(env: env)
+        let workspaceDir = try resolveWorkspaceClaudeDir(env: env)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: pkg.id)
 
         // Already installed? Reinstall = uninstall + install (spec decision 7c-B).
@@ -44,14 +45,17 @@ public struct ManifestRunner: ThirdPartyRunner {
                 switch step {
                 case .copyFile:
                     copied.append(contentsOf: try CopyFileExecutor.apply(
-                        step, sourceDir: sourceDir, claudeDir: claudeDir))
+                        step, sourceDir: sourceDir, claudeDir: claudeDir, workspaceDir: workspaceDir))
                 case .copyGlob:
                     copied.append(contentsOf: try CopyGlobExecutor.apply(
                         step, sourceDir: sourceDir, claudeDir: claudeDir))
                 case .patchSettings:
                     let rec = try PatchSettingsExecutor.apply(
                         step, claudeDir: claudeDir,
-                        placeholders: ["<CLAUDE_DIR>": claudeDir.path])
+                        placeholders: [
+                            "<CLAUDE_DIR>": claudeDir.path,
+                            "<WORKSPACE_CLAUDE_DIR>": workspaceDir.path,
+                        ])
                     patched.append(rec)
                 }
             }
@@ -59,7 +63,7 @@ public struct ManifestRunner: ThirdPartyRunner {
             for rec in patched.reversed() {
                 try? PatchSettingsExecutor.rollback(record: rec, claudeDir: claudeDir)
             }
-            CopyFileExecutor.rollback(paths: copied, claudeDir: claudeDir)
+            CopyFileExecutor.rollback(paths: copied, claudeDir: claudeDir, workspaceDir: workspaceDir)
             throw error
         }
 
@@ -83,6 +87,7 @@ public struct ManifestRunner: ThirdPartyRunner {
 
     public func uninstall(packageID: String, from env: String) throws {
         let claudeDir = try resolveClaudeDir(env: env)
+        let workspaceDir = try resolveWorkspaceClaudeDir(env: env)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: packageID)
         let fm = FileManager.default
         guard fm.fileExists(atPath: lockURL.path) else {
@@ -97,11 +102,15 @@ public struct ManifestRunner: ThirdPartyRunner {
             try? PatchSettingsExecutor.rollback(record: patchRec, claudeDir: claudeDir)
         }
         for p in record.copiedFiles {
-            try? fm.removeItem(at: claudeDir.appendingPathComponent(p))
+            try? fm.removeItem(at: CopyFileExecutor.resolveInstalledPath(
+                p, claudeDir: claudeDir, workspaceDir: workspaceDir))
         }
-        // Prune any empty directories left by copyGlob steps.
-        let parentDirs = Set(record.copiedFiles.map { path -> String in
-            guard let slash = path.lastIndex(of: "/") else { return "" }
+        // Prune any empty directories left by copyGlob steps (account-relative
+        // paths only; workspace-marker files sit directly in the workspace dir
+        // and leave no per-package subdir to prune).
+        let parentDirs = Set(record.copiedFiles.compactMap { path -> String? in
+            if path.hasPrefix(CopyFileExecutor.workspaceMarker) { return nil }
+            guard let slash = path.lastIndex(of: "/") else { return nil }
             return String(path[..<slash])
         }).filter { !$0.isEmpty && $0 != "." }
         for rel in parentDirs.sorted(by: { $0.count > $1.count }) {
@@ -138,13 +147,13 @@ public struct ManifestRunner: ThirdPartyRunner {
 
     // MARK: - Helpers
 
-    /// Resolve the install target. In v3.1 the target is the *account* dir —
-    /// the `CLAUDE_CONFIG_DIR` Claude actually reads — never the shared workspace.
-    /// An account chooses which workspace it links to (default origin), not the
-    /// other way around, so third-party files (the settings.json patch and the
-    /// statusline script) must land in the account dir to take effect: there
-    /// `settings.json` and the script are real files, not symlinks back to the
-    /// workspace, so installing into the workspace would be invisible to Claude.
+    /// Resolve the install target for account-scoped artifacts (the lock and the
+    /// `settings.json` patch): the *account* dir — the `CLAUDE_CONFIG_DIR` Claude
+    /// actually reads. The `settings.json` patch must land here because it is a
+    /// real per-account file. Individual `copyFile` steps may instead target the
+    /// pinned workspace via a `<WORKSPACE_CLAUDE_DIR>/…` `to` path (see
+    /// `resolveWorkspaceClaudeDir`), which the account's settings then reference
+    /// by absolute path — that is how the shared statusline program is installed.
     private func resolveClaudeDir(env: String) throws -> URL {
         let fm = FileManager.default
 
@@ -172,6 +181,21 @@ public struct ManifestRunner: ThirdPartyRunner {
         // Use the same home as the injected EnvironmentStore (keeps tests and
         // custom ORRERY_HOME installs consistent — never the process default).
         return AccountStore(homeURL: store.homeURL).accountDir(id: accountID, tool: .claude)
+    }
+
+    /// Resolve the workspace claude dir the target account is pinned to. Reads
+    /// the account dir's `metadata.json` `workspace` field (absent ⇒ origin) and
+    /// maps it via the injected store, mirroring `_prepare-claude-launch`.
+    private func resolveWorkspaceClaudeDir(env: String) throws -> URL {
+        let claudeDir = try resolveClaudeDir(env: env)
+        var workspace = Workspace.reservedOriginName
+        let mdURL = claudeDir.appendingPathComponent("metadata.json")
+        if let data = try? Data(contentsOf: mdURL),
+           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let ws = obj["workspace"] as? String, !ws.isEmpty {
+            workspace = ws
+        }
+        return store.claudeWorkspaceDir(workspace: workspace)
     }
 
     private func lockFileURL(claudeDir: URL, packageID: String) -> URL {
