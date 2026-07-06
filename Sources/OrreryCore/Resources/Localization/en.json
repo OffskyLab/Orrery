@@ -338,7 +338,7 @@
   "install.urlHelp": "Override the manifest source URL (use a custom git repository)",
   "install.refHelp": "Override the manifest source ref (git branch/tag/sha)",
   "install.forceRefreshHelp": "Re-clone the source even if the cached copy already exists",
-  "install.success": "Installed {id} ({shortRef}) into account '{env}'. {fileCount} files copied, settings patched.",
+  "install.success": "Installed {id} ({shortRef}) into account '{env}' in workspace '{workspace}'. {fileCount} files copied, settings patched.",
   "thirdparty.abstract": "Manage installed third-party add-ons for an environment",
   "thirdparty.idHelp": "Package id (e.g. statusline)",
   "thirdparty.envHelp": "Target environment name",

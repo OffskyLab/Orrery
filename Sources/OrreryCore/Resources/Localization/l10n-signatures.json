@@ -2335,7 +2335,8 @@
       { "label": "_", "name": "id", "type": "String" },
       { "label": "_", "name": "shortRef", "type": "String" },
       { "label": "_", "name": "fileCount", "type": "Int" },
-      { "label": "_", "name": "env", "type": "String" }
+      { "label": "_", "name": "env", "type": "String" },
+      { "label": "_", "name": "workspace", "type": "String" }
     ]
   },
   { "path": ["Thirdparty", "abstract"], "kind": "var", "parameters": [] },
