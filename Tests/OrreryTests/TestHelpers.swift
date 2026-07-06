@@ -23,13 +23,25 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
 
     let savedHome = ProcessInfo.processInfo.environment["ORRERY_HOME"]
     let savedActiveEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+    // ORRERY_USER_HOME is redirected too: `Tool.defaultConfigDir` (and other
+    // home-relative paths) resolve via `userHomeURL()`, which honors it. Without
+    // this a test that triggers origin-takeover code would symlink/write into the
+    // developer's real ~/.claude even though ORRERY_HOME was isolated. We use a
+    // dedicated var, NOT $HOME — setting $HOME breaks macOS Keychain resolution.
+    let savedUserHome = ProcessInfo.processInfo.environment["ORRERY_USER_HOME"]
     setenv("ORRERY_HOME", tmpDir.path, 1)
+    setenv("ORRERY_USER_HOME", tmpDir.path, 1)
     unsetenv("ORRERY_ACTIVE_ENV")
     defer {
         if let savedHome {
             setenv("ORRERY_HOME", savedHome, 1)
         } else {
             unsetenv("ORRERY_HOME")
+        }
+        if let savedUserHome {
+            setenv("ORRERY_USER_HOME", savedUserHome, 1)
+        } else {
+            unsetenv("ORRERY_USER_HOME")
         }
         if let savedActiveEnv {
             setenv("ORRERY_ACTIVE_ENV", savedActiveEnv, 1)
