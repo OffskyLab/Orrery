@@ -17,11 +17,17 @@ public struct InstallRecord: Codable, Equatable, Sendable {
     public let installedAt: Date
     public let copiedFiles: [String]
     public let patchedSettings: [SettingsPatchRecord]
+    /// Workspace name this package was installed against. Recorded so uninstall
+    /// resolves `<WORKSPACE_CLAUDE_DIR>/…` files against the SAME workspace (not
+    /// the account's current pin) and can reference-count shared workspace files
+    /// across accounts. Nil for legacy locks / account-only installs.
+    public let workspace: String?
 
     public init(packageID: String, resolvedRef: String, manifestRef: String,
                 displayRef: String? = nil,
                 installedAt: Date, copiedFiles: [String],
-                patchedSettings: [SettingsPatchRecord]) {
+                patchedSettings: [SettingsPatchRecord],
+                workspace: String? = nil) {
         self.packageID = packageID
         self.resolvedRef = resolvedRef
         self.manifestRef = manifestRef
@@ -29,6 +35,7 @@ public struct InstallRecord: Codable, Equatable, Sendable {
         self.installedAt = installedAt
         self.copiedFiles = copiedFiles
         self.patchedSettings = patchedSettings
+        self.workspace = workspace
     }
 }
 

@@ -139,4 +139,61 @@ struct ManifestRunnerInstallTests {
             #expect(o["statusLine"] == nil)
         }
     }
+
+    @Test("install throws on a stale/unknown workspace pin and writes nothing")
+    func badWorkspacePinThrows() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        // Point the account at a workspace that was never created.
+        try writeAccountWorkspace(store, "ghost-ws")
+
+        #expect(throws: (any Error).self) {
+            _ = try runner.install(workspacePkg(srcDir), into: envName,
+                                   refOverride: nil, forceRefresh: false)
+        }
+        // No phantom workspace file written.
+        let ghost = store.claudeWorkspaceDir(workspace: "ghost-ws")
+            .appendingPathComponent("statusline.js")
+        #expect(!FileManager.default.fileExists(atPath: ghost.path))
+    }
+
+    @Test("uninstall keeps the shared workspace file while another account references it")
+    func uninstallRefcountsSharedFile() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        try writeAccountWorkspace(store, "dev")
+        _ = try runner.install(workspacePkg(srcDir), into: envName,
+                               refOverride: nil, forceRefresh: false)
+
+        let acctStore = AccountStore(homeURL: store.homeURL)
+        let wsFile = store.claudeWorkspaceDir(workspace: "dev")
+            .appendingPathComponent("statusline.js")
+        #expect(FileManager.default.fileExists(atPath: wsFile.path))
+
+        // Plant a SECOND account, pinned to "dev", with its own lock recording
+        // the same workspace + marker (simulating it also installed).
+        let acct2 = Account(tool: .claude, displayName: "acct2")
+        try acctStore.save(acct2)
+        let acct2Dir = acctStore.accountDir(id: acct2.id, tool: .claude)
+        let acct2Third = acct2Dir.appendingPathComponent(".thirdparty")
+        try FileManager.default.createDirectory(at: acct2Third, withIntermediateDirectories: true)
+        let coTenant = InstallRecord(
+            packageID: "statusline", resolvedRef: "x", manifestRef: "latest",
+            installedAt: Date(),
+            copiedFiles: ["<WORKSPACE_CLAUDE_DIR>/statusline.js"],
+            patchedSettings: [], workspace: "dev")
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        try enc.encode(coTenant).write(to: acct2Third.appendingPathComponent("statusline.lock.json"))
+
+        // Uninstall the first account — shared file must SURVIVE (co-tenant refs it).
+        try runner.uninstall(packageID: "statusline", from: envName)
+        #expect(FileManager.default.fileExists(atPath: wsFile.path))
+
+        // Remove the co-tenant's lock, then uninstalling again would delete it —
+        // but the first account's lock is already gone, so instead verify the
+        // refcount helper's contract via a fresh install+uninstall with no co-tenant:
+        try FileManager.default.removeItem(at: acct2Third.appendingPathComponent("statusline.lock.json"))
+        _ = try runner.install(workspacePkg(srcDir), into: envName,
+                               refOverride: nil, forceRefresh: false)
+        try runner.uninstall(packageID: "statusline", from: envName)
+        #expect(!FileManager.default.fileExists(atPath: wsFile.path))
+    }
 }
