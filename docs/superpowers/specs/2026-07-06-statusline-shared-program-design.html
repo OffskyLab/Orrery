@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share the statusline program in the workspace</title>
+<style>
+  :root {
+    --bg:#f4f5f7; --card:#fff; --ink:#1f2328; --muted:#656d76; --line:#e3e6ea;
+    --code-bg:#eef1f4; --coral:#d97757; --ok:#1a7f52; --ok-bg:#e6f4ec;
+    --warn:#9a6700; --warn-bg:#fef4e0; --na:#57606a; --na-bg:#eceef1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;
+    font-family:-apple-system,"PingFang TC","Noto Sans TC","Segoe UI",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:48px 24px 96px}
+  h1{font-size:26px;margin:0 0 6px;line-height:1.3;letter-spacing:-.01em}
+  .meta{color:var(--muted);font-size:14px;margin:0 0 30px}
+  .meta .badge{display:inline-block;background:var(--warn-bg);color:var(--warn);
+    font-weight:700;font-size:12px;border-radius:999px;padding:2px 10px;margin-left:8px}
+  h2{font-size:20px;margin:38px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 8px}
+  p{font-size:15.5px;margin:12px 0}
+  ul,ol{margin:12px 0;padding-left:24px}
+  li{margin:7px 0;font-size:15.5px}
+  li>ul,li>ol{margin:5px 0}
+  code{background:var(--code-bg);border-radius:5px;padding:1.5px 6px;font-size:13.5px;
+    font-family:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+  pre{background:#1f2328;color:#e6edf3;border-radius:10px;padding:15px 17px;overflow-x:auto;
+    font-size:12.5px;line-height:1.55;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:12.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:4px 24px 18px;margin:16px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .callout{border-left:4px solid var(--coral);background:#fff;border:1px solid var(--line);
+    border-left:4px solid var(--coral);border-radius:8px;padding:14px 18px;margin:18px 0;font-size:14.5px}
+  .callout b{color:var(--coral)}
+  .note{border-left:4px solid var(--warn);background:var(--warn-bg);border-radius:8px;
+    padding:12px 16px;margin:16px 0;font-size:14.5px;color:#6b4b00}
+  .note b{color:var(--warn)}
+  footer{margin-top:44px;color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Share the statusline program in the workspace<br>(per-account settings point at it)</h1>
+  <p class="meta">日期:2026-07-06 · 設計文件<span class="badge">設計待實作</span> · 相關記憶 <code>project-statusline-shared-program</code></p>
+
+  <h2>背景 / 目標</h2>
+  <p>目前 <code>orrery install statusline</code> 把 <code>statusline.js</code> 複製到<b>每個 account dir</b>,並在該 account 的 <code>settings.json</code> 寫 <code>statusLine.command = node &lt;CLAUDE_DIR&gt;/statusline.js</code>。同一 workspace 下每個帳號各存一份。</p>
+  <p>目標:把 statusline <b>主程式</b>改成裝在 <b>workspace</b>(一份共用),每個帳號的 <code>settings.json</code>(本來就 per-account)指向那份。這是「一份共用、更新一次全帳號生效」的<b>去重/維護</b>優化;<b>不是隔離需求</b>——隔離已由 <code>CLAUDE_CONFIG_DIR</code> + per-account statusline cache 處理。</p>
+  <div class="card">
+    <p style="margin-top:14px"><b>選定的模型:</b>讀取的真實依據是 <code>settings.json</code>,而它已經是 per-account,所以由帳號自己的設定宣告「用哪個 workspace 的 statusline」,與 pin 概念一致。(不用 account-dir symlink,不動 launch linker。)</p>
+  </div>
+
+  <div class="callout">
+    <b>關鍵前提:<code>statusline.js</code> 是 account-agnostic。</b> 執行時從 <code>CLAUDE_CONFIG_DIR</code>(+ stdin)讀當前帳號資料,程式本身不含帳號狀態。因此 command 指向<b>任何</b> workspace 的那份都會正確渲染 → re-pin 後「command 還指著舊 workspace」變成無害(只要那份還在),v1 因此不需要自動 re-patch。
+  </div>
+
+  <h2>範圍</h2>
+  <p>全部在 <b>orrery repo</b>:<code>Sources/OrreryThirdParty</code>(ManifestRunner + copyFile/patchSettings executors + lock/uninstall)與 <code>Sources/OrreryThirdParty/Manifests/statusline.json</code>。<code>orrery-claude-statusline</code>(statusline.js 原始碼)<b>不變</b>。</p>
+
+  <h2>詳細設計</h2>
+
+  <h3>1. ManifestRunner:解析 workspace claude dir</h3>
+  <p><code>ManifestRunner</code> 已持有 <code>store: EnvironmentStore</code>,且能從 account dir 的 <code>metadata.json</code> 讀 <code>workspace</code> 欄位。新增解析:</p>
+  <pre><code>workspaceClaudeDir = store.claudeWorkspaceDir(workspace: &lt;account.metadata.workspace&gt;)</code></pre>
+  <p><code>resolveClaudeDir</code> 維持回傳 <b>account dir</b>(settings.json / lock 仍在 account dir);另新增 <code>resolveWorkspaceClaudeDir(env:)</code> 回傳 workspace claude dir。</p>
+
+  <h3>2. <code>&lt;WORKSPACE_CLAUDE_DIR&gt;</code> placeholder</h3>
+  <ul>
+    <li><b>patchSettings</b>:placeholders 由 <code>["&lt;CLAUDE_DIR&gt;": claudeDir.path]</code> 增為同時含 <code>"&lt;WORKSPACE_CLAUDE_DIR&gt;": workspaceClaudeDir.path</code>。manifest 的 command 因此可寫 <code>node &lt;WORKSPACE_CLAUDE_DIR&gt;/statusline.js</code>,寫進的是 <b>account 的 settings.json</b>(root 不變),值指向 workspace。</li>
+    <li><b>copyFile</b>:<code>CopyFileExecutor</code> 的 <code>to</code> 支援 <code>&lt;WORKSPACE_CLAUDE_DIR&gt;</code> 前綴——有此前綴時目標解析到 workspace claude dir;否則維持相對 account dir(現況不變)。</li>
+  </ul>
+
+  <h3>3. Lock / uninstall 追蹤 workspace 檔案</h3>
+  <p>目前 lock 記錄 copied 檔案為「相對 claudeDir(account)」,uninstall 以 <code>claudeDir.appendingPathComponent(rel)</code> 刪除。workspace 檔案不在 account dir 底下,所以:</p>
+  <div class="card">
+    <ul>
+      <li><b>選定做法(單一格式,消除歧義)</b>:copyFile 記進 lock 的 <code>copiedFiles</code> 時,workspace 目標一律存成<b>帶標記的字串</b> <code>&lt;WORKSPACE_CLAUDE_DIR&gt;/statusline.js</code>(account 目標維持純相對路徑,如 <code>statusline.js</code>)。</li>
+      <li>uninstall 逐條解析:以 <code>&lt;WORKSPACE_CLAUDE_DIR&gt;/</code> 開頭 → 解析到 workspace claude dir 後刪除;否則 → 相對 account dir 刪除(現況不變)。</li>
+      <li>lock 檔本身仍放 account dir 的 <code>.thirdparty/</code>(per-account 安裝記錄)。</li>
+    </ul>
+  </div>
+
+  <h3>4. statusline.json manifest</h3>
+  <pre><code>"steps": [
+  { "type": "copyFile", "from": "statusline.js", "to": "&lt;WORKSPACE_CLAUDE_DIR&gt;/statusline.js" },
+  { "type": "patchSettings", "file": "settings.json",
+    "patch": { "statusLine": {
+      "type": "command",
+      "command": "node &lt;WORKSPACE_CLAUDE_DIR&gt;/statusline.js",
+      "refreshInterval": 30 } } }
+]</code></pre>
+
+  <h3>5. Re-pin 行為(v1)</h3>
+  <p>不自動 re-patch。帳號 re-pin 到別的 workspace 後,command 仍指舊 workspace 的 <code>statusline.js</code>,因程式 account-agnostic 而<b>照常正確運作</b>(只要舊 workspace 那份還在)。要移到新 workspace 的那份:重跑 <code>orrery install statusline</code>。README/help 註明即可。自動 re-patch 列為未來選項。</p>
+
+  <h3>6. 不受影響</h3>
+  <ul>
+    <li><code>AccountMigration.mergedClaudeSettings</code> 仍剝除<b>繼承自 workspace settings</b> 的 <code>statusLine</code>;帳號自己 settings.json 的 command(現在指 workspace)照樣保留。</li>
+    <li>隔離不變(<code>CLAUDE_CONFIG_DIR</code> + per-account cache)。</li>
+    <li>launch linker 不動(statusline.js 不進 account dir,也非 symlink)。</li>
+    <li><code>orrery-claude-statusline</code> repo 不變。</li>
+  </ul>
+
+  <h2>測試</h2>
+  <p><code>Sources/OrreryThirdPartyTests</code>(既有 ManifestRunner 測試風格,隔離 ORRERY_HOME):</p>
+  <ol>
+    <li>copyFile 目標帶 <code>&lt;WORKSPACE_CLAUDE_DIR&gt;</code> → 檔案落在 <b>workspace</b> claude dir,不在 account dir。</li>
+    <li>patchSettings 的 <code>&lt;WORKSPACE_CLAUDE_DIR&gt;</code> 正確解析 → account <code>settings.json</code> 的 <code>statusLine.command</code> 指向 workspace 路徑。</li>
+    <li>兩個帳號 pin 同一 workspace:各自 install → 只有一份 workspace <code>statusline.js</code>,兩帳號 settings.json 都指它。</li>
+    <li>uninstall → 刪除 workspace 的 <code>statusline.js</code> 並還原 account settings.json(command 移除)。</li>
+    <li>account 相對路徑的 copyFile(無 placeholder)行為不變(回歸保護)。</li>
+    <li>解析不到 workspace(壞 pin)→ 清楚錯誤,不誤寫。</li>
+  </ol>
+
+  <h2>未涵蓋(YAGNI)</h2>
+  <ul>
+    <li>re-pin 自動 re-patch command(v1 靠重跑 install)。</li>
+    <li>把 workspace-install 泛化成 manifest 層級 <code>scope</code>;只做 <code>&lt;WORKSPACE_CLAUDE_DIR&gt;</code> placeholder(statusline 目前唯一需求)。</li>
+    <li>清理既有「每帳號一份」的舊 <code>statusline.js</code>(重跑 install 後帳號 settings 指向 workspace;舊的 account-dir <code>statusline.js</code> 變孤兒,無害,可手動刪)。</li>
+  </ul>
+
+  <footer>Orrery 設計文件 · docs/superpowers/specs/2026-07-06-statusline-shared-program-design</footer>
+
+</div>
+</body>
+</html>
