@@ -88,13 +88,15 @@ struct ManifestRunnerInstallTests {
         )
     }
 
-    /// The fixture pins `test-acct` to workspace `dev`; a real pinned account
-    /// records that in metadata.json, so write it (resolveWorkspaceClaudeDir
-    /// reads this field).
+    /// The fixture pins workspace `dev` to account `test-acct`; a real pinned
+    /// account records its workspace in a properly-encoded `Account`
+    /// metadata.json — so `AccountStore.list(tool:.claude)` returns it (which
+    /// `otherAccountReferences` relies on to iterate/self-exclude the uninstalling
+    /// account) and `resolveWorkspaceName` reads its `workspace` field.
     private func writeAccountWorkspace(_ store: EnvironmentStore, _ workspace: String) throws {
-        let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
-        try Data("{\"workspace\":\"\(workspace)\"}".utf8)
-            .write(to: acctDir.appendingPathComponent("metadata.json"))
+        let acctStore = AccountStore(homeURL: store.homeURL)
+        try acctStore.save(Account(id: "test-acct", tool: .claude,
+                                   displayName: "t", workspace: workspace))
     }
 
     @Test("workspace-targeted install lands the script in the workspace and points account settings at it")
@@ -146,7 +148,7 @@ struct ManifestRunnerInstallTests {
         // Point the account at a workspace that was never created.
         try writeAccountWorkspace(store, "ghost-ws")
 
-        #expect(throws: (any Error).self) {
+        #expect(throws: ThirdPartyError.self) {
             _ = try runner.install(workspacePkg(srcDir), into: envName,
                                    refOverride: nil, forceRefresh: false)
         }
@@ -195,5 +197,43 @@ struct ManifestRunnerInstallTests {
                                refOverride: nil, forceRefresh: false)
         try runner.uninstall(packageID: "statusline", from: envName)
         #expect(!FileManager.default.fileExists(atPath: wsFile.path))
+    }
+
+    @Test("uninstall removes the file installed under the ORIGINAL workspace after a re-pin")
+    func uninstallUsesInstallTimeWorkspace() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        try writeAccountWorkspace(store, "dev")
+        _ = try runner.install(workspacePkg(srcDir), into: envName, refOverride: nil, forceRefresh: false)
+        let devFile = store.claudeWorkspaceDir(workspace: "dev").appendingPathComponent("statusline.js")
+        #expect(FileManager.default.fileExists(atPath: devFile.path))
+        // Re-pin the account's metadata to a different workspace AFTER install.
+        try writeAccountWorkspace(store, "team")
+        // Uninstall must remove the file it actually installed (dev), via record.workspace.
+        try runner.uninstall(packageID: "statusline", from: envName)
+        #expect(!FileManager.default.fileExists(atPath: devFile.path))
+    }
+
+    @Test("a co-tenant lock recording a DIFFERENT workspace does not block deletion")
+    func refcountIgnoresDifferentWorkspace() throws {
+        let (store, envName, srcDir, runner) = try setupFixture()
+        try writeAccountWorkspace(store, "dev")
+        _ = try runner.install(workspacePkg(srcDir), into: envName, refOverride: nil, forceRefresh: false)
+        let devFile = store.claudeWorkspaceDir(workspace: "dev").appendingPathComponent("statusline.js")
+
+        // A second account whose lock references a DIFFERENT workspace ("other").
+        let acctStore = AccountStore(homeURL: store.homeURL)
+        let acct2 = Account(tool: .claude, displayName: "acct2")
+        try acctStore.save(acct2)
+        let third = acctStore.accountDir(id: acct2.id, tool: .claude).appendingPathComponent(".thirdparty")
+        try FileManager.default.createDirectory(at: third, withIntermediateDirectories: true)
+        let other = InstallRecord(packageID: "statusline", resolvedRef: "x", manifestRef: "latest",
+            installedAt: Date(), copiedFiles: ["<WORKSPACE_CLAUDE_DIR>/statusline.js"],
+            patchedSettings: [], workspace: "other")
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        try enc.encode(other).write(to: third.appendingPathComponent("statusline.lock.json"))
+
+        // Different workspace → NOT a co-tenant of "dev" → file is deleted.
+        try runner.uninstall(packageID: "statusline", from: envName)
+        #expect(!FileManager.default.fileExists(atPath: devFile.path))
     }
 }
