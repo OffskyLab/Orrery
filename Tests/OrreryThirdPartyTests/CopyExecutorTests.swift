@@ -15,18 +15,46 @@ struct CopyExecutorTests {
         return (src, dst)
     }
 
-    @Test("copyFile copies and reports dest path")
+    @Test("copyFile copies and reports dest path (account-relative)")
     func copyFileWorks() throws {
         let (src, dst) = try makeTempTree()
         try Data("hi".utf8).write(to: src.appendingPathComponent("a.js"))
 
         let record = try CopyFileExecutor.apply(
             .copyFile(from: "a.js", to: "a.js"),
-            sourceDir: src, claudeDir: dst
+            sourceDir: src, claudeDir: dst, workspaceDir: dst
         )
         #expect(record == ["a.js"])
         let content = try String(contentsOf: dst.appendingPathComponent("a.js"), encoding: .utf8)
         #expect(content == "hi")
+    }
+
+    @Test("copyFile with <WORKSPACE_CLAUDE_DIR> lands in the workspace and keeps the marker in the record")
+    func copyFileWorkspaceTarget() throws {
+        let (src, dst) = try makeTempTree()
+        let ws = dst.deletingLastPathComponent().appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        try Data("hi".utf8).write(to: src.appendingPathComponent("a.js"))
+
+        let record = try CopyFileExecutor.apply(
+            .copyFile(from: "a.js", to: "<WORKSPACE_CLAUDE_DIR>/a.js"),
+            sourceDir: src, claudeDir: dst, workspaceDir: ws
+        )
+        // Lock keeps the marker verbatim.
+        #expect(record == ["<WORKSPACE_CLAUDE_DIR>/a.js"])
+        // File landed in the workspace, NOT the account dir.
+        #expect(FileManager.default.fileExists(atPath: ws.appendingPathComponent("a.js").path))
+        #expect(!FileManager.default.fileExists(atPath: dst.appendingPathComponent("a.js").path))
+    }
+
+    @Test("resolveInstalledPath maps marker to workspace, plain to account")
+    func resolvePath() {
+        let acct = URL(fileURLWithPath: "/acct")
+        let ws = URL(fileURLWithPath: "/ws")
+        #expect(CopyFileExecutor.resolveInstalledPath("statusline.js", claudeDir: acct, workspaceDir: ws).path
+            == "/acct/statusline.js")
+        #expect(CopyFileExecutor.resolveInstalledPath("<WORKSPACE_CLAUDE_DIR>/statusline.js", claudeDir: acct, workspaceDir: ws).path
+            == "/ws/statusline.js")
     }
 
     @Test("copyGlob copies each *.ext match")
