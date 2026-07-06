@@ -57,6 +57,19 @@ struct CopyExecutorTests {
             == "/ws/statusline.js")
     }
 
+    @Test("rollback removes a <WORKSPACE_CLAUDE_DIR> file from the workspace")
+    func rollbackWorkspaceTarget() throws {
+        let (_, dst) = try makeTempTree()
+        let ws = dst.deletingLastPathComponent().appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        try Data("hi".utf8).write(to: ws.appendingPathComponent("a.js"))
+
+        CopyFileExecutor.rollback(
+            paths: ["<WORKSPACE_CLAUDE_DIR>/a.js"], claudeDir: dst, workspaceDir: ws)
+
+        #expect(!FileManager.default.fileExists(atPath: ws.appendingPathComponent("a.js").path))
+    }
+
     @Test("copyGlob copies each *.ext match")
     func copyGlobWorks() throws {
         let (src, dst) = try makeTempTree()
