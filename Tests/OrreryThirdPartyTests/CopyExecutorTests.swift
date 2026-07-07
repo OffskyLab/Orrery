@@ -47,6 +47,47 @@ struct CopyExecutorTests {
         #expect(!FileManager.default.fileExists(atPath: dst.appendingPathComponent("a.js").path))
     }
 
+    @Test("copyFile to <WORKSPACE_CLAUDE_DIR> removes a stale account-relative copy of the same file")
+    func workspaceInstallRemovesStaleAccountFile() throws {
+        let (src, dst) = try makeTempTree()   // dst = account claude dir
+        let ws = dst.deletingLastPathComponent().appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        try Data("new".utf8).write(to: src.appendingPathComponent("statusline.js"))
+        // Stale pre-workspace copy left in the account dir by an older install.
+        try Data("old".utf8).write(to: dst.appendingPathComponent("statusline.js"))
+
+        let record = try CopyFileExecutor.apply(
+            .copyFile(from: "statusline.js", to: "<WORKSPACE_CLAUDE_DIR>/statusline.js"),
+            sourceDir: src, claudeDir: dst, workspaceDir: ws
+        )
+
+        #expect(record == ["<WORKSPACE_CLAUDE_DIR>/statusline.js"])
+        // Installed to the workspace…
+        #expect(try String(contentsOf: ws.appendingPathComponent("statusline.js"), encoding: .utf8) == "new")
+        // …and the stale account copy is gone (so settings.json's re-pointed
+        // workspace command is the only statusline.js in play).
+        #expect(!FileManager.default.fileExists(atPath: dst.appendingPathComponent("statusline.js").path))
+    }
+
+    @Test("workspace install never removes a same-named real DIRECTORY in the account")
+    func workspaceInstallKeepsAccountDir() throws {
+        let (src, dst) = try makeTempTree()
+        let ws = dst.deletingLastPathComponent().appendingPathComponent("ws")
+        try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
+        try Data("new".utf8).write(to: src.appendingPathComponent("shared"))
+        // Account has a real directory with the same basename — must not be deleted.
+        let acctDir = dst.appendingPathComponent("shared")
+        try FileManager.default.createDirectory(at: acctDir, withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: acctDir.appendingPathComponent("keep.txt"))
+
+        _ = try CopyFileExecutor.apply(
+            .copyFile(from: "shared", to: "<WORKSPACE_CLAUDE_DIR>/shared"),
+            sourceDir: src, claudeDir: dst, workspaceDir: ws
+        )
+
+        #expect(FileManager.default.fileExists(atPath: acctDir.appendingPathComponent("keep.txt").path))
+    }
+
     @Test("resolveInstalledPath maps marker to workspace, plain to account")
     func resolvePath() {
         let acct = URL(fileURLWithPath: "/acct")

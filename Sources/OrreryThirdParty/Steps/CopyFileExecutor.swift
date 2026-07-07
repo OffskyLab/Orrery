@@ -32,6 +32,22 @@ public enum CopyFileExecutor {
                                withIntermediateDirectories: true)
         if fm.fileExists(atPath: dst.path) { try fm.removeItem(at: dst) }
         try fm.copyItem(at: src, to: dst)
+
+        // Migration: when installing into the workspace, remove any stale copy of
+        // the same file left at the pre-workspace ACCOUNT location (older installs
+        // put e.g. statusline.js in the account dir). Otherwise a dead account
+        // copy lingers after the account's settings.json is re-pointed to the
+        // workspace path by the patchSettings step. Never touch a real directory.
+        if to.hasPrefix(workspaceMarker) {
+            let rel = String(to.dropFirst(workspaceMarker.count))
+            let stale = claudeDir.appendingPathComponent(rel)
+            let isSymlink = (try? fm.destinationOfSymbolicLink(atPath: stale.path)) != nil
+            var isDir: ObjCBool = false
+            let existsFollowing = fm.fileExists(atPath: stale.path, isDirectory: &isDir)
+            if isSymlink || (existsFollowing && !isDir.boolValue) {
+                try? fm.removeItem(at: stale)
+            }
+        }
         return [to]
     }
 
