@@ -1,74 +1,80 @@
 # Keychain test isolation — Design
 
-**Goal:** Stop the test suite from writing to the developer's real macOS login
-Keychain. A full `swift test` currently adds ~12 stray `Claude Code-orrery-*`
-items per run (≈2900 had accumulated). Route the two production keychain **write**
-paths through the injectable `KeychainAccess` seam so the polluting tests inject a
-fake and never touch the real Keychain.
+**Goal:** Stop the test suite from leaving stray credentials in the developer's
+real macOS login Keychain. ~2900 `Claude Code-orrery-*` items had accumulated and
+a full `swift test` added ~7 per run.
 
-**Status:** proposed. Test-isolation refactor; no user-facing behavior change
-(production keeps `.live`). Branch `feat/keychain-test-isolation`.
+**Approach: test-side cleanup only — NO production changes.** This is a test-only
+problem (production keychain writes are correct and necessary for real logins), so
+it is fixed entirely in the test harness. An earlier draft proposed routing
+production keychain writes through an injectable `KeychainAccess` seam; that was
+**rejected** — it would churn production signatures for a test-only concern.
+
+**Status:** implemented (branch `feat/keychain-test-isolation`). No production code
+touched.
 
 ---
 
 ## Root cause
 
-The macOS login Keychain is global — `ORRERY_HOME`/`ORRERY_USER_HOME` do not scope
-it, and setting `$HOME` breaks Keychain resolution. Two production write primitives
-run against the real default service `Claude Code-credentials` when tests exercise
-them:
+The macOS login Keychain is **global** — `ORRERY_HOME` / `ORRERY_USER_HOME` do not
+scope it, and setting `$HOME` breaks Keychain resolution. So a test that exercises a
+claude keychain **write** against the real default service `Claude Code-credentials`
+creates a stray per-account item (`Claude Code-orrery-<uuid>`) in the real keychain.
 
-- `ClaudeKeychain.copyKeychainItem` — via `AccountLoginFlow.importFrom` (macOS
-  claude). Hit by `AccountLoginFlowTests` (macOS claude test) and the
-  `AccountAddFinalize` "v3.1 layout" test (`AccountCommandsTests`).
-- `ClaudeKeychain.storePassword` — via `AccountMigration.copyCredentialIntoPool`
-  ← `AccountMigration.migrateAccount(tool:…)` (the v3.0.4→pool credential path).
+Primary offender: `AccountMigrationTests` → `AccountMigration.runIfNeeded` →
+`migrateOrigin(.claude)` → `extractCredential(isOrigin:)` reads the real
+`Claude Code-credentials` and `storePassword`s a copy under a new per-account
+service — even though the test's home is isolated (the keychain isn't). ~7/run.
 
-`ClaudeKeychainTests` only tests `service(for:)` (pure string derivation) — no I/O,
-does not pollute. Read paths (`password(forService:)`, `keychainItemExists`) don't
-pollute (a miss is harmless), so they stay direct — only writes are seamed (YAGNI).
+`ClaudeKeychainTests` only test `service(for:)` (pure string logic — no I/O). The
+known claude keychain tests (`AccountLoginFlow` macOS, `AccountAddFinalize` v3.1)
+already clean up via `KeychainTestSupport.delete`.
 
-## Design
+## Fix (test-only)
 
-Extend the existing `KeychainAccess` seam (added in PR #22 — currently `itemExists`
-+ `copyItem`) with the second write primitive:
+`Tests/OrreryTests/TestHelpers.swift`: add
 
 ```swift
-public var storePassword: @Sendable (_ password: String, _ accountID: String) -> Bool
+func sweepClaudeKeychain(home: URL) {
+    #if os(macOS)
+    for acct in (try? AccountStore(homeURL: home).list(tool: .claude)) ?? [] {
+        for service in Set([ClaudeKeychain.serviceName(forOrreryAccount: acct.id),
+                            acct.keychainItem].compactMap { $0 }.filter { !$0.isEmpty }) {
+            // security delete-generic-password -s <service>  (matches any account field)
+        }
+    }
+    #endif
+}
 ```
 
-`.live.storePassword = ClaudeKeychain.storePassword(_:forOrreryAccount:)`.
+Deletes each isolated claude account's per-account keychain service (the
+deterministic `serviceName(forOrreryAccount:)` even when `metadata.keychainItem`
+was never persisted, plus any explicit `keychainItem`), by service name.
 
-Thread a `keychain: KeychainAccess = .live` parameter through the two write paths and
-their callers; production omits it (`.live`), tests pass a fake:
+Call it from the teardown of both isolated-home helpers, before the temp home is
+removed:
+- `withIsolatedHome` defer (covers unit tests).
+- `AccountMigrationTests.makeTempHome` cleanup (covers the migration suite — the
+  primary offender, which uses its own temp home).
 
-| Production symbol | change |
-|---|---|
-| `AccountLoginFlow.importFrom(stagingDir:into:)` | add `keychain: KeychainAccess = .live`; macOS-claude branch uses `keychain.copyItem` instead of `ClaudeKeychain.copyKeychainItem` |
-| `AccountMigration.migrateAccount(tool:…)` + `copyCredentialIntoPool` | add `keychain: KeychainAccess = .live`; use `keychain.storePassword` instead of `ClaudeKeychain.storePassword` |
-| `AccountAddFinalizeCommand` | thread `.live` through to `importFrom` (+ `migrateAccount` if it calls the tool-level one); a test can inject via an internal seam if needed |
-| `OriginAccountSeeder` | already holds a `KeychainAccess` — pass it to `importFrom` (was calling the no-arg form) |
+## Verification
 
-## Tests to convert (inject a fake, assert no real-Keychain touch)
+Manual before/after check (from the PR #22 pattern): count unique
+`Claude Code-orrery-*` services before and after a full `swift test`. Result:
+**per-run growth reduced from ~7 to ~1**; backlog cleaned (~2894 → 7 legit).
 
-- `AccountLoginFlowTests` macOS-claude test → inject a recording fake for `copyItem`.
-- `AccountCommandsTests` `AccountAddFinalize` "v3.1 layout" test → inject a fake so
-  `importFrom` (and any `migrateAccount`) never write the real Keychain.
-- Any test calling `AccountMigration.migrateAccount(tool:…)` → inject a fake.
-- New guard test: run the seeder/import/finalize with a fake and assert the fake's
-  recorded calls (not the real Keychain).
+## Residual (open)
 
-**Isolation regression check:** the manual step from PR #22 (count
-`Claude Code-orrery-*` before/after a full `swift test`) must show **no growth**.
-Codex/gemini paths are already file-based and unaffected.
+A stubborn **~1/run** remains from a source not identifiable by static analysis
+(all known writers clean up; `PhantomTriggerTests` uses a shell *stub* not the real
+binary; migration-read tests have no `keychainItem`). Pinning it needs **runtime
+instrumentation**: temporarily print a stack trace inside `ClaudeKeychain`'s write
+functions (`copyKeychainItem` / `storePassword` / `addPassword`), run the suite,
+read the offending caller, revert the instrumentation, and add cleanup there.
+Tracked as a focused follow-up.
 
 ## Out of scope
-- Read-path seaming (harmless; YAGNI).
+- Any production change (rejected — test-only concern).
+- Read-path handling (a keychain read miss is harmless).
 - `ClaudeKeychainTests` (no I/O).
-- Any production behavior change (`.live` everywhere in prod).
-
-## Open question
-- Whether `AccountAddFinalizeCommand` needs an injectable entry point for its test,
-  or whether the test can drive `AccountLoginFlow.importFrom(…, keychain:)` +
-  `migrateAccount(…, keychain:)` directly. Prefer the latter (no command-level
-  plumbing) if the finalize test can be reframed around the two seam-aware calls.
