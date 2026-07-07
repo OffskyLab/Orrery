@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.5 - 2026-07-07
+
+### Fixed
+
+- **Launching `claude` directly on origin (without `orrery use`) now shares the
+  workspace dirs too.** A bare origin launch (no `CLAUDE_CONFIG_DIR`) previously
+  skipped the workspace linker, so `~/.claude`'s `plugins`, `sessions`,
+  `shell-snapshots`, etc. stayed per-account instead of being pooled into the
+  origin workspace — only the legacy `projects`/`memory`/`agents`/`commands`/
+  `todos` were linked. Bare origin now behaves the same as `orrery use origin`.
+  (`_prepare-claude-launch` gained a `--links-only` mode that syncs the workspace
+  symlinks without merging `.claude.json`, since bare origin reads `~/.claude.json`.)
+- **Test isolation:** the test suite no longer touches the developer's real
+  `~/.claude`. `Tool.defaultConfigDir` read the real home regardless of test
+  overrides, so running `swift test` could repoint real `~/.claude`
+  `projects`/`sessions`/`session-env` symlinks into temp dirs. Internal only.
+
 ## v3.1.4 - 2026-07-06
 
 ### Changed
