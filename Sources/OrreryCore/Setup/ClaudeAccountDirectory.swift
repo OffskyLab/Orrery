@@ -116,6 +116,48 @@ public enum ClaudeAccountDirectory {
                 warnings.append("\(name): \(error.localizedDescription)")
             }
         }
+
+        // Second pass — mirror the workspace back into the account. A dir another
+        // account created in the shared workspace (or one added directly) has no
+        // counterpart here, so ensure every non-private workspace directory has a
+        // symlink in the account dir. Only fills gaps: names the account already
+        // has (a real dir already merged+symlinked above, a plain file, or an
+        // existing symlink) are left untouched.
+        if let wsEntries = try? fm.contentsOfDirectory(
+            at: workspaceDir,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: []
+        ) {
+            for entry in wsEntries {
+                let name = entry.lastPathComponent
+                if name.hasPrefix(".") { continue }
+                if privateSubdirs.contains(name) { continue }
+                let vals = try? entry.resourceValues(
+                    forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                let isRealDir = (vals?.isDirectory ?? false)
+                    && !(vals?.isSymbolicLink ?? false)
+                if !isRealDir { continue }   // only mirror directories
+
+                let link = accountDir.appendingPathComponent(name)
+                // lstat-aware occupancy check (fileExists follows symlinks and
+                // would miss a dangling one).
+                let occupied = fm.fileExists(atPath: link.path)
+                    || (try? fm.destinationOfSymbolicLink(atPath: link.path)) != nil
+                if occupied { continue }
+
+                // Point at workspaceDir/name (the caller's path), matching the
+                // symlink targets pass 1 creates — not the resolved enumeration
+                // URL (which standardizes /var → /private/var).
+                let target = workspaceDir.appendingPathComponent(name)
+                do {
+                    try fm.createSymbolicLink(at: link, withDestinationURL: target)
+                } catch {
+                    warnings.append(
+                        "\(name): could not mirror workspace dir into account: \(error.localizedDescription)")
+                }
+            }
+        }
+
         return warnings
     }
 
