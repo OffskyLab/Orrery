@@ -1,4 +1,31 @@
 import Foundation
+@testable import OrreryCore
+
+/// Delete any per-account claude Keychain items for accounts under `home`.
+/// The macOS login Keychain is GLOBAL — `ORRERY_HOME` does not isolate it — so a
+/// test that creates/copies a claude credential leaves a stray
+/// `Claude Code-orrery-*` item in the developer's real login keychain unless it is
+/// swept. Deletes by service name (matches regardless of the account field).
+/// No-op off macOS.
+func sweepClaudeKeychain(home: URL) {
+    #if os(macOS)
+    for acct in (try? AccountStore(homeURL: home).list(tool: .claude)) ?? [] {
+        // Delete BOTH the deterministic per-account service (what
+        // storePassword/copyKeychainItem use — even when metadata.keychainItem
+        // was never persisted) and any explicit keychainItem, by service name.
+        for service in Set([ClaudeKeychain.serviceName(forOrreryAccount: acct.id),
+                            acct.keychainItem].compactMap { $0 }.filter { !$0.isEmpty }) {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+            p.arguments = ["delete-generic-password", "-s", service]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            try? p.run()
+            p.waitUntilExit()
+        }
+    }
+    #endif
+}
 
 /// Process-global lock serializing every test that mutates the global ORRERY_HOME
 /// env var. swift-testing's `.serialized` only serializes within a single suite;
@@ -33,6 +60,9 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
     setenv("ORRERY_USER_HOME", tmpDir.path, 1)
     unsetenv("ORRERY_ACTIVE_ENV")
     defer {
+        // Sweep any claude Keychain items the body created (global keychain is not
+        // isolated by ORRERY_HOME). Runs before the temp dir is removed.
+        sweepClaudeKeychain(home: tmpDir)
         if let savedHome {
             setenv("ORRERY_HOME", savedHome, 1)
         } else {

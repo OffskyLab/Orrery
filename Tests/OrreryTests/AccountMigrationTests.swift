@@ -17,6 +17,10 @@ struct AccountMigrationTests {
         try? FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         let home = parent.appendingPathComponent(".orrery")
         let cleanup: () -> Void = {
+            // The migration runs migrateOrigin for ALL tools; claude's path reads
+            // the real (global) login Keychain, leaving stray items for any claude
+            // account it creates. Sweep them before removing the temp home.
+            sweepClaudeKeychain(home: home)
             // Removing the parent removes both `.orrery` and any backup siblings.
             try? FileManager.default.removeItem(at: parent)
         }
