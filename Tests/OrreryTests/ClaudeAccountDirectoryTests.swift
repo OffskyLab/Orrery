@@ -329,6 +329,77 @@ struct ClaudeAccountDirectoryLinkTests {
         #expect((try? String(contentsOf: moved, encoding: .utf8)) == "hello")
     }
 
+    @Test("mirrors a workspace-only dir back into the account as a symlink")
+    func mirrorsWorkspaceOnlyDir() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        // A dir another account created in the shared workspace; this account
+        // has no counterpart for it.
+        let wsOnly = ws.appendingPathComponent("sandboxes")
+        try fm.createDirectory(at: wsOnly, withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: wsOnly.appendingPathComponent("a.txt"))
+
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("sandboxes").path)
+        #expect(dest == wsOnly.path)
+    }
+
+    @Test("does not mirror a private (blacklisted) workspace dir into the account")
+    func skipsPrivateWorkspaceDir() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("cache"), withIntermediateDirectories: true)
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        #expect(!fm.fileExists(atPath: acct.appendingPathComponent("cache").path))
+        #expect((try? fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("cache").path)) == nil)
+    }
+
+    @Test("does not mirror a workspace file (only directories are mirrored)")
+    func skipsWorkspaceFile() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        try Data("prog".utf8).write(to: ws.appendingPathComponent("statusline.js"))
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+            accountDir: acct, workspaceDir: ws)
+
+        #expect(!fm.fileExists(atPath: acct.appendingPathComponent("statusline.js").path))
+        #expect((try? fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("statusline.js").path)) == nil)
+    }
+
+    @Test("mirror pass is idempotent — second run leaves the symlink and no warnings")
+    func mirrorIsIdempotent() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("sandboxes"), withIntermediateDirectories: true)
+
+        _ = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+        let warnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(accountDir: acct, workspaceDir: ws)
+
+        #expect(warnings.isEmpty)
+        let dest = try fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("sandboxes").path)
+        #expect(dest == ws.appendingPathComponent("sandboxes").path)
+    }
+
     @Test("union merge keeps the workspace copy and backs up the account copy")
     func unionWorkspaceWins() throws {
         let (acct, ws, base) = try makeTempPair()
