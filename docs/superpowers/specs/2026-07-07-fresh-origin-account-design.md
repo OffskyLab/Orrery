@@ -1,120 +1,129 @@
-# Fresh-user origin account — Design
+# Fresh-user origin account (all tools) — Design
 
 **Goal:** When a user who has never used Orrery runs it for the first time, their
-existing `~/.claude` becomes the **origin workspace**, and Orrery creates a
-brand-new **link-only origin account** pinned to that workspace, with `~/.claude`
-pointing at the account. A normal user's account then holds only identity + private
-files + symlinks into the workspace — never real shared data.
+existing tool config (`~/.claude`, `~/.codex`, `~/.gemini`) becomes the **origin
+workspace**, and Orrery creates a brand-new **origin account** per tool that
+captures the existing login and links to the workspace. A normal user's account
+then holds only its credential/identity — never the shared data — and everything
+"just works" without a manual `orrery add`.
 
-**Status:** proposed. Claude-only. New installs only (existing installs untouched).
+**Status:** proposed. All three tools. New installs only (existing installs untouched).
 
 ---
 
 ## Background — current behavior & the gap
 
-At every invocation, `OriginTakeoverBootstrap.runIfNeeded()` calls
+At every invocation `OriginTakeoverBootstrap.runIfNeeded()` calls
 `EnvironmentStore.originTakeover(tool:)` for each unmanaged tool whose default
-config dir exists:
+config dir exists: it **moves** `~/.<tool>` → `workspaces/origin/<tool>` (the origin
+**workspace**) and symlinks `~/.<tool>` → that workspace dir.
 
-- `originTakeover(.claude)` **moves** `~/.claude` → `workspaces/origin/claude`
-  (the origin **workspace**) and symlinks `~/.claude` → that workspace dir.
-- `AccountMigration.enforceOriginClaudeDir` → `repairOriginPins` pins the origin
-  workspace's per-tool account **only if one already exists** (by displayName
-  "origin"); `repointClaudeDirSymlink` repoints `~/.claude` → the origin **account**
-  dir **only if that pin exists**.
+`AccountMigration.enforceOriginClaudeDir` → `repairOriginPins` pins a tool's origin
+account **only if one already exists**; `MigrateToV31Command` /
+`ClaudeAccountMigration` only bring **existing** accounts to v3.1 layout. **Nothing
+creates an origin account.**
 
-`MigrateToV31Command` / `ClaudeAccountMigration.migrateAccount` bring **existing**
-accounts (`AccountStore.list`) up to the v3.1 per-account-dir layout. Nothing
-**creates** an origin account.
+**Result for a fresh user (zero accounts):** the login data moves into the workspace
+but no account is created:
+- **claude**: `~/.claude` stays pointing at the workspace, which has no
+  `metadata.json`, so the `claude()` launch wrapper's v3.1 gate is false and Orrery's
+  launch hooks never engage. No per-account identity / `.claude.json` / statusline.
+- **codex / gemini**: no pool account exists, so `orrery list` shows nothing and
+  there is no account to `use` / manage.
 
-**Result for a fresh user (zero accounts):** data moves into the workspace, but no
-origin account is created, so `~/.claude` stays pointing directly at the workspace.
-That dir has no `metadata.json`, so the `claude()` launch wrapper's v3.1 gate
-(`[ -f "$HOME/.claude/metadata.json" ]`) is false and Orrery's launch hooks never
-run. There is no per-account identity / `.claude.json` / statusline cache layer.
+This spec fills the gap for all three tools.
 
-This spec fills that gap.
+## Two account models (both already exist)
 
-## Login/credential facts (macOS)
+- **claude** — per-account-dir model. The account dir *is* `CLAUDE_CONFIG_DIR`;
+  shared subdirs are symlinks into the workspace; `~/.claude` → the account dir.
+  Credentials: macOS **Keychain** (per-account service `Claude Code-orrery-<id>`);
+  identity metadata in `claude-identity.json`.
+- **codex / gemini** — pool model. The account dir holds just the credential file
+  (`auth.json` / `oauth_creds.json`) + `metadata.json`. `orrery use <acct>`
+  materializes that file into `~/.codex` / `~/.gemini` (which → workspace). No
+  config-dir switching, no keychain.
 
-- `~/.claude.json` (home file, **not** inside the `~/.claude` dir, so `originTakeover`
-  does **not** move it) holds `oauthAccount` (email, `subscriptionType`).
-- The macOS **Keychain** holds the actual tokens under the default service
-  `Claude Code-credentials` (JSON with `claudeAiOauth.{accessToken,refreshToken,…}`).
-- A v3.1 account stores its credentials under a **per-account** keychain service
-  named `Claude Code-orrery-<accountID>` (see `Account.keychainItem`) and seeds
-  `claude-identity.json` `oauthAccount` from that service (see
-  `ClaudeAccountMigration.migrateAccount`).
+## Reusable machinery (do NOT reinvent)
 
-So a fresh account is only "logged in" if we copy the default-service credentials
-into its per-account service **and** seed its identity file.
+`AccountLoginFlow.importFrom(stagingDir:into:)` already captures a login into a pool
+account — it is what `orrery add` uses:
+- codex / gemini / Linux-claude: copies the credential file from `stagingDir` into
+  the account dir, then refreshes email/plan.
+- macOS claude: copies the keychain item `ClaudeKeychain.service(for: stagingDir.path)`
+  into the account's own service.
+
+`ClaudeAccountMigration.migrateAccount` then finalizes a claude account (link-only
+`prepareDirectory` + seed `claude-identity.json` from the keychain).
+`AccountMigration.repointClaudeDirSymlink` repoints `~/.claude` → the account once the
+origin pin exists.
 
 ## Design
 
-### Trigger & guards
-Add a claude-only step to the origin-takeover/enforce flow (after
-`originTakeover(.claude)`), guarded so it runs at most once and never for existing
-installs:
+### New step: `seedOriginAccountsIfNeeded(homeURL:)`
+Runs from the takeover/enforce flow, **after** `originTakeover` and **before**
+`repointClaudeDirSymlink`, iterating all three tools. Tool-generic (not claude-only),
+so it replaces the claude-only framing of the earlier draft.
 
-- Run only when **all** hold:
-  1. `loadOriginWorkspace().account(for: .claude) == nil` — no origin claude account
-     (this alone keeps every existing install untouched).
-  2. `~/.claude` currently resolves to the origin **workspace** claude dir
-     (i.e. the takeover just happened / hasn't been converted to an account).
-  3. The origin workspace claude dir exists.
+For each tool `T`, run only when **all** hold (idempotent; keeps existing installs
+untouched):
+1. `loadOriginWorkspace().account(for: T) == nil` — no origin account for `T`.
+2. `originTakeover` has run for `T` (`~/.<T>` resolves to the workspace `T` dir).
+3. The origin workspace `T` dir exists and contains a credential to capture.
 
-### Steps (all idempotent / best-effort — never block startup)
-1. **Create** `Account(tool: .claude, displayName: "origin")`; `AccountStore.save`.
-2. **Capture the login** into the new account (see below).
-3. **Pin** it: `originWorkspace.setAccount(newID, for: .claude)`; save.
-4. **prepareDirectory(account:)** — the workspace already holds the data, so pass 1
-   (account→workspace migrate) is a no-op and the account becomes pure symlinks
-   into the workspace (the "link-only" account). This reuses existing, tested code.
-5. Let the existing `repointClaudeDirSymlink` point `~/.claude` → the new account dir
-   (it fires once the origin pin exists). `~/.claude/metadata.json` now resolves, so
-   the launch wrapper engages normally.
+Then:
+1. Create `Account(tool: T, displayName: "origin")`; `AccountStore.save`.
+2. `AccountLoginFlow.importFrom(stagingDir: <captureSource(T)>, into: account)` —
+   reuses the existing per-tool capture.
+   - codex / gemini: `captureSource = workspaces/origin/<T>` (holds
+     `auth.json` / `oauth_creds.json`).
+   - macOS claude: `captureSource` = the path whose `ClaudeKeychain.service(for:)`
+     equals the pre-Orrery default service `Claude Code-credentials` (the login the
+     user already had). *(Exact path resolved in the plan; `ClaudeKeychain.service`
+     defines the mapping.)*
+3. Pin: `originWorkspace.setAccount(account.id, for: T)`; save.
+4. Tool-specific finalize:
+   - **claude**: `ClaudeAccountMigration.migrateAccount` (link-only `prepareDirectory`
+     — workspace already holds the data, so pass 1 is a no-op → account is pure
+     symlinks; seeds identity). Then `repointClaudeDirSymlink` points `~/.claude` →
+     the account dir; `metadata.json` now resolves so the launch wrapper engages.
+   - **codex / gemini**: none — the pool account holds the credential; `~/.<T>` stays
+     → workspace; `orrery use` materializes on demand.
 
-### Credential capture (the crux)
-`captureOriginLogin(into: Account)`:
-- Read default keychain service `Claude Code-credentials` → if present, write the
-  same JSON to the account's per-account service `Claude Code-orrery-<id>`.
-  (Do **not** delete the default service — leaves the pre-Orrery state recoverable.)
-- Seed `claude-identity.json` `oauthAccount`: prefer the full `claudeAiOauth` from
-  the captured keychain creds; else fall back to `oauthAccount` read from
-  `~/.claude.json`; else empty `{}` (user re-logs in — no worse than today).
+Best-effort throughout: a per-tool failure logs a warning and never blocks startup or
+other tools.
 
 ## Edge cases
-- **`~/.claude` empty / no login** → still create the account (or skip if no data);
-  identity seeds to `{}`; user logs in normally. No crash.
-- **User already has non-origin accounts but no origin pin** → guard #1 fires only on
-  a missing origin *pin*; if the workspace has data and no origin account, we still
-  create one. (Rare; acceptable.)
-- **Re-run** → guard #1 (origin account now exists) makes it a no-op.
+- **No login present** (`~/.<T>` had no credential) → skip that tool (nothing to
+  capture); no empty/broken account.
+- **User has non-origin accounts but no origin pin for `T`** → guard #1 is about the
+  origin *pin*; if the workspace has `T` data and no origin account, we still create
+  one. Rare; acceptable.
+- **Re-run / already seeded** → guard #1 (origin account exists) → no-op.
 - **Opt-out** (`~/.orrery/.no-origin-takeover`) → whole bootstrap already skipped.
-- **codex / gemini** → out of scope. They have no per-account-dir model in v3.1
-  (`~/.codex`/`~/.gemini` → workspace dirs directly); unchanged.
+- **claude keychain empty on this machine but `~/.claude.json` has `oauthAccount`** →
+  identity seeds from `~/.claude.json` (email only); user re-logs in. No worse than today.
 
 ## Testing strategy
-- **Keychain is not isolatable** in the suite (it's the real macOS keychain; setting
-  `$HOME` to isolate breaks keychain resolution — established earlier). So:
-  - Inject keychain access behind a small protocol (wrap `ClaudeKeychain`); unit-test
-    `captureOriginLogin` with an in-memory fake (default-service creds in → per-account
-    service + identity file out).
-  - Unit-test account creation + pin + link-only `prepareDirectory` + `~/.claude`
-    repoint using the existing `ORRERY_USER_HOME` isolation (no keychain needed).
-  - One **manual** end-to-end verification on a scratch `ORRERY_HOME`+`ORRERY_USER_HOME`
-    (never the real home) confirming the whole flow.
-- Regression guard: an install that already has an origin account is left byte-identical.
+- **codex / gemini**: fully automatable — file-based capture, isolated via
+  `ORRERY_USER_HOME` + `ORRERY_HOME`. Assert: origin account created, `auth.json` /
+  `oauth_creds.json` copied into the account dir, origin pin set, idempotent re-run.
+- **claude**: keychain is not isolatable (setting `$HOME` breaks keychain resolution).
+  Put keychain access behind a protocol; unit-test the capture with an in-memory fake.
+  Unit-test the rest (account create, link-only `prepareDirectory`, `~/.claude`
+  repoint) with the existing isolation.
+- One **manual** end-to-end on a scratch `ORRERY_HOME`+`ORRERY_USER_HOME` (never the
+  real home) for the full three-tool flow.
+- Regression: an install that already has origin accounts is left byte-identical.
 
 ## Out of scope
-- Converging **existing** installs to the fresh-account shape (decided: leave them).
-- codex / gemini origin accounts.
-- Any change to the launch-time mirror (that's PR #21).
+- Converging **existing** installs to the fresh shape (decided: leave them).
+- Any change to the launch-time mirror (PR #21).
 
-## Open questions
-- Should the new account's `displayName` be `origin` (matches the existing convention
-  `repairOriginPins`/`findByDisplayName("origin")` rely on) — assumed **yes**.
-- Where exactly to place the new step: inside `AccountMigration.enforceOriginClaudeDir`
-  (before `repointClaudeDirSymlink`) vs a new function called from
-  `OriginTakeoverBootstrap`. Leaning `enforceOriginClaudeDir` since it already owns
-  origin-pin repair and runs right after takeover.
+## Resolved decisions
+- New account `displayName = "origin"` (matches `findByDisplayName("origin")` /
+  `repairOriginPins`).
+- Placement: a tool-generic `seedOriginAccountsIfNeeded` invoked from the
+  takeover/enforce flow right after `originTakeover`, before `repointClaudeDirSymlink`
+  (generalized from the earlier claude-only "put it in `enforceOriginClaudeDir`",
+  since codex/gemini are now in scope).
