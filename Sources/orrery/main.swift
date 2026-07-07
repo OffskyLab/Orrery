@@ -32,6 +32,13 @@ private func runOrreryMain() async throws {
     // dir and point ~/.claude at the origin account dir, so origin reads the same
     // account dir that `orrery use` selects (statusline + settings consistent).
     AccountMigration.runAccountConfigConsolidationIfNeeded(homeURL: orreryHomeURL())
+    // Fresh-user onboarding: after takeover moved ~/.<tool> into the origin
+    // workspace, create a link-only origin account per tool that captures the
+    // existing login (no-op once an origin account exists → existing installs
+    // untouched). Must run BEFORE enforceOriginClaudeDir so the claude pin exists
+    // for the ~/.claude repoint below.
+    OriginAccountSeeder.seedOriginAccountsIfNeeded()
+
     // Ongoing invariant (every run, not flag-guarded): keep origin pinned and
     // ~/.claude pointing at the origin account dir. A ~/.claude still on the old
     // workspace target (upgrades / 3.0.4-damaged installs) self-heals here on the
