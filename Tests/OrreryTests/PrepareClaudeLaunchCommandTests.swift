@@ -80,8 +80,8 @@ struct PrepareClaudeLaunchCommandTests {
         }
     }
 
-    @Test("launch links a new shareable account dir into the workspace")
-    func linksNewShareableDir() throws {
+    @Test("launch mirrors a workspace dir into the account and does NOT migrate account dirs")
+    func launchMirrorsWorkspaceDirWithoutMigrating() throws {
         try withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
@@ -91,22 +91,38 @@ struct PrepareClaudeLaunchCommandTests {
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+            let fm = FileManager.default
 
-            // Simulate claude having created a brand-new folder in the account dir.
-            let skills = acctDir.appendingPathComponent("skills")
-            try FileManager.default.createDirectory(
-                at: skills, withIntermediateDirectories: true)
-            try Data("x".utf8).write(to: skills.appendingPathComponent("a.md"))
+            // A dir already in the workspace (e.g. seeded by another account) —
+            // launch should mirror it into this account.
+            let wsSkills = wsDir.appendingPathComponent("skills")
+            try fm.createDirectory(at: wsSkills, withIntermediateDirectories: true)
+            try Data("s".utf8).write(to: wsSkills.appendingPathComponent("a.md"))
+
+            // A real dir claude created in the account that the workspace lacks —
+            // launch must NOT migrate it (seeding happens only at pin time).
+            let localOnly = acctDir.appendingPathComponent("local-only")
+            try fm.createDirectory(at: localOnly, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: localOnly.appendingPathComponent("keep.txt"))
 
             var cmd = try PrepareClaudeLaunchCommand.parse(["--account-dir", acctDir.path])
             try cmd.run()
 
-            let fm = FileManager.default
-            let dest = try fm.destinationOfSymbolicLink(
-                atPath: acctDir.appendingPathComponent("skills").path)
-            #expect(dest == wsDir.appendingPathComponent("skills").path)
-            #expect(fm.fileExists(
-                atPath: wsDir.appendingPathComponent("skills/a.md").path))
+            // Mirrored: account/skills -> workspace/skills.
+            #expect((try? fm.destinationOfSymbolicLink(
+                atPath: acctDir.appendingPathComponent("skills").path))
+                == wsDir.appendingPathComponent("skills").path)
+
+            // NOT migrated: account/local-only stays a real dir with its data;
+            // the workspace never receives it.
+            let localLink = acctDir.appendingPathComponent("local-only")
+            #expect((try? fm.destinationOfSymbolicLink(atPath: localLink.path)) == nil,
+                "launch must not turn an account dir into a symlink (no migration)")
+            var isDir: ObjCBool = false
+            #expect(fm.fileExists(atPath: localLink.path, isDirectory: &isDir) && isDir.boolValue)
+            #expect(fm.fileExists(atPath: localLink.appendingPathComponent("keep.txt").path))
+            #expect(!fm.fileExists(atPath: wsDir.appendingPathComponent("local-only").path),
+                "launch must not seed account dirs into the workspace")
         }
     }
 
@@ -127,23 +143,21 @@ struct PrepareClaudeLaunchCommandTests {
             try ClaudeJsonMerge.saveJSON(["userID": "uid-alice"],
                 at: ClaudeJsonMerge.identityFileURL(accountDir: acctDir))
 
-            // A brand-new shareable folder in the account dir (like plugins).
-            let plugins = acctDir.appendingPathComponent("plugins")
+            // A dir already present in the workspace — launch mirrors it in.
+            let wsPlugins = wsDir.appendingPathComponent("plugins")
             try FileManager.default.createDirectory(
-                at: plugins, withIntermediateDirectories: true)
-            try Data("x".utf8).write(to: plugins.appendingPathComponent("config.json"))
+                at: wsPlugins, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: wsPlugins.appendingPathComponent("config.json"))
 
             var cmd = try PrepareClaudeLaunchCommand.parse(
                 ["--account-dir", acctDir.path, "--links-only"])
             try cmd.run()
 
             let fm = FileManager.default
-            // plugins is now a symlink into the workspace (linker ran).
+            // plugins mirrored into the account as a symlink to the workspace.
             let dest = try fm.destinationOfSymbolicLink(
                 atPath: acctDir.appendingPathComponent("plugins").path)
             #expect(dest == wsDir.appendingPathComponent("plugins").path)
-            #expect(fm.fileExists(
-                atPath: wsDir.appendingPathComponent("plugins/config.json").path))
 
             // .claude.json was NOT merged — identity fields must be absent.
             let claudeJSON = ClaudeJsonMerge.loadJSON(
@@ -165,10 +179,11 @@ struct PrepareClaudeLaunchCommandTests {
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
 
-            let plugins = acctDir.appendingPathComponent("plugins")
+            // A dir already in the workspace to be mirrored in.
+            let wsPlugins = wsDir.appendingPathComponent("plugins")
             try FileManager.default.createDirectory(
-                at: plugins, withIntermediateDirectories: true)
-            try Data("x".utf8).write(to: plugins.appendingPathComponent("config.json"))
+                at: wsPlugins, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: wsPlugins.appendingPathComponent("config.json"))
 
             // Simulate ~/.claude: a symlink that points at the account dir.
             let link = acctDir.deletingLastPathComponent()
@@ -181,11 +196,12 @@ struct PrepareClaudeLaunchCommandTests {
                 ["--account-dir", link.path, "--links-only"])
             try cmd.run()
 
-            // The REAL account dir's plugins must now be a symlink into the workspace.
+            // The mirror must resolve the symlinked account dir and create the
+            // symlink in the REAL account dir.
             let dest = try FileManager.default.destinationOfSymbolicLink(
                 atPath: acctDir.appendingPathComponent("plugins").path)
             #expect(dest == wsDir.appendingPathComponent("plugins").path,
-                "linker must follow the symlinked account dir and link plugins")
+                "mirror must follow the symlinked account dir")
         }
     }
 }

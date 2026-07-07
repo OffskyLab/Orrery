@@ -383,6 +383,34 @@ struct ClaudeAccountDirectoryLinkTests {
             atPath: acct.appendingPathComponent("statusline.js").path)) == nil)
     }
 
+    @Test("mirrorWorkspaceDirsToAccount symlinks workspace dirs but never migrates account dirs")
+    func mirrorOnlyNeverMigrates() throws {
+        let (acct, ws, base) = try makeTempPair()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let fm = FileManager.default
+
+        // workspace has `skills`; account has a real `local` dir not in workspace.
+        try fm.createDirectory(
+            at: ws.appendingPathComponent("skills"), withIntermediateDirectories: true)
+        let local = acct.appendingPathComponent("local")
+        try fm.createDirectory(at: local, withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: local.appendingPathComponent("k.txt"))
+
+        let warnings = ClaudeAccountDirectory.mirrorWorkspaceDirsToAccount(
+            accountDir: acct, workspaceDir: ws)
+        #expect(warnings.isEmpty)
+
+        // skills mirrored in as a symlink…
+        #expect((try? fm.destinationOfSymbolicLink(
+            atPath: acct.appendingPathComponent("skills").path))
+            == ws.appendingPathComponent("skills").path)
+        // …but the account's real dir is left alone (not turned into a symlink,
+        // not moved into the workspace).
+        #expect((try? fm.destinationOfSymbolicLink(atPath: local.path)) == nil)
+        #expect(fm.fileExists(atPath: local.appendingPathComponent("k.txt").path))
+        #expect(!fm.fileExists(atPath: ws.appendingPathComponent("local").path))
+    }
+
     @Test("mirror pass is idempotent — second run leaves the symlink and no warnings")
     func mirrorIsIdempotent() throws {
         let (acct, ws, base) = try makeTempPair()

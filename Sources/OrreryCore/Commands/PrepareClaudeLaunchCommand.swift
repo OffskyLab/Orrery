@@ -102,11 +102,11 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
             )
         }
 
-        // v3.1: generalize workspace linking. Move any shareable account dir
-        // (skills, plugins, or anything claude adds later) into the pinned
-        // workspace and symlink it, so accounts on the same workspace share it.
-        // Best-effort — link failures must never block claude launch.
-        let linkWarnings = ClaudeAccountDirectory.linkAccountDirsToWorkspace(
+        // Launch only mirrors the workspace into the account: symlink any shared
+        // dir the account is missing. It never moves/merges account dirs into the
+        // workspace — that account→workspace seeding happens once at pin time
+        // (`orrery pin` → prepareDirectory). Best-effort; never blocks launch.
+        let linkWarnings = ClaudeAccountDirectory.mirrorWorkspaceDirsToAccount(
             accountDir: acctDirURL, workspaceDir: wsDir)
         for w in linkWarnings {
             FileHandle.standardError.write(
