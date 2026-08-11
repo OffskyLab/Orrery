@@ -44,10 +44,12 @@ public struct OrreryCommand: AsyncParsableCommand {
             AccountAddPrepareCommand.self,
             AccountAddFinalizeCommand.self,
             MigrateToV31Command.self,
+            RefreshTokenCommand.self,
             // Internal subcommands (hidden from --help, used by shell wrappers)
             PrepareClaudeLaunchCommand.self,
             CaptureClaudeExitCommand.self,
             AccountDirLookupCommand.self,
+            RefreshTokensCommand.self,
         ]
     )
     public init() {}

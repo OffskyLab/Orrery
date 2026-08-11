@@ -232,6 +232,92 @@ public enum ClaudeKeychain {
         addPassword(service: service, account: currentUserAccount, password: password)
     }
 
+    // MARK: - OAuth token refresh support
+
+    /// Parsed `claudeAiOauth` OAuth fields, including the token-refresh
+    /// bookkeeping (`refreshToken`/`expiresAt`) that the other accessors in
+    /// this file never needed to look at.
+    public struct OAuthCredential: Sendable {
+        public let accessToken: String
+        public let refreshToken: String
+        /// `claudeAiOauth.expiresAt` is epoch-millis in the stored JSON.
+        public let expiresAt: Date
+        public let subscriptionType: String?
+    }
+
+    /// Read the full OAuth credential (incl. refresh token + expiry) stored
+    /// under `service`. Returns nil if the item is missing or malformed, or
+    /// if `refreshToken`/`expiresAt` aren't present (older/partial blobs).
+    public static func oauthCredential(forService service: String) -> OAuthCredential? {
+        guard let json = password(forService: service) else { return nil }
+        return parseOAuthCredential(json: json)
+    }
+
+    /// Replace `accessToken`/`refreshToken`/`expiresAt` inside the
+    /// `claudeAiOauth` object stored under `service`, leaving every other
+    /// key in the credential JSON (including unrelated MCP OAuth blobs for
+    /// other connectors) untouched. Returns false — without writing
+    /// anything — if the existing item is missing/malformed or the write
+    /// fails.
+    @discardableResult
+    public static func updateOAuthCredential(
+        forService service: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresAt: Date
+    ) -> Bool {
+        guard let json = password(forService: service),
+              let newJSON = applyingOAuthUpdate(
+                toJSON: json, accessToken: accessToken, refreshToken: refreshToken, expiresAt: expiresAt
+              )
+        else { return false }
+        return setPassword(newJSON, service: service)
+    }
+
+    /// Pure JSON parsing — no Keychain I/O — so it's testable without
+    /// touching the real login keychain (which cannot be isolated in
+    /// tests; see `KeychainAccess`'s doc comment).
+    static func parseOAuthCredential(json: String) -> OAuthCredential? {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = obj["claudeAiOauth"] as? [String: Any],
+              let accessToken = oauth["accessToken"] as? String,
+              let refreshToken = oauth["refreshToken"] as? String,
+              let expiresAtMillis = (oauth["expiresAt"] as? NSNumber)?.doubleValue
+        else { return nil }
+        return OAuthCredential(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: Date(timeIntervalSince1970: expiresAtMillis / 1000),
+            subscriptionType: oauth["subscriptionType"] as? String
+        )
+    }
+
+    /// Pure JSON transform — no Keychain I/O. Returns the full credential
+    /// JSON with only `claudeAiOauth.{accessToken,refreshToken,expiresAt}`
+    /// replaced, or nil if `json` isn't a well-formed credential blob.
+    static func applyingOAuthUpdate(
+        toJSON json: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresAt: Date
+    ) -> String? {
+        guard let data = json.data(using: .utf8),
+              var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var oauth = obj["claudeAiOauth"] as? [String: Any]
+        else { return nil }
+
+        oauth["accessToken"] = accessToken
+        oauth["refreshToken"] = refreshToken
+        oauth["expiresAt"] = Int64((expiresAt.timeIntervalSince1970 * 1000).rounded())
+        obj["claudeAiOauth"] = oauth
+
+        guard let newData = try? JSONSerialization.data(withJSONObject: obj),
+              let newJSON = String(data: newData, encoding: .utf8)
+        else { return nil }
+        return newJSON
+    }
+
     private static func findPassword(service: String, account: String) -> String? {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
