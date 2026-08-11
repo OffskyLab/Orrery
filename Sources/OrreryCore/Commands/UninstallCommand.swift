@@ -30,7 +30,13 @@ public struct UninstallCommand: ParsableCommand {
             print(L10n.Origin.released(tool.rawValue, tool.defaultConfigDir.path))
         }
 
-        // 2. Remove shell integration from rc files
+        #if os(macOS)
+        // 2. Unload and remove the background token-refresh LaunchAgent, so
+        //    uninstalling orrery doesn't leave an orphaned launchd job.
+        TokenRefreshDaemonInstaller.unregister()
+        #endif
+
+        // 3. Remove shell integration from rc files
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let shellName = URL(fileURLWithPath: shell).lastPathComponent
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -49,7 +55,7 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedIntegration(rcFile.path))
         }
 
-        // 3. Remove the orrery-bin binary
+        // 4. Remove the orrery-bin binary
         let binaryPath = CommandLine.arguments[0]
         let binaryURL = URL(fileURLWithPath: binaryPath)
         if FileManager.default.fileExists(atPath: binaryURL.path) {
@@ -57,7 +63,7 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedBinary(binaryURL.path))
         }
 
-        // 4. Remove the orrery-magi sidecar binary (installed under
+        // 5. Remove the orrery-magi sidecar binary (installed under
         //    ~/.orrery/bin/ by install.sh / Homebrew). Use try? — sidecar
         //    removal failure must not block uninstall completion.
         let magiURL = home.appendingPathComponent(".orrery/bin/orrery-magi")
