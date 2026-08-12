@@ -36,10 +36,11 @@ private let orreryHomeLock = NSLock()
 /// Holds a process-global lock for the duration so concurrent suites cannot race.
 /// Restores the previous ORRERY_HOME and deletes the temp dir afterwards.
 ///
-/// `ORRERY_ACTIVE_ENV` is scrubbed for the duration too: a dev running the
-/// suite from a shell that is "in" a sandbox would otherwise leak that name
-/// into commands like `orrery show`, which read the active env from the
-/// process environment. Restored afterwards.
+/// `ORRERY_ACTIVE_ENV` / `CLAUDE_CONFIG_DIR` are scrubbed for the duration too:
+/// a dev running the suite from a shell that is "in" a sandbox (or has just
+/// run `orrery use` for claude) would otherwise leak that state into commands
+/// like `orrery show`, which read both from the process environment. Restored
+/// afterwards.
 func withIsolatedHome(_ body: () throws -> Void) rethrows {
     orreryHomeLock.lock()
     defer { orreryHomeLock.unlock() }
@@ -50,6 +51,7 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
 
     let savedHome = ProcessInfo.processInfo.environment["ORRERY_HOME"]
     let savedActiveEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+    let savedClaudeConfigDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
     // ORRERY_USER_HOME is redirected too: `Tool.defaultConfigDir` (and other
     // home-relative paths) resolve via `userHomeURL()`, which honors it. Without
     // this a test that triggers origin-takeover code would symlink/write into the
@@ -59,6 +61,7 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
     setenv("ORRERY_HOME", tmpDir.path, 1)
     setenv("ORRERY_USER_HOME", tmpDir.path, 1)
     unsetenv("ORRERY_ACTIVE_ENV")
+    unsetenv("CLAUDE_CONFIG_DIR")
     defer {
         // Sweep any claude Keychain items the body created (global keychain is not
         // isolated by ORRERY_HOME). Runs before the temp dir is removed.
@@ -77,6 +80,11 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
             setenv("ORRERY_ACTIVE_ENV", savedActiveEnv, 1)
         } else {
             unsetenv("ORRERY_ACTIVE_ENV")
+        }
+        if let savedClaudeConfigDir {
+            setenv("CLAUDE_CONFIG_DIR", savedClaudeConfigDir, 1)
+        } else {
+            unsetenv("CLAUDE_CONFIG_DIR")
         }
         try? FileManager.default.removeItem(at: tmpDir)
     }

@@ -316,6 +316,72 @@ struct AccountCommandsAllTests {
                 #expect(output.contains("env-pinned-account"))
             }
         }
+
+        @Test("CLAUDE_CONFIG_DIR pointing at a different account overrides the claude row and notes the default")
+        func claudeConfigDirOverridesRow() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let pinned = Account(tool: .claude, displayName: "pinned-default")
+                let shellOnly = Account(tool: .claude, displayName: "shell-only-account")
+                try acctStore.save(pinned)
+                try acctStore.save(shellOnly)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = pinned.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("CLAUDE_CONFIG_DIR", acctStore.accountDir(id: shellOnly.id, tool: .claude).path, 1)
+                defer { unsetenv("CLAUDE_CONFIG_DIR") }
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("shell-only-account"))
+                #expect(output.contains("this shell only"))
+                #expect(output.contains("pinned-default")) // still mentioned as the default
+            }
+        }
+
+        @Test("CLAUDE_CONFIG_DIR matching the persisted pin shows the normal row, no override marker")
+        func claudeConfigDirMatchingPinIsUnannotated() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let acct = Account(tool: .claude, displayName: "same-account")
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("CLAUDE_CONFIG_DIR", acctStore.accountDir(id: acct.id, tool: .claude).path, 1)
+                defer { unsetenv("CLAUDE_CONFIG_DIR") }
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("same-account"))
+                #expect(!output.contains("this shell only"))
+            }
+        }
+
+        @Test("CLAUDE_CONFIG_DIR pointing at an unknown account falls back to the persisted pin")
+        func claudeConfigDirUnknownFallsBack() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let acct = Account(tool: .claude, displayName: "still-shown")
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("CLAUDE_CONFIG_DIR", "/tmp/not-a-real-orrery-account-dir", 1)
+                defer { unsetenv("CLAUDE_CONFIG_DIR") }
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("still-shown"))
+                #expect(!output.contains("this shell only"))
+            }
+        }
     }
 
     // MARK: UseCommand
