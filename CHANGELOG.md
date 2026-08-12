@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.2.0 - 2026-08-12
+
+### Added
+
+- **Background OAuth token-refresh agent for Claude accounts, on macOS and Linux.**
+  Claude Code's own token refresh is unreliable — access tokens expire after ~8h
+  idle and the upstream refresh-token flow silently fails (multiple open
+  `anthropics/claude-code` issues), forcing repeated re-logins. orrery now
+  refreshes each managed account's token itself, directly against Anthropic's
+  OAuth endpoint using the stored refresh token, bypassing the bug entirely.
+  Ships as a dedicated `orrery-agent` binary (built separately for macOS and
+  Linux, alongside `orrery-bin`) registered as a real background job — a macOS
+  `launchd` LaunchAgent or a Linux `systemd --user` service+timer — that checks
+  every 15 minutes and refreshes any token within an hour of expiring, entirely
+  independent of whether you run any `orrery`/`claude` command. Also adds
+  `orrery refresh-token [<name>|--all]` as a manual escape hatch to force a
+  refresh right now, for debugging or recovering an account.
+- **Origin accounts are now seeded for Codex and Gemini too**, not just Claude,
+  during fresh-user onboarding after origin takeover — a link-only origin
+  account is created per tool that captures the existing login.
+
+### Fixed
+
+- **`orrery show` now reflects a session-only `orrery use` claude switch.**
+  `orrery use <name>` for claude only exports `CLAUDE_CONFIG_DIR` into the
+  current shell session — it never updates the persisted default pin. `orrery
+  show` previously only read the persisted pin, so after switching accounts it
+  kept showing the old default. It now also checks `CLAUDE_CONFIG_DIR` and, when
+  it points at a different account than the persisted pin, shows that as the
+  effective account with a note of what the persisted default still is.
+- **Workspace-shared directories converge correctly across accounts pinned to
+  the same workspace.** A directory another account created in a shared
+  workspace (or added directly) is now symlinked back into every account
+  pinned there on each `claude` launch, not just moved one-way from account to
+  workspace at pin time. Installing a workspace-shared file (e.g. the
+  statusline program) also now cleans up any stale pre-workspace copy left
+  behind in the account directory.
+
 ## v3.1.5 - 2026-07-07
 
 ### Fixed
