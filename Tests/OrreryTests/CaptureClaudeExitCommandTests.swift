@@ -123,5 +123,44 @@ struct CaptureClaudeExitCommandTests {
             #expect(synced?.refreshToken == "new-refresh")
         }
     }
+
+    @Test("unchanged refreshToken is not treated as a login — no re-copy, no hook fired")
+    func unchangedRefreshTokenSkipsSync() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            var acct = Account(tool: .claude, displayName: "alice")
+            acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let liveService = ClaudeKeychain.service(for: acctDir.path)
+            defer {
+                ClaudeKeychain.deleteKeychainItem(service: liveService)
+                ClaudeKeychain.deleteKeychainItem(service: acct.keychainItem!)
+            }
+
+            let sameCredential = #"{"claudeAiOauth":{"accessToken":"same","refreshToken":"same-refresh","expiresAt":1000}}"#
+            ClaudeKeychain.storePassword(sameCredential, forOrreryAccount: acct.id)
+            ClaudeKeychain.setPassword(sameCredential, service: liveService)
+
+            // A hook script that would prove it fired, if it did.
+            let markerURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("orrery-hook-marker-\(UUID().uuidString).txt")
+            defer { try? FileManager.default.removeItem(at: markerURL) }
+            let scriptURL = AccountLoginHooks.onLoginScriptURL
+            try FileManager.default.createDirectory(
+                at: scriptURL.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
+            try "#!/bin/sh\ntouch \"\(markerURL.path)\"\n".write(to: scriptURL, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+
+            var cmd = try CaptureClaudeExitCommand.parse(["--account-dir", acctDir.path])
+            try cmd.run()
+
+            #expect(!FileManager.default.fileExists(atPath: markerURL.path))
+        }
+    }
     #endif
 }

@@ -21,8 +21,13 @@ import Foundation
 /// silently go stale the moment claude (or the user, via `/login`) rotated
 /// the refresh token during normal use — the background agent would then
 /// fail every refresh with `invalid_grant` against a token that was already
-/// dead. Copying the live credential back into the pool on every exit keeps
-/// them in sync going forward.
+/// dead.
+///
+/// The sync is gated on actually detecting a change (comparing the pool's
+/// cached `refreshToken` against the live one), rather than copying
+/// unconditionally on every exit — that comparison **is** the "a login
+/// happened" signal, and it's what fires `AccountLoginHooks` (refetch
+/// email/plan, run the user's `~/.orrery/hooks/on-login` script if any).
 public struct CaptureClaudeExitCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_capture-claude-exit",
@@ -79,16 +84,28 @@ public struct CaptureClaudeExitCommand: ParsableCommand {
     }
 
     #if os(macOS)
-    /// Copies whatever claude currently has under the config-dir-hashed
-    /// Keychain service into the account's own pool service. Best-effort:
-    /// silently no-ops if the account can't be loaded or has no
-    /// `keychainItem` (e.g. non-claude tools never reach this command).
+    /// Detects whether claude's live credential (under the config-dir-hashed
+    /// Keychain service) actually changed since the pool's cached copy — a
+    /// fresh login or a token rotation — and if so, copies it into the
+    /// account's own pool service and fires `AccountLoginHooks`.
+    /// Best-effort throughout: silently no-ops if the account can't be
+    /// loaded, has no `keychainItem` (e.g. non-claude tools never reach this
+    /// command), or there's simply nothing new to sync.
     private func syncKeychainToPool(accountDir: URL) {
         guard let account = try? AccountStore.default.load(id: accountDir.lastPathComponent, tool: .claude),
               let poolService = account.keychainItem
         else { return }
+
         let liveService = ClaudeKeychain.service(for: accountDir.path)
-        ClaudeKeychain.copyKeychainItem(from: liveService, to: poolService)
+        guard let liveCredential = ClaudeKeychain.oauthCredential(forService: liveService) else { return }
+
+        let poolCredential = ClaudeKeychain.oauthCredential(forService: poolService)
+        guard liveCredential.refreshToken != poolCredential?.refreshToken else {
+            return // unchanged since last capture — no login/refresh happened this session
+        }
+
+        guard ClaudeKeychain.copyKeychainItem(from: liveService, to: poolService) else { return }
+        AccountLoginHooks.fire(account: account)
     }
     #endif
 }
