@@ -171,6 +171,68 @@ public enum ClaudeKeychain {
         return oauthAccount["emailAddress"] as? String
     }
 
+    // MARK: - OAuth token refresh support (JSON logic — platform-agnostic)
+    //
+    // These operate on the credential JSON string alone, with no I/O, so
+    // they're shared by both storage backends: the macOS accessors below
+    // pass in Keychain-read JSON, and the Linux background agent
+    // (`TokenRefreshRunner`) passes in `.credentials.json` file contents.
+
+    /// Parsed `claudeAiOauth` OAuth fields, including the token-refresh
+    /// bookkeeping (`refreshToken`/`expiresAt`) that the other accessors in
+    /// this file never needed to look at.
+    public struct OAuthCredential: Sendable {
+        public let accessToken: String
+        public let refreshToken: String
+        /// `claudeAiOauth.expiresAt` is epoch-millis in the stored JSON.
+        public let expiresAt: Date
+        public let subscriptionType: String?
+    }
+
+    /// Pure JSON parsing — no I/O — so it's testable without touching the
+    /// real login keychain (which cannot be isolated in tests; see
+    /// `KeychainAccess`'s doc comment) or a real filesystem.
+    static func parseOAuthCredential(json: String) -> OAuthCredential? {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let oauth = obj["claudeAiOauth"] as? [String: Any],
+              let accessToken = oauth["accessToken"] as? String,
+              let refreshToken = oauth["refreshToken"] as? String,
+              let expiresAtMillis = (oauth["expiresAt"] as? NSNumber)?.doubleValue
+        else { return nil }
+        return OAuthCredential(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            expiresAt: Date(timeIntervalSince1970: expiresAtMillis / 1000),
+            subscriptionType: oauth["subscriptionType"] as? String
+        )
+    }
+
+    /// Pure JSON transform — no I/O. Returns the full credential JSON with
+    /// only `claudeAiOauth.{accessToken,refreshToken,expiresAt}` replaced,
+    /// or nil if `json` isn't a well-formed credential blob.
+    static func applyingOAuthUpdate(
+        toJSON json: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresAt: Date
+    ) -> String? {
+        guard let data = json.data(using: .utf8),
+              var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var oauth = obj["claudeAiOauth"] as? [String: Any]
+        else { return nil }
+
+        oauth["accessToken"] = accessToken
+        oauth["refreshToken"] = refreshToken
+        oauth["expiresAt"] = Int64((expiresAt.timeIntervalSince1970 * 1000).rounded())
+        obj["claudeAiOauth"] = oauth
+
+        guard let newData = try? JSONSerialization.data(withJSONObject: obj),
+              let newJSON = String(data: newData, encoding: .utf8)
+        else { return nil }
+        return newJSON
+    }
+
     // MARK: - Account-pool Keychain helpers (macOS)
 
     #if os(macOS)
@@ -232,18 +294,7 @@ public enum ClaudeKeychain {
         addPassword(service: service, account: currentUserAccount, password: password)
     }
 
-    // MARK: - OAuth token refresh support
-
-    /// Parsed `claudeAiOauth` OAuth fields, including the token-refresh
-    /// bookkeeping (`refreshToken`/`expiresAt`) that the other accessors in
-    /// this file never needed to look at.
-    public struct OAuthCredential: Sendable {
-        public let accessToken: String
-        public let refreshToken: String
-        /// `claudeAiOauth.expiresAt` is epoch-millis in the stored JSON.
-        public let expiresAt: Date
-        public let subscriptionType: String?
-    }
+    // MARK: - OAuth token refresh support (Keychain I/O)
 
     /// Read the full OAuth credential (incl. refresh token + expiry) stored
     /// under `service`. Returns nil if the item is missing or malformed, or
@@ -272,50 +323,6 @@ public enum ClaudeKeychain {
               )
         else { return false }
         return setPassword(newJSON, service: service)
-    }
-
-    /// Pure JSON parsing — no Keychain I/O — so it's testable without
-    /// touching the real login keychain (which cannot be isolated in
-    /// tests; see `KeychainAccess`'s doc comment).
-    static func parseOAuthCredential(json: String) -> OAuthCredential? {
-        guard let data = json.data(using: .utf8),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = obj["claudeAiOauth"] as? [String: Any],
-              let accessToken = oauth["accessToken"] as? String,
-              let refreshToken = oauth["refreshToken"] as? String,
-              let expiresAtMillis = (oauth["expiresAt"] as? NSNumber)?.doubleValue
-        else { return nil }
-        return OAuthCredential(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            expiresAt: Date(timeIntervalSince1970: expiresAtMillis / 1000),
-            subscriptionType: oauth["subscriptionType"] as? String
-        )
-    }
-
-    /// Pure JSON transform — no Keychain I/O. Returns the full credential
-    /// JSON with only `claudeAiOauth.{accessToken,refreshToken,expiresAt}`
-    /// replaced, or nil if `json` isn't a well-formed credential blob.
-    static func applyingOAuthUpdate(
-        toJSON json: String,
-        accessToken: String,
-        refreshToken: String,
-        expiresAt: Date
-    ) -> String? {
-        guard let data = json.data(using: .utf8),
-              var obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              var oauth = obj["claudeAiOauth"] as? [String: Any]
-        else { return nil }
-
-        oauth["accessToken"] = accessToken
-        oauth["refreshToken"] = refreshToken
-        oauth["expiresAt"] = Int64((expiresAt.timeIntervalSince1970 * 1000).rounded())
-        obj["claudeAiOauth"] = oauth
-
-        guard let newData = try? JSONSerialization.data(withJSONObject: obj),
-              let newJSON = String(data: newData, encoding: .utf8)
-        else { return nil }
-        return newJSON
     }
 
     private static func findPassword(service: String, account: String) -> String? {

@@ -44,11 +44,13 @@ private func runOrreryMain() async throws {
     // workspace target (upgrades / 3.0.4-damaged installs) self-heals here on the
     // next command, instead of being stuck behind a one-shot migration flag.
     AccountMigration.enforceOriginClaudeDir(homeURL: orreryHomeURL())
-    #if os(macOS)
     // Same "ongoing invariant, self-heals every run" spot as the line above:
-    // keeps the background token-refresh LaunchAgent installed and pointed
-    // at the current binary path (e.g. after an `orrery` upgrade).
+    // keeps the background token-refresh agent installed and pointed at the
+    // current `orrery-agent` binary path (e.g. after an `orrery` upgrade).
+    #if os(macOS)
     TokenRefreshDaemonInstaller.ensureRegistered()
+    #elseif os(Linux)
+    LinuxAgentInstaller.ensureRegistered()
     #endif
     OrreryThirdPartyRuntime.register()
 

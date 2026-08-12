@@ -15,6 +15,7 @@ set -e
 REPO="OffskyLab/Orrery"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="orrery-bin"
+AGENT_BINARY_NAME="orrery-agent"   # background token-refresh agent; ships alongside orrery-bin
 OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
 INCLUDE_PRERELEASE=false
@@ -96,6 +97,23 @@ build_from_source() {
   $USE_SUDO cp "$BUILT_BINARY" "$INSTALL_DIR/$BINARY_NAME"
   $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
   info "Installed from source to $INSTALL_DIR/$BINARY_NAME"
+
+  BUILT_AGENT="$TMP_DIR/orrery/.build/release/$AGENT_BINARY_NAME"
+  if [[ -f "$BUILT_AGENT" ]]; then
+    $USE_SUDO cp "$BUILT_AGENT" "$INSTALL_DIR/$AGENT_BINARY_NAME"
+    $USE_SUDO chmod +x "$INSTALL_DIR/$AGENT_BINARY_NAME"
+    info "Installed from source to $INSTALL_DIR/$AGENT_BINARY_NAME"
+  fi
+
+  # Bundle.module (used for the third-party manifest catalog) needs its
+  # resource bundle shipped next to the binary or it fatal-errors at runtime.
+  for suffix in bundle resources; do
+    built="$TMP_DIR/orrery/.build/release/orrery_OrreryThirdParty.${suffix}"
+    if [[ -d "$built" ]]; then
+      $USE_SUDO cp -r "$built" "$INSTALL_DIR/"
+      break
+    fi
+  done
 }
 
 if [[ "$BUILD_FROM_SOURCE" == "true" ]]; then
@@ -148,6 +166,10 @@ else
     fi
     $USE_SUDO cp "$EXTRACTED" "$INSTALL_DIR/$BINARY_NAME"
     $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    if [[ -f "$TMP_DIR/$AGENT_BINARY_NAME" ]]; then
+      $USE_SUDO cp "$TMP_DIR/$AGENT_BINARY_NAME" "$INSTALL_DIR/$AGENT_BINARY_NAME"
+      $USE_SUDO chmod +x "$INSTALL_DIR/$AGENT_BINARY_NAME"
+    fi
     if [[ -d "$TMP_DIR/orrery_OrreryThirdParty.bundle" ]]; then
       $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.bundle" "$INSTALL_DIR/"
     elif [[ -d "$TMP_DIR/orrery_OrreryThirdParty.resources" ]]; then
@@ -174,6 +196,10 @@ fi
 if [[ "$os" == "darwin" ]]; then
   $USE_SUDO xattr -c "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || true
   $USE_SUDO codesign --force --sign - "$INSTALL_DIR/$BINARY_NAME" 2>/dev/null || true
+  if [[ -f "$INSTALL_DIR/$AGENT_BINARY_NAME" ]]; then
+    $USE_SUDO xattr -c "$INSTALL_DIR/$AGENT_BINARY_NAME" 2>/dev/null || true
+    $USE_SUDO codesign --force --sign - "$INSTALL_DIR/$AGENT_BINARY_NAME" 2>/dev/null || true
+  fi
 fi
 # Install orrery-magi sidecar (required runtime dependency).
 install_magi_from_source() {

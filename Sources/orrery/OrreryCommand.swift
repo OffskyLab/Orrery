@@ -49,7 +49,6 @@ public struct OrreryCommand: AsyncParsableCommand {
             PrepareClaudeLaunchCommand.self,
             CaptureClaudeExitCommand.self,
             AccountDirLookupCommand.self,
-            RefreshTokensCommand.self,
         ]
     )
     public init() {}
