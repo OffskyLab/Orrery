@@ -9,7 +9,7 @@ struct TokenRefreshDaemonInstallerTests {
     func generatesExpectedKeys() throws {
         let logURL = URL(fileURLWithPath: "/Users/test/.orrery/logs/token-refresh.log")
         let xml = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/Users/test/.orrery/bin/Orrery Inc.",
+            binaryPath: "/Users/test/.orrery/bin/Orrery",
             intervalSeconds: 900,
             logURL: logURL
         )
@@ -20,7 +20,7 @@ struct TokenRefreshDaemonInstallerTests {
         )
 
         #expect(obj["Label"] as? String == TokenRefreshDaemonInstaller.label)
-        #expect(obj["ProgramArguments"] as? [String] == ["/Users/test/.orrery/bin/Orrery Inc."])
+        #expect(obj["ProgramArguments"] as? [String] == ["/Users/test/.orrery/bin/Orrery"])
         #expect(obj["StartInterval"] as? Int == 900)
         #expect(obj["RunAtLoad"] as? Bool == true)
         #expect(obj["StandardOutPath"] as? String == logURL.path)
@@ -95,6 +95,24 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
                 atPath: TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path
             )
             #expect(target == newPath)
+        }
+    }
+
+    @Test("removeStaleLegacySymlinks cleans up the old 'Orrery Inc.' symlink briefly shipped in v3.2.0")
+    func removesStaleLegacySymlink() throws {
+        try withIsolatedHome {
+            let legacyURL = orreryHomeURL().appendingPathComponent("bin/Orrery Inc.")
+            try FileManager.default.createDirectory(
+                at: legacyURL.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
+            try FileManager.default.createSymbolicLink(
+                atPath: legacyURL.path, withDestinationPath: "/usr/local/bin/orrery-agent"
+            )
+            #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: legacyURL.path)) != nil)
+
+            TokenRefreshDaemonInstaller.removeStaleLegacySymlinks()
+
+            #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: legacyURL.path)) == nil)
         }
     }
 }

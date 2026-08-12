@@ -44,7 +44,7 @@ public enum TokenRefreshDaemonInstaller {
     /// See the type doc comment — this is what actually controls the name
     /// shown in the "Background Items Added" notification and Login Items.
     static var friendlyAgentSymlinkURL: URL {
-        orreryHomeURL().appendingPathComponent("bin/Orrery Inc.")
+        orreryHomeURL().appendingPathComponent("bin/Orrery")
     }
 
     /// Pure plist-content generator — kept separate from the installer so
@@ -71,6 +71,7 @@ public enum TokenRefreshDaemonInstaller {
     /// sandboxed/unusual environment can't break every `orrery` invocation.
     public static func ensureRegistered() {
         guard let agentBinaryPath = resolvedAgentBinaryPath() else { return }
+        removeStaleLegacySymlinks()
         let executablePath = ensureFriendlyAgentSymlink(pointingTo: agentBinaryPath)
         let desired = plistXML(binaryPath: executablePath, intervalSeconds: intervalSeconds, logURL: logURL)
         guard !desired.isEmpty else { return }
@@ -112,6 +113,14 @@ public enum TokenRefreshDaemonInstaller {
         let oldURL = logURL.appendingPathExtension("old")
         try? fm.removeItem(at: oldURL)
         try? fm.moveItem(at: logURL, to: oldURL)
+    }
+
+    /// v3.2.0 briefly shipped the symlink named "Orrery Inc." — misleadingly
+    /// implying a real registered company. Clean up that stray symlink from
+    /// any machine that already ran it, best-effort.
+    static func removeStaleLegacySymlinks() {
+        let legacyURL = orreryHomeURL().appendingPathComponent("bin/Orrery Inc.")
+        try? FileManager.default.removeItem(at: legacyURL)
     }
 
     /// Points `friendlyAgentSymlinkURL` at `realAgentPath`, (re)creating it
