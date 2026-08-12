@@ -30,10 +30,13 @@ public struct UninstallCommand: ParsableCommand {
             print(L10n.Origin.released(tool.rawValue, tool.defaultConfigDir.path))
         }
 
+        // 2. Unload and remove the background token-refresh agent, so
+        //    uninstalling orrery doesn't leave an orphaned launchd job /
+        //    systemd unit behind.
         #if os(macOS)
-        // 2. Unload and remove the background token-refresh LaunchAgent, so
-        //    uninstalling orrery doesn't leave an orphaned launchd job.
         TokenRefreshDaemonInstaller.unregister()
+        #elseif os(Linux)
+        LinuxAgentInstaller.unregister()
         #endif
 
         // 3. Remove shell integration from rc files
@@ -55,12 +58,18 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedIntegration(rcFile.path))
         }
 
-        // 4. Remove the orrery-bin binary
+        // 4. Remove the orrery-bin binary, and its orrery-agent sibling
+        //    (ships side-by-side — see .github/workflows/release.yml).
         let binaryPath = CommandLine.arguments[0]
         let binaryURL = URL(fileURLWithPath: binaryPath)
         if FileManager.default.fileExists(atPath: binaryURL.path) {
             try FileManager.default.removeItem(at: binaryURL)
             stderrWrite(L10n.Uninstall.removedBinary(binaryURL.path))
+        }
+        let agentURL = binaryURL.deletingLastPathComponent().appendingPathComponent("orrery-agent")
+        if FileManager.default.fileExists(atPath: agentURL.path) {
+            try? FileManager.default.removeItem(at: agentURL)
+            stderrWrite(L10n.Uninstall.removedBinary(agentURL.path))
         }
 
         // 5. Remove the orrery-magi sidecar binary (installed under

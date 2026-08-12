@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "orrery-bin", targets: ["orrery-bin"]),
+        .executable(name: "orrery-agent", targets: ["orrery-agent"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
         .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
@@ -22,6 +23,11 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/orrery"
+        ),
+        .executableTarget(
+            name: "orrery-agent",
+            dependencies: ["OrreryCore"],
+            path: "Sources/orrery-agent"
         ),
         .target(
             name: "OrreryCore",

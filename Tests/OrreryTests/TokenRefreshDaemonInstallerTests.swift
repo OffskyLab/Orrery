@@ -9,7 +9,7 @@ struct TokenRefreshDaemonInstallerTests {
     func generatesExpectedKeys() throws {
         let logURL = URL(fileURLWithPath: "/Users/test/.orrery/logs/token-refresh.log")
         let xml = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/usr/local/bin/orrery-bin",
+            binaryPath: "/Users/test/.orrery/bin/Orrery Inc.",
             intervalSeconds: 900,
             logURL: logURL
         )
@@ -20,7 +20,7 @@ struct TokenRefreshDaemonInstallerTests {
         )
 
         #expect(obj["Label"] as? String == TokenRefreshDaemonInstaller.label)
-        #expect(obj["ProgramArguments"] as? [String] == ["/usr/local/bin/orrery-bin", "_refresh-tokens"])
+        #expect(obj["ProgramArguments"] as? [String] == ["/Users/test/.orrery/bin/Orrery Inc."])
         #expect(obj["StartInterval"] as? Int == 900)
         #expect(obj["RunAtLoad"] as? Bool == true)
         #expect(obj["StandardOutPath"] as? String == logURL.path)
@@ -31,10 +31,10 @@ struct TokenRefreshDaemonInstallerTests {
     func isDeterministic() {
         let logURL = URL(fileURLWithPath: "/Users/test/.orrery/logs/token-refresh.log")
         let a = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/usr/local/bin/orrery-bin", intervalSeconds: 900, logURL: logURL
+            binaryPath: "/path/to/orrery-agent", intervalSeconds: 900, logURL: logURL
         )
         let b = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/usr/local/bin/orrery-bin", intervalSeconds: 900, logURL: logURL
+            binaryPath: "/path/to/orrery-agent", intervalSeconds: 900, logURL: logURL
         )
         #expect(a == b)
     }
@@ -43,26 +43,26 @@ struct TokenRefreshDaemonInstallerTests {
     func changesWithBinaryPath() {
         let logURL = URL(fileURLWithPath: "/Users/test/.orrery/logs/token-refresh.log")
         let a = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/usr/local/bin/orrery-bin", intervalSeconds: 900, logURL: logURL
+            binaryPath: "/path/a/orrery-agent", intervalSeconds: 900, logURL: logURL
         )
         let b = TokenRefreshDaemonInstaller.plistXML(
-            binaryPath: "/opt/homebrew/bin/orrery-bin", intervalSeconds: 900, logURL: logURL
+            binaryPath: "/path/b/orrery-agent", intervalSeconds: 900, logURL: logURL
         )
         #expect(a != b)
     }
 }
 
-@Suite("TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink (isolated $ORRERY_HOME, no launchctl)")
+@Suite("TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink (isolated $ORRERY_HOME, no launchctl)")
 struct TokenRefreshDaemonInstallerSymlinkTests {
-    @Test("creates a symlink pointing at the real binary and returns its path")
+    @Test("creates a symlink pointing at the real agent binary and returns its path")
     func createsSymlink() throws {
         try withIsolatedHome {
-            let realPath = "/usr/local/bin/orrery-bin"
-            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
+            let realPath = "/usr/local/bin/orrery-agent"
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
 
-            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            #expect(result == TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path)
             let target = try FileManager.default.destinationOfSymbolicLink(
-                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+                atPath: TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path
             )
             #expect(target == realPath)
         }
@@ -71,13 +71,13 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
     @Test("is idempotent when the target hasn't changed")
     func idempotentWhenUnchanged() throws {
         try withIsolatedHome {
-            let realPath = "/usr/local/bin/orrery-bin"
-            _ = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
-            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
+            let realPath = "/usr/local/bin/orrery-agent"
+            _ = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
 
-            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            #expect(result == TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path)
             let target = try FileManager.default.destinationOfSymbolicLink(
-                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+                atPath: TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path
             )
             #expect(target == realPath)
         }
@@ -86,13 +86,13 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
     @Test("repoints the symlink when the real binary path changes (e.g. after an upgrade)")
     func repointsOnBinaryPathChange() throws {
         try withIsolatedHome {
-            _ = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: "/usr/local/bin/orrery-bin")
-            let newPath = "/opt/homebrew/bin/orrery-bin"
-            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: newPath)
+            _ = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: "/usr/local/bin/orrery-agent")
+            let newPath = "/opt/homebrew/bin/orrery-agent"
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: newPath)
 
-            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            #expect(result == TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path)
             let target = try FileManager.default.destinationOfSymbolicLink(
-                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+                atPath: TokenRefreshDaemonInstaller.friendlyAgentSymlinkURL.path
             )
             #expect(target == newPath)
         }

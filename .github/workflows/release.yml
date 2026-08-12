@@ -27,6 +27,8 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
+          cp .build/release/orrery-agent dist/orrery-agent
+          chmod +x dist/orrery-agent
           cp -r .build/release/orrery_OrreryThirdParty.bundle dist/
           tar -czf orrery-darwin-arm64.tar.gz -C dist .
       - uses: actions/upload-artifact@v4
@@ -47,6 +49,8 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
+          cp .build/release/orrery-agent dist/orrery-agent
+          chmod +x dist/orrery-agent
           if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
             BUNDLE=.build/release/orrery_OrreryThirdParty.bundle
           elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
@@ -62,6 +66,8 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
+          cp .build/release/orrery-agent deb/usr/local/bin/orrery-agent
+          chmod +x deb/usr/local/bin/orrery-agent
           if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
             cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
           elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
@@ -108,6 +114,8 @@ jobs:
           mkdir -p dist
           cp .build/release/orrery-bin dist/orrery-bin
           chmod +x dist/orrery-bin
+          cp .build/release/orrery-agent dist/orrery-agent
+          chmod +x dist/orrery-agent
           if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
             BUNDLE=.build/release/orrery_OrreryThirdParty.bundle
           elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then
@@ -123,6 +131,8 @@ jobs:
           mkdir -p deb/DEBIAN deb/usr/local/bin
           cp .build/release/orrery-bin deb/usr/local/bin/orrery-bin
           chmod +x deb/usr/local/bin/orrery-bin
+          cp .build/release/orrery-agent deb/usr/local/bin/orrery-agent
+          chmod +x deb/usr/local/bin/orrery-agent
           if [ -d .build/release/orrery_OrreryThirdParty.bundle ]; then
             cp -r .build/release/orrery_OrreryThirdParty.bundle deb/usr/local/bin/
           elif [ -d .build/release/orrery_OrreryThirdParty.resources ]; then

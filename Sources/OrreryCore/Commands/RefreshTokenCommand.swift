@@ -1,11 +1,12 @@
 import ArgumentParser
 import Foundation
 
-/// Manual escape hatch for the background token-refresh daemon
-/// (`RefreshTokensCommand` / `com.offskylab.orrery.token-refresh`
-/// LaunchAgent): force-refresh one or all Claude accounts' OAuth tokens
-/// right now, ignoring the near-expiry threshold. Useful for debugging the
-/// daemon or recovering an account it keeps failing to refresh.
+/// Manual escape hatch for the background token-refresh agent
+/// (`orrery-agent` — see `TokenRefreshDaemonInstaller` on macOS,
+/// `LinuxAgentInstaller` on Linux): force-refresh one or all Claude
+/// accounts' OAuth tokens right now, ignoring the near-expiry threshold.
+/// Useful for debugging the agent or recovering an account it keeps
+/// failing to refresh.
 public struct RefreshTokenCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "refresh-token",
@@ -21,7 +22,6 @@ public struct RefreshTokenCommand: ParsableCommand {
     public init() {}
 
     public func run() throws {
-        #if os(macOS)
         let acctStore = AccountStore.default
         let accounts: [Account]
         if all {
@@ -53,8 +53,5 @@ public struct RefreshTokenCommand: ParsableCommand {
         if !all && anyFailed {
             throw ExitCode.failure
         }
-        #else
-        print("orrery: token refresh is only supported on macOS")
-        #endif
     }
 }
