@@ -10,6 +10,19 @@ import Foundation
 ///
 /// If no `.claude.json` exists (e.g. claude crashed before writing anything),
 /// this is a no-op rather than an error — there's nothing to capture.
+///
+/// Also syncs the Keychain: claude reads/writes its OAuth credential (incl.
+/// any refresh — its own, or an interactive `/login`) under a service keyed
+/// to `CLAUDE_CONFIG_DIR` (see `ClaudeKeychain.service(for:)`), which is a
+/// *different* Keychain item from the account's own pool copy
+/// (`account.keychainItem`, `Claude Code-orrery-<id>`) that orrery's
+/// background token-refresh agent reads. Nothing previously kept those two
+/// in sync after the initial `orrery add` import, so the pool copy would
+/// silently go stale the moment claude (or the user, via `/login`) rotated
+/// the refresh token during normal use — the background agent would then
+/// fail every refresh with `invalid_grant` against a token that was already
+/// dead. Copying the live credential back into the pool on every exit keeps
+/// them in sync going forward.
 public struct CaptureClaudeExitCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_capture-claude-exit",
@@ -29,6 +42,12 @@ public struct CaptureClaudeExitCommand: ParsableCommand {
         guard fm.fileExists(atPath: acctDirURL.path) else {
             throw ValidationError("Account dir does not exist: \(accountDir)")
         }
+
+        #if os(macOS)
+        // Independent of .claude.json below — a Keychain-only refresh (no
+        // config file changes) still needs to reach the pool copy.
+        syncKeychainToPool(accountDir: acctDirURL)
+        #endif
 
         let claudeJSONURL = acctDirURL.appendingPathComponent(".claude.json")
         guard fm.fileExists(atPath: claudeJSONURL.path) else {
@@ -58,4 +77,18 @@ public struct CaptureClaudeExitCommand: ParsableCommand {
             at: ClaudeJsonMerge.sharedFileURL(workspaceDir: wsDir)
         )
     }
+
+    #if os(macOS)
+    /// Copies whatever claude currently has under the config-dir-hashed
+    /// Keychain service into the account's own pool service. Best-effort:
+    /// silently no-ops if the account can't be loaded or has no
+    /// `keychainItem` (e.g. non-claude tools never reach this command).
+    private func syncKeychainToPool(accountDir: URL) {
+        guard let account = try? AccountStore.default.load(id: accountDir.lastPathComponent, tool: .claude),
+              let poolService = account.keychainItem
+        else { return }
+        let liveService = ClaudeKeychain.service(for: accountDir.path)
+        ClaudeKeychain.copyKeychainItem(from: liveService, to: poolService)
+    }
+    #endif
 }

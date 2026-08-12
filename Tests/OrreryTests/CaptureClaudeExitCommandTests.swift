@@ -86,4 +86,42 @@ struct CaptureClaudeExitCommandTests {
             try cmd.run()
         }
     }
+
+    #if os(macOS)
+    @Test("syncs the live (config-dir-hashed) Keychain credential back into the account's pool copy")
+    func syncsKeychainToPool() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            var acct = Account(tool: .claude, displayName: "alice")
+            acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            let liveService = ClaudeKeychain.service(for: acctDir.path)
+            defer {
+                ClaudeKeychain.deleteKeychainItem(service: liveService)
+                ClaudeKeychain.deleteKeychainItem(service: acct.keychainItem!)
+            }
+
+            // Stale pool copy (as if from account-add months ago).
+            ClaudeKeychain.storePassword(
+                #"{"claudeAiOauth":{"accessToken":"old","refreshToken":"old-refresh","expiresAt":1000}}"#,
+                forOrreryAccount: acct.id
+            )
+            // Fresh credential claude itself wrote during this session (e.g. via `/login`).
+            ClaudeKeychain.setPassword(
+                #"{"claudeAiOauth":{"accessToken":"new","refreshToken":"new-refresh","expiresAt":2000}}"#,
+                service: liveService
+            )
+
+            var cmd = try CaptureClaudeExitCommand.parse(["--account-dir", acctDir.path])
+            try cmd.run()
+
+            let synced = ClaudeKeychain.oauthCredential(forService: acct.keychainItem!)
+            #expect(synced?.refreshToken == "new-refresh")
+        }
+    }
+    #endif
 }
