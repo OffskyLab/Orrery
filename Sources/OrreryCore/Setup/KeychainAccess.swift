@@ -1,5 +1,17 @@
 import Foundation
 
+// On Linux, origin-account seeding never actually calls these (see
+// OriginAccountSeeder's `#if os(macOS)`/`#else` branches, which use
+// file-existence checks and AccountLoginFlow.importFrom instead) — these
+// closures exist only so `KeychainAccess.live`'s default compiles.
+#if os(macOS)
+private let liveItemExists: @Sendable (String) -> Bool = ClaudeKeychain.keychainItemExists
+private let liveCopyItem: @Sendable (String, String) -> Bool = ClaudeKeychain.copyKeychainItem
+#else
+private let liveItemExists: @Sendable (String) -> Bool = { _ in false }
+private let liveCopyItem: @Sendable (String, String) -> Bool = { _, _ in false }
+#endif
+
 /// Injectable seam over the macOS Keychain so origin-account seeding is
 /// unit-testable without touching the real login keychain (which cannot be
 /// isolated in tests — setting $HOME breaks keychain resolution).
@@ -17,9 +29,9 @@ public struct KeychainAccess: Sendable {
         self.copyItem = copyItem
     }
 
-    /// Production wiring — the real Keychain.
+    /// Production wiring — the real Keychain on macOS; unused no-ops on Linux.
     public static let live = KeychainAccess(
-        itemExists: ClaudeKeychain.keychainItemExists,
-        copyItem: ClaudeKeychain.copyKeychainItem
+        itemExists: liveItemExists,
+        copyItem: liveCopyItem
     )
 }

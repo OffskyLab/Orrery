@@ -25,8 +25,7 @@ public enum OriginAccountSeeder {
                 let id = UUID().uuidString
                 let account = Account(
                     id: id, tool: tool, displayName: "origin",
-                    keychainItem: tool == .claude
-                        ? ClaudeKeychain.serviceName(forOrreryAccount: id) : nil,
+                    keychainItem: claudeKeychainItem(forAccountID: id, tool: tool),
                     workspace: Workspace.reservedOriginName)
                 try acctStore.save(account)
 
@@ -44,6 +43,17 @@ public enum OriginAccountSeeder {
                     "orrery: could not seed origin \(tool.rawValue) account: \(error)\n".utf8))
             }
         }
+    }
+
+    /// `Account.keychainItem` is macOS-Claude-only (nil for every other
+    /// tool/platform combination — see its doc comment).
+    private static func claudeKeychainItem(forAccountID id: String, tool: Tool) -> String? {
+        guard tool == .claude else { return nil }
+        #if os(macOS)
+        return ClaudeKeychain.serviceName(forOrreryAccount: id)
+        #else
+        return nil
+        #endif
     }
 
     private static func hasCapturableLogin(
