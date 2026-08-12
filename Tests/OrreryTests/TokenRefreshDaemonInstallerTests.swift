@@ -51,4 +51,51 @@ struct TokenRefreshDaemonInstallerTests {
         #expect(a != b)
     }
 }
+
+@Suite("TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink (isolated $ORRERY_HOME, no launchctl)")
+struct TokenRefreshDaemonInstallerSymlinkTests {
+    @Test("creates a symlink pointing at the real binary and returns its path")
+    func createsSymlink() throws {
+        try withIsolatedHome {
+            let realPath = "/usr/local/bin/orrery-bin"
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
+
+            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            let target = try FileManager.default.destinationOfSymbolicLink(
+                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+            )
+            #expect(target == realPath)
+        }
+    }
+
+    @Test("is idempotent when the target hasn't changed")
+    func idempotentWhenUnchanged() throws {
+        try withIsolatedHome {
+            let realPath = "/usr/local/bin/orrery-bin"
+            _ = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: realPath)
+
+            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            let target = try FileManager.default.destinationOfSymbolicLink(
+                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+            )
+            #expect(target == realPath)
+        }
+    }
+
+    @Test("repoints the symlink when the real binary path changes (e.g. after an upgrade)")
+    func repointsOnBinaryPathChange() throws {
+        try withIsolatedHome {
+            _ = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: "/usr/local/bin/orrery-bin")
+            let newPath = "/opt/homebrew/bin/orrery-bin"
+            let result = TokenRefreshDaemonInstaller.ensureFriendlyBinarySymlink(pointingTo: newPath)
+
+            #expect(result == TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path)
+            let target = try FileManager.default.destinationOfSymbolicLink(
+                atPath: TokenRefreshDaemonInstaller.friendlyBinarySymlinkURL.path
+            )
+            #expect(target == newPath)
+        }
+    }
+}
 #endif

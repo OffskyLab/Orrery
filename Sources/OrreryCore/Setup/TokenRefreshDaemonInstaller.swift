@@ -4,8 +4,10 @@ import Foundation
 import Darwin
 
 /// Installs/self-heals the `com.offskylab.orrery.token-refresh` LaunchAgent
-/// that periodically runs `orrery-bin _refresh-tokens` (`RefreshTokensCommand`)
-/// even when the user never invokes `orrery`/`claude` themselves — a real
+/// that periodically runs `_refresh-tokens` (`RefreshTokensCommand`, via a
+/// friendly-named symlink to the real `orrery-bin` — see
+/// `friendlyBinarySymlinkURL`) even when the user never invokes
+/// `orrery`/`claude` themselves — a real
 /// launchd job, not orrery's usual "piggyback on the next invocation"
 /// background pattern (see `ShellFunctionGenerator`'s `_check-update` hook),
 /// because token expiry doesn't wait for the user to run a command.
@@ -25,6 +27,15 @@ public enum TokenRefreshDaemonInstaller {
 
     static var logURL: URL {
         orreryHomeURL().appendingPathComponent("logs/token-refresh.log")
+    }
+
+    /// macOS's "Background Items Added" notification and the Login Items list
+    /// name a launchd job after the literal path passed as `ProgramArguments[0]`
+    /// (not the plist's `Label`). Pointing that straight at the real
+    /// `orrery-bin` executable surfaces that internal name to the user; a
+    /// plainly-named symlink avoids it without renaming the distributed binary.
+    static var friendlyBinarySymlinkURL: URL {
+        orreryHomeURL().appendingPathComponent("bin/orrery")
     }
 
     /// Pure plist-content generator — kept separate from the installer so
@@ -50,7 +61,8 @@ public enum TokenRefreshDaemonInstaller {
     /// Best-effort: never throws, silently no-ops on any failure so a
     /// sandboxed/unusual environment can't break every `orrery` invocation.
     public static func ensureRegistered() {
-        let binaryPath = resolvedBinaryPath()
+        let realBinaryPath = resolvedBinaryPath()
+        let binaryPath = ensureFriendlyBinarySymlink(pointingTo: realBinaryPath)
         let desired = plistXML(binaryPath: binaryPath, intervalSeconds: intervalSeconds, logURL: logURL)
         guard !desired.isEmpty else { return }
 
@@ -75,6 +87,7 @@ public enum TokenRefreshDaemonInstaller {
         let uid = getuid()
         runLaunchctl(["bootout", "gui/\(uid)/\(label)"])
         try? FileManager.default.removeItem(at: plistURL)
+        try? FileManager.default.removeItem(at: friendlyBinarySymlinkURL)
     }
 
     /// Cap the daemon's log file so it can't grow unbounded — called at the
@@ -88,6 +101,26 @@ public enum TokenRefreshDaemonInstaller {
         let oldURL = logURL.appendingPathExtension("old")
         try? fm.removeItem(at: oldURL)
         try? fm.moveItem(at: logURL, to: oldURL)
+    }
+
+    /// Points `friendlyBinarySymlinkURL` at `realBinaryPath`, (re)creating it
+    /// if missing or stale. Falls back to returning `realBinaryPath` itself if
+    /// the symlink can't be created (e.g. read-only filesystem) — the daemon
+    /// still installs, just under its real name.
+    static func ensureFriendlyBinarySymlink(pointingTo realBinaryPath: String) -> String {
+        let symlinkURL = friendlyBinarySymlinkURL
+        let fm = FileManager.default
+        let existingTarget = try? fm.destinationOfSymbolicLink(atPath: symlinkURL.path)
+        guard existingTarget != realBinaryPath else { return symlinkURL.path }
+
+        try? fm.createDirectory(
+            at: symlinkURL.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try? fm.removeItem(at: symlinkURL)
+        guard (try? fm.createSymbolicLink(atPath: symlinkURL.path, withDestinationPath: realBinaryPath)) != nil else {
+            return realBinaryPath
+        }
+        return symlinkURL.path
     }
 
     private static func resolvedBinaryPath() -> String {
