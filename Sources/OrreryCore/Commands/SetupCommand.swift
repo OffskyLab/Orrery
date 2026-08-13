@@ -45,7 +45,7 @@ public struct SetupCommand: ParsableCommand {
 
         let phantomMd = claudeCommandsDir.appendingPathComponent("orrery:phantom.md")
         do {
-            try PhantomSandboxTriggerCommand.slashCommandMarkdown.write(to: phantomMd, atomically: true, encoding: .utf8)
+            try PhantomSupport.slashCommandMarkdown.write(to: phantomMd, atomically: true, encoding: .utf8)
             stderrWrite(L10n.Setup.installedSlashCommand(phantomMd.path))
         } catch {
             stderrWrite(L10n.Setup.failedToWrite(phantomMd.path, error.localizedDescription))

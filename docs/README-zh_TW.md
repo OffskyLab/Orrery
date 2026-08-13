@@ -40,7 +40,7 @@ Orrery 以一個概念解決這些問題：
 
 ### Sandbox（沙盒）_（進階）_
 
-可選的**隔離層**：獨立的 memory、sessions、env vars，蓋在 account 之上。多數人從來不需要 — 客戶或專案需要獨立設定空間時再用。`orrery enter` 進入、`orrery exit` 離開。
+可選的**隔離層**：獨立的 memory、sessions、env vars，蓋在 account 之上。多數人從來不需要 — 客戶或專案需要獨立設定空間時再用。用 `orrery pin <account> --workspace <name>` 把帳號 pin 進去，再用 `orrery use <account>` 啟用。
 
 ### Session（對話）
 
@@ -48,7 +48,7 @@ Orrery 以一個概念解決這些問題：
 
 ### Phantom 模式
 
-`orrery run claude` 啟動 Claude 時會帶著一個 phantom supervisor。在那個 Claude session 裡，`/orrery:phantom` slash command 可以**不結束對話**就切換帳號或 sandbox — Claude 退出後 supervisor 帶著新設定與 `--resume` 把它叫回來。詳見下方 [Phantom 模式](#phantom-模式) 。
+`orrery run claude` 啟動 Claude 時會帶著一個 phantom supervisor。在那個 Claude session 裡，`/orrery:phantom` slash command 可以**不結束對話**就切換帳號 — Claude 退出後 supervisor 帶著新帳號與 `--resume` 把它叫回來。詳見下方 [Phantom 模式](#phantom-模式) 。
 
 ### MCP Delegation（委派）
 
@@ -183,15 +183,14 @@ claude --resume              # 無縫接續同一個 session
 
 ## Phantom 模式
 
-用 `orrery run claude` 啟動 Claude，會有一個 supervisor 在旁邊守著。在那個 Claude 裡，`orrery mcp setup` 安裝的 `/orrery:phantom` slash command 可以**不重啟對話**直接換 account 或 sandbox：
+用 `orrery run claude` 啟動 Claude，會有一個 supervisor 在旁邊守著。在那個 Claude 裡，`orrery mcp setup` 安裝的 `/orrery:phantom` slash command 可以**不重啟對話**直接換 account：
 
 ```text
 /orrery:phantom personal           # 把 claude 帳號切到 'personal'
 /orrery:phantom codex work         # 切 codex 帳號
-/orrery:phantom sandbox client-a   # 切到 sandbox
 ```
 
-Claude 退出後 supervisor 帶著新的 account/sandbox 與 `--resume` 把它叫回來，對話無感接續。
+Claude 退出後 supervisor 帶著新的 account 與 `--resume` 把它叫回來，對話無感接續。
 
 <p align="center">
   <img src="../assets/demo/phatom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
@@ -207,7 +206,7 @@ orrery run --non-phantom claude
 
 ```bash
 orrery run codex             # 在目前 pin 的 codex 帳號下單次執行
-orrery run npm install       # 在目前 sandbox 內跑任意指令
+orrery run -e client-a npm install  # 在指定的 sandbox 內跑任意指令
 ```
 
 ---
@@ -217,39 +216,38 @@ orrery run npm install       # 在目前 sandbox 內跑任意指令
 Sandbox 是完整的設定隔離層：獨立的 memory、sessions、env vars，以及各工具的 config dir。當客戶或專案需要自己一塊牆內空間時用得到。如果只需要切帳號，可以完全跳過 sandbox。
 
 ```bash
-orrery sandbox create client-a     # 互動式 wizard：選工具、memory 模式、clone 來源
-orrery sandbox list                # 列出所有 sandbox
-orrery sandbox info client-a       # 詳細狀態（工具、帳號、env vars、memory）
+orrery workspace create client-a   # 互動式 wizard：選工具、memory 模式、clone 來源
+orrery workspace list              # 列出所有 sandbox
+orrery workspace info client-a     # 詳細狀態（工具、帳號、env vars、memory）
 
-orrery enter client-a              # 進入 sandbox（per-shell）
-claude                              # 使用 sandbox 內 pin 的帳號與設定
-orrery exit                         # 返回 origin
+orrery pin work --workspace client-a --claude  # 把帳號 pin 進這個 sandbox
+orrery use work                                # 啟用它 — CLAUDE_CONFIG_DIR 解析到
+                                                # 該帳號的目錄，共享 client-a 的
+                                                # memory/sessions/設定
+claude
 ```
 
 <p align="center">
-  <img src="../assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
-  <img src="../assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
+  <img src="../assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
 </p>
 
-Sandbox 級的 env vars 用 `orrery sandbox set-env` / `unset-env`：
+Sandbox 級的 env vars 用 `orrery workspace set-env` / `unset-env`：
 
 ```bash
-orrery sandbox set-env API_BASE https://staging.example.com --sandbox client-a
-orrery sandbox unset-env API_BASE --sandbox client-a
+orrery workspace set-env API_BASE https://staging.example.com --sandbox client-a
+orrery workspace unset-env API_BASE --sandbox client-a
 ```
 
 ---
 
 ## `origin` 基準
 
-`origin` 是你的預設設定 — 在進入任何 sandbox 前的狀態。第一次 `orrery setup` 時，現有的工具設定（`~/.claude/`、`~/.codex/`、`~/.gemini/`）會被移入 `~/.orrery/origin/`，原位變成 symlink。你的資料完整保留，只是搬進 Orrery 的管理範圍。
+`origin` 是你的預設設定 — 帳號在沒有選擇其他 sandbox 時所 pin 的 workspace。第一次 `orrery setup` 時，現有的工具設定（`~/.claude/`、`~/.codex/`、`~/.gemini/`）會被移入 `~/.orrery/origin/`，原位變成 symlink。你的資料完整保留，只是搬進 Orrery 的管理範圍。
 
 ```bash
-orrery exit                  # 從任一 sandbox 返回 origin
-orrery sandbox info origin   # 查看 origin 狀態（memory、sessions、tools）
+orrery use <origin 帳號>        # 啟用一個 pin 在 origin 的帳號
+orrery workspace info origin   # 查看 origin 狀態（memory、sessions、tools）
 ```
-
-`orrery enter origin` 會被拒絕並指引到 `exit`：origin 是「沒進 sandbox」的狀態，不是一個 sandbox。
 
 完整移除 Orrery（釋放所有設定 + 移除 shell 整合）：
 
@@ -269,7 +267,7 @@ orrery uninstall
 
 共享機制是把工具的 session 目錄（`projects/`、`sessions/`、`session-env/`）symlink 到 `~/.orrery/shared/`。
 
-需要在 sandbox 內完全隔離 session 時（例如合規要求），在 `orrery sandbox create` wizard 中選 **isolate**，或之後用 `orrery sandbox memory isolate` / `share` 切換。
+需要在 sandbox 內完全隔離 session 時（例如合規要求），在 `orrery workspace create` wizard 中選 **isolate**，或之後用 `orrery workspace memory isolate` / `share` 切換。
 
 ---
 
@@ -291,25 +289,17 @@ orrery uninstall
 
 | 指令 | 說明 |
 |---|---|
-| `orrery sandbox create <name>` | 互動式 wizard 建立 sandbox |
-| `orrery sandbox list` | 列出所有 sandbox |
-| `orrery sandbox info [name]` | 顯示 sandbox 詳細資訊 |
-| `orrery sandbox delete <name>` | 刪除 sandbox |
-| `orrery sandbox rename <old> <new>` | 重新命名 sandbox |
-| `orrery sandbox set-env <KEY> <VALUE> [-s <name>]` | 設定 sandbox 等級的 env var |
-| `orrery sandbox unset-env <KEY> [-s <name>]` | 移除 sandbox 等級的 env var |
-| `orrery sandbox current` | 顯示目前 sandbox 名稱（或 `origin`） |
-| `orrery sandbox memory {isolate\|share\|info\|storage\|export}` | 管理 memory 模式與儲存 |
-| `orrery sandbox sync ...` | sandbox 同步相關操作 |
+| `orrery workspace create <name>` | 互動式 wizard 建立 sandbox |
+| `orrery workspace list` | 列出所有 sandbox |
+| `orrery workspace info [name]` | 顯示 sandbox 詳細資訊 |
+| `orrery workspace delete <name>` | 刪除 sandbox |
+| `orrery workspace rename <old> <new>` | 重新命名 sandbox |
+| `orrery workspace set-env <KEY> <VALUE> [-s <name>]` | 設定 sandbox 等級的 env var |
+| `orrery workspace unset-env <KEY> [-s <name>]` | 移除 sandbox 等級的 env var |
+| `orrery workspace current` | 顯示目前 sandbox 名稱（或 `origin`） |
+| `orrery workspace memory {isolate\|share\|info\|storage\|export}` | 管理 memory 模式與儲存 |
+| `orrery workspace sync ...` | sandbox 同步相關操作 |
 
-### Sandbox 狀態（per-shell）
-
-> 需要 shell 整合（`orrery setup`）
-
-| 指令 | 說明 |
-|---|---|
-| `orrery enter <name>` | 在當前 shell 進入 sandbox |
-| `orrery exit` | 返回 origin |
 
 ### 設定
 
@@ -478,7 +468,7 @@ orrery mcp setup
 | `/orrery:delegate` | `orrery_delegate` MCP 工具（含環境提示） |
 | `/orrery:sessions` | `orrery sessions` |
 | `/orrery:resume` | `orrery resume <index>` |
-| `/orrery:phantom` | 不離開 session 切換 account / sandbox — 詳見上方 [Phantom 模式](#phantom-模式) |
+| `/orrery:phantom` | 不離開 session 切換 account — 詳見上方 [Phantom 模式](#phantom-模式) |
 | `/orrery:magi` | `orrery_magi`（含 `/grill-me` pre-flight 提示，給產品/scope 議題用） |
 | `/orrery:spec` | `orrery_spec` |
 | `/orrery:spec-verify` | `orrery_spec_verify` |
@@ -490,8 +480,8 @@ orrery mcp setup
 **外部記憶儲存**：可將記憶重導向到任意目錄，例如 Obsidian vault：
 
 ```bash
-orrery sandbox memory storage ~/Documents/my-wiki/orrery
-orrery sandbox memory storage --reset   # 還原預設路徑
+orrery workspace memory storage ~/Documents/my-wiki/orrery
+orrery workspace memory storage --reset   # 還原預設路徑
 ```
 
 ---
@@ -502,27 +492,27 @@ orrery sandbox memory storage --reset   # 還原預設路徑
 
 ```bash
 # 桌機
-orrery sandbox sync daemon --port 9527
+orrery workspace sync daemon --port 9527
 
 # 筆電（透過 Bonjour 自動探索）
-orrery sandbox sync daemon --port 9528
+orrery workspace sync daemon --port 9528
 ```
 
 跨網路同步時，在 VPS 上執行 rendezvous server：
 
 ```bash
-orrery sandbox sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery workspace sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 只有專案記憶會同步 — session 保留在本機。記憶變更以無衝突片段追蹤，由 AI agent 在 session 開始時整合。
 
 | 指令 | 說明 |
 |---|---|
-| `orrery sandbox sync daemon` | 啟動同步 daemon |
-| `orrery sandbox sync status` | 顯示 daemon 與 peer 狀態 |
-| `orrery sandbox sync team create <name>` | 建立新團隊 |
-| `orrery sandbox sync team invite` | 產生邀請碼 |
-| `orrery sandbox sync team join <code>` | 加入團隊 |
+| `orrery workspace sync daemon` | 啟動同步 daemon |
+| `orrery workspace sync status` | 顯示 daemon 與 peer 狀態 |
+| `orrery workspace sync team create <name>` | 建立新團隊 |
+| `orrery workspace sync team invite` | 產生邀請碼 |
+| `orrery workspace sync team join <code>` | 加入團隊 |
 
 ---
 

@@ -2,9 +2,10 @@ import Testing
 import Foundation
 @testable import OrreryCore
 
-/// Tests for the generalized phantom sentinel, which can carry EITHER a target
-/// env (env-switch) OR a target account (account-switch). The supervisor loop
-/// applies whichever is present after claude exits.
+/// Tests for the phantom sentinel, which carries a target account (tool+name)
+/// for the supervisor loop to apply after claude exits. Workspace/env
+/// switching (the former TARGET_SANDBOX field) was removed along with
+/// `orrery enter`/`orrery exit`.
 @Suite("PhantomSentinel")
 struct PhantomSentinelTests {
     var tmpDir: URL!
@@ -17,53 +18,47 @@ struct PhantomSentinelTests {
         store = EnvironmentStore(homeURL: tmpDir)
     }
 
-    @Test("account sentinel carries tool+name and omits TARGET_SANDBOX")
+    @Test("account sentinel carries tool+name and session id")
     func accountSentinel() throws {
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: nil,
+        try PhantomSupport.writeSentinel(
             targetAccountTool: "claude",
             targetAccountName: "work",
             sessionId: "sess-1",
             store: store
         )
         let text = try String(
-            contentsOf: PhantomSandboxTriggerCommand.sentinelURL(store: store), encoding: .utf8)
+            contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
         #expect(text.contains("TARGET_ACCOUNT_TOOL='claude'"))
         #expect(text.contains("TARGET_ACCOUNT_NAME='work'"))
         #expect(text.contains("SESSION_ID='sess-1'"))
-        // An account-switch sentinel must NOT carry a TARGET_SANDBOX line, or the
-        // loop would also run `orrery sandbox use` and double-handle the switch.
+        // The removed TARGET_SANDBOX field must never resurface.
         #expect(!text.contains("TARGET_SANDBOX"))
     }
 
-    @Test("sandbox sentinel carries TARGET_SANDBOX and omits account fields")
-    func envSentinel() throws {
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: "personal",
-            targetAccountTool: nil,
-            targetAccountName: nil,
+    @Test("account sentinel handles nil session id")
+    func accountSentinelNoSession() throws {
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude",
+            targetAccountName: "personal",
             sessionId: nil,
             store: store
         )
         let text = try String(
-            contentsOf: PhantomSandboxTriggerCommand.sentinelURL(store: store), encoding: .utf8)
-        #expect(text.contains("TARGET_SANDBOX='personal'"))
+            contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
+        #expect(text.contains("TARGET_ACCOUNT_NAME='personal'"))
         #expect(text.contains("SESSION_ID=''"))
-        #expect(!text.contains("TARGET_ACCOUNT_TOOL"))
-        #expect(!text.contains("TARGET_ACCOUNT_NAME"))
     }
 
     @Test("account sentinel escapes single quotes in the account name")
     func accountSentinelEscaping() throws {
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: nil,
+        try PhantomSupport.writeSentinel(
             targetAccountTool: "claude",
             targetAccountName: "weird'name",
             sessionId: nil,
             store: store
         )
         let text = try String(
-            contentsOf: PhantomSandboxTriggerCommand.sentinelURL(store: store), encoding: .utf8)
+            contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
         #expect(text.contains(#"TARGET_ACCOUNT_NAME='weird'\''name'"#))
     }
 }
