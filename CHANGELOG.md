@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.3.0 - 2026-08-13
+
+### Added
+
+- **`orrery-claude-hook`: real-time login detection via Claude Code's
+  `auth_success` Notification hook.** `orrery refresh-token` could fail with
+  `HTTP 400 invalid_grant` even right after `/login`, because claude's own
+  live OAuth credential (keyed to `CLAUDE_CONFIG_DIR`) and the account's pool
+  copy (used by the background `orrery-agent` refresher) are separate
+  Keychain items that drift apart whenever claude logs in or refreshes on its
+  own — refresh tokens rotate on every use, so the pool's stale copy silently
+  goes dead. `_prepare-claude-launch` now self-heals each pool account's
+  `settings.json` to register a dedicated `orrery-claude-hook` binary against
+  Claude Code's `auth_success` Notification hook, so the live credential is
+  synced into the pool the moment `/login` succeeds — confirmed empirically
+  to fire immediately, without waiting for claude to exit. The previous
+  exit-time capture (`_capture-claude-exit`) is kept as a deprecated fallback.
+
 ## v3.2.0 - 2026-08-12
 
 ### Added
