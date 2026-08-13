@@ -8,7 +8,7 @@ import Foundation
 /// reads consistent state at launch.
 ///
 /// Resolves the workspace via the account's `metadata.json` (its `workspace`
-/// field) and `EnvironmentStore.claudeWorkspaceDir`.
+/// field) and `EnvironmentStore.toolConfigDir(tool: .claude, environment:)`.
 public struct PrepareClaudeLaunchCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_prepare-claude-launch",
@@ -56,7 +56,7 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
         // Compute workspace shared dir (uses default home — caller controls
         // ORRERY_HOME).
         let envStore = EnvironmentStore.default
-        let wsDir = envStore.claudeWorkspaceDir(workspace: workspace)
+        let wsDir = envStore.toolConfigDir(tool: .claude, environment: workspace)
 
         // The .claude.json merge is skipped for --links-only: bare origin
         // launches (CLAUDE_CONFIG_DIR unset) read ~/.claude.json, NOT
@@ -114,8 +114,8 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
         // dir the account is missing. It never moves/merges account dirs into the
         // workspace — that account→workspace seeding happens once at pin time
         // (`orrery pin` → prepareDirectory). Best-effort; never blocks launch.
-        let linkWarnings = ClaudeAccountDirectory.mirrorWorkspaceDirsToAccount(
-            accountDir: acctDirURL, workspaceDir: wsDir)
+        let linkWarnings = AccountDirectoryRuntime.manager(ifAvailable: .claude)?.mirrorWorkspaceDirsToAccount(
+            accountDir: acctDirURL, workspaceDir: wsDir) ?? []
         for w in linkWarnings {
             FileHandle.standardError.write(
                 Data("orrery: link-workspace: \(w)\n".utf8))

@@ -171,25 +171,51 @@ public struct ShellFunctionGenerator {
                 esac
               done
               shift
-              # Codex / gemini route directly to the binary — those tools have
-              # no per-account dir concept in v3.1.
+              local _is_codex=0 _is_gemini=0
               for _a in "$@"; do
                 case "$_a" in
-                  --codex|--gemini)
-                    command orrery-bin use "$@"
-                    return $?
-                    ;;
+                  --codex) _is_codex=1 ;;
+                  --gemini) _is_gemini=1 ;;
                 esac
               done
-              # Claude (explicit or default). Let _account-dir's stderr flow to
-              # the user's terminal naturally; capture only stdout into _dir.
-              # On failure _account-dir has already printed an actionable error.
-              local _dir
-              if _dir=$(command orrery-bin _account-dir "$@"); then
-                export CLAUDE_CONFIG_DIR="$_dir"
-                echo "orrery: CLAUDE_CONFIG_DIR=$_dir" >&2
+              if [ $_is_codex -eq 1 ]; then
+                # Try the v3.1 account-dir fast path first; fall back to the
+                # legacy materialize path silently for accounts not yet
+                # migrated (suppress _account-dir's "not yet in v3.1 layout"
+                # error here — the fallback below handles it).
+                local _dir
+                if _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null); then
+                  export CODEX_HOME="$_dir"
+                  echo "orrery: CODEX_HOME=$_dir" >&2
+                else
+                  command orrery-bin use "$@"
+                  return $?
+                fi
+              elif [ $_is_gemini -eq 1 ]; then
+                # Same fast-path-with-fallback shape as codex, but gemini-cli
+                # ignores GEMINI_CONFIG_DIR — _account-dir returns a HOME-wrapper
+                # dir instead (see GeminiAdapter.resolvedExportPath), consumed
+                # by the gemini() wrapper function below via ORRERY_GEMINI_HOME.
+                local _dir
+                if _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null); then
+                  export ORRERY_GEMINI_HOME="$_dir"
+                  echo "orrery: ORRERY_GEMINI_HOME=$_dir" >&2
+                else
+                  command orrery-bin use "$@"
+                  return $?
+                fi
               else
-                return 1
+                # Claude (explicit or default). Let _account-dir's stderr flow
+                # to the user's terminal naturally; capture only stdout into
+                # _dir. On failure _account-dir has already printed an
+                # actionable error.
+                local _dir
+                if _dir=$(command orrery-bin _account-dir "$@"); then
+                  export CLAUDE_CONFIG_DIR="$_dir"
+                  echo "orrery: CLAUDE_CONFIG_DIR=$_dir" >&2
+                else
+                  return 1
+                fi
               fi
               ;;
             *)

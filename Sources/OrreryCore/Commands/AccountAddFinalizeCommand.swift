@@ -121,7 +121,7 @@ public struct AccountAddFinalizeCommand: ParsableCommand {
         // Merge the shared half into the per-workspace store without clobbering state
         // contributed by other accounts pinned to the same workspace (the new login's
         // shared half overlays existing keys; existing-only keys are preserved).
-        let wsDir = EnvironmentStore.default.claudeWorkspaceDir(workspace: account.workspace)
+        let wsDir = EnvironmentStore.default.toolConfigDir(tool: .claude, environment: account.workspace)
         let sharedURL = ClaudeJsonMerge.sharedFileURL(workspaceDir: wsDir)
         let existingShared = ClaudeJsonMerge.loadJSON(at: sharedURL) ?? [:]
         let mergedShared = ClaudeJsonMerge.merge(identity: split.shared, shared: existingShared)

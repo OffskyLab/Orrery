@@ -44,18 +44,18 @@ public struct AccountDirLookupCommand: ParsableCommand {
             throw ValidationError("Account '\(name)' not found in the \(tool.rawValue) pool.")
         }
 
-        // Per-account dirs are claude-only for now.
-        guard tool == .claude else {
-            throw ValidationError("Tool '\(tool.rawValue)' is not in v3.1 layout (per-account dirs are claude-only).")
+        guard let manager = AccountDirectoryRuntime.manager(ifAvailable: tool) else {
+            throw ValidationError("Tool '\(tool.rawValue)' is not in v3.1 layout (no account-dir manager registered).")
         }
 
-        let status = ClaudeAccountDirectory.verifySymlinks(
+        let status = manager.verifySymlinks(
             account: acct, accountStore: acctStore, environmentStore: envStore)
         guard status == .ok else {
             throw ValidationError("Account '\(name)' is not yet in v3.1 layout (status: \(status)). Run `orrery migrate-to-v3.1` first.")
         }
 
-        let dir = acctStore.accountDir(id: acct.id, tool: .claude)
-        print(dir.path)
+        let dir = acctStore.accountDir(id: acct.id, tool: tool)
+        let exportPath = try manager.resolvedExportPath(accountDir: dir)
+        print(exportPath.path)
     }
 }

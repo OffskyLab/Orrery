@@ -18,7 +18,7 @@ struct CaptureClaudeExitCommandTests {
             try pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
 
             // Simulate claude having written a fully-merged .claude.json.
             let merged: [String: Any] = [

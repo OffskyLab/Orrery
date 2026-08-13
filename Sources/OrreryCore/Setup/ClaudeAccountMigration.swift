@@ -4,7 +4,8 @@ import Foundation
 /// layout introduced by Plan 1.
 ///
 /// Purely additive:
-/// - Creates the 5 workspace-pointing symlinks via `ClaudeAccountDirectory.prepareDirectory`
+/// - Creates the workspace-pointing symlinks via `AccountDirectoryRuntime`'s
+///   registered claude manager (`ClaudeAdapter.prepareDirectory`, in OrreryAccountKit)
 /// - Seeds `claude-identity.json` (account dir) from `Account.email` if available,
 ///   else writes an empty `{}`.
 ///
@@ -25,8 +26,8 @@ public enum ClaudeAccountMigration {
         precondition(account.tool == .claude,
             "ClaudeAccountMigration only handles claude accounts")
 
-        // Build account dir + 5 symlinks (idempotent).
-        try ClaudeAccountDirectory.prepareDirectory(
+        // Build account dir + symlinks (idempotent).
+        try AccountDirectoryRuntime.manager(for: .claude).prepareDirectory(
             account: account,
             accountStore: accountStore,
             environmentStore: environmentStore

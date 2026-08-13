@@ -107,7 +107,7 @@ struct ManifestRunnerInstallTests {
         let record = try runner.install(workspacePkg(srcDir), into: envName,
                                         refOverride: nil, forceRefresh: false)
         let fm = FileManager.default
-        let wsDir = store.claudeWorkspaceDir(workspace: "dev")
+        let wsDir = store.toolConfigDir(tool: .claude, environment: "dev")
         let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
 
         // Script is in the workspace, NOT the account dir.
@@ -131,7 +131,7 @@ struct ManifestRunnerInstallTests {
         try runner.uninstall(packageID: "statusline", from: envName)
 
         let fm = FileManager.default
-        let wsDir = store.claudeWorkspaceDir(workspace: "dev")
+        let wsDir = store.toolConfigDir(tool: .claude, environment: "dev")
         let acctDir = AccountStore(homeURL: store.homeURL).accountDir(id: "test-acct", tool: .claude)
         #expect(!fm.fileExists(atPath: wsDir.appendingPathComponent("statusline.js").path))
         #expect(!fm.fileExists(atPath: acctDir.appendingPathComponent(".thirdparty/statusline.lock.json").path))
@@ -153,7 +153,7 @@ struct ManifestRunnerInstallTests {
                                    refOverride: nil, forceRefresh: false)
         }
         // No phantom workspace file written.
-        let ghost = store.claudeWorkspaceDir(workspace: "ghost-ws")
+        let ghost = store.toolConfigDir(tool: .claude, environment: "ghost-ws")
             .appendingPathComponent("statusline.js")
         #expect(!FileManager.default.fileExists(atPath: ghost.path))
     }
@@ -166,7 +166,7 @@ struct ManifestRunnerInstallTests {
                                refOverride: nil, forceRefresh: false)
 
         let acctStore = AccountStore(homeURL: store.homeURL)
-        let wsFile = store.claudeWorkspaceDir(workspace: "dev")
+        let wsFile = store.toolConfigDir(tool: .claude, environment: "dev")
             .appendingPathComponent("statusline.js")
         #expect(FileManager.default.fileExists(atPath: wsFile.path))
 
@@ -204,7 +204,7 @@ struct ManifestRunnerInstallTests {
         let (store, envName, srcDir, runner) = try setupFixture()
         try writeAccountWorkspace(store, "dev")
         _ = try runner.install(workspacePkg(srcDir), into: envName, refOverride: nil, forceRefresh: false)
-        let devFile = store.claudeWorkspaceDir(workspace: "dev").appendingPathComponent("statusline.js")
+        let devFile = store.toolConfigDir(tool: .claude, environment: "dev").appendingPathComponent("statusline.js")
         #expect(FileManager.default.fileExists(atPath: devFile.path))
         // Re-pin the account's metadata to a different workspace AFTER install.
         try writeAccountWorkspace(store, "team")
@@ -218,7 +218,7 @@ struct ManifestRunnerInstallTests {
         let (store, envName, srcDir, runner) = try setupFixture()
         try writeAccountWorkspace(store, "dev")
         _ = try runner.install(workspacePkg(srcDir), into: envName, refOverride: nil, forceRefresh: false)
-        let devFile = store.claudeWorkspaceDir(workspace: "dev").appendingPathComponent("statusline.js")
+        let devFile = store.toolConfigDir(tool: .claude, environment: "dev").appendingPathComponent("statusline.js")
 
         // A second account whose lock references a DIFFERENT workspace ("other").
         let acctStore = AccountStore(homeURL: store.homeURL)

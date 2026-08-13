@@ -10,6 +10,7 @@ let package = Package(
         .executable(name: "orrery-claude-hook", targets: ["orrery-claude-hook"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
         .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
+        .library(name: "OrreryAccountKit", targets: ["OrreryAccountKit"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
     ],
     dependencies: [
@@ -21,6 +22,7 @@ let package = Package(
             dependencies: [
                 "OrreryCore",
                 "OrreryThirdParty",
+                "OrreryAccountKit",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources/orrery"
@@ -53,6 +55,11 @@ let package = Package(
             path: "Sources/OrreryThirdParty",
             resources: [.process("Manifests")]
         ),
+        .target(
+            name: "OrreryAccountKit",
+            dependencies: ["OrreryCore"],
+            path: "Sources/OrreryAccountKit"
+        ),
         .executableTarget(
             name: "L10nCodegenTool",
             path: "Plugins/L10nCodegenTool"
@@ -64,7 +71,7 @@ let package = Package(
         ),
         .testTarget(
             name: "OrreryTests",
-            dependencies: ["OrreryCore"],
+            dependencies: ["OrreryCore", "OrreryAccountKit"],
             path: "Tests/OrreryTests",
             exclude: [
                 "Fixtures/sidecar/fake-sidecar.sh",
@@ -74,6 +81,11 @@ let package = Package(
             name: "OrreryThirdPartyTests",
             dependencies: ["OrreryThirdParty"],
             path: "Tests/OrreryThirdPartyTests"
+        ),
+        .testTarget(
+            name: "OrreryAccountKitTests",
+            dependencies: ["OrreryAccountKit"],
+            path: "Tests/OrreryAccountKitTests"
         ),
     ]
 )

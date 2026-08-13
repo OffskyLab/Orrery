@@ -33,14 +33,16 @@ public struct ShowCommand: ParsableCommand {
 
         print(L10n.Account.showActiveEnv(activeEnvName))
         for tool in Tool.allCases {
-            // `orrery use` for claude only exports CLAUDE_CONFIG_DIR into the
-            // current shell session — it never updates the persisted pin (see
-            // UseCommand). So the persisted pin can silently disagree with what
-            // this shell will actually use. Surface that instead of just the
-            // (possibly stale) persisted pin.
-            if tool == .claude, let live = Self.liveClaudeAccount(acctStore: acctStore),
+            // `orrery use` for claude/codex, once an account is on the v3.1
+            // account-dir layout, only exports CLAUDE_CONFIG_DIR/CODEX_HOME into
+            // the current shell session via the `_account-dir` fast path — it
+            // never updates the persisted pin (see UseCommand). So the persisted
+            // pin can silently disagree with what this shell will actually use.
+            // Surface that instead of just the (possibly stale) persisted pin.
+            if let manager = AccountDirectoryRuntime.manager(ifAvailable: tool),
+               let live = Self.liveAccount(tool: tool, manager: manager, acctStore: acctStore),
                live.id != pins[tool.rawValue] {
-                print("  claude: \(live.displayName)\(Self.infoSuffix(live)) [this shell only — via `orrery use`; default is \(Self.defaultLabel(tool: tool, pins: pins, acctStore: acctStore))]")
+                print("  \(tool.rawValue): \(live.displayName)\(Self.infoSuffix(live)) [this shell only — via `orrery use`; default is \(Self.defaultLabel(tool: tool, pins: pins, acctStore: acctStore))]")
                 continue
             }
 
@@ -65,17 +67,17 @@ public struct ShowCommand: ParsableCommand {
         return acct.displayName
     }
 
-    /// Resolves the Claude account actually in effect for *this shell*, from
-    /// `CLAUDE_CONFIG_DIR` (set by `orrery use` — see `AccountDirLookupCommand`,
-    /// which always points it at `~/.orrery/accounts/claude/<id>`). Returns nil
-    /// if unset, or set to something that isn't a known pool account (e.g. unset,
-    /// or pointing outside the pool layout) — callers fall back to the persisted
-    /// pin in that case.
-    private static func liveClaudeAccount(acctStore: AccountStore) -> Account? {
-        guard let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"],
+    /// Resolves the account actually in effect for *this shell*, from the
+    /// tool's account-dir env var (set by `orrery use` — see
+    /// `AccountDirLookupCommand`, which exports whatever `manager.resolvedExportPath`
+    /// produces — the account dir itself for claude/codex, a HOME-wrapper dir
+    /// for gemini). Returns nil if unset, or set to something that isn't a
+    /// known pool account — callers fall back to the persisted pin in that case.
+    private static func liveAccount(tool: Tool, manager: ToolAccountManaging, acctStore: AccountStore) -> Account? {
+        guard let configDir = ProcessInfo.processInfo.environment[manager.exportEnvVarName],
               !configDir.isEmpty
         else { return nil }
-        let id = URL(fileURLWithPath: configDir).lastPathComponent
-        return try? acctStore.load(id: id, tool: .claude)
+        let id = manager.accountID(fromExportPath: URL(fileURLWithPath: configDir))
+        return try? acctStore.load(id: id, tool: tool)
     }
 }

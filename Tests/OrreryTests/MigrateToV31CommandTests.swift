@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import OrreryCore
+import OrreryAccountKit
 
 @Suite("MigrateToV31Command")
 struct MigrateToV31CommandTests {
@@ -10,6 +11,7 @@ struct MigrateToV31CommandTests {
         try withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
+            let manager = try AccountDirectoryRuntime.manager(for: .claude)
 
             let alice = Account(tool: .claude, displayName: "alice", email: "alice@x.com")
             let bob = Account(tool: .claude, displayName: "bob", email: "bob@x.com")
@@ -20,9 +22,9 @@ struct MigrateToV31CommandTests {
             try cmd.run()
 
             // Both accounts have the v3.1 layout now.
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(manager.verifySymlinks(
                 account: alice, accountStore: acctStore, environmentStore: envStore) == .ok)
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(manager.verifySymlinks(
                 account: bob, accountStore: acctStore, environmentStore: envStore) == .ok)
 
             // Both have claude-identity.json seeded with their email.
@@ -36,15 +38,17 @@ struct MigrateToV31CommandTests {
 
             // Second run is a no-op (does not throw, does not clobber identity).
             try cmd.run()
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(manager.verifySymlinks(
                 account: alice, accountStore: acctStore, environmentStore: envStore) == .ok)
         }
     }
 
-    @Test("non-claude accounts are skipped")
-    func skipsNonClaude() throws {
+    @Test("codex pool accounts are migrated too")
+    func migratesCodexAccounts() throws {
         try withIsolatedHome {
             let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let manager = try AccountDirectoryRuntime.manager(for: .codex)
 
             let codex = Account(tool: .codex, displayName: "codex-alice", email: "c@x.com")
             try acctStore.save(codex)
@@ -52,10 +56,32 @@ struct MigrateToV31CommandTests {
             var cmd = try MigrateToV31Command.parse([])
             try cmd.run()
 
-            // No claude symlinks for the codex slot.
+            #expect(manager.verifySymlinks(
+                account: codex, accountStore: acctStore, environmentStore: envStore) == .ok)
             let codexDir = acctStore.accountDir(id: codex.id, tool: .codex)
-            #expect(!FileManager.default.fileExists(
-                atPath: codexDir.appendingPathComponent("projects").path))
+            #expect(FileManager.default.fileExists(
+                atPath: codexDir.appendingPathComponent("skills").path))
+        }
+    }
+
+    @Test("gemini pool accounts are migrated too")
+    func migratesGeminiAccounts() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            let manager = try AccountDirectoryRuntime.manager(for: .gemini)
+
+            let gemini = Account(tool: .gemini, displayName: "gemini-alice", email: "g@x.com")
+            try acctStore.save(gemini)
+
+            var cmd = try MigrateToV31Command.parse([])
+            try cmd.run()
+
+            #expect(manager.verifySymlinks(
+                account: gemini, accountStore: acctStore, environmentStore: envStore) == .ok)
+            let geminiDir = acctStore.accountDir(id: gemini.id, tool: .gemini)
+            #expect(FileManager.default.fileExists(
+                atPath: geminiDir.appendingPathComponent("tmp").path))
         }
     }
 

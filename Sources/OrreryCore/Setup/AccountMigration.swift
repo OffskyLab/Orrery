@@ -500,7 +500,7 @@ public enum AccountMigration {
         for acct in accounts {
             let accountSettings = acctStore.accountDir(id: acct.id, tool: .claude)
                 .appendingPathComponent("settings.json")
-            let workspaceSettings = envStore.claudeWorkspaceDir(workspace: acct.workspace)
+            let workspaceSettings = envStore.toolConfigDir(tool: .claude, environment: acct.workspace)
                 .appendingPathComponent("settings.json")
 
             // Nothing captured in the workspace → nothing to consolidate.

@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import ArgumentParser
 @testable import OrreryCore
+import OrreryAccountKit
 
 // MARK: - stdout capture helper
 
@@ -221,6 +222,54 @@ struct AccountCommandsAllTests {
                 #expect(!output.contains("sandbox:"))
             }
         }
+
+        @Test("CODEX_HOME pointing at a different account moves the active marker")
+        func codexHomeMovesActiveMarker() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let pinned = Account(tool: .codex, displayName: "codex-pinned")
+                let shellOnly = Account(tool: .codex, displayName: "codex-shell-only")
+                try acctStore.save(pinned)
+                try acctStore.save(shellOnly)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["codex"] = pinned.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                // Mirrors what `orrery use --codex` exports via the _account-dir
+                // fast path — shell-only, never touches the persisted pin.
+                setenv("CODEX_HOME", acctStore.accountDir(id: shellOnly.id, tool: .codex).path, 1)
+                defer { unsetenv("CODEX_HOME") }
+
+                let cmd = try ListCommand.parse(["--codex"])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("● codex-shell-only"))
+                #expect(output.contains("- codex-pinned"))
+            }
+        }
+
+        @Test("ORRERY_GEMINI_HOME pointing at a different account moves the active marker")
+        func geminiHomeMovesActiveMarker() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let pinned = Account(tool: .gemini, displayName: "gemini-pinned")
+                let shellOnly = Account(tool: .gemini, displayName: "gemini-shell-only")
+                try acctStore.save(pinned)
+                try acctStore.save(shellOnly)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["gemini"] = pinned.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("ORRERY_GEMINI_HOME", acctStore.accountDir(id: shellOnly.id, tool: .gemini).path, 1)
+                defer { unsetenv("ORRERY_GEMINI_HOME") }
+
+                let cmd = try ListCommand.parse(["--gemini"])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("● gemini-shell-only"))
+                #expect(output.contains("- gemini-pinned"))
+            }
+        }
     }
 
     // MARK: ShowCommand
@@ -379,6 +428,51 @@ struct AccountCommandsAllTests {
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("still-shown"))
+                #expect(!output.contains("this shell only"))
+            }
+        }
+
+        @Test("CODEX_HOME pointing at a different account overrides the codex row and notes the default")
+        func codexHomeOverridesRow() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let pinned = Account(tool: .codex, displayName: "codex-pinned-default")
+                let shellOnly = Account(tool: .codex, displayName: "codex-shell-only")
+                try acctStore.save(pinned)
+                try acctStore.save(shellOnly)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["codex"] = pinned.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("CODEX_HOME", acctStore.accountDir(id: shellOnly.id, tool: .codex).path, 1)
+                defer { unsetenv("CODEX_HOME") }
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("codex-shell-only"))
+                #expect(output.contains("this shell only"))
+                #expect(output.contains("codex-pinned-default")) // still mentioned as the default
+            }
+        }
+
+        @Test("CODEX_HOME matching the persisted pin shows the normal row, no override marker")
+        func codexHomeMatchingPinIsUnannotated() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let acct = Account(tool: .codex, displayName: "codex-same-account")
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["codex"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                setenv("CODEX_HOME", acctStore.accountDir(id: acct.id, tool: .codex).path, 1)
+                defer { unsetenv("CODEX_HOME") }
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("codex-same-account"))
                 #expect(!output.contains("this shell only"))
             }
         }
@@ -665,7 +759,7 @@ struct AccountCommandsAllTests {
                 try cmd.run()
 
                 // v3.1 layout: symlinks must be valid.
-                #expect(ClaudeAccountDirectory.verifySymlinks(
+                #expect(try AccountDirectoryRuntime.manager(for: .claude).verifySymlinks(
                     account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
 
                 // v3.1 layout: claude-identity.json must exist in the account pool dir.

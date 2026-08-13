@@ -17,7 +17,7 @@ public struct ManifestRunner: ThirdPartyRunner {
                         forceRefresh: Bool) throws -> InstallRecord {
         let claudeDir = try resolveClaudeDir(env: env)
         let workspaceName = try resolveWorkspaceName(accountDir: claudeDir)
-        let workspaceDir = store.claudeWorkspaceDir(workspace: workspaceName)
+        let workspaceDir = store.toolConfigDir(tool: .claude, environment: workspaceName)
         let lockURL = lockFileURL(claudeDir: claudeDir, packageID: pkg.id)
 
         // Already installed? Reinstall = uninstall + install (spec decision 7c-B).
@@ -105,7 +105,7 @@ public struct ManifestRunner: ThirdPartyRunner {
         let workspaceName = record.workspace
             ?? (try? resolveWorkspaceName(accountDir: claudeDir))
             ?? Workspace.reservedOriginName
-        let workspaceDir = store.claudeWorkspaceDir(workspace: workspaceName)
+        let workspaceDir = store.toolConfigDir(tool: .claude, environment: workspaceName)
 
         for patchRec in record.patchedSettings.reversed() {
             try? PatchSettingsExecutor.rollback(record: patchRec, claudeDir: claudeDir)

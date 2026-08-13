@@ -64,7 +64,7 @@ public struct CaptureClaudeExitCommand: ParsableCommand {
         let workspace = (mdObj["workspace"] as? String) ?? "origin"
 
         let envStore = EnvironmentStore.default
-        let wsDir = envStore.claudeWorkspaceDir(workspace: workspace)
+        let wsDir = envStore.toolConfigDir(tool: .claude, environment: workspace)
 
         let split = try ClaudeJsonMerge.split(claudeJSONURL: claudeJSONURL)
         try ClaudeJsonMerge.saveJSON(
