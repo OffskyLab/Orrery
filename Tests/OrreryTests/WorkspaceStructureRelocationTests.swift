@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import OrreryCore
+import OrreryAccountKit
 
 @Suite("WorkspaceStructureRelocation")
 struct WorkspaceStructureRelocationTests {
@@ -59,7 +60,7 @@ struct WorkspaceStructureRelocationTests {
         AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: home)
 
         let acctDir = acctStore.accountDir(id: "ACCT1", tool: .claude)
-        for sub in ClaudeAccountDirectory.sharedSubdirs {
+        for sub in ClaudeAdapter.baseSharedSubdirs {
             let dest = try fm.destinationOfSymbolicLink(atPath: acctDir.appendingPathComponent(sub).path)
             #expect(dest == home.appendingPathComponent("workspaces/origin/claude/\(sub)").path)
         }

@@ -1,5 +1,20 @@
 import Foundation
 @testable import OrreryCore
+import OrreryAccountKit
+
+/// Registers the real `ClaudeAdapter`/`CodexAdapter` into `AccountDirectoryRuntime`,
+/// mirroring what `orrery-bin`'s `main.swift` does at startup. OrreryCore's own
+/// command tests (PinCommand, AccountDirLookupCommand, PrepareClaudeLaunchCommand,
+/// MigrateToV31Command, …) exercise real account-dir symlinking through the
+/// registry, so it must be populated before they run. Idempotent — cheap to
+/// call from every test.
+private let registerAccountKitOnce: Void = {
+    OrreryAccountKitRuntime.register()
+}()
+
+func ensureAccountKitRegistered() {
+    _ = registerAccountKitOnce
+}
 
 /// Delete any per-account claude Keychain items for accounts under `home`.
 /// The macOS login Keychain is GLOBAL — `ORRERY_HOME` does not isolate it — so a
@@ -42,6 +57,7 @@ private let orreryHomeLock = NSLock()
 /// like `orrery show`, which read both from the process environment. Restored
 /// afterwards.
 func withIsolatedHome(_ body: () throws -> Void) rethrows {
+    ensureAccountKitRegistered()
     orreryHomeLock.lock()
     defer { orreryHomeLock.unlock() }
 

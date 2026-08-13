@@ -40,13 +40,11 @@ public struct PinCommand: ParsableCommand {
         acct.workspace = workspace
         try acctStore.save(acct)
 
-        if tool == .claude {
-            try ClaudeAccountDirectory.prepareDirectory(
-                account: acct,
-                accountStore: acctStore,
-                environmentStore: envStore
-            )
-        }
+        try AccountDirectoryRuntime.manager(ifAvailable: tool)?.prepareDirectory(
+            account: acct,
+            accountStore: acctStore,
+            environmentStore: envStore
+        )
 
         print(L10n.Pin.success(accountName, workspace))
     }

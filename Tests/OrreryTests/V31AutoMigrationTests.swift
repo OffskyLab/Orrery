@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import OrreryCore
+import OrreryAccountKit
 
 @Suite("AccountMigration.runWorkspaceAccountSymlinksIfNeeded")
 struct V31AutoMigrationTests {
@@ -16,7 +17,7 @@ struct V31AutoMigrationTests {
 
             AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
 
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(try AccountDirectoryRuntime.manager(for: .claude).verifySymlinks(
                 account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
             let flag = orreryHomeURL().appendingPathComponent(
                 AccountMigration.workspaceAccountSymlinksFlagFileName)

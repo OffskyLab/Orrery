@@ -55,6 +55,22 @@ public struct ListCommand: ParsableCommand {
             }
         }
 
+        // Same idea for codex/gemini: `orrery use --codex/--gemini` (the
+        // _account-dir fast path) only exports CODEX_HOME/ORRERY_GEMINI_HOME
+        // for the current shell — it never touches the persisted pin. Neither
+        // tool has claude's ~/.claude-origin-repoint invariant, so there's no
+        // defaultConfigDir fallback here, just the live-env-var override.
+        for tool in [Tool.codex, .gemini] {
+            guard let manager = AccountDirectoryRuntime.manager(ifAvailable: tool),
+                  let liveDir = ProcessInfo.processInfo.environment[manager.exportEnvVarName],
+                  !liveDir.isEmpty
+            else { continue }
+            let id = manager.accountID(fromExportPath: URL(fileURLWithPath: liveDir))
+            if (try? store.load(id: id, tool: tool)) != nil {
+                activePins[tool.rawValue] = id
+            }
+        }
+
         // 只有「剛好一個」flag 才視為過濾；0 或 >1 → 顯示全部。
         let selected: [Tool] = [claude ? Tool.claude : nil,
                                 codex ? Tool.codex : nil,

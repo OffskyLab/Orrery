@@ -2,6 +2,7 @@ import ArgumentParser
 import Foundation
 import OrreryCore
 import OrreryThirdParty
+import OrreryAccountKit
 
 @MainActor
 private func runOrreryMain() async throws {
@@ -53,6 +54,7 @@ private func runOrreryMain() async throws {
     LinuxAgentInstaller.ensureRegistered()
     #endif
     OrreryThirdPartyRuntime.register()
+    OrreryAccountKitRuntime.register()
 
     let firstArgument = CommandLine.arguments.dropFirst().first
 

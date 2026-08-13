@@ -19,7 +19,7 @@ struct PrepareClaudeLaunchCommandTests {
             try pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
 
             // Seed identity + shared stores with non-overlapping fields.
             let identity: [String: Any] = [
@@ -90,7 +90,7 @@ struct PrepareClaudeLaunchCommandTests {
             try PinCommand.parse(["alice", "--workspace", "work"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
             let fm = FileManager.default
 
             // A dir already in the workspace (e.g. seeded by another account) —
@@ -136,7 +136,7 @@ struct PrepareClaudeLaunchCommandTests {
             try PinCommand.parse(["alice", "--workspace", "work"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "work")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
 
             // Seed an identity store — a FULL prepare would merge this into
             // .claude.json. --links-only must NOT.
@@ -177,7 +177,7 @@ struct PrepareClaudeLaunchCommandTests {
             try PinCommand.parse(["alice", "--workspace", "origin"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "origin")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "origin")
 
             // A dir already in the workspace to be mirrored in.
             let wsPlugins = wsDir.appendingPathComponent("plugins")
@@ -310,7 +310,7 @@ struct V31LaunchCaptureRoundTripTests {
             try pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "team")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "team")
 
             // Seed initial state in both stores.
             try ClaudeJsonMerge.saveJSON(
@@ -375,7 +375,7 @@ struct V31LaunchCaptureRoundTripTests {
 
             let aliceDir = acctStore.accountDir(id: alice.id, tool: .claude)
             let bobDir = acctStore.accountDir(id: bob.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "team")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "team")
 
             // Alice runs (prep + simulated mutation + capture).
             try PrepareClaudeLaunchCommand.parse(["--account-dir", aliceDir.path]).run()

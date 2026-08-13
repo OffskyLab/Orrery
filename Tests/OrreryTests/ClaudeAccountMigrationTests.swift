@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import OrreryCore
+import OrreryAccountKit
 
 @Suite("ClaudeAccountMigration.migrateAccount")
 struct ClaudeAccountMigrationTests {
@@ -14,16 +15,18 @@ struct ClaudeAccountMigrationTests {
             var acct = Account(tool: .claude, displayName: "alice", email: "alice@example.com")
             try acctStore.save(acct)
 
+            let manager = try AccountDirectoryRuntime.manager(for: .claude)
+
             // First call: creates layout
             try ClaudeAccountMigration.migrateAccount(
                 acct, accountStore: acctStore, environmentStore: envStore)
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(manager.verifySymlinks(
                 account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
 
             // Second call: still .ok, no errors thrown
             try ClaudeAccountMigration.migrateAccount(
                 acct, accountStore: acctStore, environmentStore: envStore)
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(manager.verifySymlinks(
                 account: acct, accountStore: acctStore, environmentStore: envStore) == .ok)
         }
     }

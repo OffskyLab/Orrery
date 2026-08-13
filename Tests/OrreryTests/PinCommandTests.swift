@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import ArgumentParser
 @testable import OrreryCore
+import OrreryAccountKit
 
 @Suite("PinCommand")
 struct PinCommandTests {
@@ -20,7 +21,7 @@ struct PinCommandTests {
             let reloaded = try acctStore.load(id: acct.id, tool: .claude)
             #expect(reloaded.workspace == "work")
 
-            let status = ClaudeAccountDirectory.verifySymlinks(
+            let status = try AccountDirectoryRuntime.manager(for: .claude).verifySymlinks(
                 account: reloaded, accountStore: acctStore, environmentStore: envStore)
             #expect(status == .ok)
         }
@@ -45,7 +46,7 @@ struct PinCommandTests {
 
             let reloaded = try acctStore.load(id: acct.id, tool: .claude)
             #expect(reloaded.workspace == "work")
-            #expect(ClaudeAccountDirectory.verifySymlinks(
+            #expect(try AccountDirectoryRuntime.manager(for: .claude).verifySymlinks(
                 account: reloaded, accountStore: acctStore, environmentStore: envStore) == .ok)
         }
     }
@@ -101,7 +102,7 @@ struct PinCommandIntegrationTests {
             try cmd.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
-            let wsDir = envStore.claudeWorkspaceDir(workspace: "shared-team")
+            let wsDir = envStore.toolConfigDir(tool: .claude, environment: "shared-team")
             let fm = FileManager.default
 
             // Account dir exists.
@@ -109,13 +110,13 @@ struct PinCommandIntegrationTests {
 
             // Workspace dir + 5 subdirs exist.
             #expect(fm.fileExists(atPath: wsDir.path))
-            for sub in ClaudeAccountDirectory.sharedSubdirs {
+            for sub in ClaudeAdapter.baseSharedSubdirs {
                 #expect(fm.fileExists(atPath: wsDir.appendingPathComponent(sub).path),
                     "missing workspace subdir: \(sub)")
             }
 
             // 5 symlinks in account dir, each pointing at the right workspace subdir.
-            for sub in ClaudeAccountDirectory.sharedSubdirs {
+            for sub in ClaudeAdapter.baseSharedSubdirs {
                 let linkPath = acctDir.appendingPathComponent(sub).path
                 let dest = try fm.destinationOfSymbolicLink(atPath: linkPath)
                 #expect(dest == wsDir.appendingPathComponent(sub).path,
@@ -136,7 +137,7 @@ struct PinCommandIntegrationTests {
             try cmd2.run()
 
             let bobDir = acctStore.accountDir(id: bob.id, tool: .claude)
-            for sub in ClaudeAccountDirectory.sharedSubdirs {
+            for sub in ClaudeAdapter.baseSharedSubdirs {
                 let aliceLink = try fm.destinationOfSymbolicLink(
                     atPath: acctDir.appendingPathComponent(sub).path)
                 let bobLink = try fm.destinationOfSymbolicLink(
