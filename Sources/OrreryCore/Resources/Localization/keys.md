@@ -269,15 +269,10 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 
 | Key | Context |
 | --- | --- |
-| `phantom.triggerAbstract` | Hidden command help for `_phantom-trigger`. |
 | `phantom.accountTriggerAbstract` | Hidden command help for `_phantom-trigger-account`. Shown in `--help` for the internal subcommand. |
 | `phantom.notUnderPhantom` | Error when the trigger runs outside a phantom-supervised session. References `orrery run claude` — keep literal. |
 | `phantom.claudeNotFound` | Error when the claude process can't be located in the process tree. |
 | `phantom.signalFailed` | Error when SIGTERM delivery fails. |
-| `phantom.availableHeader` | Header printed before the env list (no-arg invocation). |
-| `phantom.usageHint` | Usage hint appended after the env list. `/orrery:phantom` is a literal slash command name. |
-| `phantom.switching` | Printed when switching to a named env with a known session. `{env}` = env name; `{sessionPrefix}` = first 8 chars of session id. |
-| `phantom.switchingNoSession` | Printed when switching to an env with no active session. `{env}` = env name. |
 | `phantom.switchingAccount` | Printed when switching to a named account with a known session. `{account}` = account display name; `{session}` = first 8 chars of session id. |
 | `phantom.switchingAccountNoSession` | Printed when switching to an account with no active session. `{account}` = account display name. |
 
@@ -339,19 +334,6 @@ Shown by ArgumentParser as part of auto-generated help.
 | `update.notice` | One-line "update available" banner. `{current}`, `{latest}`. Keep the trailing `run: orrery update` hint literal. |
 | `update.unsupportedPlatform` | Error on non-supported OS. URL kept literal. |
 | `update.upgrading` | Progress line. |
-
-## enter / exit — `orrery enter` and `orrery exit`
-
-| Key | Context |
-| --- | --- |
-| `enter.abstract` | Command help. |
-| `enter.nameHelp` | Positional `name` help. |
-| `enter.needsShellIntegration` | Error when shell integration isn't installed. Shared by `exit` (both verbs need the shell wrapper to export/unset env vars). References `orrery setup` — keep literal. Has `\n`. |
-| `enter.switched` | Shown when entering a sandbox. `%s` = sandbox name. |
-| `enter.cannotEnterOrigin` | Rejection when the user passes `origin` to `enter`. References `orrery exit` — keep literal. |
-| `exit.abstract` | Command help. |
-| `exit.switched` | Shown when leaving a sandbox back to origin. |
-| `exit.alreadyAtOrigin` | Friendly no-op message when `exit` runs while already at origin. |
 
 ## which — `orrery which`
 

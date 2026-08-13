@@ -29,77 +29,6 @@ public struct ShellFunctionGenerator {
 
           local cmd="${1:-}"
           case "$cmd" in
-            enter)
-              # Shell-side env-var export when opting into a sandbox.
-              # `shift` so $1 becomes the sandbox name.
-              shift
-              if [ -z "${1:-}" ]; then
-                echo "Usage: orrery enter <sandbox>" >&2
-                return 1
-              fi
-              if [ "$1" = "origin" ]; then
-                printf "\(L10n.Enter.cannotEnterOrigin)\\n" >&2
-                return 1
-              fi
-              # Unexport previous sandbox's env vars if switching from another sandbox.
-              if [ -n "${ORRERY_ACTIVE_ENV:-}" ] && [ "$ORRERY_ACTIVE_ENV" != "origin" ]; then
-                eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
-              fi
-              local exports
-              exports=$(command orrery-bin sandbox _export "$1") || { echo "orrery: sandbox '$1' not found" >&2; return 1; }
-              eval "$exports"
-              export ORRERY_ACTIVE_ENV="$1"
-              command orrery-bin _set-current "$1" 2>/dev/null || true
-              # Background quota refresh so `orrery list` shows fresh data
-              # next time. Double subshell hides the job notice from
-              # interactive shells, just like the update check above.
-              ( ( command orrery-bin quota refresh -e "$1" >/dev/null 2>&1 ) & ) >/dev/null 2>&1
-              printf "\(L10n.Enter.switched)\\n" "$1"
-              ;;
-            exit)
-              # Idempotent: even when already at origin we re-assert the
-              # state (set ORRERY_ACTIVE_ENV=origin, write current=origin)
-              # so a freshly-started shell ends up consistent.
-              if [ -z "${ORRERY_ACTIVE_ENV:-}" ] || [ "$ORRERY_ACTIVE_ENV" = "origin" ]; then
-                export ORRERY_ACTIVE_ENV="origin"
-                command orrery-bin _set-current origin 2>/dev/null || true
-                printf "\(L10n.Exit.alreadyAtOrigin)\\n" >&2
-                return 0
-              fi
-              eval "$(command orrery-bin sandbox _unexport "$ORRERY_ACTIVE_ENV" 2>/dev/null || true)"
-              unset CLAUDE_CONFIG_DIR CODEX_HOME CODEX_CONFIG_DIR GEMINI_CONFIG_DIR ORRERY_GEMINI_HOME
-              export ORRERY_ACTIVE_ENV="origin"
-              command orrery-bin _set-current origin 2>/dev/null || true
-              printf "\(L10n.Exit.switched)\\n"
-              ;;
-            sandbox)
-              case "${2:-}" in
-                create)
-                  command orrery-bin "$@"
-                  if [ $? -eq 0 ]; then
-                    local _name="" _skip=0
-                    for _arg in "${@:3}"; do
-                      if [ $_skip -eq 1 ]; then _skip=0; continue; fi
-                      case "$_arg" in
-                        --description|--clone|--tool|--copy-login-from) _skip=1 ;;
-                        --*) ;;
-                        *) _name="$_arg"; break ;;
-                      esac
-                    done
-                    if [ -n "$_name" ]; then
-                      printf "切換到 sandbox '%s'？[Y/n] " "$_name"
-                      read -r _ans </dev/tty
-                      case "${_ans:-Y}" in
-                        [Yy]*|"") orrery enter "$_name" ;;
-                      esac
-                    fi
-                  fi
-                  ;;
-                *)
-                  command orrery-bin "$@"
-                  ;;
-              esac
-              ;;
             run)
               # Phantom mode is the default for `orrery run claude` — claude is
               # launched under a supervisor loop that watches for a sentinel
@@ -156,11 +85,8 @@ public struct ShellFunctionGenerator {
               # session-resume semantics so a supervisor loop adds no value.
               if [ $_run_non_phantom -eq 0 ] && [ "${1:-}" = "claude" ]; then
                 if [ -n "$_run_target" ]; then
-                  if [ "$_run_target" = "origin" ]; then
-                    orrery exit || return $?
-                  else
-                    orrery enter "$_run_target" || return $?
-                  fi
+                  echo "orrery run claude: -e/--env is not supported for claude — run 'orrery use <account>' first, then 'orrery run claude'." >&2
+                  return 1
                 fi
                 local _phantom_sentinel="$_orrery_home/.phantom-sentinel"
                 rm -f "$_phantom_sentinel"
@@ -175,16 +101,9 @@ public struct ShellFunctionGenerator {
                 while true; do
                   claude "${_phantom_args[@]}"
                   [ -f "$_phantom_sentinel" ] || break
-                  local TARGET_SANDBOX='' TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
+                  local TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
                   . "$_phantom_sentinel"
                   rm -f "$_phantom_sentinel"
-                  if [ -n "$TARGET_SANDBOX" ]; then
-                    if [ "$TARGET_SANDBOX" = "origin" ]; then
-                      orrery exit || break
-                    else
-                      orrery enter "$TARGET_SANDBOX" || break
-                    fi
-                  fi
                   if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
                     orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME" || break
                   fi
@@ -282,7 +201,6 @@ public struct ShellFunctionGenerator {
         _orrery_init() {
           local orrery_home="${ORRERY_HOME:-$HOME/.orrery}"
           local activate_file="$orrery_home/activate.sh"
-          local current_file="$orrery_home/current"
 
           # Self-update: if the version stamp in activate.sh doesn't match the
           # installed binary, regenerate and re-source so stale shells heal
@@ -296,25 +214,6 @@ public struct ShellFunctionGenerator {
             return
           fi
 
-          # Migrate pre-1.1.0: "default" was renamed to "origin"
-          if [ "${ORRERY_ACTIVE_ENV:-}" = "default" ]; then
-            export ORRERY_ACTIVE_ENV="origin"
-          fi
-          if [ -f "$current_file" ]; then
-            local env_name
-            env_name=$(cat "$current_file" 2>/dev/null)
-            if [ "$env_name" = "default" ]; then
-              env_name="origin"
-              echo "origin" > "$current_file" 2>/dev/null || true
-            fi
-            if [ -n "$env_name" ]; then
-              if [ "$env_name" = "origin" ]; then
-                orrery exit >/dev/null 2>&1 || true
-              else
-                orrery enter "$env_name" >/dev/null 2>&1 || true
-              fi
-            fi
-          fi
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
           command orrery-bin _link-memory 2>/dev/null || true
         }

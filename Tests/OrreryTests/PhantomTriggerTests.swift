@@ -16,14 +16,15 @@ struct PhantomTriggerTests {
 
     // MARK: - Sentinel format
 
-    @Test("sentinel is shell-sourceable with target env and session id")
+    @Test("sentinel is shell-sourceable with target account and session id")
     func sentinelRoundTrip() throws {
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: "work", targetAccountTool: nil, targetAccountName: nil,
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "work",
             sessionId: "abc123-def", store: store)
-        let url = PhantomSandboxTriggerCommand.sentinelURL(store: store)
+        let url = PhantomSupport.sentinelURL(store: store)
         let text = try String(contentsOf: url, encoding: .utf8)
-        #expect(text.contains("TARGET_SANDBOX='work'"))
+        #expect(text.contains("TARGET_ACCOUNT_TOOL='claude'"))
+        #expect(text.contains("TARGET_ACCOUNT_NAME='work'"))
         #expect(text.contains("SESSION_ID='abc123-def'"))
         // Each assignment must be on its own line so `. sentinel` works under
         // both bash and zsh without surprises.
@@ -32,24 +33,24 @@ struct PhantomTriggerTests {
 
     @Test("sentinel handles nil session id (fresh conversation)")
     func sentinelNoSession() throws {
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: "personal", targetAccountTool: nil, targetAccountName: nil,
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "personal",
             sessionId: nil, store: store)
-        let text = try String(contentsOf: PhantomSandboxTriggerCommand.sentinelURL(store: store), encoding: .utf8)
-        #expect(text.contains("TARGET_SANDBOX='personal'"))
+        let text = try String(contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
+        #expect(text.contains("TARGET_ACCOUNT_NAME='personal'"))
         #expect(text.contains("SESSION_ID=''"))
     }
 
-    @Test("sentinel escapes single quotes in env name (defensive)")
+    @Test("sentinel escapes single quotes in account name (defensive)")
     func sentinelEscaping() throws {
-        // Env names with quotes should never reach the sentinel (they're rejected
-        // upstream by the create command), but test the shell escaping anyway
-        // because this is the IPC trust boundary.
-        try PhantomSandboxTriggerCommand.writeSentinel(
-            targetSandbox: "weird'name", targetAccountTool: nil, targetAccountName: nil,
+        // Account names with quotes should never reach the sentinel (they're
+        // rejected upstream), but test the shell escaping anyway because this
+        // is the IPC trust boundary.
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "weird'name",
             sessionId: nil, store: store)
-        let text = try String(contentsOf: PhantomSandboxTriggerCommand.sentinelURL(store: store), encoding: .utf8)
-        #expect(text.contains(#"TARGET_SANDBOX='weird'\''name'"#))
+        let text = try String(contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
+        #expect(text.contains(#"TARGET_ACCOUNT_NAME='weird'\''name'"#))
     }
 
     // MARK: - Session id discovery
@@ -82,7 +83,7 @@ struct PhantomTriggerTests {
             else { unsetenv("CLAUDE_CONFIG_DIR") }
         }
 
-        let id = PhantomSandboxTriggerCommand.findCurrentClaudeSessionId()
+        let id = PhantomSupport.findCurrentClaudeSessionId()
         #expect(id == "new-session-id")
     }
 
@@ -98,7 +99,7 @@ struct PhantomTriggerTests {
             else { unsetenv("CLAUDE_CONFIG_DIR") }
         }
 
-        let id = PhantomSandboxTriggerCommand.findCurrentClaudeSessionId()
+        let id = PhantomSupport.findCurrentClaudeSessionId()
         #expect(id == nil)
     }
 
@@ -110,13 +111,13 @@ struct PhantomTriggerTests {
         // is not running under claude, so walking up from getppid() will not
         // find any claude ancestor whose parent is this pid.
         let pid = getpid()
-        let result = PhantomSandboxTriggerCommand.findClaudeAncestor(supervisorPid: pid)
+        let result = PhantomSupport.findClaudeAncestor(supervisorPid: pid)
         #expect(result == nil)
     }
 
     @Test("readProcessInfo returns ppid+comm for the current process")
     func readProcessInfoCurrent() {
-        let info = PhantomSandboxTriggerCommand.readProcessInfo(pid: getpid())
+        let info = PhantomSupport.readProcessInfo(pid: getpid())
         #expect(info != nil)
         // The test runner's parent should be either swift or xctest; comm is a
         // basename string, so just check it's non-empty and has no slashes.
@@ -144,7 +145,7 @@ struct PhantomTriggerTests {
             200: (300, "2.1.201"),
             300: (400, "zsh"),
         ]
-        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+        let r = PhantomSupport.resolveClaudePid(
             start: 100, supervisorPid: 300, lookup: lookup(tree))
         #expect(r.reachedSupervisor)
         #expect(r.claudePid == 200)
@@ -157,7 +158,7 @@ struct PhantomTriggerTests {
             200: (300, "claude"),
             300: (400, "zsh"),
         ]
-        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+        let r = PhantomSupport.resolveClaudePid(
             start: 100, supervisorPid: 300, lookup: lookup(tree))
         #expect(r.claudePid == 200)
     }
@@ -172,7 +173,7 @@ struct PhantomTriggerTests {
             250: (300, "caffeinate"),
             300: (400, "zsh"),
         ]
-        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+        let r = PhantomSupport.resolveClaudePid(
             start: 100, supervisorPid: 300, lookup: lookup(tree))
         #expect(r.claudePid == 200)
     }
@@ -183,7 +184,7 @@ struct PhantomTriggerTests {
             100: (200, "zsh"),
             200: (1, "zsh"),
         ]
-        let r = PhantomSandboxTriggerCommand.resolveClaudePid(
+        let r = PhantomSupport.resolveClaudePid(
             start: 100, supervisorPid: 999, lookup: lookup(tree))
         #expect(!r.reachedSupervisor)
         #expect(r.claudePid == nil)
@@ -191,10 +192,10 @@ struct PhantomTriggerTests {
 
     @Test("isClaudeComm accepts claude/claude.exe, rejects version and helper names")
     func isClaudeCommMatching() {
-        #expect(PhantomSandboxTriggerCommand.isClaudeComm("claude"))
-        #expect(PhantomSandboxTriggerCommand.isClaudeComm("claude.exe"))
-        #expect(!PhantomSandboxTriggerCommand.isClaudeComm("2.1.201"))
-        #expect(!PhantomSandboxTriggerCommand.isClaudeComm("claude-helper"))
+        #expect(PhantomSupport.isClaudeComm("claude"))
+        #expect(PhantomSupport.isClaudeComm("claude.exe"))
+        #expect(!PhantomSupport.isClaudeComm("2.1.201"))
+        #expect(!PhantomSupport.isClaudeComm("claude-helper"))
     }
 }
 
@@ -216,23 +217,30 @@ struct ShellFunctionGeneratorRunTests {
         #expect(script.contains("SESSION_ID"))
     }
 
-    @Test("run loop translates TARGET_SANDBOX through the v3 enter/exit verbs")
-    func runLoopSwitchesEnv() {
+    @Test("run loop still applies TARGET_ACCOUNT_TOOL/NAME account switches")
+    func runLoopSwitchesAccount() {
         let script = ShellFunctionGenerator.generate()
-        // The loop must use the orrery() shell function (not orrery-bin directly)
-        // so the env vars actually mutate the supervisor's shell — that's how the
-        // child claude inherits the new sandbox on the next iteration. In v3,
-        // origin maps to `orrery exit` and any other name to `orrery enter`.
-        #expect(script.contains("if [ \"$TARGET_SANDBOX\" = \"origin\" ]; then"))
-        #expect(script.contains("orrery enter \"$TARGET_SANDBOX\""))
-        #expect(!script.contains("orrery sandbox use \"$TARGET_SANDBOX\""))
+        #expect(script.contains("TARGET_ACCOUNT_TOOL"))
+        #expect(script.contains("TARGET_ACCOUNT_NAME"))
+        #expect(script.contains(#"orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME""#))
     }
 
-    @Test("run parses -e flag for the target env")
+    @Test("orrery enter/exit and sandbox-level workspace switching are gone")
+    func enterExitRemoved() {
+        let script = ShellFunctionGenerator.generate()
+        #expect(!script.contains("TARGET_SANDBOX"))
+        #expect(!script.contains("orrery enter"))
+        #expect(!script.contains("orrery exit"))
+        #expect(!script.contains("orrery-bin sandbox"))
+    }
+
+    @Test("run parses -e flag for the target env (non-phantom fallback only)")
     func runAcceptsEnvFlag() {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("-e|--env"))
         #expect(script.contains("_run_target"))
+        // Phantom claude no longer supports -e — account switching is `orrery use`.
+        #expect(script.contains("is not supported for claude"))
     }
 
     @Test("run accepts --non-phantom to opt out of supervisor mode")

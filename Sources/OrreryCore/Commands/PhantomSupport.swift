@@ -1,4 +1,3 @@
-import ArgumentParser
 import Foundation
 #if canImport(Darwin)
 import Darwin
@@ -6,22 +5,11 @@ import Darwin
 import Glibc
 #endif
 
-/// `orrery-bin _phantom-trigger-sandbox <env>` — invoked from inside a phantom-supervised
-/// claude (typically via the `/orrery:phantom` slash command). Writes a sentinel
-/// describing the desired next sandbox + current session id, then SIGTERMs claude so
-/// the supervisor loop in `activate.sh` can relaunch with the new sandbox active and
-/// `--resume <session-id>` so the conversation continues seamlessly.
-public struct PhantomSandboxTriggerCommand: ParsableCommand {
-    public static let configuration = CommandConfiguration(
-        commandName: "_phantom-trigger-sandbox",
-        abstract: L10n.Phantom.triggerAbstract,
-        shouldDisplay: false
-    )
-
-    @Argument(parsing: .remaining)
-    public var args: [String] = []
-
-    public init() {}
+/// Shared infrastructure for phantom-mode account switching (`/orrery:phantom`,
+/// backed by `orrery-bin _phantom-trigger-account`): sentinel read/write,
+/// claude-process discovery, and the slash-command markdown installed by
+/// `orrery setup` / `orrery mcp setup`.
+public enum PhantomSupport {
 
     /// Source-of-truth markdown for the `/orrery:phantom` slash command. Both
     /// `orrery setup` (global → `~/.claude/commands/`) and `orrery mcp setup`
@@ -32,13 +20,13 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
     /// independent of `CLAUDE_CONFIG_DIR`.
     public static let slashCommandMarkdown: String = """
     ---
-    description: Switch orrery account or sandbox without restarting Claude
-    argument-hint: [name | <tool> <name> | sandbox <name>]
+    description: Switch orrery account without restarting Claude
+    argument-hint: [name | <tool> <name>]
     ---
 
-    # Phantom: switch orrery account or sandbox in-place
+    # Phantom: switch orrery account in-place
 
-    Switch the active orrery account (or sandbox) without losing the conversation. Claude exits and the orrery supervisor relaunches it with `--resume`, so the conversation continues where it left off.
+    Switch the active orrery account without losing the conversation. Claude exits and the orrery supervisor relaunches it with `--resume`, so the conversation continues where it left off.
 
     **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
 
@@ -46,70 +34,57 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
 
     Inspect `$ARGUMENTS` and pick the matching branch:
 
-    - **`$ARGUMENTS` is `sandbox <name>`** (explicit sandbox switch): run `orrery-bin _phantom-trigger-sandbox <name>`.
-
     - **`$ARGUMENTS` starts with `claude`, `codex`, or `gemini`** followed by a name: switch that tool's account. Run `orrery-bin _phantom-trigger-account --<tool> --name <name>`.
 
-    - **`$ARGUMENTS` is just `<name>`** (a single token, not `sandbox`/`claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin _phantom-trigger-account --claude --name <name>`.
+    - **`$ARGUMENTS` is just `<name>`** (a single token, not `claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin _phantom-trigger-account --claude --name <name>`.
 
-    - **`$ARGUMENTS` is empty**: first run `orrery-bin _phantom-trigger-sandbox` (no args) to get the list of available sandboxes, and `orrery-bin list` to get the list of accounts. Present both lists to the user, ask which they want to switch to, and re-invoke this slash command with their choice.
+    - **`$ARGUMENTS` is empty**: run `orrery-bin list` to get the list of accounts, present it to the user, and ask which they want to switch to, then re-invoke this slash command with their choice.
 
-    Do not narrate the relaunch — Claude will simply exit and reappear with the new account or sandbox active. The user's next message lands in the new context.
+    Do not narrate the relaunch — Claude will simply exit and reappear with the new account active. The user's next message lands in the new context.
     """
 
-    public func run() throws {
-        let supervisorPidStr = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
-        guard let supervisorPidStr, let supervisorPid = Int32(supervisorPidStr) else {
-            throw ValidationError(L10n.Phantom.notUnderPhantom)
-        }
+    // MARK: - Sentinel
 
-        let store = EnvironmentStore.default
+    public static func sentinelURL(store: EnvironmentStore) -> URL {
+        store.homeURL.appendingPathComponent(".phantom-sentinel")
+    }
 
-        // No-arg form: list envs and bail with a hint. The slash command will
-        // catch this output and re-prompt the user.
-        guard let target = args.first, !target.isEmpty else {
-            let names = ([Workspace.reservedOriginName] + ((try? store.listNames().sorted()) ?? []))
-            print(L10n.Phantom.availableHeader)
-            for n in names { print("  - \(n)") }
-            print("")
-            print(L10n.Phantom.usageHint)
-            return
-        }
-
-        // Validate target env exists (origin is always valid).
-        if target != Workspace.reservedOriginName {
-            _ = try store.load(named: target)
-        }
-
-        // Find claude FIRST — if we can't reach it, don't leave a stale sentinel
-        // that would fire on the next normal claude exit.
-        guard let claudePid = Self.findClaudeAncestor(supervisorPid: supervisorPid) else {
-            throw ValidationError(L10n.Phantom.claudeNotFound)
-        }
-
-        let sessionId = Self.findCurrentClaudeSessionId()
-        try Self.writeSentinel(
-            targetSandbox: target,
-            targetAccountTool: nil,
-            targetAccountName: nil,
-            sessionId: sessionId,
-            store: store
+    /// Sentinel format is shell-sourceable so the supervisor loop can simply
+    /// `. "$sentinel"` to read it. Single-quoted values guard against names
+    /// containing shell metacharacters (account names are validated
+    /// elsewhere, but be defensive at the IPC boundary).
+    ///
+    /// `SESSION_ID` is always emitted (empty string when nil); the account
+    /// fields are only emitted when non-nil.
+    static func writeSentinel(
+        targetAccountTool: String?,
+        targetAccountName: String?,
+        sessionId: String?,
+        store: EnvironmentStore
+    ) throws {
+        let url = Self.sentinelURL(store: store)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
         )
-
+        var lines: [String] = []
+        if let targetAccountTool {
+            lines.append("TARGET_ACCOUNT_TOOL='\(shellEscape(targetAccountTool))'")
+        }
+        if let targetAccountName {
+            lines.append("TARGET_ACCOUNT_NAME='\(shellEscape(targetAccountName))'")
+        }
         if let sessionId {
-            print(L10n.Phantom.switching(target, String(sessionId.prefix(8))))
+            lines.append("SESSION_ID='\(shellEscape(sessionId))'")
         } else {
-            print(L10n.Phantom.switchingNoSession(target))
+            lines.append("SESSION_ID=''")
         }
+        let content = lines.joined(separator: "\n") + "\n"
+        try content.write(to: url, atomically: true, encoding: .utf8)
+    }
 
-        // SIGTERM lets claude exit cleanly. Its JSONL is streamed live so the
-        // conversation up to this turn is already on disk. If the signal fails
-        // to deliver (race with claude exiting), pull the sentinel back so it
-        // doesn't fire on the next manual launch.
-        if kill(claudePid, SIGTERM) != 0 {
-            try? FileManager.default.removeItem(at: Self.sentinelURL(store: store))
-            throw ValidationError(L10n.Phantom.signalFailed)
-        }
+    private static func shellEscape(_ s: String) -> String {
+        s.replacingOccurrences(of: "'", with: "'\\''")
     }
 
     // MARK: - Session id discovery
@@ -139,56 +114,6 @@ public struct PhantomSandboxTriggerCommand: ParsableCommand {
             return ad < bd
         }
         return latest?.deletingPathExtension().lastPathComponent
-    }
-
-    // MARK: - Sentinel
-
-    public static func sentinelURL(store: EnvironmentStore) -> URL {
-        store.homeURL.appendingPathComponent(".phantom-sentinel")
-    }
-
-    /// Sentinel format is shell-sourceable so the supervisor loop can simply
-    /// `. "$sentinel"` to read it. Single-quoted values guard against names
-    /// containing shell metacharacters (env / account names are validated
-    /// elsewhere, but be defensive at the IPC boundary).
-    ///
-    /// The sentinel can carry EITHER a target env (env-switch) OR a target
-    /// account (account-switch) — the supervisor loop applies whichever is
-    /// present AFTER claude exits. Only non-nil fields are emitted; `SESSION_ID`
-    /// is always emitted (empty string when nil).
-    static func writeSentinel(
-        targetSandbox: String?,
-        targetAccountTool: String?,
-        targetAccountName: String?,
-        sessionId: String?,
-        store: EnvironmentStore
-    ) throws {
-        let url = Self.sentinelURL(store: store)
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        var lines: [String] = []
-        if let targetSandbox {
-            lines.append("TARGET_SANDBOX='\(shellEscape(targetSandbox))'")
-        }
-        if let targetAccountTool {
-            lines.append("TARGET_ACCOUNT_TOOL='\(shellEscape(targetAccountTool))'")
-        }
-        if let targetAccountName {
-            lines.append("TARGET_ACCOUNT_NAME='\(shellEscape(targetAccountName))'")
-        }
-        if let sessionId {
-            lines.append("SESSION_ID='\(shellEscape(sessionId))'")
-        } else {
-            lines.append("SESSION_ID=''")
-        }
-        let content = lines.joined(separator: "\n") + "\n"
-        try content.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    private static func shellEscape(_ s: String) -> String {
-        s.replacingOccurrences(of: "'", with: "'\\''")
     }
 
     // MARK: - Process discovery

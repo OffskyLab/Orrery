@@ -40,7 +40,7 @@ Your **identity** for a tool — the credential Orrery logs in with. Accounts li
 
 ### Sandbox _(advanced)_
 
-An optional **isolation** layer: separate memory, sessions, and env vars on top of accounts. Most users never need one — reach for a sandbox when a client or project needs its own config space. Enter with `orrery enter`, leave with `orrery exit`.
+An optional **isolation** layer: separate memory, sessions, and env vars on top of accounts. Most users never need one — reach for a sandbox when a client or project needs its own config space. Pin an account to it with `orrery pin <account> --workspace <name>`, then activate it with `orrery use <account>`.
 
 ### Session
 
@@ -48,7 +48,7 @@ Represents **continuity**: conversation history and project context. Shared acro
 
 ### Phantom mode
 
-`orrery run claude` launches Claude under a phantom supervisor. From inside that Claude session, the `/orrery:phantom` slash command can swap accounts or sandboxes without losing the conversation — Claude exits, the supervisor relaunches it with the new context and `--resume`. See the [Phantom Mode](#phantom-mode) section below.
+`orrery run claude` launches Claude under a phantom supervisor. From inside that Claude session, the `/orrery:phantom` slash command can swap accounts without losing the conversation — Claude exits, the supervisor relaunches it with the new account and `--resume`. See the [Phantom Mode](#phantom-mode) section below.
 
 ### MCP Delegation
 
@@ -183,15 +183,14 @@ claude --resume              # pick up right where you left off
 
 ## Phantom Mode
 
-Launch Claude with `orrery run claude` and a supervisor stays alongside it. From inside that Claude, the `/orrery:phantom` slash command (installed by `orrery mcp setup`) swaps the active account or sandbox **without restarting the conversation**:
+Launch Claude with `orrery run claude` and a supervisor stays alongside it. From inside that Claude, the `/orrery:phantom` slash command (installed by `orrery mcp setup`) swaps the active account **without restarting the conversation**:
 
 ```text
 /orrery:phantom personal           # switch the claude account to 'personal'
 /orrery:phantom codex work         # switch the codex account
-/orrery:phantom sandbox client-a   # switch the active sandbox
 ```
 
-Claude exits, the supervisor relaunches it with the new account or sandbox active and `--resume`, and the conversation continues uninterrupted.
+Claude exits, the supervisor relaunches it with the new account active and `--resume`, and the conversation continues uninterrupted.
 
 <p align="center">
   <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
@@ -207,7 +206,7 @@ For non-Claude commands, `orrery run` is always single-shot:
 
 ```bash
 orrery run codex             # one-shot codex under the pinned codex account
-orrery run npm install       # ad-hoc command inside the active sandbox
+orrery run -e client-a npm install  # ad-hoc command inside a specific sandbox
 ```
 
 ---
@@ -217,39 +216,38 @@ orrery run npm install       # ad-hoc command inside the active sandbox
 A sandbox is a full config-isolation layer: separate memory, sessions, env vars, and per-tool config dirs. Useful when a client or project needs its own walled-off context. If you only need to swap accounts, you can skip sandboxes entirely.
 
 ```bash
-orrery sandbox create client-a     # interactive wizard: pick tools, memory mode, clone source
-orrery sandbox list                # show all sandboxes
-orrery sandbox info client-a       # full state (tools, accounts, env vars, memory)
+orrery workspace create client-a   # interactive wizard: pick tools, memory mode, clone source
+orrery workspace list              # show all sandboxes
+orrery workspace info client-a     # full state (tools, accounts, env vars, memory)
 
-orrery enter client-a              # opt into the sandbox (per-shell)
-claude                              # uses the sandbox's pinned accounts and config
-orrery exit                         # return to origin
+orrery pin work --workspace client-a --claude  # pin an account into the sandbox
+orrery use work                                # activate it — CLAUDE_CONFIG_DIR now
+                                                # resolves to that account's dir, sharing
+                                                # client-a's memory/sessions/config
+claude
 ```
 
 <p align="center">
-  <img src="assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" width="480" />
-  <img src="assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" width="480" />
+  <img src="assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
 </p>
 
-Sandbox-level env vars are managed with `orrery sandbox set-env` / `unset-env`:
+Sandbox-level env vars are managed with `orrery workspace set-env` / `unset-env`:
 
 ```bash
-orrery sandbox set-env API_BASE https://staging.example.com --sandbox client-a
-orrery sandbox unset-env API_BASE --sandbox client-a
+orrery workspace set-env API_BASE https://staging.example.com --sandbox client-a
+orrery workspace unset-env API_BASE --sandbox client-a
 ```
 
 ---
 
 ## The `origin` Baseline
 
-`origin` is your default config — where you are before entering any sandbox. On first `orrery setup`, your existing tool configs (`~/.claude/`, `~/.codex/`, `~/.gemini/`) are moved into `~/.orrery/origin/` and the original paths become symlinks. Your data is untouched; it just lives where Orrery can manage and sync it.
+`origin` is your default config — the workspace an account is pinned to when you haven't chosen another one. On first `orrery setup`, your existing tool configs (`~/.claude/`, `~/.codex/`, `~/.gemini/`) are moved into `~/.orrery/origin/` and the original paths become symlinks. Your data is untouched; it just lives where Orrery can manage and sync it.
 
 ```bash
-orrery exit                  # return to origin from any sandbox
-orrery sandbox info origin   # show origin state (memory, sessions, tools)
+orrery use <origin-account>    # activate an account pinned to origin
+orrery workspace info origin   # show origin state (memory, sessions, tools)
 ```
-
-`orrery enter origin` is rejected and points you at `exit`: origin is the **absence** of a sandbox, not a sandbox you enter.
 
 To fully back out of Orrery (release tool configs and remove shell integration):
 
@@ -269,7 +267,7 @@ By default, session data is shared across all sandboxes:
 
 Session sharing works by symlinking tool session directories (`projects/`, `sessions/`, `session-env/`) to `~/.orrery/shared/`.
 
-For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery sandbox create` wizard, or switch later with `orrery sandbox memory isolate` / `share`.
+For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard, or switch later with `orrery workspace memory isolate` / `share`.
 
 ---
 
@@ -289,25 +287,16 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 
 | Command | Description |
 |---|---|
-| `orrery sandbox create <name>` | Create a sandbox (interactive wizard) |
-| `orrery sandbox list` | List all sandboxes |
-| `orrery sandbox info [name]` | Show full details of a sandbox |
-| `orrery sandbox delete <name>` | Delete a sandbox |
-| `orrery sandbox rename <old> <new>` | Rename a sandbox |
-| `orrery sandbox set-env <KEY> <VALUE> [-s <name>]` | Set a sandbox env var |
-| `orrery sandbox unset-env <KEY> [-s <name>]` | Remove a sandbox env var |
-| `orrery sandbox current` | Print the active sandbox name (or `origin`) |
-| `orrery sandbox memory {isolate\|share\|info\|storage \| export}` | Manage memory mode and storage |
-| `orrery sandbox sync ...` | Sync state into/out of a sandbox |
-
-### Sandbox state (per-shell)
-
-> Requires shell integration (`orrery setup`)
-
-| Command | Description |
-|---|---|
-| `orrery enter <name>` | Enter a sandbox in the current shell |
-| `orrery exit` | Return to origin |
+| `orrery workspace create <name>` | Create a sandbox (interactive wizard) |
+| `orrery workspace list` | List all sandboxes |
+| `orrery workspace info [name]` | Show full details of a sandbox |
+| `orrery workspace delete <name>` | Delete a sandbox |
+| `orrery workspace rename <old> <new>` | Rename a sandbox |
+| `orrery workspace set-env <KEY> <VALUE> [-s <name>]` | Set a sandbox env var |
+| `orrery workspace unset-env <KEY> [-s <name>]` | Remove a sandbox env var |
+| `orrery workspace current` | Print the active sandbox name (or `origin`) |
+| `orrery workspace memory {isolate\|share\|info\|storage \| export}` | Manage memory mode and storage |
+| `orrery workspace sync ...` | Sync state into/out of a sandbox |
 
 ### Configuration
 
@@ -488,8 +477,8 @@ This registers Orrery as an MCP server and installs slash commands.
 **External memory storage**: Redirect memory to any directory — such as an Obsidian vault:
 
 ```bash
-orrery sandbox memory storage ~/Documents/my-wiki/orrery
-orrery sandbox memory storage --reset   # revert to ~/.orrery
+orrery workspace memory storage ~/Documents/my-wiki/orrery
+orrery workspace memory storage --reset   # revert to ~/.orrery
 ```
 
 ---
@@ -500,27 +489,27 @@ Sync project memory across machines and teammates in real time, powered by [orre
 
 ```bash
 # Desktop
-orrery sandbox sync daemon --port 9527
+orrery workspace sync daemon --port 9527
 
 # Laptop (auto-discovers via Bonjour)
-orrery sandbox sync daemon --port 9528
+orrery workspace sync daemon --port 9528
 ```
 
 For cross-network sync, run a rendezvous server on a VPS:
 
 ```bash
-orrery sandbox sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery workspace sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 Only project memory is synced — sessions stay local. Memory changes are tracked as conflict-free fragments and consolidated by the AI agent at session start.
 
 | Command | Description |
 |---|---|
-| `orrery sandbox sync daemon` | Start the sync daemon |
-| `orrery sandbox sync status` | Show daemon and peer status |
-| `orrery sandbox sync team create <name>` | Create a new team |
-| `orrery sandbox sync team invite` | Generate an invite code |
-| `orrery sandbox sync team join <code>` | Join a team |
+| `orrery workspace sync daemon` | Start the sync daemon |
+| `orrery workspace sync status` | Show daemon and peer status |
+| `orrery workspace sync team create <name>` | Create a new team |
+| `orrery workspace sync team invite` | Generate an invite code |
+| `orrery workspace sync team join <code>` | Join a team |
 
 ---
 
