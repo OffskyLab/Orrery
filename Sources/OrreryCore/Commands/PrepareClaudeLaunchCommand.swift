@@ -100,6 +100,14 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
                 merged,
                 at: acctDirURL.appendingPathComponent(".claude.json")
             )
+
+            #if os(macOS)
+            // Ongoing invariant, not flag-guarded: keep the auth_success hook
+            // installed in this account's settings.json, self-healing the
+            // same way the rest of this command does. Best-effort — a
+            // failure here must never block the launch.
+            ensureAuthSuccessHookInstalled(accountDir: acctDirURL)
+            #endif
         }
 
         // Launch only mirrors the workspace into the account: symlink any shared
@@ -113,4 +121,76 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
                 Data("orrery: link-workspace: \(w)\n".utf8))
         }
     }
+
+    #if os(macOS)
+    /// Patches `<accountDir>/settings.json` to add a `Notification` hook for
+    /// the `auth_success` matcher, pointing at `orrery-claude-hook` — see
+    /// `ClaudeLoginSync`'s doc comment for what that hook does. Idempotent
+    /// (`SettingsJSONPatcher`'s hook-matcher comparator treats an existing
+    /// entry with the same matcher + command set as already present, so this
+    /// never duplicates on repeated launches) and additive — every other key
+    /// already in settings.json, including other hooks, is left untouched.
+    /// Best-effort: silently no-ops if the sibling `orrery-claude-hook`
+    /// binary can't be found or the file can't be read/written.
+    private func ensureAuthSuccessHookInstalled(accountDir: URL) {
+        guard let hookBinaryPath = Self.resolvedHookBinaryPath() else { return }
+        Self.patchAuthSuccessHook(accountDir: accountDir, hookBinaryPath: hookBinaryPath)
+    }
+
+    /// The actual patch, taking `hookBinaryPath` as a plain parameter so
+    /// it's testable without depending on `resolvedHookBinaryPath()`'s
+    /// `CommandLine.arguments[0]`-based resolution (which, same as
+    /// `TokenRefreshDaemonInstaller`/`LinuxAgentInstaller`'s equivalent,
+    /// can't be meaningfully exercised in-process under the test runner).
+    static func patchAuthSuccessHook(accountDir: URL, hookBinaryPath: String) {
+        let patch: JSONValue = .object([
+            "hooks": .object([
+                "Notification": .array([
+                    .object([
+                        "matcher": .string("auth_success"),
+                        "hooks": .array([
+                            .object([
+                                "type": .string("command"),
+                                "command": .string("\(hookBinaryPath) --account-dir \(accountDir.path)"),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ])
+
+        let settingsURL = accountDir.appendingPathComponent("settings.json")
+        var target: JSONValue
+        if let data = try? Data(contentsOf: settingsURL), !data.isEmpty,
+           let decoded = try? JSONDecoder().decode(JSONValue.self, from: data) {
+            target = decoded
+        } else {
+            target = .object([:])
+        }
+
+        guard (try? SettingsJSONPatcher.apply(patch: patch, to: &target)) != nil else { return }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+        guard let data = try? encoder.encode(target) else { return }
+        try? data.write(to: settingsURL, options: .atomic)
+    }
+
+    /// `orrery-claude-hook` ships side-by-side with `orrery-bin` (same
+    /// install directory — see `.github/workflows/release.yml` and
+    /// `docs/install.sh`), resolved by swapping the currently running
+    /// `orrery-bin`'s filename. Returns nil if no such binary exists next to
+    /// it (e.g. a dev build where only `orrery-bin` was built).
+    private static func resolvedHookBinaryPath() -> String? {
+        let arg0 = CommandLine.arguments[0]
+        let binaryPath = arg0.hasPrefix("/")
+            ? arg0
+            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent(arg0).standardizedFileURL.path
+        let candidate = URL(fileURLWithPath: binaryPath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("orrery-claude-hook")
+        return FileManager.default.fileExists(atPath: candidate.path) ? candidate.path : nil
+    }
+    #endif
 }

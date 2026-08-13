@@ -1,5 +1,4 @@
 import Foundation
-import OrreryCore
 
 /// Pure deep-merge + undo logic for `settings.json`. No IO; callers pass values in,
 /// values out, and a `SettingsPatchRecord` describing exactly what was changed.
