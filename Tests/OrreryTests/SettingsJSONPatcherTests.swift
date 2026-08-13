@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-@testable import OrreryThirdParty
 @testable import OrreryCore
 
 @Suite("SettingsJSONPatcher — basics")

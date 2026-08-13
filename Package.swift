@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "orrery-bin", targets: ["orrery-bin"]),
         .executable(name: "orrery-agent", targets: ["orrery-agent"]),
+        .executable(name: "orrery-claude-hook", targets: ["orrery-claude-hook"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
         .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
         .plugin(name: "L10nCodegen", targets: ["L10nCodegen"]),
@@ -28,6 +29,11 @@ let package = Package(
             name: "orrery-agent",
             dependencies: ["OrreryCore"],
             path: "Sources/orrery-agent"
+        ),
+        .executableTarget(
+            name: "orrery-claude-hook",
+            dependencies: ["OrreryCore"],
+            path: "Sources/orrery-claude-hook"
         ),
         .target(
             name: "OrreryCore",

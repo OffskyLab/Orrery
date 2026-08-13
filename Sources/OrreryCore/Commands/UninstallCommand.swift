@@ -58,18 +58,20 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedIntegration(rcFile.path))
         }
 
-        // 4. Remove the orrery-bin binary, and its orrery-agent sibling
-        //    (ships side-by-side — see .github/workflows/release.yml).
+        // 4. Remove the orrery-bin binary, and its sibling binaries that ship
+        //    alongside it (see .github/workflows/release.yml).
         let binaryPath = CommandLine.arguments[0]
         let binaryURL = URL(fileURLWithPath: binaryPath)
         if FileManager.default.fileExists(atPath: binaryURL.path) {
             try FileManager.default.removeItem(at: binaryURL)
             stderrWrite(L10n.Uninstall.removedBinary(binaryURL.path))
         }
-        let agentURL = binaryURL.deletingLastPathComponent().appendingPathComponent("orrery-agent")
-        if FileManager.default.fileExists(atPath: agentURL.path) {
-            try? FileManager.default.removeItem(at: agentURL)
-            stderrWrite(L10n.Uninstall.removedBinary(agentURL.path))
+        for sibling in ["orrery-agent", "orrery-claude-hook"] {
+            let siblingURL = binaryURL.deletingLastPathComponent().appendingPathComponent(sibling)
+            if FileManager.default.fileExists(atPath: siblingURL.path) {
+                try? FileManager.default.removeItem(at: siblingURL)
+                stderrWrite(L10n.Uninstall.removedBinary(siblingURL.path))
+            }
         }
 
         // 5. Remove the orrery-magi sidecar binary (installed under

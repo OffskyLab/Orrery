@@ -204,6 +204,95 @@ struct PrepareClaudeLaunchCommandTests {
                 "mirror must follow the symlinked account dir")
         }
     }
+
+    #if os(macOS)
+    @Test("patchAuthSuccessHook adds the Notification/auth_success hook, preserving existing settings")
+    func patchAuthSuccessHookAddsEntry() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+
+            // Pre-existing settings.json, as if the user (or another tool)
+            // already had its own hooks configured.
+            let settingsURL = acctDir.appendingPathComponent("settings.json")
+            let existing = """
+            {"theme":"dark","hooks":{"Stop":[{"matcher":"*","hooks":[{"type":"command","command":"/bin/true"}]}]}}
+            """
+            try existing.write(to: settingsURL, atomically: true, encoding: .utf8)
+
+            PrepareClaudeLaunchCommand.patchAuthSuccessHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+
+            let data = try Data(contentsOf: settingsURL)
+            let obj = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            #expect(obj["theme"] as? String == "dark") // untouched
+            let hooks = try #require(obj["hooks"] as? [String: Any])
+            #expect(hooks["Stop"] != nil) // untouched
+
+            let notifications = try #require(hooks["Notification"] as? [[String: Any]])
+            #expect(notifications.count == 1)
+            #expect(notifications.first?["matcher"] as? String == "auth_success")
+            let innerHooks = try #require(notifications.first?["hooks"] as? [[String: Any]])
+            #expect(innerHooks.first?["command"] as? String
+                == "/usr/local/bin/orrery-claude-hook --account-dir \(acctDir.path)")
+        }
+    }
+
+    @Test("patchAuthSuccessHook is idempotent — a second call doesn't duplicate the entry")
+    func patchAuthSuccessHookIdempotent() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+
+            PrepareClaudeLaunchCommand.patchAuthSuccessHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+            PrepareClaudeLaunchCommand.patchAuthSuccessHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+
+            let data = try Data(contentsOf: acctDir.appendingPathComponent("settings.json"))
+            let obj = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let hooks = try #require(obj["hooks"] as? [String: Any])
+            let notifications = try #require(hooks["Notification"] as? [[String: Any]])
+            #expect(notifications.count == 1)
+        }
+    }
+
+    @Test("patchAuthSuccessHook repoints the command when the hook binary path changes")
+    func patchAuthSuccessHookRepointsOnPathChange() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+
+            PrepareClaudeLaunchCommand.patchAuthSuccessHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+            PrepareClaudeLaunchCommand.patchAuthSuccessHook(
+                accountDir: acctDir, hookBinaryPath: "/opt/homebrew/bin/orrery-claude-hook"
+            )
+
+            let data = try Data(contentsOf: acctDir.appendingPathComponent("settings.json"))
+            let obj = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let hooks = try #require(obj["hooks"] as? [String: Any])
+            let notifications = try #require(hooks["Notification"] as? [[String: Any]])
+            #expect(notifications.count == 2, "different command → different hook-matcher signature → appended, not deduped")
+        }
+    }
+    #endif
 }
 
 @Suite("v3.1 launch+capture round trip")

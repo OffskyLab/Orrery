@@ -11,23 +11,17 @@ import Foundation
 /// If no `.claude.json` exists (e.g. claude crashed before writing anything),
 /// this is a no-op rather than an error — there's nothing to capture.
 ///
-/// Also syncs the Keychain: claude reads/writes its OAuth credential (incl.
-/// any refresh — its own, or an interactive `/login`) under a service keyed
-/// to `CLAUDE_CONFIG_DIR` (see `ClaudeKeychain.service(for:)`), which is a
-/// *different* Keychain item from the account's own pool copy
-/// (`account.keychainItem`, `Claude Code-orrery-<id>`) that orrery's
-/// background token-refresh agent reads. Nothing previously kept those two
-/// in sync after the initial `orrery add` import, so the pool copy would
-/// silently go stale the moment claude (or the user, via `/login`) rotated
-/// the refresh token during normal use — the background agent would then
-/// fail every refresh with `invalid_grant` against a token that was already
-/// dead.
-///
-/// The sync is gated on actually detecting a change (comparing the pool's
-/// cached `refreshToken` against the live one), rather than copying
-/// unconditionally on every exit — that comparison **is** the "a login
-/// happened" signal, and it's what fires `AccountLoginHooks` (refetch
-/// email/plan, run the user's `~/.orrery/hooks/on-login` script if any).
+/// Also syncs the Keychain via `ClaudeLoginSync.syncIfChanged` — see that
+/// type's doc comment for why the pool copy and claude's live credential
+/// can otherwise silently diverge. **This exit-time path is deprecated**:
+/// the primary sync trigger is now the `auth_success` claude `Notification`
+/// hook (`orrery-claude-hook`, installed per-account by
+/// `PrepareClaudeLaunchCommand`), which fires the instant a login
+/// completes instead of waiting for exit. This is kept only as a fallback
+/// until that hook is confirmed, in practice, to cover every case that
+/// matters — in particular, whether it also fires for claude's own silent
+/// token refresh and not just an explicit `/login` is unverified as of this
+/// writing. Delete once confirmed.
 public struct CaptureClaudeExitCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_capture-claude-exit",
@@ -84,28 +78,9 @@ public struct CaptureClaudeExitCommand: ParsableCommand {
     }
 
     #if os(macOS)
-    /// Detects whether claude's live credential (under the config-dir-hashed
-    /// Keychain service) actually changed since the pool's cached copy — a
-    /// fresh login or a token rotation — and if so, copies it into the
-    /// account's own pool service and fires `AccountLoginHooks`.
-    /// Best-effort throughout: silently no-ops if the account can't be
-    /// loaded, has no `keychainItem` (e.g. non-claude tools never reach this
-    /// command), or there's simply nothing new to sync.
+    @available(*, deprecated, message: "Fallback only — the primary sync trigger is the auth_success claude Notification hook (orrery-claude-hook). Remove once that hook is confirmed to cover every case that matters, e.g. claude's own silent token refresh.")
     private func syncKeychainToPool(accountDir: URL) {
-        guard let account = try? AccountStore.default.load(id: accountDir.lastPathComponent, tool: .claude),
-              let poolService = account.keychainItem
-        else { return }
-
-        let liveService = ClaudeKeychain.service(for: accountDir.path)
-        guard let liveCredential = ClaudeKeychain.oauthCredential(forService: liveService) else { return }
-
-        let poolCredential = ClaudeKeychain.oauthCredential(forService: poolService)
-        guard liveCredential.refreshToken != poolCredential?.refreshToken else {
-            return // unchanged since last capture — no login/refresh happened this session
-        }
-
-        guard ClaudeKeychain.copyKeychainItem(from: liveService, to: poolService) else { return }
-        AccountLoginHooks.fire(account: account)
+        ClaudeLoginSync.syncIfChanged(accountDir: accountDir)
     }
     #endif
 }
