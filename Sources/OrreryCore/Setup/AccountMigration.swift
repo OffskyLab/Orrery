@@ -517,7 +517,7 @@ public enum AccountMigration {
         workspace: [String: Any], account: [String: Any]
     ) -> [String: Any] {
         var result = workspace
-        // statusLine is per-account (installed via `orrery install`); never inherit
+        // statusLine is per-account (installed via `orrery thirdparty install`); never inherit
         // the workspace's, which points at a stale/foreign script path.
         result.removeValue(forKey: "statusLine")
         for (key, value) in account { result[key] = value }

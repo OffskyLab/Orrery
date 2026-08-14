@@ -25,7 +25,7 @@ final class LocalizationTests: XCTestCase {
     }
 
     func testInstallSuccessNamesAccountAndWorkspace() {
-        // `orrery install` reports the account AND the workspace it's pinned to.
+        // `orrery thirdparty install` reports the account AND the workspace it's pinned to.
         let msg = L10n.Install.success("statusline", "latest@v0.2.9", 1, "work", "team")
         XCTAssertTrue(msg.contains("statusline"))
         XCTAssertTrue(msg.contains("work"), "should name the account")
