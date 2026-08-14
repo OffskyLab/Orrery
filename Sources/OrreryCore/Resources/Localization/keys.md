@@ -42,9 +42,15 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.removeRemoved` | Success after removing an account (single-target and per-item in the batch path). `{tool}` = tool name; `{name}` = display name. |
 | `account.removeStillReferenced` | Error when the account is still pinned by one or more sandboxes. `{name}` = display name; `{envs}` = comma-joined sandbox names (placeholder retained for compat). |
 | `account.showAbstract` | Command help for `orrery show`. |
-| `account.showActiveEnv` | Header line showing the active sandbox name. `{name}` = sandbox name. |
-| `account.showRowPinned` | One row when a tool has an account pinned. `{tool}` = tool name; `{name}` = account display name; `{suffix}` = " (email, plan)" or empty string. |
+| `account.showRowHeader` | Top-level header row when a tool has an account pinned (no longer nested under an "active sandbox" banner — each account carries its own workspace). `{tool}` = tool name; `{name}` = account display name. Followed by indented detail lines (Auth/Workspace/…). |
 | `account.showRowUnpinned` | One row when a tool has no account pinned. `{tool}` = tool name. |
+| `account.showFlagVerboseHelp` | Help text for the `-v`/`--verbose` flag on `orrery show`. |
+| `account.showLabelAuth` | Indented label preceding the email/plan line under a tool's row. Pre-padded for column alignment. |
+| `account.showAuthNone` | Value shown after `showLabelAuth` when neither email nor plan is known. |
+| `account.showLabelWorkspace` | Indented label preceding the pinned content-workspace name. Pre-padded for column alignment. |
+| `account.showLabelPath` | Indented label preceding the account's storage directory path. Verbose-only. Pre-padded for column alignment. |
+| `account.showLabelWorkspacePath` | Nested one level deeper than `showLabelWorkspace`, directly under it — reads as "this workspace's path", not "Workspace Path" (avoid repeating the word "Workspace"). Verbose-only, claude only (other tools don't materialize a workspace dir yet). Pre-padded for column alignment. |
+| `account.showLabelCreated` | Indented label preceding the account's creation date. Verbose-only. Pre-padded for column alignment. |
 | `account.nameSelectorHelp` | `--name` option help text shared by `use` (and `remove`). |
 | `account.useAbstract` | Command help for `orrery use`. |
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |

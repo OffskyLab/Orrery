@@ -7,6 +7,9 @@ public struct ShowCommand: ParsableCommand {
         abstract: L10n.Account.showAbstract
     )
 
+    @Flag(name: .shortAndLong, help: ArgumentHelp(L10n.Account.showFlagVerboseHelp))
+    public var verbose: Bool = false
+
     public init() {}
 
     public func run() throws {
@@ -31,7 +34,6 @@ public struct ShowCommand: ParsableCommand {
             pins = envStore.loadOriginWorkspace().accounts
         }
 
-        print(L10n.Account.showActiveEnv(activeEnvName))
         for tool in Tool.allCases {
             // `orrery use` for claude/codex, once an account is on the v3.1
             // account-dir layout, only exports CLAUDE_CONFIG_DIR/CODEX_HOME into
@@ -42,22 +44,45 @@ public struct ShowCommand: ParsableCommand {
             if let manager = AccountDirectoryRuntime.manager(ifAvailable: tool),
                let live = Self.liveAccount(tool: tool, manager: manager, acctStore: acctStore),
                live.id != pins[tool.rawValue] {
-                print("  \(tool.rawValue): \(live.displayName)\(Self.infoSuffix(live)) [this shell only — via `orrery use`; default is \(Self.defaultLabel(tool: tool, pins: pins, acctStore: acctStore))]")
+                print("\(tool.rawValue): \(live.displayName) [this shell only — via `orrery use`; default is \(Self.defaultLabel(tool: tool, pins: pins, acctStore: acctStore))]")
+                printDetails(for: live, tool: tool, isLiveInThisShell: true, acctStore: acctStore, envStore: envStore)
                 continue
             }
 
             if let id = pins[tool.rawValue],
                let acct = try? acctStore.load(id: id, tool: tool) {
-                print(L10n.Account.showRowPinned(tool.rawValue, acct.displayName, Self.infoSuffix(acct)))
+                print(L10n.Account.showRowHeader(tool.rawValue, acct.displayName))
+                printDetails(for: acct, tool: tool, isLiveInThisShell: false, acctStore: acctStore, envStore: envStore)
             } else {
                 print(L10n.Account.showRowUnpinned(tool.rawValue))
             }
         }
     }
 
-    private static func infoSuffix(_ acct: Account) -> String {
-        let joined = [acct.email, acct.plan].compactMap { $0 }.joined(separator: ", ")
-        return joined.isEmpty ? "" : " (\(joined))"
+    private func printDetails(
+        for acct: Account, tool: Tool, isLiveInThisShell: Bool,
+        acctStore: AccountStore, envStore: EnvironmentStore
+    ) {
+        let info = AccountAuthInfo.resolve(for: acct, isLiveInThisShell: isLiveInThisShell, store: acctStore)
+        let authSuffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+        print("\(L10n.Account.showLabelAuth)\(authSuffix.isEmpty ? L10n.Account.showAuthNone : authSuffix)")
+        print("\(L10n.Account.showLabelWorkspace)\(acct.workspace)")
+        // Nested under the Workspace line, not a flat "Workspace Path" — this is
+        // the workspace's own path, not a second thing named "workspace path".
+        // Only claude currently materializes a shared content dir per pinned
+        // workspace (`ClaudeAccountDirectory.prepareDirectory`, invoked from
+        // `orrery pin`) — codex/gemini pins are metadata-only so far.
+        if verbose, tool == .claude {
+            print("\(L10n.Account.showLabelWorkspacePath)\(envStore.claudeWorkspaceDir(workspace: acct.workspace).path)")
+        }
+
+        guard verbose else { return }
+
+        print("\(L10n.Account.showLabelPath)\(acctStore.accountDir(id: acct.id, tool: tool).path)")
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .short
+        print("\(L10n.Account.showLabelCreated)\(df.string(from: acct.createdAt))")
     }
 
     private static func defaultLabel(tool: Tool, pins: [String: AccountID], acctStore: AccountStore) -> String {

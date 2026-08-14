@@ -278,13 +278,14 @@ struct AccountCommandsAllTests {
     struct AccountShowTests {
         init() {}
 
-        @Test("unpinned rows show origin and unpinned text")
+        @Test("unpinned rows show unpinned text for every tool")
         func unpinnedRows() throws {
             try withIsolatedHome {
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
-                #expect(output.contains("origin"))
-                #expect(output.contains("no account pinned"))
+                for tool in Tool.allCases {
+                    #expect(output.contains("\(tool.rawValue): (no account pinned)"))
+                }
             }
         }
 
@@ -341,18 +342,23 @@ struct AccountCommandsAllTests {
             }
         }
 
-        @Test("ORRERY_ACTIVE_ENV named env: shows env name and pinned account")
+        @Test("ORRERY_ACTIVE_ENV named env: shows the account pinned in that env, not origin's")
         func activeEnvVarNamedEnv() throws {
             try withIsolatedHome {
                 let envStore = EnvironmentStore.default
                 let acctStore = AccountStore.default
 
-                // Create account and a named env, then pin the account in that env
-                let acct = Account(tool: .claude, displayName: "env-pinned-account")
-                try acctStore.save(acct)
+                let originAcct = Account(tool: .claude, displayName: "origin-pinned-account")
+                let envAcct = Account(tool: .claude, displayName: "env-pinned-account")
+                try acctStore.save(originAcct)
+                try acctStore.save(envAcct)
+
+                var origin = envStore.loadOriginWorkspace()
+                origin.accounts["claude"] = originAcct.id
+                try envStore.saveOriginWorkspace(origin)
 
                 var env = Workspace(name: "work-env")
-                env.accounts["claude"] = acct.id
+                env.accounts["claude"] = envAcct.id
                 try envStore.save(env)
 
                 // Set ORRERY_ACTIVE_ENV to the named env
@@ -361,8 +367,8 @@ struct AccountCommandsAllTests {
 
                 let cmd = try ShowCommand.parse([])
                 let output = try captureStdout { try cmd.run() }
-                #expect(output.contains("work-env"))
                 #expect(output.contains("env-pinned-account"))
+                #expect(!output.contains("origin-pinned-account"))
             }
         }
 
@@ -474,6 +480,66 @@ struct AccountCommandsAllTests {
                 let output = try captureStdout { try cmd.run() }
                 #expect(output.contains("codex-same-account"))
                 #expect(!output.contains("this shell only"))
+            }
+        }
+
+        @Test("default output shows Auth and Workspace labels but no path/created (verbose-only)")
+        func defaultOutputOmitsVerboseFields() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                var acct = Account(tool: .claude, displayName: "rich-account")
+                acct.email = "rich@example.com"
+                acct.plan = "pro"
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("rich@example.com, pro"))
+                #expect(output.contains("Workspace:"))
+                #expect(output.contains("origin"))
+                #expect(!output.contains("Path:"))
+                #expect(!output.contains("Created:"))
+            }
+        }
+
+        @Test("--verbose adds account path, workspace path, and created date")
+        func verboseAddsPathsAndCreatedDate() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                let acct = Account(tool: .claude, displayName: "verbose-account")
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                let cmd = try ShowCommand.parse(["--verbose"])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains(acctStore.accountDir(id: acct.id, tool: .claude).path))
+                #expect(output.contains(EnvironmentStore.default.claudeWorkspaceDir(workspace: acct.workspace).path))
+                #expect(output.contains("Created:"))
+            }
+        }
+
+        @Test("pinned account shows its content-workspace name, not just the active sandbox")
+        func showsPinnedWorkspaceName() throws {
+            try withIsolatedHome {
+                let acctStore = AccountStore.default
+                var acct = Account(tool: .claude, displayName: "workspace-pinned")
+                acct.workspace = "team-workspace"
+                try acctStore.save(acct)
+
+                var origin = EnvironmentStore.default.loadOriginWorkspace()
+                origin.accounts["claude"] = acct.id
+                try EnvironmentStore.default.saveOriginWorkspace(origin)
+
+                let cmd = try ShowCommand.parse([])
+                let output = try captureStdout { try cmd.run() }
+                #expect(output.contains("team-workspace"))
             }
         }
     }

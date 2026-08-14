@@ -97,19 +97,11 @@
   },
   { "path": ["Account", "showAbstract"], "kind": "var", "parameters": [] },
   {
-    "path": ["Account", "showActiveEnv"],
-    "kind": "func",
-    "parameters": [
-      { "label": "_", "name": "name", "type": "String" }
-    ]
-  },
-  {
-    "path": ["Account", "showRowPinned"],
+    "path": ["Account", "showRowHeader"],
     "kind": "func",
     "parameters": [
       { "label": "_", "name": "tool", "type": "String" },
-      { "label": "_", "name": "name", "type": "String" },
-      { "label": "_", "name": "suffix", "type": "String" }
+      { "label": "_", "name": "name", "type": "String" }
     ]
   },
   {
@@ -119,6 +111,13 @@
       { "label": "_", "name": "tool", "type": "String" }
     ]
   },
+  { "path": ["Account", "showFlagVerboseHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showLabelAuth"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showAuthNone"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showLabelWorkspace"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showLabelPath"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showLabelWorkspacePath"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "showLabelCreated"], "kind": "var", "parameters": [] },
   { "path": ["Account", "useAbstract"], "kind": "var", "parameters": [] },
   {
     "path": ["Account", "useNotFound"],
