@@ -12,7 +12,7 @@ final class LocalizationTests: XCTestCase {
             Localizer.string("sessions.abstract"),
             Localizer.string("delegate.abstract"),
             Localizer.string("run.abstract"),
-            Localizer.string("memory.abstract"),
+            Localizer.string("info.abstract"),
             Localizer.string("toolSetup.installed"),
         ]
         XCTAssertEqual(values.count, 10)
@@ -44,7 +44,7 @@ final class LocalizationTests: XCTestCase {
             "sessions.abstract",
             "delegate.abstract",
             "run.abstract",
-            "memory.abstract",
+            "info.abstract",
             "toolSetup.installed",
         ]
         XCTAssertTrue(keys.allSatisfy { !(L10nData.en[$0] ?? "").isEmpty })
