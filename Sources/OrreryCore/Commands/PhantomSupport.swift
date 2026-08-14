@@ -6,9 +6,9 @@ import Glibc
 #endif
 
 /// Shared infrastructure for phantom-mode account switching (`/orrery:phantom`,
-/// backed by `orrery-bin _phantom-trigger-account`): sentinel read/write,
-/// claude-process discovery, and the slash-command markdown installed by
-/// `orrery setup` / `orrery mcp setup`.
+/// backed by `orrery-bin phantom`): sentinel read/write, claude-process
+/// discovery, and the slash-command markdown installed by `orrery setup` /
+/// `orrery mcp setup`.
 public enum PhantomSupport {
 
     /// Source-of-truth markdown for the `/orrery:phantom` slash command. Both
@@ -30,13 +30,15 @@ public enum PhantomSupport {
 
     **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
 
+    **Tip**: this slash command is just a convenience wrapper — `orrery phantom <name>` (or `orrery phantom --codex <name>` / `--gemini`) is a plain CLI command and works the same way run directly (e.g. via `!` command-mode), including when the account's usage is exhausted and a Claude turn isn't available to parse this command.
+
     ## What to do
 
     Inspect `$ARGUMENTS` and pick the matching branch:
 
-    - **`$ARGUMENTS` starts with `claude`, `codex`, or `gemini`** followed by a name: switch that tool's account. Run `orrery-bin _phantom-trigger-account --<tool> --name <name>`.
+    - **`$ARGUMENTS` starts with `claude`, `codex`, or `gemini`** followed by a name: switch that tool's account. Run `orrery-bin phantom --<tool> <name>` (omit `--claude`, it's the default).
 
-    - **`$ARGUMENTS` is just `<name>`** (a single token, not `claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin _phantom-trigger-account --claude --name <name>`.
+    - **`$ARGUMENTS` is just `<name>`** (a single token, not `claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin phantom <name>`.
 
     - **`$ARGUMENTS` is empty**: run `orrery-bin list` to get the list of accounts, present it to the user, and ask which they want to switch to, then re-invoke this slash command with their choice.
 

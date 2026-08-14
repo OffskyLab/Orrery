@@ -6,10 +6,14 @@ import Darwin
 import Glibc
 #endif
 
-/// `orrery-bin _phantom-trigger-account --<tool> --name <account>` — invoked from
-/// inside a phantom-supervised claude (via the `/orrery:phantom` slash command) to
-/// switch which account a tool uses, without leaving the current env or losing the
-/// conversation.
+/// `orrery phantom [--codex|--gemini] <account>` — invoked from inside a
+/// phantom-supervised claude (directly, via `!` command-mode, or via the
+/// `/orrery:phantom` slash command) to switch which account a tool uses,
+/// without leaving the current env or losing the conversation. Public and
+/// model-independent on purpose: the slash command requires a Claude turn to
+/// parse `$ARGUMENTS` and invoke this, which isn't available once the
+/// account's usage is exhausted — running this directly works regardless,
+/// since it's plain process-tree signalling with no LLM involved.
 ///
 /// This command does NOT mutate the account pin. It writes a sentinel carrying
 /// the target tool+account, then signals claude to exit. The supervisor loop
@@ -20,16 +24,18 @@ import Glibc
 /// account's pool entry — corruption.
 public struct PhantomAccountTriggerCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
-        commandName: "_phantom-trigger-account",
-        abstract: L10n.Phantom.accountTriggerAbstract,
-        shouldDisplay: false
+        commandName: "phantom",
+        abstract: L10n.Phantom.accountTriggerAbstract
     )
 
-    @Flag(name: .long) public var claude: Bool = false
-    @Flag(name: .long) public var codex: Bool = false
-    @Flag(name: .long) public var gemini: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagClaudeHelp))
+    public var claude: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagCodexHelp))
+    public var codex: Bool = false
+    @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagGeminiHelp))
+    public var gemini: Bool = false
 
-    @Option(name: .long)
+    @Argument(help: ArgumentHelp(L10n.Account.nameSelectorHelp))
     public var name: String
 
     public init() {}

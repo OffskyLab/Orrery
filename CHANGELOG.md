@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`orrery phantom [--codex|--gemini] <name>` is now a public CLI command**,
+  not just the `/orrery:phantom` slash command's internal implementation. The
+  slash command requires a Claude turn to parse `$ARGUMENTS` and invoke it —
+  unavailable once the account's usage is exhausted, which is exactly when
+  you'd want to switch accounts. Running `orrery phantom` directly (e.g. via
+  `!` command-mode) works the same way with no model involved: it's plain
+  process-tree signalling. The slash command is now a thin wrapper around it.
+
 ## v3.4.0 - 2026-08-14
 
 ### Added

@@ -262,7 +262,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 
 | Key | Context |
 | --- | --- |
-| `phantom.accountTriggerAbstract` | Hidden command help for `_phantom-trigger-account`. Shown in `--help` for the internal subcommand. |
+| `phantom.accountTriggerAbstract` | Help text for `orrery phantom`. Shown in `--help` for the subcommand. |
 | `phantom.notUnderPhantom` | Error when the trigger runs outside a phantom-supervised session. References `orrery run claude` — keep literal. |
 | `phantom.claudeNotFound` | Error when the claude process can't be located in the process tree. |
 | `phantom.signalFailed` | Error when SIGTERM delivery fails. |
