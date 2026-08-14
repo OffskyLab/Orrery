@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## v3.4.2 - 2026-08-14
+
+### Added
+
+- **`orrery show` now prints richer per-account info**: Auth (email/plan) and
+  each account's content-workspace name per tool, with `-v`/`--verbose`
+  adding storage paths and the account's creation date. Dropped the
+  top-level "Active sandbox: X" banner — sandboxes are gone, each account
+  already carries its own workspace. Also fixes `list`/`show` disagreeing on
+  live email/plan for codex/gemini (previously only `show` did the live
+  `CLAUDE_CONFIG_DIR` check for claude).
 
 ### Fixed
 
