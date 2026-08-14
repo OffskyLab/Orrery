@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Background token-refresh agent silently failed to register in normal usage.**
+  `TokenRefreshDaemonInstaller` (macOS) and `LinuxAgentInstaller` located the
+  sibling `orrery-agent` binary via `CommandLine.arguments[0]`, resolving it
+  relative to the current working directory whenever `argv[0]` wasn't already
+  an absolute path. But a shell that finds a command via `$PATH` — exactly
+  what happens both in the `orrery` shell wrapper's `command orrery-bin ...`
+  and in `install.sh`'s `"$BINARY_NAME" setup` — passes the literal typed
+  word as `argv[0]`, not the resolved path. So the lookup was almost always
+  wrong, and since registration is best-effort (never throws, so a normal
+  invocation is never broken by it), this failed completely silently: the
+  background refresh timer/LaunchAgent simply never got created, with no
+  error anywhere. Both installers now resolve the running executable's real
+  path via `/proc/self/exe` (Linux) / `_NSGetExecutablePath` (macOS) instead.
+
 ## v3.4.1 - 2026-08-14
 
 ### Added

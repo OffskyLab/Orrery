@@ -147,18 +147,13 @@ public enum TokenRefreshDaemonInstaller {
     /// directory, via Homebrew/tarball/`.deb` — see `.github/workflows/release.yml`
     /// and `docs/install.sh`), so it's resolved by swapping the currently
     /// running `orrery-bin`'s filename. Returns nil if no such binary exists
-    /// next to it (e.g. a dev build where only `orrery-bin` was built).
+    /// next to it (e.g. a dev build where only `orrery-bin` was built), or if
+    /// the running executable's own path couldn't be resolved.
     private static func resolvedAgentBinaryPath() -> String? {
-        let binaryDir = URL(fileURLWithPath: resolvedBinaryPath()).deletingLastPathComponent()
+        guard let binaryPath = currentExecutablePath() else { return nil }
+        let binaryDir = URL(fileURLWithPath: binaryPath).deletingLastPathComponent()
         let candidate = binaryDir.appendingPathComponent(agentExecutableName)
         return FileManager.default.fileExists(atPath: candidate.path) ? candidate.path : nil
-    }
-
-    private static func resolvedBinaryPath() -> String {
-        let arg0 = CommandLine.arguments[0]
-        if arg0.hasPrefix("/") { return arg0 }
-        let cwd = FileManager.default.currentDirectoryPath
-        return URL(fileURLWithPath: cwd).appendingPathComponent(arg0).standardizedFileURL.path
     }
 
     @discardableResult
