@@ -31,8 +31,15 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.listSandboxHeader` | Header line printed by `orrery list` when inside a non-origin workspace. `{name}` = workspace name. |
 | `account.listToolHeader` | Section header per tool in the list output. `{tool}` = tool name. |
 | `account.removeAbstract` | Command help for `orrery remove`. |
+| `account.removeAborted` | Printed when the user declines the batch-delete confirmation prompt (interactive multi-select path). |
+| `account.removeConfirmBatch` | Confirmation prompt before batch-deleting the multi-select picker's selection. `{count}` = number of accounts selected. Trailing space is load-bearing (readLine prompt). |
+| `account.removeForceHelp` | `--force` flag help text for `remove`; skips the batch confirmation prompt. |
+| `account.removeMultiSelectTitle` | Title line shown above the interactive multi-select picker when `orrery remove` runs with no name argument. |
+| `account.removeNameHelp` | Positional `name` argument help text for `remove`, distinct from the shared `account.nameSelectorHelp` because the argument is optional here (omit → multi-select). |
+| `account.removeNoAccounts` | Shown when the multi-select picker has nothing to list (no accounts exist yet for the resolved tool). `{tool}` = tool name. |
 | `account.removeNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. |
-| `account.removeRemoved` | Success after removing an account. `{tool}` = tool name; `{name}` = display name. |
+| `account.removeNothingSelected` | Shown when the multi-select picker is confirmed with no items toggled on. |
+| `account.removeRemoved` | Success after removing an account (single-target and per-item in the batch path). `{tool}` = tool name; `{name}` = display name. |
 | `account.removeStillReferenced` | Error when the account is still pinned by one or more sandboxes. `{name}` = display name; `{envs}` = comma-joined sandbox names (placeholder retained for compat). |
 | `account.showAbstract` | Command help for `orrery show`. |
 | `account.showActiveEnv` | Header line showing the active sandbox name. `{name}` = sandbox name. |

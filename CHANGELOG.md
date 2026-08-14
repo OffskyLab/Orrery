@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- **`orrery remove` without a name opens an interactive multi-select picker.**
+  Restores the checkbox-style batch delete from v2.x (`orrery delete`), lost
+  when account removal was promoted to a top-level command. Arrow keys move,
+  space toggles, enter confirms; the selection is listed and confirmed once
+  before deleting in batch (`--force` skips that confirmation). Passing a
+  name still removes a single account as before.
+
 ### Removed
 
 - **`orrery tools`, `orrery which`, `orrery resume`, `orrery migrate-to-v3.1`.**
