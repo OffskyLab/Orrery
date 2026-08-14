@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.4.0 - 2026-08-14
 
 ### Added
 
@@ -27,6 +27,21 @@
   `-a`/`--account`.** Both commands always resolved this flag to an account
   context, not a full environment/sandbox switch, so the flag now says what
   it does. Behavior is unchanged.
+- **`orrery --help` groups subcommands by topic** (Accounts, Workspaces,
+  Execution, Integrations, Setup) instead of one flat list.
+- **`orrery install` is now `orrery thirdparty install`**, alongside its
+  existing `uninstall`/`list`/`available` siblings. It no longer reads as
+  the counterpart to the unrelated `orrery uninstall` (which removes Orrery
+  itself, not an add-on).
+
+### Fixed
+
+- **Subcommand errors now report their own usage, not the root's.** A
+  `ValidationError` thrown from a subcommand's `run()` (e.g. `refresh-token`
+  with no account name) was reported with the top-level "Usage: orrery
+  <subcommand> / See 'orrery --help'" banner instead of its own — misleading
+  for every subcommand that validates this way. Parse-time failures
+  (`validate()`, unknown subcommand, `--help`) were already correct.
 
 ## v3.3.0 - 2026-08-13
 
