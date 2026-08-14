@@ -100,13 +100,9 @@ public enum LinuxAgentInstaller {
     /// `docs/install.sh`), so it's resolved by swapping the currently
     /// running `orrery-bin`'s filename. Returns nil if no such binary
     /// exists next to it (e.g. a dev build where only `orrery-bin` was
-    /// built).
+    /// built), or if the running executable's own path couldn't be resolved.
     private static func resolvedAgentBinaryPath() -> String? {
-        let arg0 = CommandLine.arguments[0]
-        let binaryPath = arg0.hasPrefix("/")
-            ? arg0
-            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent(arg0).standardizedFileURL.path
+        guard let binaryPath = currentExecutablePath() else { return nil }
         let candidate = URL(fileURLWithPath: binaryPath)
             .deletingLastPathComponent()
             .appendingPathComponent(agentExecutableName)
