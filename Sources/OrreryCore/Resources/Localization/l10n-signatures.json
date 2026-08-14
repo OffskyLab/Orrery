@@ -52,6 +52,24 @@
     ]
   },
   { "path": ["Account", "removeAbstract"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "removeAborted"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "removeConfirmBatch"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "count", "type": "Int" }
+    ]
+  },
+  { "path": ["Account", "removeForceHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "removeMultiSelectTitle"], "kind": "var", "parameters": [] },
+  { "path": ["Account", "removeNameHelp"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Account", "removeNoAccounts"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
+  },
   {
     "path": ["Account", "removeNotFound"],
     "kind": "func",
@@ -60,6 +78,7 @@
       { "label": "_", "name": "tool", "type": "String" }
     ]
   },
+  { "path": ["Account", "removeNothingSelected"], "kind": "var", "parameters": [] },
   {
     "path": ["Account", "removeRemoved"],
     "kind": "func",

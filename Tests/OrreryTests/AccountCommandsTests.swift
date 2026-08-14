@@ -838,5 +838,32 @@ struct AccountCommandsAllTests {
                 }
             }
         }
+
+        @Test("interactive path with no accounts prints a message instead of opening the picker")
+        func interactiveNoAccounts() throws {
+            try withIsolatedHome {
+                let output = try captureStdout {
+                    try RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
+                }
+                #expect(output.contains("No claude accounts to remove."))
+            }
+        }
+
+        @Test("interactive path removes nothing when the picker returns an empty selection")
+        func interactiveEmptySelectionRemovesNothing() throws {
+            // MultiSelect.run() falls back to an empty selection whenever /dev/tty
+            // isn't available (e.g. under `swift test`), so this exercises the same
+            // "nothing selected → no-op" safety path a user hits by confirming with
+            // no boxes checked.
+            try withIsolatedHome {
+                let acct = Account(tool: .claude, displayName: "untouched")
+                try AccountStore.default.save(acct)
+
+                try RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
+
+                let accounts = try AccountStore.default.list(tool: .claude)
+                #expect(accounts.contains { $0.displayName == "untouched" })
+            }
+        }
     }
 }
