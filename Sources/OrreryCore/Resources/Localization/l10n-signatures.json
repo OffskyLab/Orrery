@@ -1103,6 +1103,14 @@
   },
   {
     "path": [
+      "List",
+      "pinnedHeader"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
       "MCPServerCmd",
       "abstract"
     ],

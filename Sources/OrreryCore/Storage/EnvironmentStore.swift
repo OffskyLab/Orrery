@@ -86,6 +86,50 @@ public struct EnvironmentStore: Sendable {
         }
     }
 
+    public struct WorkspaceListing: Sendable {
+        public let name: String
+        public let path: URL
+    }
+
+    /// Every non-origin workspace, deduped by name and sorted. Self-heals a
+    /// legacy artifact from the v3.0.x → unified-layout migration: the old
+    /// per-name workspace directory (e.g. `workspaces/work/`) was left behind
+    /// after relocating to the UUID-keyed layout (`workspaces/<uuid>/`), so
+    /// both the leftover literal-named dir and its UUID successor can carry a
+    /// `workspace.json` with the same `name` — without this, callers like
+    /// `orrery workspace list` would print every such workspace twice.
+    /// Prefers the UUID-keyed directory (the current layout); if that signal
+    /// doesn't disambiguate (neither or both look UUID-keyed), keeps
+    /// whichever has the more recent `lastUsed`. Origin is excluded —
+    /// callers that need it use `originDir`/`loadOriginWorkspace()`.
+    public func listAllWorkspaces() throws -> [WorkspaceListing] {
+        guard FileManager.default.fileExists(atPath: envsURL.path) else { return [] }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let dirs = try FileManager.default.contentsOfDirectory(atPath: envsURL.path)
+        var winners: [String: (dir: String, env: Workspace)] = [:]
+        for dir in dirs {
+            guard dir != Workspace.reservedOriginName else { continue }
+            let jsonURL = envsURL.appendingPathComponent(dir).appendingPathComponent("workspace.json")
+            guard let data = try? Data(contentsOf: jsonURL),
+                  let env = try? decoder.decode(Workspace.self, from: data)
+            else { continue }
+            if let existing = winners[env.name] {
+                let newLooksCurrent = UUID(uuidString: dir) != nil
+                let existingLooksCurrent = UUID(uuidString: existing.dir) != nil
+                let replace = newLooksCurrent != existingLooksCurrent
+                    ? newLooksCurrent
+                    : env.lastUsed > existing.env.lastUsed
+                if replace { winners[env.name] = (dir, env) }
+            } else {
+                winners[env.name] = (dir, env)
+            }
+        }
+        return winners.values
+            .map { WorkspaceListing(name: $0.env.name, path: envsURL.appendingPathComponent($0.dir)) }
+            .sorted { $0.name < $1.name }
+    }
+
     public func delete(named name: String) throws {
         let id = try resolveID(for: name)
         try FileManager.default.removeItem(at: envURL(id: id))

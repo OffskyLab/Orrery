@@ -31,6 +31,53 @@ struct EnvironmentStoreTests {
         #expect(names.sorted() == ["personal", "work"])
     }
 
+    @Test("listAllWorkspaces excludes origin and includes each workspace's path")
+    func listAllWorkspacesExcludesOriginAndIncludesPath() throws {
+        try store.save(Workspace(name: "work"))
+        let listing = try store.listAllWorkspaces()
+        #expect(listing.map(\.name) == ["work"])
+        #expect(listing[0].path.lastPathComponent != "origin")
+    }
+
+    /// Regression test for a real, observed bug: the v3.0.x → unified-layout
+    /// migration left the old per-name workspace directory
+    /// (`workspaces/<name>/`) behind after relocating to the UUID-keyed
+    /// layout (`workspaces/<uuid>/`), so a stale `workspace.json` with the
+    /// same `name` lingered in both places — `listNames()`/the old
+    /// `orrery workspace list` printed the workspace twice.
+    @Test("listAllWorkspaces dedupes a legacy literal-named dir against its UUID successor, preferring the UUID one")
+    func dedupesLegacyLiteralDirAgainstUUIDDir() throws {
+        let uuid = UUID().uuidString
+        try writeRawWorkspace(dir: "work", id: "work", name: "work", lastUsed: Date(timeIntervalSince1970: 0))
+        try writeRawWorkspace(dir: uuid, id: uuid, name: "work", lastUsed: Date())
+
+        let listing = try store.listAllWorkspaces()
+        #expect(listing.count == 1)
+        #expect(listing[0].path.lastPathComponent == uuid)
+    }
+
+    @Test("listAllWorkspaces falls back to the more recently used entry when neither dir looks UUID-keyed")
+    func dedupesByLastUsedWhenNeitherLooksLikeUUID() throws {
+        try writeRawWorkspace(dir: "work-old", id: "work-old", name: "work", lastUsed: Date(timeIntervalSince1970: 0))
+        try writeRawWorkspace(dir: "work-new", id: "work-new", name: "work", lastUsed: Date())
+
+        let listing = try store.listAllWorkspaces()
+        #expect(listing.count == 1)
+        #expect(listing[0].path.lastPathComponent == "work-new")
+    }
+
+    /// Writes a `workspace.json` directly under a directory named `dir`,
+    /// bypassing `save()` (which always uses the UUID-keyed `envURL(id:)`
+    /// path) so a legacy literal-named directory can be simulated.
+    private func writeRawWorkspace(dir: String, id: String, name: String, lastUsed: Date) throws {
+        let dirURL = tmpDir.appendingPathComponent("workspaces").appendingPathComponent(dir)
+        try FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+        let env = Workspace(id: id, name: name, lastUsed: lastUsed)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(env).write(to: dirURL.appendingPathComponent("workspace.json"))
+    }
+
     @Test("deletes environment")
     func deleteEnvironment() throws {
         try store.save(Workspace(name: "work"))
