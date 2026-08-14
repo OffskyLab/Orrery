@@ -74,7 +74,7 @@ private func runOrreryMain() async throws {
         Foundation.exit(0)
     }
 
-    await OrreryCommand.main()
+    try await runRootCommandReportingLeafErrors(OrreryCommand.self)
 }
 
 // Only keep RunLoop alive for mcp-server; other commands should exit after completion
