@@ -822,7 +822,8 @@
     </p>
     <p>
       與一般 sandbox 不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config
-      路徑。不過它支援 memory 與 session 設定：可以選擇 memory 為隔離或共享，也可以在
+      路徑。不過它支援 memory 與 session 設定：可以用 <code>orrery memory isolate</code> /
+      <code>share</code> / <code>storage</code> 控制 memory 存放位置，也可以在
       <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。執行
       <code>orrery sandbox info origin</code> 查看完整狀態。
     </p>
@@ -984,6 +985,16 @@
         <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名 sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">列出 sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">顯示 sandbox 詳細</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Memory</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery memory info</span><span class="cmd-desc">顯示目前 memory 狀態與路徑</span></div>
+        <div class="command-item"><span class="cmd">orrery memory export</span><span class="cmd-desc">匯出目前專案的共享 memory</span></div>
+        <div class="command-item"><span class="cmd">orrery memory isolate</span><span class="cmd-desc">切換為隔離 memory</span></div>
+        <div class="command-item"><span class="cmd">orrery memory share</span><span class="cmd-desc">切換為共享 memory</span></div>
+        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
       </div>
     </div>
     <div class="command-group">

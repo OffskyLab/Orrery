@@ -267,7 +267,7 @@ By default, session data is shared across all sandboxes:
 
 Session sharing works by symlinking tool session directories (`projects/`, `sessions/`, `session-env/`) to `~/.orrery/shared/`.
 
-For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard.
+For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard, or switch later with `orrery memory isolate` / `share`.
 
 ---
 
@@ -292,7 +292,13 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 | `orrery workspace info [name]` | Show full details of a sandbox |
 | `orrery workspace delete <name>` | Delete a sandbox |
 | `orrery workspace rename <old> <new>` | Rename a sandbox |
-| `orrery workspace sync ...` | Sync state into/out of a sandbox |
+
+### Memory
+
+| Command | Description |
+|---|---|
+| `orrery memory {isolate\|share\|info\|storage\|export}` | Manage memory mode and storage |
+| `orrery sync ...` | P2P real-time memory sync |
 
 ### Sessions
 
@@ -461,6 +467,13 @@ This registers Orrery as an MCP server and installs slash commands.
 
 **Shared memory**: All AI tools read and write to the same `MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
 
+**External memory storage**: Redirect memory to any directory — such as an Obsidian vault:
+
+```bash
+orrery memory storage ~/Documents/my-wiki/orrery
+orrery memory storage --reset   # revert to ~/.orrery
+```
+
 ---
 
 ## P2P Memory Sync
@@ -469,27 +482,27 @@ Sync project memory across machines and teammates in real time, powered by [orre
 
 ```bash
 # Desktop
-orrery workspace sync daemon --port 9527
+orrery sync daemon --port 9527
 
 # Laptop (auto-discovers via Bonjour)
-orrery workspace sync daemon --port 9528
+orrery sync daemon --port 9528
 ```
 
 For cross-network sync, run a rendezvous server on a VPS:
 
 ```bash
-orrery workspace sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 Only project memory is synced — sessions stay local. Memory changes are tracked as conflict-free fragments and consolidated by the AI agent at session start.
 
 | Command | Description |
 |---|---|
-| `orrery workspace sync daemon` | Start the sync daemon |
-| `orrery workspace sync status` | Show daemon and peer status |
-| `orrery workspace sync team create <name>` | Create a new team |
-| `orrery workspace sync team invite` | Generate an invite code |
-| `orrery workspace sync team join <code>` | Join a team |
+| `orrery sync daemon` | Start the sync daemon |
+| `orrery sync status` | Show daemon and peer status |
+| `orrery sync team create <name>` | Create a new team |
+| `orrery sync team invite` | Generate an invite code |
+| `orrery sync team join <code>` | Join a team |
 
 ---
 

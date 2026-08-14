@@ -3,7 +3,7 @@
 This directory holds the translation source-of-truth for orrery's CLI strings.
 The build plugin (`Plugins/L10nCodegen/`) reads these files on every `swift build`
 and generates `L10n+Generated.swift` containing both the typed accessors
-(`L10n.Create.abstract`, `L10n.Create.memory(_:)`, …) and the embedded
+(`L10n.Create.abstract`, `L10n.Memory.migrationDone(_:_:)`, …) and the embedded
 translation dictionaries. There is no runtime resource lookup — all strings ship
 inside the binary, so single-file deploys (Homebrew, `.deb`) keep working.
 
@@ -31,8 +31,8 @@ Each locale file is a flat JSON object:
 {
   "create.abstract": "Create a new orrery environment",
   "create.alreadyExists": "Environment '{name}' already exists.",
-  "create.memory.isolated": "Memory: isolated",
-  "create.memory.shared":   "Memory: shared"
+  "memory.migrationDone.isolated": "Memory for '{envName}' switched to isolated mode.",
+  "memory.migrationDone.shared":   "Memory for '{envName}' switched to shared mode."
 }
 ```
 
@@ -41,8 +41,8 @@ Each locale file is a flat JSON object:
   declared in `l10n-signatures.json` for that accessor. Mismatches fail validation.
 - **Variants** (Bool / Optional dispatch) are sub-keys of the parent. For a Bool
   parameter that selects between two phrasings, the parent has no key — only the
-  branches do (e.g. `create.memory.isolated` + `create.memory.shared`,
-  no `create.memory`). The signatures file declares which sub-key names
+  branches do (e.g. `memory.migrationDone.isolated` + `memory.migrationDone.shared`,
+  no `memory.migrationDone`). The signatures file declares which sub-key names
   correspond to `true` / `false` / `present` / `absent`.
 
 ## Adding a new locale

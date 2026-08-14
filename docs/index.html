@@ -827,7 +827,8 @@
     <p>
       Unlike regular sandboxes, <code>origin</code> cannot be deleted or renamed and
       uses the system's native config paths. It does support memory and session settings —
-      choose isolated or shared memory, and per-tool session sharing, during
+      use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
+      control where its project memory lives, and choose per-tool session sharing during
       <code>orrery setup</code>. Run <code>orrery sandbox info origin</code> to see full state.
     </p>
     <p style="margin-top:1rem">
@@ -1000,15 +1001,25 @@
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sandbox sync (experimental)</div>
+      <div class="command-group-title">Memory</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sandbox sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync team create</span><span class="cmd-desc">Create a new team</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync team join</span><span class="cmd-desc">Join a team</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
+        <div class="command-item"><span class="cmd">orrery memory info</span><span class="cmd-desc">Show current memory status and path</span></div>
+        <div class="command-item"><span class="cmd">orrery memory export</span><span class="cmd-desc">Export shared memory for the current project</span></div>
+        <div class="command-item"><span class="cmd">orrery memory isolate</span><span class="cmd-desc">Switch this environment to isolated memory</span></div>
+        <div class="command-item"><span class="cmd">orrery memory share</span><span class="cmd-desc">Switch this environment to shared memory</span></div>
+        <div class="command-item"><span class="cmd">orrery memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
+      </div>
+    </div>
+    <div class="command-group">
+      <div class="command-group-title">Memory sync (experimental)</div>
+      <div class="command-list">
+        <div class="command-item"><span class="cmd">orrery sync daemon</span><span class="cmd-desc">Start the sync daemon</span></div>
+        <div class="command-item"><span class="cmd">orrery sync status</span><span class="cmd-desc">Show daemon and peer status</span></div>
+        <div class="command-item"><span class="cmd">orrery sync pair &lt;host:port&gt;</span><span class="cmd-desc">Pair with a remote peer</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team create</span><span class="cmd-desc">Create a new team</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team invite</span><span class="cmd-desc">Generate an invite code</span></div>
+        <div class="command-item"><span class="cmd">orrery sync team join</span><span class="cmd-desc">Join a team</span></div>
+        <div class="command-item"><span class="cmd">orrery sync rendezvous</span><span class="cmd-desc">Run a rendezvous server</span></div>
       </div>
     </div>
     <div class="command-group">

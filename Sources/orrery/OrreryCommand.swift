@@ -31,6 +31,10 @@ public struct OrreryCommand: AsyncParsableCommand {
             CommandGroup(name: "Workspaces", subcommands: [
                 WorkspaceCommand.self,
             ]),
+            CommandGroup(name: "Memory", subcommands: [
+                MemoryCommand.self,
+                SyncCommand.self,
+            ]),
             CommandGroup(name: "Execution", subcommands: [
                 RunCommand.self,
                 DelegateCommand.self,
