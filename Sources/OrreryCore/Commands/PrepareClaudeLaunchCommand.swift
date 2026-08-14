@@ -143,37 +143,10 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
     /// `TokenRefreshDaemonInstaller`/`LinuxAgentInstaller`'s equivalent,
     /// can't be meaningfully exercised in-process under the test runner).
     static func patchAuthSuccessHook(accountDir: URL, hookBinaryPath: String) {
-        let patch: JSONValue = .object([
-            "hooks": .object([
-                "Notification": .array([
-                    .object([
-                        "matcher": .string("auth_success"),
-                        "hooks": .array([
-                            .object([
-                                "type": .string("command"),
-                                "command": .string("\(hookBinaryPath) --account-dir \(accountDir.path)"),
-                            ]),
-                        ]),
-                    ]),
-                ]),
-            ]),
-        ])
-
-        let settingsURL = accountDir.appendingPathComponent("settings.json")
-        var target: JSONValue
-        if let data = try? Data(contentsOf: settingsURL), !data.isEmpty,
-           let decoded = try? JSONDecoder().decode(JSONValue.self, from: data) {
-            target = decoded
-        } else {
-            target = .object([:])
-        }
-
-        guard (try? SettingsJSONPatcher.apply(patch: patch, to: &target)) != nil else { return }
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
-        guard let data = try? encoder.encode(target) else { return }
-        try? data.write(to: settingsURL, options: .atomic)
+        ClaudeAuthSuccessHookInstaller.install(
+            command: "\(hookBinaryPath) --account-dir \(accountDir.path)",
+            settingsURL: accountDir.appendingPathComponent("settings.json")
+        )
     }
 
     /// `orrery-claude-hook` ships side-by-side with `orrery-bin` (same
