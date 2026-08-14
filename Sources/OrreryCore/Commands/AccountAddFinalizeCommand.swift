@@ -120,17 +120,36 @@ public struct AccountAddFinalizeCommand: ParsableCommand {
         let accountDir = AccountStore.default.accountDir(id: account.id, tool: .claude)
         let identityURL = ClaudeJsonMerge.identityFileURL(accountDir: accountDir)
 
-        // Take the login session's full per-account state (onboarding flags etc.),
-        // then overlay the keychain credential `migrateAccount` already seeded so the
-        // identity's `oauthAccount` is guaranteed to carry fresh tokens. Merging (rather
-        // than replacing) preserves profile fields the session captured — e.g.
-        // ccOnboardingFlags — that the bare keychain blob may not include.
+        // Base: whatever identity already exists for this account (e.g.
+        // ccOnboardingFlags from a prior session) — only used to fill gaps.
+        // Overlay THIS session's fresh capture on top, since it reflects
+        // whoever is actually logged in right now (a `/login` inside the
+        // same still-open session can switch to a different account before
+        // ever `/exit`ing — the prior identity must not win over that).
+        // Overlay the account's just-imported keychain credential last:
+        // `.claude.json` doesn't necessarily mirror the full refreshToken,
+        // so tokens must come from the Keychain copy `importFrom` already
+        // performed, not from either JSON blob.
         var identity = split.identity
-        var oauth = (identity["oauthAccount"] as? [String: Any]) ?? [:]
+        var oauth = [String: Any]()
         if let existing = ClaudeJsonMerge.loadJSON(at: identityURL),
-           let keychainOauth = existing["oauthAccount"] as? [String: Any] {
-            for (key, value) in keychainOauth { oauth[key] = value }
+           let existingOauth = existing["oauthAccount"] as? [String: Any] {
+            oauth = existingOauth
         }
+        if let fresh = identity["oauthAccount"] as? [String: Any] {
+            for (key, value) in fresh { oauth[key] = value }
+        }
+        #if os(macOS)
+        if let keychainItem = account.keychainItem,
+           let credential = ClaudeKeychain.oauthCredential(forService: keychainItem) {
+            oauth["accessToken"] = credential.accessToken
+            oauth["refreshToken"] = credential.refreshToken
+            oauth["expiresAt"] = credential.expiresAt.timeIntervalSince1970 * 1000
+            if let subscriptionType = credential.subscriptionType {
+                oauth["subscriptionType"] = subscriptionType
+            }
+        }
+        #endif
         if !oauth.isEmpty { identity["oauthAccount"] = oauth }
         try? ClaudeJsonMerge.saveJSON(identity, at: identityURL)
 

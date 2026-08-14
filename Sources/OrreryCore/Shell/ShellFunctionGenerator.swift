@@ -155,7 +155,19 @@ public struct ShellFunctionGenerator {
                 _staging=$(command orrery-bin _account-add-prepare "${@:2}") || return $?
                 [ -z "$_staging" ] && { echo "orrery: prepare returned empty staging dir" >&2; return 1; }
                 printf "\(L10n.Account.loginReadyHint)\\n"
+                # claude's own first-run onboarding (theme picker etc.) overwrites
+                # this staging settings.json wholesale, wiping the auth_success
+                # hook _account-add-prepare just installed — before OAuth even
+                # starts. Re-patch it in the background for as long as claude is
+                # running so the hook is back in place well before login
+                # completes. Double subshell (as with the update-check job above)
+                # keeps this from printing a job-control notice in the shell.
+                ( ( while true; do command orrery-bin _account-add-heal-hook --staging "$_staging" 2>/dev/null; sleep 1; done ) & echo $! > "$_staging/.heal-hook.pid" ) >/dev/null 2>&1
                 CLAUDE_CONFIG_DIR="$_staging" command claude
+                if [ -f "$_staging/.heal-hook.pid" ]; then
+                  kill "$(cat "$_staging/.heal-hook.pid")" 2>/dev/null
+                  rm -f "$_staging/.heal-hook.pid"
+                fi
                 command orrery-bin _account-add-finalize --staging "$_staging"
                 return $?
               fi
