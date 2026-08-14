@@ -231,13 +231,6 @@ claude
   <img src="../assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
 </p>
 
-Sandbox 級的 env vars 用 `orrery workspace set-env` / `unset-env`：
-
-```bash
-orrery workspace set-env API_BASE https://staging.example.com --sandbox client-a
-orrery workspace unset-env API_BASE --sandbox client-a
-```
-
 ---
 
 ## `origin` 基準
@@ -267,7 +260,7 @@ orrery uninstall
 
 共享機制是把工具的 session 目錄（`projects/`、`sessions/`、`session-env/`）symlink 到 `~/.orrery/shared/`。
 
-需要在 sandbox 內完全隔離 session 時（例如合規要求），在 `orrery workspace create` wizard 中選 **isolate**，或之後用 `orrery workspace memory isolate` / `share` 切換。
+需要在 sandbox 內完全隔離 session 時（例如合規要求），在 `orrery workspace create` wizard 中選 **isolate**，或之後用 `orrery memory isolate` / `share` 切換。
 
 ---
 
@@ -294,12 +287,13 @@ orrery uninstall
 | `orrery workspace info [name]` | 顯示 sandbox 詳細資訊 |
 | `orrery workspace delete <name>` | 刪除 sandbox |
 | `orrery workspace rename <old> <new>` | 重新命名 sandbox |
-| `orrery workspace set-env <KEY> <VALUE> [-s <name>]` | 設定 sandbox 等級的 env var |
-| `orrery workspace unset-env <KEY> [-s <name>]` | 移除 sandbox 等級的 env var |
-| `orrery workspace current` | 顯示目前 sandbox 名稱（或 `origin`） |
-| `orrery workspace memory {isolate\|share\|info\|storage\|export}` | 管理 memory 模式與儲存 |
-| `orrery workspace sync ...` | sandbox 同步相關操作 |
 
+### Memory
+
+| 指令 | 說明 |
+|---|---|
+| `orrery memory {isolate\|share\|info\|storage\|export}` | 管理 memory 模式與儲存 |
+| `orrery sync ...` | P2P 即時 memory 同步 |
 
 ### Session 管理
 
@@ -470,8 +464,8 @@ orrery mcp setup
 **外部記憶儲存**：可將記憶重導向到任意目錄，例如 Obsidian vault：
 
 ```bash
-orrery workspace memory storage ~/Documents/my-wiki/orrery
-orrery workspace memory storage --reset   # 還原預設路徑
+orrery memory storage ~/Documents/my-wiki/orrery
+orrery memory storage --reset   # 還原預設路徑
 ```
 
 ---
@@ -482,27 +476,27 @@ orrery workspace memory storage --reset   # 還原預設路徑
 
 ```bash
 # 桌機
-orrery workspace sync daemon --port 9527
+orrery sync daemon --port 9527
 
 # 筆電（透過 Bonjour 自動探索）
-orrery workspace sync daemon --port 9528
+orrery sync daemon --port 9528
 ```
 
 跨網路同步時，在 VPS 上執行 rendezvous server：
 
 ```bash
-orrery workspace sync daemon --port 9527 --rendezvous rv.example.com:9600
+orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
 ```
 
 只有專案記憶會同步 — session 保留在本機。記憶變更以無衝突片段追蹤，由 AI agent 在 session 開始時整合。
 
 | 指令 | 說明 |
 |---|---|
-| `orrery workspace sync daemon` | 啟動同步 daemon |
-| `orrery workspace sync status` | 顯示 daemon 與 peer 狀態 |
-| `orrery workspace sync team create <name>` | 建立新團隊 |
-| `orrery workspace sync team invite` | 產生邀請碼 |
-| `orrery workspace sync team join <code>` | 加入團隊 |
+| `orrery sync daemon` | 啟動同步 daemon |
+| `orrery sync status` | 顯示 daemon 與 peer 狀態 |
+| `orrery sync team create <name>` | 建立新團隊 |
+| `orrery sync team invite` | 產生邀請碼 |
+| `orrery sync team join <code>` | 加入團隊 |
 
 ---
 
