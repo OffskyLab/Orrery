@@ -35,6 +35,7 @@ public struct OrreryCommand: AsyncParsableCommand {
                 RunCommand.self,
                 DelegateCommand.self,
                 SessionsCommand.self,
+                PhantomAccountTriggerCommand.self,
             ]),
             CommandGroup(name: "Integrations", subcommands: [
                 MCPSetupCommand.self,
@@ -62,7 +63,6 @@ public struct OrreryCommand: AsyncParsableCommand {
             SetCurrentCommand.self,
             CheckUpdateCommand.self,
             LinkMemoryCommand.self,
-            PhantomAccountTriggerCommand.self,
             AccountAddPrepareCommand.self,
             AccountAddFinalizeCommand.self,
             PrepareClaudeLaunchCommand.self,

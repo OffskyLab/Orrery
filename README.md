@@ -192,6 +192,13 @@ Launch Claude with `orrery run claude` and a supervisor stays alongside it. From
 
 Claude exits, the supervisor relaunches it with the new account active and `--resume`, and the conversation continues uninterrupted.
 
+The slash command is a convenience wrapper around `orrery phantom [--codex|--gemini] <name>`, a plain CLI command — run it directly (e.g. via `!` command-mode) and it works the same way without needing a Claude turn, including when the current account's usage is exhausted:
+
+```bash
+orrery phantom personal            # switch the claude account to 'personal'
+orrery phantom --codex work        # switch the codex account
+```
+
 <p align="center">
   <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
 </p>
@@ -310,6 +317,7 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 |---|---|
 | `orrery run [-a <name>] claude` | Launch Claude under a phantom supervisor (default) — enables `/orrery:phantom` |
 | `orrery run --non-phantom claude` | Launch Claude as a single-shot (no supervisor) |
+| `orrery phantom [--codex\|--gemini] <name>` | Switch account inside a phantom-supervised session — see [Phantom Mode](#phantom-mode) |
 | `orrery run [-a <name>] <command>` | Run any other command inside the named (or active) sandbox |
 | `orrery delegate -a <name> "prompt"` | Delegate a task to an AI tool in another sandbox |
 | `orrery delegate --resume <id\|index> "prompt"` | Resume a native tool session (UUID, short prefix, or index from `orrery sessions`) |

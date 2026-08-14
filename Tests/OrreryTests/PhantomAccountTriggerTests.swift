@@ -30,7 +30,7 @@ struct PhantomAccountTriggerTests {
                 if let saved { setenv("ORRERY_PHANTOM_SHELL_PID", saved, 1) }
             }
 
-            let cmd = try PhantomAccountTriggerCommand.parse(["--name", "x"])
+            let cmd = try PhantomAccountTriggerCommand.parse(["x"])
             #expect(throws: (any Error).self) {
                 try cmd.run()
             }
@@ -51,7 +51,7 @@ struct PhantomAccountTriggerTests {
                 if let saved { setenv("ORRERY_PHANTOM_SHELL_PID", saved, 1) }
             }
 
-            let cmd = try PhantomAccountTriggerCommand.parse(["--claude", "--codex", "--name", "x"])
+            let cmd = try PhantomAccountTriggerCommand.parse(["--claude", "--codex", "x"])
             #expect(throws: (any Error).self) {
                 try cmd.run()
             }
