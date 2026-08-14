@@ -5,7 +5,7 @@ public struct DelegateCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "delegate",
         abstract: L10n.Delegate.abstract,
-        discussion: "Example: orrery delegate --claude -e work \"check error handling\""
+        discussion: "Example: orrery delegate --claude -a work \"check error handling\""
     )
 
     @Flag(help: ArgumentHelp(L10n.ToolFlag.claude))
@@ -17,8 +17,8 @@ public struct DelegateCommand: ParsableCommand {
     @Flag(help: ArgumentHelp(L10n.ToolFlag.gemini))
     public var gemini: Bool = false
 
-    @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Delegate.envHelp))
-    public var environment: String?
+    @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Delegate.accountHelp))
+    public var account: String?
 
     @Option(name: .long, help: ArgumentHelp(L10n.Delegate.resumeHelp))
     public var resume: String?
@@ -36,7 +36,7 @@ public struct DelegateCommand: ParsableCommand {
 
     public func run() throws {
         let store = EnvironmentStore.default
-        let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        let envName = account ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
         let cwd = FileManager.default.currentDirectoryPath
 
         // Validation: --session / --session-name / --resume are mutually exclusive

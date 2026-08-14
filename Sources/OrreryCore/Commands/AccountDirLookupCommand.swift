@@ -51,7 +51,7 @@ public struct AccountDirLookupCommand: ParsableCommand {
         let status = manager.verifySymlinks(
             account: acct, accountStore: acctStore, environmentStore: envStore)
         guard status == .ok else {
-            throw ValidationError("Account '\(name)' is not yet in v3.1 layout (status: \(status)). Run `orrery migrate-to-v3.1` first.")
+            throw ValidationError("Account '\(name)' is not yet in v3.1 layout (status: \(status)).")
         }
 
         let dir = acctStore.accountDir(id: acct.id, tool: tool)

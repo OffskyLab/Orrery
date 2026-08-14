@@ -919,10 +919,10 @@
           </div>
           <div>
             <code style="color:var(--accent2);font-size:.9rem">/orrery:sessions</code>
-            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">List sessions and resume by index</span>
+            <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">List sessions, then resume by index</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
               <span style="color:var(--muted)">/orrery:sessions</span><br/>
-              <span style="color:var(--muted)">then:</span> orrery resume 1
+              <span style="color:var(--muted)">then:</span> orrery delegate --resume 1 "..."
             </div>
           </div>
           <div>
@@ -979,7 +979,6 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">Activate a sandbox in current shell</span></div>
         <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">Leave the current sandbox, return to origin</span></div>
-        <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">Print tool config dir path</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -996,8 +995,6 @@
     <div class="command-group">
       <div class="command-group-title">Sandbox config</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">Add a tool (wizard)</span></div>
-        <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">Remove a tool</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set a per-sandbox env var</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">Remove a per-sandbox env var</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>

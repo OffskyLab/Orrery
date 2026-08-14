@@ -665,7 +665,7 @@
   {
     "path": [
       "Delegate",
-      "envHelp"
+      "accountHelp"
     ],
     "kind": "var",
     "parameters": []
@@ -701,6 +701,25 @@
     ],
     "kind": "var",
     "parameters": []
+  },
+  {
+    "path": [
+      "Delegate",
+      "resumeIndexOutOfRange"
+    ],
+    "kind": "func",
+    "parameters": [
+      {
+        "label": "_",
+        "name": "index",
+        "type": "Int"
+      },
+      {
+        "label": "_",
+        "name": "count",
+        "type": "Int"
+      }
+    ]
   },
   {
     "path": [
@@ -1601,14 +1620,6 @@
   },
   {
     "path": [
-      "Migrate",
-      "abstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
       "Orrery",
       "abstract"
     ],
@@ -1668,55 +1679,6 @@
   },
   {
     "path": [
-      "Resume",
-      "abstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Resume",
-      "indexOutOfRange"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "index",
-        "type": "Int"
-      },
-      {
-        "label": "_",
-        "name": "count",
-        "type": "Int"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Resume",
-      "noIndex"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Resume",
-      "pickerTitle"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "count",
-        "type": "Int"
-      }
-    ]
-  },
-  {
-    "path": [
       "Run",
       "abstract"
     ],
@@ -1734,7 +1696,7 @@
   {
     "path": [
       "Run",
-      "envHelp"
+      "accountHelp"
     ],
     "kind": "var",
     "parameters": []
@@ -1993,138 +1955,6 @@
   },
   {
     "path": [
-      "Tools",
-      "abstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "addAbstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "addWizardTitle"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Tools",
-      "added"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "tool",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Tools",
-      "defaultNotSupported"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "envHelp"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "noActive"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "noToolsToAdd"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Tools",
-      "noToolsToRemove"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Tools",
-      "removeAbstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Tools",
-      "removeWizardTitle"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "envName",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
-      "Tools",
-      "removed"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "tool",
-        "type": "String"
-      }
-    ]
-  },
-  {
-    "path": [
       "Update",
       "abstract"
     ],
@@ -2165,44 +1995,6 @@
     ],
     "kind": "var",
     "parameters": []
-  },
-  {
-    "path": [
-      "Which",
-      "abstract"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Which",
-      "noActive"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Which",
-      "toolHelp"
-    ],
-    "kind": "var",
-    "parameters": []
-  },
-  {
-    "path": [
-      "Which",
-      "unknownTool"
-    ],
-    "kind": "func",
-    "parameters": [
-      {
-        "label": "_",
-        "name": "tool",
-        "type": "String"
-      }
-    ]
   },
   {
     "path": [

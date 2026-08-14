@@ -5,7 +5,7 @@ import OrreryAccountKit
 /// Registers the real `ClaudeAdapter`/`CodexAdapter` into `AccountDirectoryRuntime`,
 /// mirroring what `orrery-bin`'s `main.swift` does at startup. OrreryCore's own
 /// command tests (PinCommand, AccountDirLookupCommand, PrepareClaudeLaunchCommand,
-/// MigrateToV31Command, …) exercise real account-dir symlinking through the
+/// …) exercise real account-dir symlinking through the
 /// registry, so it must be populated before they run. Idempotent — cheap to
 /// call from every test.
 private let registerAccountKitOnce: Void = {

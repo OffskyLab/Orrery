@@ -20,7 +20,7 @@ public struct SessionResolver {
             return first
         case .index(let n):
             guard n <= entries.count else {
-                throw ValidationError(L10n.Resume.indexOutOfRange(n, entries.count))
+                throw ValidationError(L10n.Delegate.resumeIndexOutOfRange(n, entries.count))
             }
             return entries[n - 1]
         case .id(let s):

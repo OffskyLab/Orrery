@@ -86,7 +86,7 @@ public struct AccountAddFinalizeCommand: ParsableCommand {
                 captureLoginState(stagingURL: stagingURL, account: refreshed)
             } catch {
                 FileHandle.standardError.write(Data(
-                    "orrery: warning: account added, but v3.1 layout setup failed: \(error). Run `orrery migrate-to-v3.1` to retry.\n".utf8
+                    "orrery: warning: account added, but v3.1 layout setup failed: \(error).\n".utf8
                 ))
             }
         }

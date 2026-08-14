@@ -918,7 +918,7 @@
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">列出 session 並用 index 接續</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
               <span style="color:var(--muted)">/orrery:sessions</span><br/>
-              <span style="color:var(--muted)">接著：</span> orrery resume 1
+              <span style="color:var(--muted)">接著：</span> orrery delegate --resume 1 "..."
             </div>
           </div>
           <div>
@@ -975,7 +975,6 @@
       <div class="command-list">
         <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">在當前 shell 進入 sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">離開目前的 sandbox 回到 origin</span></div>
-        <div class="command-item"><span class="cmd">orrery which &lt;tool&gt;</span><span class="cmd-desc">顯示工具設定目錄路徑</span></div>
       </div>
     </div>
     <div class="command-group">
@@ -992,8 +991,6 @@
     <div class="command-group">
       <div class="command-group-title">Sandbox 設定</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery tools add [-e &lt;name&gt;]</span><span class="cmd-desc">加入工具（wizard）</span></div>
-        <div class="command-item"><span class="cmd">orrery tools remove [-e &lt;name&gt;]</span><span class="cmd-desc">移除工具</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定 sandbox 環境變數</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">移除 sandbox 環境變數</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
