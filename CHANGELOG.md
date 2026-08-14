@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **`orrery workspace list` redesigned: grouped by tool, not by workspace.**
+  Since v3.1 an `Account` carries its own `workspace` field — a workspace
+  doesn't own accounts, accounts point at a workspace — so the old
+  workspace-first view (reading `Workspace.tools` and live-probing each
+  tool's credential file) was stale and mostly printed empty rows. The new
+  view groups by `[Claude]`/`[Codex]`/`[Gemini]`; under each tool, every
+  workspace is listed with its storage path, and only workspaces with an
+  account of that tool pinned to them get a `+ pinned:` block underneath
+  (an account's display name plus cached email/plan — no more live
+  Keychain/JSON probing, so it's also noticeably faster). Also fixes a
+  duplicate-listing bug: a leftover pre-v3.1 workspace directory
+  (`workspaces/<name>/`) and its UUID-keyed successor
+  (`workspaces/<uuid>/`) could both carry a `workspace.json` with the same
+  `name`, so `origin`/`personal`/`work`-style workspaces were printed
+  twice.
+
 ## v3.4.2 - 2026-08-14
 
 ### Added

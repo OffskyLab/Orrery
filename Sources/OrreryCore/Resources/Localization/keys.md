@@ -169,8 +169,9 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | Key | Context |
 | --- | --- |
 | `list.abstract` | Command help. |
-| `list.empty` | Shown when no envs exist. Contains literal command `orrery sandbox create <name>`. |
+| `list.empty` | Currently unused (origin is always listed, so the list is never empty). Retained for compatibility. |
 | `list.header` | Currently unused (list now uses multi-line layout). Retained for compatibility. |
+| `list.pinnedHeader` | Sub-heading under each `<workspace>: <path>` line, introducing the accounts pinned to it. Only printed when at least one account of that tool has `workspace == <name>`. |
 
 ## mCPServerCmd / mCPSetup — MCP server commands
 
