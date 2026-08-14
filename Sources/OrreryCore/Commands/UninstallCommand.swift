@@ -42,7 +42,7 @@ public struct UninstallCommand: ParsableCommand {
         // 3. Remove shell integration from rc files
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let shellName = URL(fileURLWithPath: shell).lastPathComponent
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = userHomeURL()
         let rcFiles: [URL] = shellName == "bash"
             ? [home.appendingPathComponent(".bashrc")]
             : [home.appendingPathComponent(".zshrc")]

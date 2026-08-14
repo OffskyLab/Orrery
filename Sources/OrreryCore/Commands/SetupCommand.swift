@@ -33,7 +33,7 @@ public struct SetupCommand: ParsableCommand {
     /// Install slash commands that should be available in every project (not just
     /// where `orrery mcp setup` has been run). Currently just `orrery:phantom`.
     static func installGlobalSlashCommands() {
-        let claudeCommandsDir = FileManager.default.homeDirectoryForCurrentUser
+        let claudeCommandsDir = userHomeURL()
             .appendingPathComponent(".claude")
             .appendingPathComponent("commands")
         do {
@@ -70,7 +70,7 @@ public struct SetupCommand: ParsableCommand {
     }
 
     static func rcFile(for shell: String) -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = userHomeURL()
         switch shell {
         case "bash": return home.appendingPathComponent(".bashrc")
         default:     return home.appendingPathComponent(".zshrc")
@@ -78,14 +78,7 @@ public struct SetupCommand: ParsableCommand {
     }
 
     static func activateFile() -> URL {
-        let home: URL
-        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
-            home = URL(fileURLWithPath: custom)
-        } else {
-            home = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".orrery")
-        }
-        return home.appendingPathComponent("activate.sh")
+        orreryHomeURL().appendingPathComponent("activate.sh")
     }
 
     static func writeActivateScript(to url: URL) {
