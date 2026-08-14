@@ -4,8 +4,8 @@ Context for every key in `en.json`. Keys are grouped by namespace (the prefix
 before the first dot). Placeholders in `{curly}` come from
 `l10n-signatures.json` and must appear verbatim in every locale.
 
-When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
-`memory.migrationDone.shared`), both sub-keys are documented together.
+When a key has Bool/Optional branches (e.g. `create.memory.isolated` +
+`create.memory.shared`), both sub-keys are documented together.
 
 ---
 
@@ -107,13 +107,6 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `create.unknownTool` | Error for an unknown `--tool` value. `{raw}` = user input. Keep tool names literal. |
 | `create.wizardTitle` | Title for the initial tool picker. |
 
-## current — `orrery current`
-
-| Key | Context |
-| --- | --- |
-| `current.abstract` | Command help. |
-| `current.noActive` | Printed when no env is active. |
-
 ## delegate — `orrery delegate`
 
 | Key | Context |
@@ -193,45 +186,6 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `pin.errorAccountNotFound` | Error when the named account isn't in the pool. `{name}` = account name; `{tool}` = tool name. |
 | `pin.errorWorkspaceNotFound` | Error when the workspace doesn't exist. `{name}` = workspace name. |
 | `pin.success` | Success message after pinning. `{account}` = account name; `{workspace}` = workspace name. |
-
-## memory — `orrery memory`
-
-| Key | Context |
-| --- | --- |
-| `memory.aborted` | Shown when the user declines a memory action. |
-| `memory.abstract` | Parent command help. |
-| `memory.actionExport` / `memory.actionInfo` / `memory.actionIsolate` / `memory.actionShare` / `memory.actionStorage` | Menu labels for the interactive memory prompt. |
-| `memory.alreadyIsolated` / `memory.alreadyShared` | No-op messages when the env is already in the requested mode. |
-| `memory.discardConfirm` | Confirm prompt before discarding memory. `⚠️` emoji intentional. Trailing `[y/N] ` has a trailing space. |
-| `memory.exportAbstract` | `memory export` sub-command help. |
-| `memory.exported` | Success message. `{path}` = output file path. |
-| `memory.infoAbstract` | `memory info` sub-command help. |
-| `memory.isolateAbstract` | `memory isolate` sub-command help. |
-| `memory.migrationDiscardToIsolated` | Migration option: start fresh isolated memory. |
-| `memory.migrationDiscardToShared` | Migration option: discard isolated, use shared only (destructive — warning emoji retained). |
-| `memory.migrationDone.isolated` / `memory.migrationDone.shared` | Success after migration. Bool branch on target mode. `{envName}`. |
-| `memory.migrationMergeToIsolated` | Migration option: copy shared → isolated. |
-| `memory.migrationMergeToShared` | Migration option: merge isolated → shared. |
-| `memory.migrationPrompt` | Title for the migration choice picker. |
-| `memory.migrationWarning` | Multi-line banner before migration. `{from}`, `{to}` are mode labels. Preserve `\n    ` indentation so alignment holds. |
-| `memory.noActiveEnv` | Error when no active env. |
-| `memory.noMemory` | Shown for `memory info` when memory file doesn't exist. |
-| `memory.outputHelp` | `--output` flag help. |
-| `memory.settingsPrompt` | Title for the memory-settings interactive menu. |
-| `memory.shareAbstract` | `memory share` sub-command help. |
-| `memory.statusExists.absent` / `memory.statusExists.present` | Optional-branch on file existence. `{size}` = bytes. |
-| `memory.statusMode.isolated` / `memory.statusMode.shared` | Status row. Bool branch. |
-| `memory.statusPath` | Status row: path to memory file. `{path}`. |
-| `memory.storageAbstract` | `memory storage` sub-command help. |
-| `memory.storageCopied` | Success after copying memory to a new storage path. |
-| `memory.storageCopyNo` / `memory.storageCopyYes` | Copy-prompt options. |
-| `memory.storageCopyPrompt` | Asked when the new path has no memory yet. |
-| `memory.storageNotDirectory` | Error: target path is a file. `{path}`. |
-| `memory.storagePathHelp` | Positional arg help for `memory storage <path>`. |
-| `memory.storageReset` | Success after `--reset`. |
-| `memory.storageResetHelp` | `--reset` flag help. |
-| `memory.storageSet` | Success after setting a custom path. `{path}`. |
-| `memory.storageStatus.custom` / `memory.storageStatus.default` | Status row. Optional-branch on whether the path is customized. `{path}`. |
 
 ## orrery — root command
 
@@ -323,16 +277,6 @@ Shown by ArgumentParser as part of auto-generated help.
 | Key | Context |
 | --- | --- |
 | `workspace.abstract` | Root command help for `orrery workspace`. |
-| `workspace.setEnvAbstract` | Sub-command help for `orrery workspace set-env`. |
-| `workspace.setEnvKeyHelp` | Positional `key` argument help for `set-env`. |
-| `workspace.setEnvValueHelp` | Positional `value` argument help for `set-env`. |
-| `workspace.setEnvWorkspaceHelp` | `-s/--sandbox` option help for `set-env` and `unset-env`. References the active workspace. |
-| `workspace.setEnvNoActive` | Error: no active workspace and `-s` not given. References `orrery enter <name>` — keep literal. |
-| `workspace.setEnvOriginNotSupported` | Error when targeting the `origin` workspace. |
-| `workspace.setEnvSuccess` | Success: variable set. `{key}` = variable name; `{name}` = workspace name. |
-| `workspace.unsetEnvAbstract` | Sub-command help for `orrery workspace unset-env`. |
-| `workspace.unsetEnvKeyHelp` | Positional `key` argument help for `unset-env`. |
-| `workspace.unsetEnvSuccess` | Success: variable removed. `{key}` = variable name; `{name}` = workspace name. |
 
 ---
 

@@ -238,13 +238,6 @@ claude
   <img src="assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
 </p>
 
-Sandbox-level env vars are managed with `orrery workspace set-env` / `unset-env`:
-
-```bash
-orrery workspace set-env API_BASE https://staging.example.com --sandbox client-a
-orrery workspace unset-env API_BASE --sandbox client-a
-```
-
 ---
 
 ## The `origin` Baseline
@@ -274,7 +267,7 @@ By default, session data is shared across all sandboxes:
 
 Session sharing works by symlinking tool session directories (`projects/`, `sessions/`, `session-env/`) to `~/.orrery/shared/`.
 
-For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard, or switch later with `orrery workspace memory isolate` / `share`.
+For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard.
 
 ---
 
@@ -299,10 +292,6 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 | `orrery workspace info [name]` | Show full details of a sandbox |
 | `orrery workspace delete <name>` | Delete a sandbox |
 | `orrery workspace rename <old> <new>` | Rename a sandbox |
-| `orrery workspace set-env <KEY> <VALUE> [-s <name>]` | Set a sandbox env var |
-| `orrery workspace unset-env <KEY> [-s <name>]` | Remove a sandbox env var |
-| `orrery workspace current` | Print the active sandbox name (or `origin`) |
-| `orrery workspace memory {isolate\|share\|info\|storage \| export}` | Manage memory mode and storage |
 | `orrery workspace sync ...` | Sync state into/out of a sandbox |
 
 ### Sessions
@@ -471,13 +460,6 @@ This registers Orrery as an MCP server and installs slash commands.
 | `/orrery:spec-status` | `orrery_spec_status` |
 
 **Shared memory**: All AI tools read and write to the same `MEMORY.md` per project. Knowledge saved by Claude is accessible from Codex and Gemini, and vice versa.
-
-**External memory storage**: Redirect memory to any directory — such as an Obsidian vault:
-
-```bash
-orrery workspace memory storage ~/Documents/my-wiki/orrery
-orrery workspace memory storage --reset   # revert to ~/.orrery
-```
 
 ---
 

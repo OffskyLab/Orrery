@@ -822,8 +822,7 @@
     </p>
     <p>
       與一般 sandbox 不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config
-      路徑。不過它支援 memory 與 session 設定：可以用 <code>orrery sandbox memory isolate</code> /
-      <code>share</code> / <code>storage</code> 控制 memory 存放位置，也可以在
+      路徑。不過它支援 memory 與 session 設定：可以選擇 memory 為隔離或共享，也可以在
       <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。執行
       <code>orrery sandbox info origin</code> 查看完整狀態。
     </p>
@@ -985,15 +984,6 @@
         <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名 sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">列出 sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">顯示 sandbox 詳細</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox current</span><span class="cmd-desc">顯示目前啟用的 sandbox</span></div>
-      </div>
-    </div>
-    <div class="command-group">
-      <div class="command-group-title">Sandbox 設定</div>
-      <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">設定 sandbox 環境變數</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">移除 sandbox 環境變數</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">將記憶重導向至外部路徑</span></div>
       </div>
     </div>
     <div class="command-group">

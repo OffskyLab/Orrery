@@ -827,8 +827,7 @@
     <p>
       Unlike regular sandboxes, <code>origin</code> cannot be deleted or renamed and
       uses the system's native config paths. It does support memory and session settings —
-      use <code>orrery sandbox memory isolate</code> / <code>share</code> / <code>storage</code> to
-      control where its project memory lives, and choose per-tool session sharing during
+      choose isolated or shared memory, and per-tool session sharing, during
       <code>orrery setup</code>. Run <code>orrery sandbox info origin</code> to see full state.
     </p>
     <p style="margin-top:1rem">
@@ -989,15 +988,6 @@
         <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename a sandbox</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">List sandboxes</span></div>
         <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">Show sandbox details</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox current</span><span class="cmd-desc">Print active sandbox</span></div>
-      </div>
-    </div>
-    <div class="command-group">
-      <div class="command-group-title">Sandbox config</div>
-      <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sandbox set-env &lt;K&gt; &lt;V&gt;</span><span class="cmd-desc">Set a per-sandbox env var</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox unset-env &lt;K&gt;</span><span class="cmd-desc">Remove a per-sandbox env var</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox memory storage &lt;path&gt;</span><span class="cmd-desc">Redirect memory to external path</span></div>
       </div>
     </div>
     <div class="command-group">
