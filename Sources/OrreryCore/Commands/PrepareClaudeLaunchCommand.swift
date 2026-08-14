@@ -138,10 +138,8 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
     }
 
     /// The actual patch, taking `hookBinaryPath` as a plain parameter so
-    /// it's testable without depending on `resolvedHookBinaryPath()`'s
-    /// `CommandLine.arguments[0]`-based resolution (which, same as
-    /// `TokenRefreshDaemonInstaller`/`LinuxAgentInstaller`'s equivalent,
-    /// can't be meaningfully exercised in-process under the test runner).
+    /// tests can pin an arbitrary path instead of depending on where the
+    /// sibling `orrery-claude-hook` binary actually lives.
     static func patchAuthSuccessHook(accountDir: URL, hookBinaryPath: String) {
         ClaudeAuthSuccessHookInstaller.install(
             command: "\(hookBinaryPath) --account-dir \(accountDir.path)",
@@ -153,14 +151,11 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
     /// install directory — see `.github/workflows/release.yml` and
     /// `docs/install.sh`), resolved by swapping the currently running
     /// `orrery-bin`'s filename. Returns nil if no such binary exists next to
-    /// it (e.g. a dev build where only `orrery-bin` was built).
+    /// it (e.g. a dev build where only `orrery-bin` was built). See
+    /// `RunningExecutablePath` for why this can't use `CommandLine.arguments[0]`.
     private static func resolvedHookBinaryPath() -> String? {
-        let arg0 = CommandLine.arguments[0]
-        let binaryPath = arg0.hasPrefix("/")
-            ? arg0
-            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent(arg0).standardizedFileURL.path
-        let candidate = URL(fileURLWithPath: binaryPath)
+        guard let selfPath = RunningExecutablePath.resolved() else { return nil }
+        let candidate = URL(fileURLWithPath: selfPath)
             .deletingLastPathComponent()
             .appendingPathComponent("orrery-claude-hook")
         return FileManager.default.fileExists(atPath: candidate.path) ? candidate.path : nil

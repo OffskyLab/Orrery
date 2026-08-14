@@ -82,14 +82,26 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     /// claude actually exits. Best-effort: silently no-ops if `orrery-bin`'s
     /// own path can't be resolved.
     private func installAutoFinalizeHook(stagingDir: URL) {
-        guard let orreryBinPath = Self.resolvedOrreryBinPath() else { return }
-        Self.patchAutoFinalizeHook(stagingDir: stagingDir, orreryBinPath: orreryBinPath)
+        Self.healHook(stagingDir: stagingDir)
     }
 
-    /// The actual patch, taking `orreryBinPath` as a plain parameter so it's
-    /// testable without depending on `resolvedOrreryBinPath()`'s
-    /// `CommandLine.arguments[0]`-based resolution (same caveat as
-    /// `PrepareClaudeLaunchCommand.resolvedHookBinaryPath()`).
+    /// Re-applies the hook installed by `installAutoFinalizeHook` above. Also
+    /// called by `_account-add-heal-hook`, which the shell wrapper's `add`
+    /// fast path polls in the background for the lifetime of the `claude`
+    /// login session — claude's own first-run onboarding write to this
+    /// (otherwise-empty) staging `settings.json` replaces the file wholesale,
+    /// wiping the hook before OAuth ever completes. Re-patching on a short
+    /// interval puts it back well before login finishes. Safe to call
+    /// repeatedly: `ClaudeAuthSuccessHookInstaller.install` is additive and
+    /// idempotent.
+    public static func healHook(stagingDir: URL) {
+        guard let orreryBinPath = resolvedOrreryBinPath() else { return }
+        patchAutoFinalizeHook(stagingDir: stagingDir, orreryBinPath: orreryBinPath)
+    }
+
+    /// The actual patch, taking `orreryBinPath` as a plain parameter so tests
+    /// can pin an arbitrary path instead of depending on where the test
+    /// binary itself happens to live.
     static func patchAutoFinalizeHook(stagingDir: URL, orreryBinPath: String) {
         ClaudeAuthSuccessHookInstaller.install(
             command: "\(orreryBinPath) _account-add-finalize --staging \(stagingDir.path) --keep-staging",
@@ -98,14 +110,10 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     }
 
     /// `orrery-bin` resolved to its own absolute path, so the hook command
-    /// keeps working regardless of the invoking shell's `PATH`.
+    /// keeps working regardless of the invoking shell's `PATH`. See
+    /// `RunningExecutablePath` for why this can't use `CommandLine.arguments[0]`.
     private static func resolvedOrreryBinPath() -> String? {
-        let arg0 = CommandLine.arguments[0]
-        let binaryPath = arg0.hasPrefix("/")
-            ? arg0
-            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent(arg0).standardizedFileURL.path
-        return FileManager.default.fileExists(atPath: binaryPath) ? binaryPath : nil
+        RunningExecutablePath.resolved()
     }
     #endif
 

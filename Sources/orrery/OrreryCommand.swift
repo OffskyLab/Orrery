@@ -12,7 +12,15 @@ public struct OrreryCommand: AsyncParsableCommand {
         commandName: "orrery",
         abstract: L10n.Orrery.abstract,
         version: OrreryVersion.current,
-        subcommands: [
+        subcommands: OrreryCommand.allSubcommands
+    )
+
+    /// Built via a closure (rather than an array literal) so the
+    /// macOS-only `AccountAddHealHookCommand` can be conditionally appended
+    /// with `#if os(macOS)` — Swift doesn't support `#if` directly around
+    /// individual elements of an array literal passed as an argument.
+    private static var allSubcommands: [ParsableCommand.Type] {
+        var cmds: [ParsableCommand.Type] = [
             UpdateCommand.self,
             SetupCommand.self,
             InitCommand.self,
@@ -43,6 +51,10 @@ public struct OrreryCommand: AsyncParsableCommand {
             CaptureClaudeExitCommand.self,
             AccountDirLookupCommand.self,
         ]
-    )
+        #if os(macOS)
+        cmds.append(AccountAddHealHookCommand.self)
+        #endif
+        return cmds
+    }
     public init() {}
 }
