@@ -29,7 +29,7 @@
   "account.useNotFound": "{tool} にアカウント「{name}」が見つかりません。'orrery list --{tool}' を実行して選択肢を確認してください。",
   "account.usePinned": "{tool} アカウント「{name}」を sandbox「{env}」にピン留めしました。",
   "account.loginManualFallbackHint": "orrery バイナリから直接 {tool} を起動します — TTY フォアグラウンドが制限される場合があります。ウィザードが表示されない場合は、~/.orrery/activate.sh を source したシェルからこのコマンドを実行してください。",
-  "account.loginReadyHint": "ログインが完了したら /exit と入力して終了してください。",
+  "account.loginReadyHint": "ログインフローを行ってください。完了したら /exit で終了しても、そのまま使い続けても構いません。",
   "account.addFinalized": "{tool} アカウント「{name}」をインポートしました。",
   "account.addFinalizedWithInfo": "{tool} アカウント「{name}」をインポートしました（{info}）。",
   "origin.released": "✓ {tool}: restored to {path}.",

@@ -14,11 +14,27 @@ public struct AccountAddFinalizeCommand: ParsableCommand {
 
     @Option(name: .long) public var staging: String
 
+    /// Skip deleting the staging directory on completion. Set by the
+    /// `auth_success` hook (see `AccountAddPrepareCommand`), which invokes
+    /// this command early — while claude may still be running with
+    /// `CLAUDE_CONFIG_DIR` pointed at the staging dir — so removing it would
+    /// pull the rug out from under the live session. The shell wrapper's
+    /// own exit-time call omits this flag, so the staging dir is still
+    /// cleaned up once claude actually exits. Every step here is safe to
+    /// re-run (keychain re-import, `migrateAccount`, and the JSON merge in
+    /// `captureLoginState` are all idempotent), so running twice — once via
+    /// the hook, once at exit — is expected, not an error.
+    @Flag(name: .long) public var keepStaging: Bool = false
+
     public init() {}
 
     public func run() throws {
         let stagingURL = URL(fileURLWithPath: staging)
-        defer { try? FileManager.default.removeItem(at: stagingURL) }
+        defer {
+            if !keepStaging {
+                try? FileManager.default.removeItem(at: stagingURL)
+            }
+        }
 
         // Parse the prepare metadata written by _account-add-prepare.
         let metadataURL = stagingURL.appendingPathComponent(".orrery-prepare.json")

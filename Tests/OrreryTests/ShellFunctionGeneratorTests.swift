@@ -62,7 +62,10 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("_account-add-prepare"))
         #expect(script.contains("command claude"))
         #expect(script.contains("_account-add-finalize"))
-        // Login ready hint is printed before claude launches.
+        // Login ready hint is printed before claude launches. Purely
+        // informational now — the auth_success hook installed by
+        // _account-add-prepare finalizes the account automatically as soon
+        // as login succeeds, so /exit is offered, not required.
         #expect(script.contains(L10n.Account.loginReadyHint))
     }
 

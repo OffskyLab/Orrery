@@ -43,7 +43,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.useNotFound` | Error when the requested account doesn't exist. `{name}` = display name; `{tool}` = tool name. Flag `--{tool}` is literal. |
 | `account.usePinned` | Success after pinning an account. `{tool}` = tool name; `{name}` = account display name; `{env}` = sandbox name (placeholder retained for compat). |
 | `account.loginManualFallbackHint` | Warning shown when Claude is launched via the Swift `Process` fallback path (bypassing the shell function). `{tool}` = tool name. File path `~/.orrery/activate.sh` is literal — do not translate. |
-| `account.loginReadyHint` | Hint printed by the shell function just before `command claude` is launched for account-add. `/exit` is a literal Claude command — do not translate. |
+| `account.loginReadyHint` | Hint printed by the shell function just before `command claude` is launched for account-add. `/exit` is a literal Claude command — do not translate. Purely informational: the `auth_success` hook installed by `_account-add-prepare` already finalizes the account as soon as login succeeds, so nothing actually depends on the user running `/exit`. |
 | `account.addFinalized` | Success line printed by `_account-add-finalize` when no email or plan is available. `{tool}` = tool name; `{name}` = display name. |
 | `account.addFinalizedWithInfo` | Success line printed by `_account-add-finalize` when email and/or plan are available. `{tool}` = tool name; `{name}` = display name; `{info}` = comma-joined email/plan string. |
 ## create — `orrery sandbox create` wizard

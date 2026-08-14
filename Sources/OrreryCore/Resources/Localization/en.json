@@ -29,7 +29,7 @@
   "account.useNotFound": "No account '{name}' for {tool}. Run 'orrery list --{tool}' to see options.",
   "account.usePinned": "Pinned {tool} account '{name}' to sandbox '{env}'.",
   "account.loginManualFallbackHint": "Launching {tool} from the orrery binary directly — TTY foreground may be limited. If the wizard does not appear, run this command from a shell that has sourced ~/.orrery/activate.sh.",
-  "account.loginReadyHint": "Run /exit when you're done logging in.",
+  "account.loginReadyHint": "Now perform the login flow. When you're done, run /exit — or just keep using Claude.",
   "account.addFinalized": "Imported {tool} account '{name}'.",
   "account.addFinalizedWithInfo": "Imported {tool} account '{name}' ({info}).",
   "origin.released": "✓ {tool}: restored to {path}.",
