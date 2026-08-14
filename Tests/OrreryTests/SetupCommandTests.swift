@@ -5,6 +5,24 @@ import Foundation
 @Suite("SetupCommand")
 struct SetupCommandTests {
 
+    /// Regression test for a real incident: `rcFile(for:)` used to resolve via
+    /// `FileManager.default.homeDirectoryForCurrentUser` directly, ignoring
+    /// `ORRERY_USER_HOME` — the override `withIsolatedHome()` sets so tests never
+    /// touch the developer's real home. Since `withIsolatedHome` deliberately
+    /// doesn't touch real `$HOME` (that breaks Keychain resolution), any test
+    /// that called `rcFile(for:)` inside it silently wrote to the developer's
+    /// real `~/.zshrc` / `~/.bashrc`. `rcFile(for:)` must honor the same
+    /// override `Tool.defaultConfigDir` and `activateFile()` already do.
+    @Test("rcFile(for:) honors ORRERY_USER_HOME, does not resolve to the real home")
+    func rcFileHonorsUserHomeOverride() throws {
+        try withIsolatedHome {
+            let userHome = ProcessInfo.processInfo.environment["ORRERY_USER_HOME"] ?? ""
+            #expect(!userHome.isEmpty)
+            #expect(SetupCommand.rcFile(for: "zsh").path == "\(userHome)/.zshrc")
+            #expect(SetupCommand.rcFile(for: "bash").path == "\(userHome)/.bashrc")
+        }
+    }
+
     @Test("writes lazy-bootstrap stub when rc is fresh")
     func appendsWhenMissing() throws {
         let tmpFile = FileManager.default.temporaryDirectory
