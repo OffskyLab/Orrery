@@ -206,7 +206,7 @@ orrery run --non-phantom claude
 
 ```bash
 orrery run codex             # 在目前 pin 的 codex 帳號下單次執行
-orrery run -e client-a npm install  # 在指定的 sandbox 內跑任意指令
+orrery run -a client-a npm install  # 在指定的 sandbox 內跑任意指令
 ```
 
 ---
@@ -301,29 +301,20 @@ orrery uninstall
 | `orrery workspace sync ...` | sandbox 同步相關操作 |
 
 
-### 設定
-
-| 指令 | 說明 |
-|---|---|
-| `orrery tools add [-e <name>]` | 透過 wizard 在 sandbox 中加入工具 |
-| `orrery tools remove [-e <name>]` | 從 sandbox 移除工具 |
-| `orrery which <tool>` | 顯示工具的設定目錄路徑 |
-
 ### Session 管理
 
 | 指令 | 說明 |
 |---|---|
 | `orrery sessions [--claude\|--codex\|--gemini]` | 列出當前專案的所有 session |
-| `orrery resume [--claude\|--codex\|--gemini] [index]` | 接續 session（無 index 則開啟互動選單） |
 
 ### 跨工具
 
 | 指令 | 說明 |
 |---|---|
-| `orrery run [-e <name>] claude` | 透過 phantom supervisor 啟動 Claude（預設）— 啟用 `/orrery:phantom` |
+| `orrery run [-a <name>] claude` | 透過 phantom supervisor 啟動 Claude（預設）— 啟用 `/orrery:phantom` |
 | `orrery run --non-phantom claude` | 單次執行 Claude（無 supervisor） |
-| `orrery run [-e <name>] <command>` | 在指定（或當前）sandbox 內執行任意指令 |
-| `orrery delegate -e <name> "prompt"` | 委派任務給其他 sandbox 的 AI 工具 |
+| `orrery run [-a <name>] <command>` | 在指定（或當前）sandbox 內執行任意指令 |
+| `orrery delegate -a <name> "prompt"` | 委派任務給其他 sandbox 的 AI 工具 |
 | `orrery delegate --resume <id\|index> "prompt"` | 接續工具原生 session（UUID、短前綴、或 `orrery sessions` 中的編號） |
 | `orrery delegate --session [<name>]` | 開啟託管 session 選單（或 resume 指定的 mapping） |
 | `orrery magi "<topic>"` | 啟動多模型討論並達成共識 |
@@ -365,10 +356,10 @@ orrery magi --output report.md "該不該遷移到 Swift 6？"
 
 ```bash
 # 用 native session UUID 短前綴接續
-orrery delegate -e work --resume 4f2c "繼續剛剛的 review"
+orrery delegate -a work --resume 4f2c "繼續剛剛的 review"
 
 # 用 `orrery sessions` 列出的編號接續
-orrery delegate -e work --resume 1 "..."
+orrery delegate -a work --resume 1 "..."
 
 # 開啟跨工具、跨環境的託管 session 選單
 orrery delegate --session
@@ -467,7 +458,6 @@ orrery mcp setup
 |---|---|
 | `/orrery:delegate` | `orrery_delegate` MCP 工具（含環境提示） |
 | `/orrery:sessions` | `orrery sessions` |
-| `/orrery:resume` | `orrery resume <index>` |
 | `/orrery:phantom` | 不離開 session 切換 account — 詳見上方 [Phantom 模式](#phantom-模式) |
 | `/orrery:magi` | `orrery_magi`（含 `/grill-me` pre-flight 提示，給產品/scope 議題用） |
 | `/orrery:spec` | `orrery_spec` |

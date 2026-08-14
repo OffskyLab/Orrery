@@ -206,7 +206,7 @@ For non-Claude commands, `orrery run` is always single-shot:
 
 ```bash
 orrery run codex             # one-shot codex under the pinned codex account
-orrery run -e client-a npm install  # ad-hoc command inside a specific sandbox
+orrery run -a client-a npm install  # ad-hoc command inside a specific sandbox
 ```
 
 ---
@@ -298,29 +298,20 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 | `orrery workspace memory {isolate\|share\|info\|storage \| export}` | Manage memory mode and storage |
 | `orrery workspace sync ...` | Sync state into/out of a sandbox |
 
-### Configuration
-
-| Command | Description |
-|---|---|
-| `orrery tools add [-e <name>]` | Add a tool to a sandbox via wizard |
-| `orrery tools remove [-e <name>]` | Remove a tool from a sandbox |
-| `orrery which <tool>` | Print the config dir path for a tool |
-
 ### Sessions
 
 | Command | Description |
 |---|---|
 | `orrery sessions [--claude\|--codex\|--gemini]` | List sessions for the current project |
-| `orrery resume [--claude\|--codex\|--gemini] [index]` | Resume a session (interactive picker if no index) |
 
 ### Cross-tool
 
 | Command | Description |
 |---|---|
-| `orrery run [-e <name>] claude` | Launch Claude under a phantom supervisor (default) — enables `/orrery:phantom` |
+| `orrery run [-a <name>] claude` | Launch Claude under a phantom supervisor (default) — enables `/orrery:phantom` |
 | `orrery run --non-phantom claude` | Launch Claude as a single-shot (no supervisor) |
-| `orrery run [-e <name>] <command>` | Run any other command inside the named (or active) sandbox |
-| `orrery delegate -e <name> "prompt"` | Delegate a task to an AI tool in another sandbox |
+| `orrery run [-a <name>] <command>` | Run any other command inside the named (or active) sandbox |
+| `orrery delegate -a <name> "prompt"` | Delegate a task to an AI tool in another sandbox |
 | `orrery delegate --resume <id\|index> "prompt"` | Resume a native tool session (UUID, short prefix, or index from `orrery sessions`) |
 | `orrery delegate --session [<name>]` | Open a managed-session picker (or resume a named mapping if `<name>` is given) |
 | `orrery magi "<topic>"` | Start a multi-model discussion and reach consensus |
@@ -362,10 +353,10 @@ Discussion runs are saved as JSON to `~/.orrery/magi/` for later reference.
 
 ```bash
 # Resume by short prefix of the native session UUID
-orrery delegate -e work --resume 4f2c "follow up on the earlier review"
+orrery delegate -a work --resume 4f2c "follow up on the earlier review"
 
 # Resume by index from `orrery sessions`
-orrery delegate -e work --resume 1 "..."
+orrery delegate -a work --resume 1 "..."
 
 # Open a picker over all managed sessions (across tools and envs)
 orrery delegate --session
@@ -464,7 +455,6 @@ This registers Orrery as an MCP server and installs slash commands.
 |---|---|
 | `/orrery:delegate` | `orrery_delegate` MCP tool with sandbox hints |
 | `/orrery:sessions` | `orrery sessions` |
-| `/orrery:resume` | `orrery resume <index>` |
 | `/orrery:phantom` | In-session account or sandbox switch — see [Phantom Mode](#phantom-mode) |
 | `/orrery:magi` | `orrery_magi` (with a `/grill-me` pre-flight hint for product/scope topics) |
 | `/orrery:spec` | `orrery_spec` |

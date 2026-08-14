@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- **`orrery tools`, `orrery which`, `orrery resume`, `orrery migrate-to-v3.1`.**
+  `tools`/`which` managed per-environment tool config that's now handled
+  through `sandbox`/account commands, `resume`'s interactive session picker
+  is superseded by `orrery delegate --resume`/`--session`, and
+  `migrate-to-v3.1` was a one-time opt-in migration that every account path
+  now performs automatically — none of the three had any remaining reason to
+  exist as separate commands.
+
+### Changed
+
+- **`orrery run`/`orrery delegate`: `-e`/`--environment` renamed to
+  `-a`/`--account`.** Both commands always resolved this flag to an account
+  context, not a full environment/sandbox switch, so the flag now says what
+  it does. Behavior is unchanged.
+
 ## v3.3.0 - 2026-08-13
 
 ### Added

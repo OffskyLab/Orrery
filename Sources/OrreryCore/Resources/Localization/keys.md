@@ -106,7 +106,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | Key | Context |
 | --- | --- |
 | `delegate.abstract` | Command help. |
-| `delegate.envHelp` | `--env` flag help. |
+| `delegate.accountHelp` | `--account` flag help. |
 | `delegate.promptHelp` | Positional `prompt` argument help. |
 
 ## delete — `orrery delete`
@@ -180,12 +180,6 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `pin.errorWorkspaceNotFound` | Error when the workspace doesn't exist. `{name}` = workspace name. |
 | `pin.success` | Success message after pinning. `{account}` = account name; `{workspace}` = workspace name. |
 
-## migrate — `orrery migrate-to-v3.1`
-
-| Key | Context |
-| --- | --- |
-| `migrate.abstract` | Command help for `orrery migrate-to-v3.1`. |
-
 ## memory — `orrery memory`
 
 | Key | Context |
@@ -241,22 +235,14 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `rename.renamed` | Success message. `{old}`, `{new}`. |
 | `rename.reservedName` | Error when trying to rename `origin`. |
 
-## resume — `orrery resume`
-
-| Key | Context |
-| --- | --- |
-| `resume.abstract` | Command help. |
-| `resume.indexOutOfRange` | Error. `{index}` = requested; `{count}` = available. |
-| `resume.noIndex` | Error when the user omitted the index. References `orrery sessions` — keep literal. |
-
 ## run — `orrery run`
 
 | Key | Context |
 | --- | --- |
 | `run.abstract` | Command help. |
+| `run.accountHelp` | `--account` flag help. |
 | `run.commandHelp` | Positional `command…` arg help. |
-| `run.envHelp` | `--env` flag help. |
-| `run.noCommand` | Error when no command followed. Contains literal example `orrery run -e work claude --resume <id>`. |
+| `run.noCommand` | Error when no command followed. Contains literal example `orrery run -a work claude --resume <id>`. |
 
 ## sessions — `orrery sessions`
 
@@ -309,23 +295,6 @@ Shown by ArgumentParser as part of auto-generated help.
 | `toolSetup.skipping` | Shown on "no" to install. `{tool}`. |
 | `toolSetup.skippingLogin` | Shown on "no" to login. `{tool}`. |
 
-## tools — `orrery tools`
-
-| Key | Context |
-| --- | --- |
-| `tools.abstract` | Parent command help. |
-| `tools.addAbstract` | `tools add` sub-command help. |
-| `tools.addWizardTitle` | Title for the tool-add picker. `{envName}`. |
-| `tools.added` | Success. `{tool}`. |
-| `tools.defaultNotSupported` | Error when operating on `origin`. References `orrery sandbox create <name>` — literal. |
-| `tools.envHelp` | `--env` flag help. |
-| `tools.noActive` | Error: no active env. |
-| `tools.noToolsToAdd` | Shown when every supported tool is already configured. `{envName}`. |
-| `tools.noToolsToRemove` | Shown when the env has zero tools. `{envName}`. |
-| `tools.removeAbstract` | `tools remove` sub-command help. |
-| `tools.removeWizardTitle` | Title for the tool-remove picker. `{envName}`. |
-| `tools.removed` | Success. `{tool}`. |
-
 ## update — `orrery update`
 
 | Key | Context |
@@ -334,15 +303,6 @@ Shown by ArgumentParser as part of auto-generated help.
 | `update.notice` | One-line "update available" banner. `{current}`, `{latest}`. Keep the trailing `run: orrery update` hint literal. |
 | `update.unsupportedPlatform` | Error on non-supported OS. URL kept literal. |
 | `update.upgrading` | Progress line. |
-
-## which — `orrery which`
-
-| Key | Context |
-| --- | --- |
-| `which.abstract` | Command help. |
-| `which.noActive` | Error: no active env. |
-| `which.toolHelp` | Positional `tool` help. Tool names literal. |
-| `which.unknownTool` | Error for unrecognized tool. `{tool}`. |
 
 ## workspace — `orrery workspace` command family
 

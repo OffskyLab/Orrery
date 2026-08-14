@@ -23,10 +23,7 @@ public struct OrreryCommand: AsyncParsableCommand {
             PinCommand.self,
             RemoveCommand.self,
             WorkspaceCommand.self,
-            ToolsCommand.self,
-            WhichCommand.self,
             RunCommand.self,
-            ResumeCommand.self,
             DelegateCommand.self,
             SessionsCommand.self,
             MCPSetupCommand.self,
@@ -40,7 +37,6 @@ public struct OrreryCommand: AsyncParsableCommand {
             PhantomAccountTriggerCommand.self,
             AccountAddPrepareCommand.self,
             AccountAddFinalizeCommand.self,
-            MigrateToV31Command.self,
             RefreshTokenCommand.self,
             // Internal subcommands (hidden from --help, used by shell wrappers)
             PrepareClaudeLaunchCommand.self,

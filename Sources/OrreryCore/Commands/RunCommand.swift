@@ -7,10 +7,10 @@ public struct RunCommand: ParsableCommand {
         abstract: L10n.Run.abstract,
         discussion: """
         Examples:
-          orrery run -e work claude              # phantom-supervised (default for claude)
-          orrery run -e work claude --resume <id>
+          orrery run -a work claude              # phantom-supervised (default for claude)
+          orrery run -a work claude --resume <id>
           orrery run --non-phantom claude        # opt out: single-shot, no supervisor
-          orrery run -e work npm install         # non-claude: always single-shot
+          orrery run -a work npm install         # non-claude: always single-shot
 
         With phantom mode (the default for `claude`), Claude can switch orrery
         environments mid-conversation via the /orrery:phantom slash command —
@@ -21,8 +21,8 @@ public struct RunCommand: ParsableCommand {
         """
     )
 
-    @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Run.envHelp))
-    public var environment: String?
+    @Option(name: .shortAndLong, help: ArgumentHelp(L10n.Run.accountHelp))
+    public var account: String?
 
     @Argument(parsing: .allUnrecognized, help: ArgumentHelp(L10n.Run.commandHelp))
     public var command: [String] = []
@@ -35,7 +35,7 @@ public struct RunCommand: ParsableCommand {
         }
 
         let store = EnvironmentStore.default
-        let envName = environment ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
+        let envName = account ?? ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
 
         // Build environment variables
         var envVars: [String: String] = [:]
