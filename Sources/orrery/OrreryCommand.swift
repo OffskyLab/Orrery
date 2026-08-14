@@ -12,41 +12,59 @@ public struct OrreryCommand: AsyncParsableCommand {
         commandName: "orrery",
         abstract: L10n.Orrery.abstract,
         version: OrreryVersion.current,
-        subcommands: OrreryCommand.allSubcommands
+        subcommands: OrreryCommand.hiddenSubcommands,
+        groupedSubcommands: OrreryCommand.visibleSubcommandGroups
     )
+
+    /// Grouped so `--help` reads as sections instead of one flat list.
+    private static var visibleSubcommandGroups: [CommandGroup] {
+        [
+            CommandGroup(name: "Accounts", subcommands: [
+                AddCommand.self,
+                ListCommand.self,
+                ShowCommand.self,
+                UseCommand.self,
+                PinCommand.self,
+                RemoveCommand.self,
+                RefreshTokenCommand.self,
+            ]),
+            CommandGroup(name: "Workspaces", subcommands: [
+                WorkspaceCommand.self,
+            ]),
+            CommandGroup(name: "Execution", subcommands: [
+                RunCommand.self,
+                DelegateCommand.self,
+                SessionsCommand.self,
+            ]),
+            CommandGroup(name: "Integrations", subcommands: [
+                MCPSetupCommand.self,
+                ThirdPartyCommand.self,
+            ]),
+            CommandGroup(name: "Setup", subcommands: [
+                SetupCommand.self,
+                InitCommand.self,
+                UpdateCommand.self,
+                UninstallCommand.self,
+            ]),
+        ]
+    }
 
     /// Built via a closure (rather than an array literal) so the
     /// macOS-only `AccountAddHealHookCommand` can be conditionally appended
     /// with `#if os(macOS)` — Swift doesn't support `#if` directly around
     /// individual elements of an array literal passed as an argument.
-    private static var allSubcommands: [ParsableCommand.Type] {
+    ///
+    /// These all have `shouldDisplay: false`, so they're internal/shell-wrapper
+    /// commands rather than part of the user-facing `--help` groups above.
+    private static var hiddenSubcommands: [ParsableCommand.Type] {
         var cmds: [ParsableCommand.Type] = [
-            UpdateCommand.self,
-            SetupCommand.self,
-            InitCommand.self,
-            AddCommand.self,
-            ListCommand.self,
-            ShowCommand.self,
-            UseCommand.self,
-            PinCommand.self,
-            RemoveCommand.self,
-            WorkspaceCommand.self,
-            RunCommand.self,
-            DelegateCommand.self,
-            SessionsCommand.self,
-            MCPSetupCommand.self,
             MCPServerCommand.self,
             SetCurrentCommand.self,
             CheckUpdateCommand.self,
             LinkMemoryCommand.self,
-            UninstallCommand.self,
-            InstallCommand.self,
-            ThirdPartyCommand.self,
             PhantomAccountTriggerCommand.self,
             AccountAddPrepareCommand.self,
             AccountAddFinalizeCommand.self,
-            RefreshTokenCommand.self,
-            // Internal subcommands (hidden from --help, used by shell wrappers)
             PrepareClaudeLaunchCommand.self,
             CaptureClaudeExitCommand.self,
             AccountDirLookupCommand.self,

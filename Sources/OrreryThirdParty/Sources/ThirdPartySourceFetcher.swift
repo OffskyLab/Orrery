@@ -15,7 +15,7 @@ public struct FetchedRef: Sendable, Equatable {
     /// pinned to a tag (so `latest` → `v0.2.7`, or `--ref v0.2.6` →
     /// `v0.2.6`), nil for branches and raw SHAs where the SHA is the only
     /// meaningful identifier. Surfaced via `InstallRecord.displayRef` and
-    /// the `orrery install` success message.
+    /// the `orrery thirdparty install` success message.
     public let displayLabel: String?
 
     public init(dir: URL, sha: String, displayLabel: String?) {
