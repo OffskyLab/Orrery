@@ -18,43 +18,123 @@ struct PhantomNextCommandTests {
             sessionId: nil, sessionIdSource: .probe, updatedAt: 1.0), id: "4242")
     }
 
-    @Test("argv is --resume plus a quoted session id")
-    func argvWithSession() {
-        #expect(PhantomNextCommand.nextArgv(sessionId: "abc-123") == "--resume 'abc-123'")
+    // MARK: - resumeSetLine
+
+    @Test("the resume set-line carries --resume plus a quoted session id")
+    func resumeLineWithSession() {
+        #expect(PhantomNextCommand.resumeSetLine(sessionId: "abc-123") == "set -- --resume 'abc-123'")
     }
 
-    @Test("argv is empty when there is no session to resume")
-    func argvWithoutSession() {
-        #expect(PhantomNextCommand.nextArgv(sessionId: nil) == "")
+    @Test("the resume set-line is bare `set --` when there is no session to resume")
+    func resumeLineWithoutSession() {
+        #expect(PhantomNextCommand.resumeSetLine(sessionId: nil) == "set --")
     }
+
+    @Test("a session id containing a quote is safely quoted for eval")
+    func quotedSessionId() {
+        #expect(PhantomNextCommand.resumeSetLine(sessionId: "a'b") == #"set -- --resume 'a'\''b'"#)
+    }
+
+    // MARK: - exportVarName
+
+    @Test("claude exports CLAUDE_CONFIG_DIR")
+    func claudeVarName() {
+        #expect(PhantomNextCommand.exportVarName(forTool: "claude") == "CLAUDE_CONFIG_DIR")
+    }
+
+    @Test("codex exports CODEX_HOME")
+    func codexVarName() {
+        #expect(PhantomNextCommand.exportVarName(forTool: "codex") == "CODEX_HOME")
+    }
+
+    @Test("gemini exports ORRERY_GEMINI_HOME, not GEMINI_CONFIG_DIR")
+    func geminiVarName() {
+        #expect(PhantomNextCommand.exportVarName(forTool: "gemini") == "ORRERY_GEMINI_HOME")
+    }
+
+    @Test("an unrecognized tool name has no export var")
+    func unknownVarName() {
+        #expect(PhantomNextCommand.exportVarName(forTool: "bogus") == nil)
+    }
+
+    // MARK: - advance
 
     @Test("no sentinel means break the loop")
     func noSentinel() throws {
-        var pinned: [(String, String)] = []
+        var resolveCalled = false
         let result = try PhantomNextCommand.advance(
             id: "4242", registry: registry,
-            applyPin: { pinned.append(($0, $1)) },
+            resolveAccountDir: { _, _ in resolveCalled = true; return nil },
             resolveSessionId: { nil })
         #expect(result == nil)
-        #expect(pinned.isEmpty)
+        #expect(!resolveCalled)
     }
 
-    @Test("a sentinel applies the pin and returns resume argv")
-    func appliesPin() throws {
+    @Test("a resolved account dir emits an export line before the resume line")
+    func emitsExportForResolvedAccount() throws {
         try PhantomSupport.writeSentinel(
             targetAccountTool: "claude", targetAccountName: "work",
             sessionId: "sess-old", to: registry.sentinelURL(id: "4242"))
 
-        var pinned: [(String, String)] = []
         let result = try PhantomNextCommand.advance(
             id: "4242", registry: registry,
-            applyPin: { pinned.append(($0, $1)) },
+            resolveAccountDir: { tool, name in
+                #expect(tool == "claude")
+                #expect(name == "work")
+                return "/Users/x/.orrery/accounts/claude/some-uuid"
+            },
             resolveSessionId: { "sess-old" })
 
-        #expect(result == "--resume 'sess-old'")
-        #expect(pinned.count == 1)
-        #expect(pinned[0].0 == "claude")
-        #expect(pinned[0].1 == "work")
+        #expect(result == """
+        export CLAUDE_CONFIG_DIR='/Users/x/.orrery/accounts/claude/some-uuid'
+        set -- --resume 'sess-old'
+        """)
+    }
+
+    @Test("codex and gemini sentinels resolve to their own export variable")
+    func exportVariablePerTool() throws {
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "gemini", targetAccountName: "personal",
+            sessionId: nil, to: registry.sentinelURL(id: "4242"))
+
+        let result = try PhantomNextCommand.advance(
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in "/tmp/gemini-home" },
+            resolveSessionId: { nil })
+
+        #expect(result == """
+        export ORRERY_GEMINI_HOME='/tmp/gemini-home'
+        set --
+        """)
+    }
+
+    @Test("a nil resolve result drops the switch but still continues the loop")
+    func nilResolveDropsSwitch() throws {
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "work",
+            sessionId: "sess-old", to: registry.sentinelURL(id: "4242"))
+
+        let result = try PhantomNextCommand.advance(
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in nil },
+            resolveSessionId: { "sess-old" })
+
+        #expect(result == "set -- --resume 'sess-old'")
+        #expect(!(result?.contains("export") ?? true))
+    }
+
+    @Test("a resolved dir containing a quote stays valid for eval")
+    func quotedDirPath() throws {
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "work",
+            sessionId: nil, to: registry.sentinelURL(id: "4242"))
+
+        let result = try PhantomNextCommand.advance(
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in "/tmp/o'brien" },
+            resolveSessionId: { nil })
+
+        #expect(result == #"export CLAUDE_CONFIG_DIR='/tmp/o'\''brien'"# + "\nset --")
     }
 
     @Test("the sentinel is consumed so the next iteration does not re-fire")
@@ -64,7 +144,8 @@ struct PhantomNextCommandTests {
             sessionId: nil, to: registry.sentinelURL(id: "4242"))
 
         _ = try PhantomNextCommand.advance(
-            id: "4242", registry: registry, applyPin: { _, _ in }, resolveSessionId: { nil })
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in nil }, resolveSessionId: { nil })
 
         #expect(!FileManager.default.fileExists(
             atPath: registry.sentinelURL(id: "4242").path))
@@ -77,7 +158,8 @@ struct PhantomNextCommandTests {
             sessionId: nil, to: registry.sentinelURL(id: "4242"))
 
         _ = try PhantomNextCommand.advance(
-            id: "4242", registry: registry, applyPin: { _, _ in },
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in "/tmp/work-dir" },
             resolveSessionId: { "sess-new" })
 
         let entry = try #require(registry.read(id: "4242"))
@@ -96,14 +178,13 @@ struct PhantomNextCommandTests {
             sessionId: nil, to: registry.sentinelURL(id: "4242"))
 
         let result = try PhantomNextCommand.advance(
-            id: "4242", registry: registry, applyPin: { _, _ in },
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in "/tmp/work-dir" },
             resolveSessionId: { "from-probe" })
 
-        #expect(result == "--resume 'from-hook'")
-    }
-
-    @Test("a session id containing a quote is safely quoted for eval")
-    func quotedSessionId() {
-        #expect(PhantomNextCommand.nextArgv(sessionId: "a'b") == #"--resume 'a'\''b'"#)
+        #expect(result == """
+        export CLAUDE_CONFIG_DIR='/tmp/work-dir'
+        set -- --resume 'from-hook'
+        """)
     }
 }

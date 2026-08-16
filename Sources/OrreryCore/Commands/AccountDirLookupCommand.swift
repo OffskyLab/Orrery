@@ -37,6 +37,19 @@ public struct AccountDirLookupCommand: ParsableCommand {
         }
         let tool: Tool = selected.first ?? .claude
 
+        let exportPath = try Self.resolveExportPath(name: name, tool: tool)
+        print(exportPath.path)
+    }
+
+    /// Resolve the absolute v3.1 account-dir export path for `name`/`tool`, or
+    /// throw a `ValidationError` with the same diagnostics `run()` prints.
+    ///
+    /// Shared with `PhantomNextCommand`, which needs this exact resolution
+    /// (account exists → v3.1 layout manager registered → symlinks verified
+    /// `.ok` → export path) to decide what to `export` before relaunching
+    /// claude after a phantom account switch. Do not duplicate this logic —
+    /// both callers must agree on what counts as a resolvable account dir.
+    static func resolveExportPath(name: String, tool: Tool) throws -> URL {
         let acctStore = AccountStore.default
         let envStore = EnvironmentStore.default
 
@@ -55,7 +68,6 @@ public struct AccountDirLookupCommand: ParsableCommand {
         }
 
         let dir = acctStore.accountDir(id: acct.id, tool: tool)
-        let exportPath = try manager.resolvedExportPath(accountDir: dir)
-        print(exportPath.path)
+        return try manager.resolvedExportPath(accountDir: dir)
     }
 }

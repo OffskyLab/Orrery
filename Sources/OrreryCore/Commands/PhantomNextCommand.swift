@@ -5,13 +5,20 @@ import Foundation
 ///
 /// Called by the `claude()` supervisor loop each time claude exits. Exits
 /// non-zero when there is no sentinel, which the shell reads as "claude
-/// exited normally, leave the loop". Otherwise it applies the pending account
-/// switch and prints the argv for the next iteration.
+/// exited normally, leave the loop". Otherwise it prints a small shell script
+/// for the caller to `eval` — up to an `export <VAR>=<dir>` line to switch
+/// which account's credentials the next claude launch reads, followed by a
+/// `set --` line carrying the resume argv.
 ///
-/// The pin is applied here rather than at trigger time on purpose: `orrery
-/// use` syncs the just-used account's refreshed credential back into the pool
-/// before repinning, so flipping the pin while the old claude was still alive
-/// would copy its live token into the new account's pool entry.
+/// The account switch can ONLY happen this way, not by mutating the account
+/// store from this process: for claude, switching accounts means exporting
+/// `CLAUDE_CONFIG_DIR` in the *supervisor's own shell* — a child process can
+/// never do that to its parent. This is why `UseCommand` refuses `--claude`
+/// (`Sources/OrreryCore/Commands/UseCommand.swift`): its shell counterpart
+/// (`ShellFunctionGenerator`'s `use)` case) never calls into the binary for
+/// claude either, it resolves the export path itself and exports directly.
+/// `_phantom-next` follows the same shape `_phantom-begin` already
+/// established — print shell source, let the caller `eval` it.
 public struct PhantomNextCommand: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_phantom-next",
@@ -26,30 +33,38 @@ public struct PhantomNextCommand: ParsableCommand {
         let store = EnvironmentStore.default
         let registry = PhantomRegistry(homeURL: store.homeURL)
 
-        guard let argv = try Self.advance(
+        guard let script = try Self.advance(
             id: id,
             registry: registry,
-            applyPin: { tool, name in
-                try? Self.runUse(tool: tool, name: name)
+            resolveAccountDir: { toolRawValue, name in
+                guard let tool = Tool(rawValue: toolRawValue) else { return nil }
+                return try? AccountDirLookupCommand.resolveExportPath(name: name, tool: tool).path
             },
             resolveSessionId: { PhantomSupport.findCurrentClaudeSessionId() }
         ) else {
             throw ExitCode.failure
         }
-        print(argv)
+        print(script)
     }
 
     // MARK: - Testable core
 
-    /// Returns the next iteration's argv, or nil when the loop should end.
+    /// Returns the next iteration's eval-able script, or nil when the loop
+    /// should end.
     ///
-    /// `applyPin` and `resolveSessionId` are injected so the whole decision
-    /// path is testable without mutating real account state or needing a live
-    /// claude session on disk.
+    /// `resolveAccountDir` and `resolveSessionId` are injected so the whole
+    /// decision path is testable without mutating real account state or
+    /// needing a live claude session on disk.
+    ///
+    /// `resolveAccountDir` returning nil (account missing, or not in v3.1
+    /// layout) is not fatal: the switch is dropped — no `export` line — but
+    /// the loop still relaunches and resumes the conversation on the
+    /// unchanged account. Losing the switch is acceptable; losing the
+    /// session is not.
     static func advance(
         id: String,
         registry: PhantomRegistry,
-        applyPin: (String, String) -> Void,
+        resolveAccountDir: (String, String) -> String?,
         resolveSessionId: () -> String?
     ) throws -> String? {
         let sentinelURL = registry.sentinelURL(id: id)
@@ -60,8 +75,15 @@ public struct PhantomNextCommand: ParsableCommand {
         // re-fire on every subsequent iteration.
         try? FileManager.default.removeItem(at: sentinelURL)
 
+        var lines: [String] = []
         if let tool = sentinel.tool, let name = sentinel.name {
-            applyPin(tool, name)
+            if let dirPath = resolveAccountDir(tool, name), let varName = Self.exportVarName(forTool: tool) {
+                lines.append(Self.exportLine(varName: varName, dirPath: dirPath))
+            } else {
+                let warning = "orrery: phantom: could not resolve the account dir for "
+                    + "\(tool) '\(name)'; continuing on the current account\n"
+                FileHandle.standardError.write(Data(warning.utf8))
+            }
         }
 
         var entry = registry.read(id: id)
@@ -83,22 +105,33 @@ public struct PhantomNextCommand: ParsableCommand {
             entry = e
         }
 
-        return Self.nextArgv(sessionId: sessionId)
+        lines.append(Self.resumeSetLine(sessionId: sessionId))
+        return lines.joined(separator: "\n")
+    }
+
+    /// The shell variable a tool's account switch is activated through.
+    /// NOT `Tool.envVarName` for gemini: gemini-cli ignores
+    /// `GEMINI_CONFIG_DIR`, so the shell's `use)` case (and this one, to
+    /// match) exports `ORRERY_GEMINI_HOME` instead — see `gemini()` in
+    /// `ShellFunctionGenerator`. Unknown tool names return nil so a corrupt
+    /// or future-version sentinel is dropped rather than exporting garbage.
+    static func exportVarName(forTool tool: String) -> String? {
+        switch tool {
+        case "claude": return "CLAUDE_CONFIG_DIR"
+        case "codex": return "CODEX_HOME"
+        case "gemini": return "ORRERY_GEMINI_HOME"
+        default: return nil
+        }
+    }
+
+    static func exportLine(varName: String, dirPath: String) -> String {
+        "export \(varName)=\(ShellQuote.single(dirPath))"
     }
 
     /// The user's original flags are deliberately dropped — they may include a
     /// now-stale `--resume`.
-    static func nextArgv(sessionId: String?) -> String {
-        guard let sessionId, !sessionId.isEmpty else { return "" }
-        return "--resume \(ShellQuote.single(sessionId))"
-    }
-
-    private static func runUse(tool: String, name: String) throws {
-        var use = UseCommand()
-        use.claude = (tool == "claude")
-        use.codex = (tool == "codex")
-        use.gemini = (tool == "gemini")
-        use.name = name
-        try use.run()
+    static func resumeSetLine(sessionId: String?) -> String {
+        guard let sessionId, !sessionId.isEmpty else { return "set --" }
+        return "set -- --resume \(ShellQuote.single(sessionId))"
     }
 }
