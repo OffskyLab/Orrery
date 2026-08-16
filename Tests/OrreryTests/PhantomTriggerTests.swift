@@ -255,6 +255,28 @@ struct PhantomTriggerTests {
         #expect(downward(supervisor: 10, children: [10: [11], 11: [12]],
                          comms: [10: "zsh", 11: "claude-helper", 12: "claude"]) == 12)
     }
+
+    @Test("an ambiguous tree with no claude-named process returns nil rather than guessing")
+    func downwardRefusesToGuessWhenAmbiguous() {
+        // Two unnamed branches: any pid we picked here would be a guess, and
+        // the caller signals whatever it gets back.
+        #expect(downward(supervisor: 10, children: [10: [11, 12], 11: [13]],
+                         comms: [10: "zsh", 11: "sleep", 12: "node", 13: "tail"]) == nil)
+    }
+
+    @Test("a chain deeper than maxDepth stops without returning a deeper pid")
+    func downwardStopsAtMaxDepth() {
+        // A 10-link unnamed chain against the default maxDepth of 8.
+        var children: [Int32: [Int32]] = [:]
+        var comms: [Int32: String] = [10: "zsh"]
+        for i in Int32(10)..<Int32(20) {
+            children[i] = [i + 1]
+            comms[i + 1] = "worker"
+        }
+        let result = downward(supervisor: 10, children: children, comms: comms)
+        // Truncation must not reach the tail of the chain.
+        #expect(result != 20)
+    }
 }
 
 @Suite("ShellFunctionGenerator run case (phantom-by-default)")

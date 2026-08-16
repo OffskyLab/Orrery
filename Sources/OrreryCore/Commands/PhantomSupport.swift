@@ -312,7 +312,13 @@ public enum PhantomSupport {
     ) -> Int32? {
         var frontier = children(supervisorPid)
         var depth = 0
-        var fallback: Int32? = frontier.count == 1 ? frontier.first : nil
+        // The returned pid gets signalled, so a wrong guess kills an unrelated
+        // process rather than merely failing. Only trust the single-descendant
+        // fallback while every level walked has had exactly one child; once the
+        // tree branches, refuse to guess and let the caller report that claude
+        // could not be found.
+        var unambiguous = frontier.count == 1
+        var fallback: Int32? = unambiguous ? frontier.first : nil
 
         while !frontier.isEmpty, depth < maxDepth {
             for pid in frontier {
@@ -321,11 +327,17 @@ public enum PhantomSupport {
                 }
             }
             let next = frontier.flatMap { children($0) }
-            if next.count == 1 { fallback = next.first }
+            if next.isEmpty { break }
+            if next.count > 1 {
+                unambiguous = false
+                fallback = nil
+            } else if unambiguous {
+                fallback = next.first
+            }
             frontier = next
             depth += 1
         }
-        return fallback
+        return unambiguous ? fallback : nil
     }
 
     /// Direct children of `pid`, via a full process-table snapshot.
