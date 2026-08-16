@@ -112,4 +112,21 @@ struct PhantomTargetSelectorTests {
             Issue.record("expected .none, got \(result)"); return
         }
     }
+
+    @Test("an explicit index resolves against the cwd-scoped candidate list, not all entries")
+    func explicitIndexScopedToCandidates() {
+        // Three live entries; the caller's cwd only matches two of them, so
+        // the candidate list the user would see is a strict subset of
+        // `entries`. `--session 2` must mean "the 2nd line shown" — id 300 —
+        // not `entries[1]`, which is id 200.
+        let entries = [("100", entry(pid: 100, cwd: "/a")),
+                       ("200", entry(pid: 200, cwd: "/b")),
+                       ("300", entry(pid: 300, cwd: "/b"))]
+        let result = PhantomTargetSelector.select(
+            entries: entries, envPhantomId: nil, cwd: "/b", explicit: "2")
+        guard case .selected(let id, _) = result else {
+            Issue.record("expected .selected, got \(result)"); return
+        }
+        #expect(id == "300")
+    }
 }
