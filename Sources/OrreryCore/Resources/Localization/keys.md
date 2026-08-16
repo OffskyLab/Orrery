@@ -274,6 +274,12 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `phantom.legacySupervisor` | Notice (stderr) printed when falling back to the pre-registry single global sentinel, because the shell integration predates `orrery setup`'s registry support. |
 | `phantom.sessionNotFound` | Error when an explicit `--session <number|id>` matches no live entry. `{selector}` = the raw value the user passed. Distinct from `phantom.notUnderPhantom`, which is only for "no sessions at all." |
 
+## show — `orrery show` supervised-session listing
+
+| Key | Context |
+| --- | --- |
+| `show.supervisedHeader` | Header line printed above the list of live supervised (phantom) sessions in `orrery show`, only when at least one is running. Distinct from the `account.show*` keys, which cover the rest of `orrery show`'s per-tool account output. |
+
 ## setup — `orrery setup` (shell integration install)
 
 | Key | Context |

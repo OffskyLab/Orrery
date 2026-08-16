@@ -333,5 +333,6 @@
   "phantom.ambiguousHint": "Re-run with --session <number|id> to pick one.",
   "phantom.legacySupervisor": "orrery: this session uses an older shell integration; run 'orrery setup' to enable out-of-band switching.",
   "phantom.sessionNotFound": "No supervised session matches '{selector}'. Re-run without --session to see the sessions that are running.",
-  "setup.installedSlashCommand": "orrery: installed slash command at {path}\n"
+  "setup.installedSlashCommand": "orrery: installed slash command at {path}\n",
+  "show.supervisedHeader": "Supervised sessions:"
 }

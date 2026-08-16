@@ -83,6 +83,11 @@ public struct UninstallCommand: ParsableCommand {
             stderrWrite(L10n.Uninstall.removedBinary(magiURL.path))
         }
 
+        // 6. Remove the supervised-session registry: entries are per-process
+        //    and meaningless once the shell integration is gone.
+        try? FileManager.default.removeItem(
+            at: EnvironmentStore.default.homeURL.appendingPathComponent("phantom"))
+
         print(L10n.Uninstall.done)
     }
 }

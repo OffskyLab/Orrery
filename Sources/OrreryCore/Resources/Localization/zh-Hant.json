@@ -333,5 +333,6 @@
   "phantom.ambiguousHint": "請加上 --session <編號|id> 重新執行以指定其中一個。",
   "phantom.legacySupervisor": "orrery：這個 session 使用的是較舊版的 shell 整合，請執行 'orrery setup' 以啟用跨終端機切換。",
   "phantom.sessionNotFound": "找不到符合「{selector}」的受監督 session。請不加 --session 重新執行，即可看到目前正在執行的 session 清單。",
-  "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n"
+  "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n",
+  "show.supervisedHeader": "受監督中的 session："
 }
