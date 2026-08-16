@@ -34,16 +34,19 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("_link-memory"))
     }
 
-    @Test("phantom loop applies a target account from the sentinel")
+    @Test("phantom loop applies account switches via _phantom-next's eval-able output")
     func phantomLoopAppliesTargetAccount() {
         let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("TARGET_ACCOUNT_TOOL"))
-        #expect(script.contains("TARGET_ACCOUNT_NAME"))
-        // v3: the account switcher is the top-level `orrery use`, and the
-        // account name is a positional argument — not the v2-era
-        // `orrery account use --name <name>`.
-        #expect(script.contains("use --\"$TARGET_ACCOUNT_TOOL\" \"$TARGET_ACCOUNT_NAME\""))
+        // Task 10: the shell no longer sources a TARGET_ACCOUNT_TOOL/NAME
+        // sentinel or calls `orrery use` itself — `_phantom-next` resolves
+        // the account dir in Swift and prints an `export` line for the
+        // claude() shim's loop to `eval`, because a child process can never
+        // export into its parent shell any other way.
+        #expect(!script.contains("TARGET_ACCOUNT_TOOL"))
+        #expect(!script.contains("TARGET_ACCOUNT_NAME"))
         #expect(!script.contains("orrery-bin account use"))
+        #expect(script.contains("_phantom-next --id \"$ORRERY_PHANTOM_ID\""))
+        #expect(script.contains("eval \"$_next\""))
         // Workspace-switch sentinel field is gone.
         #expect(!script.contains("TARGET_SANDBOX"))
     }
