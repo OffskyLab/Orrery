@@ -2102,6 +2102,10 @@
       { "label": "_", "name": "account", "type": "String" }
     ]
   },
+  { "path": ["Phantom", "sessionSelectorHelp"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "ambiguousHeader"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "ambiguousHint"], "kind": "var", "parameters": [] },
+  { "path": ["Phantom", "legacySupervisor"], "kind": "var", "parameters": [] },
   {
     "path": ["Setup", "installedSlashCommand"],
     "kind": "func",

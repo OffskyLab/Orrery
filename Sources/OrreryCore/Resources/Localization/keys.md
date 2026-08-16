@@ -263,11 +263,15 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | Key | Context |
 | --- | --- |
 | `phantom.accountTriggerAbstract` | Help text for `orrery phantom`. Shown in `--help` for the subcommand. |
-| `phantom.notUnderPhantom` | Error when the trigger runs outside a phantom-supervised session. References `orrery run claude` — keep literal. |
+| `phantom.notUnderPhantom` | Error when no live registry entry can be found and there is no legacy fallback either. References `orrery setup` — keep literal. |
 | `phantom.claudeNotFound` | Error when the claude process can't be located in the process tree. |
 | `phantom.signalFailed` | Error when SIGTERM delivery fails. |
 | `phantom.switchingAccount` | Printed when switching to a named account with a known session. `{account}` = account display name; `{session}` = first 8 chars of session id. |
 | `phantom.switchingAccountNoSession` | Printed when switching to an account with no active session. `{account}` = account display name. |
+| `phantom.sessionSelectorHelp` | Help text for `orrery phantom --session`. Shown in `--help` for the subcommand. |
+| `phantom.ambiguousHeader` | First line of the error printed when more than one supervised session is live and none can be disambiguated by cwd. |
+| `phantom.ambiguousHint` | Last line of that same error, telling the user how to pick one with `--session`. |
+| `phantom.legacySupervisor` | Notice (stderr) printed when falling back to the pre-registry single global sentinel, because the shell integration predates `orrery setup`'s registry support. |
 
 ## setup — `orrery setup` (shell integration install)
 
