@@ -39,13 +39,26 @@ public enum ProcessLiveness {
         #endif
     }
 
+    /// Tolerance for comparing recorded vs. actual process start times.
+    ///
+    /// `p_starttime` has microsecond resolution, and `Double` round-trips
+    /// exactly through `JSONEncoder`/`JSONDecoder` (no precision is lost), so
+    /// this only needs to absorb last-bit formatting drift — not a wide
+    /// window. Keeping it at microsecond scale matters: a wide tolerance
+    /// would let an unrelated process that reuses a pid shortly after the
+    /// recorded process died be mistaken for the same process, which is
+    /// exactly the false positive this type exists to prevent.
+    private static let startTimeEpsilon = 0.000_002
+
     /// Whether `pid` is the same process we recorded.
     ///
-    /// The tolerance absorbs float round-tripping through JSON; start times
-    /// are microsecond-resolution, so anything within a second is the same
-    /// process in practice.
-    public static func isAlive(pid: Int32, startedAt: Double, tolerance: Double = 1.0) -> Bool {
+    /// No `tolerance` parameter is exposed here: a defaulted parameter is
+    /// still part of the function's type when referenced as a value (not
+    /// called), so `ProcessLiveness.isAlive` would no longer convert to the
+    /// `(Int32, Double) -> Bool` closure type `PhantomRegistry.liveEntries`
+    /// requires. Keep the epsilon internal instead.
+    public static func isAlive(pid: Int32, startedAt: Double) -> Bool {
         guard let actual = startTime(pid: pid) else { return false }
-        return abs(actual - startedAt) <= tolerance
+        return abs(actual - startedAt) <= Self.startTimeEpsilon
     }
 }
