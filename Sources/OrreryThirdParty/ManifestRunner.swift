@@ -174,12 +174,12 @@ public struct ManifestRunner: ThirdPartyRunner {
         let fm = FileManager.default
 
         // Preferred: the live active account dir exported by `orrery use`.
-        if let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"],
-           !configDir.isEmpty {
-            let dir = URL(fileURLWithPath: configDir)
-            if fm.fileExists(atPath: dir.appendingPathComponent("metadata.json").path) {
-                return dir
-            }
+        if let dir = Self.activeAccountDir(
+            configDir: ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"],
+            storeHome: store.homeURL,
+            fileExists: { fm.fileExists(atPath: $0) }
+        ) {
+            return dir
         }
 
         // Fallback (no active claude account selected, e.g. plain origin):
@@ -197,6 +197,44 @@ public struct ManifestRunner: ThirdPartyRunner {
         // Use the same home as the injected EnvironmentStore (keeps tests and
         // custom ORRERY_HOME installs consistent — never the process default).
         return AccountStore(homeURL: store.homeURL).accountDir(id: accountID, tool: .claude)
+    }
+
+    /// The account dir named by `CLAUDE_CONFIG_DIR`, but only when it really is
+    /// one of `storeHome`'s accounts.
+    ///
+    /// The containment check is what makes this safe to consult at all. This
+    /// runner is constructed with an explicit `EnvironmentStore`, and an ambient
+    /// process variable must never override an injected dependency: under
+    /// `swift test` the developer's own shell exports `CLAUDE_CONFIG_DIR`
+    /// pointing at their real `~/.orrery` account, which has a `metadata.json`
+    /// and so passed the old check — every test then installed into, and
+    /// patched the `settings.json` of, that real account. It also tightens
+    /// production behaviour: a `CLAUDE_CONFIG_DIR` the user set for their own
+    /// reasons is not an orrery account and must not be written to.
+    ///
+    /// `fileExists` is injected so the containment rules are testable without
+    /// touching the filesystem.
+    static func activeAccountDir(
+        configDir: String?,
+        storeHome: URL,
+        fileExists: (String) -> Bool
+    ) -> URL? {
+        guard let configDir, !configDir.isEmpty else { return nil }
+
+        // Standardize both sides so `..` cannot escape the home and so the
+        // comparison is not defeated by trailing slashes.
+        let dir = URL(fileURLWithPath: configDir).standardizedFileURL
+        let home = storeHome.standardizedFileURL
+
+        // Compare path components, not string prefixes: "/a/home-other" has
+        // "/a/home" as a string prefix but is a different directory.
+        let dirParts = dir.pathComponents
+        let homeParts = home.pathComponents
+        guard dirParts.count >= homeParts.count,
+              Array(dirParts.prefix(homeParts.count)) == homeParts else { return nil }
+
+        guard fileExists(dir.appendingPathComponent("metadata.json").path) else { return nil }
+        return dir
     }
 
     /// The workspace name the target account is pinned to (account
