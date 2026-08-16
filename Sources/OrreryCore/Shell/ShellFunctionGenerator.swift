@@ -91,6 +91,14 @@ public struct ShellFunctionGenerator {
                 # Supervision now lives in the claude() shim, so bare `claude`
                 # gets it too. This branch stays as an equivalent alias.
                 shift
+                # Strip claude IPC env vars defensively: if `orrery run claude` is
+                # ever invoked from inside another claude, these would leak in and
+                # make the child claude hang waiting for an MCP host. Bare `claude`
+                # never stripped these — this is `run claude`-specific, and it also
+                # means the claude() shim's own CLAUDECODE no-supervise guard won't
+                # fire here, so a nested `orrery run claude` gets supervised (same
+                # as the old dedicated loop did in this exact situation).
+                unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH
                 claude "$@"
               else
                 # Single-shot path: hand off to Swift's `orrery-bin run`, which
