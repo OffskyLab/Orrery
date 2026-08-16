@@ -7,21 +7,25 @@ import Foundation
 /// purpose: the shell integration is written into the user's rc file and only
 /// changes when they re-run `orrery setup`, so anything likely to need
 /// updating — like the subcommand list below — belongs behind the binary.
+///
+/// Only the FIRST argument is examined for a subcommand. An earlier design
+/// walked the whole argv, skipping each flag's value via a whitelist of
+/// value-taking flags; that whitelist has to track another tool's CLI across
+/// versions (the real `claude` has 29 such flags, several with two accepted
+/// spellings) and was wrong the moment it was written. Checking `args.first`
+/// needs no such knowledge, and `claude`'s own subcommands are always the
+/// first argument.
+///
+/// Erring toward "supervise" is cheap: the supervisor loop asks
+/// `_phantom-next` whether to continue, and with no sentinel written that
+/// answers no, so a wrongly-supervised one-shot command runs exactly once and
+/// costs a single registry entry that is immediately removed.
 public enum PhantomLaunchPolicy {
 
-    /// `claude` subcommands that do not start a conversation. Supervising one
-    /// would relaunch a utility command in a loop.
+    /// `claude` subcommands that do not start a conversation.
     public static let nonSessionSubcommands: Set<String> = [
         "mcp", "update", "doctor", "config", "install",
         "plugin", "setup-token", "migrate-installer",
-    ]
-
-    /// Flags that take a value, so the token after them must not be read as a
-    /// subcommand.
-    private static let valueTakingFlags: Set<String> = [
-        "--model", "--resume", "-r", "--settings", "--add-dir",
-        "--allowed-tools", "--disallowed-tools", "--permission-mode",
-        "--append-system-prompt", "--mcp-config", "--session-id",
     ]
 
     public static func shouldSupervise(
@@ -32,31 +36,19 @@ public enum PhantomLaunchPolicy {
         // A supervisor loop only makes sense around an interactive TUI.
         guard stdinIsTTY, stdoutIsTTY else { return false }
 
-        // One-shot print mode exits immediately; relaunching it would loop.
+        // One-shot print mode exits immediately on its own.
+        //
+        // This matches the token anywhere rather than only in flag position.
+        // A value that happens to equal "-p" would therefore suppress
+        // supervision — the harmless direction, since the user simply gets an
+        // unsupervised claude, and avoiding it would require reintroducing the
+        // value-taking-flag whitelist this design deliberately removed.
         if args.contains("-p") || args.contains("--print") { return false }
 
-        if let sub = firstPositional(args), nonSessionSubcommands.contains(sub) {
+        if let first = args.first, nonSessionSubcommands.contains(first) {
             return false
         }
 
         return true
-    }
-
-    /// The first token that is neither a flag nor a flag's value.
-    private static func firstPositional(_ args: [String]) -> String? {
-        var index = 0
-        while index < args.count {
-            let arg = args[index]
-            if valueTakingFlags.contains(arg) {
-                index += 2
-                continue
-            }
-            if arg.hasPrefix("-") {
-                index += 1
-                continue
-            }
-            return arg
-        }
-        return nil
     }
 }

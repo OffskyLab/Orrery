@@ -40,9 +40,12 @@ struct PhantomLaunchPolicyTests {
         }
     }
 
-    @Test("a subcommand behind a global flag is still detected")
-    func subcommandAfterFlag() {
-        #expect(!decide(["--debug", "mcp", "list"]))
+    @Test("a subcommand behind a global flag is supervised — first-arg-only is deliberate")
+    func subcommandAfterFlagIsSupervised() {
+        // Not the behaviour a whitelist scanner would give, and that is fine:
+        // erring toward supervising costs one registry entry, because the loop
+        // exits on the first _phantom-next with no sentinel.
+        #expect(decide(["--debug", "mcp", "list"]))
     }
 
     @Test("a flag's value is not mistaken for a subcommand")
@@ -61,5 +64,16 @@ struct PhantomLaunchPolicyTests {
     func redirectedStdout() {
         #expect(!PhantomLaunchPolicy.shouldSupervise(
             args: [], stdinIsTTY: true, stdoutIsTTY: false))
+    }
+
+    @Test("a subcommand's own arguments do not change the decision")
+    func subcommandWithArguments() {
+        #expect(!decide(["mcp", "list"]))
+        #expect(!decide(["config", "get", "theme"]))
+    }
+
+    @Test("a value-taking flag with no value does not crash the scan")
+    func truncatedFlag() {
+        #expect(decide(["--model"]))
     }
 }
