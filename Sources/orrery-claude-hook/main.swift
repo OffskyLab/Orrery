@@ -17,10 +17,22 @@ import OrreryCore
 // there's no feedback channel back to claude — this is entirely
 // best-effort, silent, and always exits 0.
 
-// Drain stdin (the hook's JSON payload) even though it's unused, so claude
-// never blocks writing to a pipe nobody's reading — same deadlock hazard
-// noted in ClaudeKeychain.findPassword's Keychain pipe handling.
-_ = FileHandle.standardInput.readDataToEndOfFile()
+// Drain stdin (the hook's JSON payload) unconditionally, so claude never
+// blocks writing to a pipe nobody's reading — same deadlock hazard noted in
+// ClaudeKeychain.findPassword's Keychain pipe handling. This applies to every
+// mode this binary runs in, including --session-event below.
+let stdinData = FileHandle.standardInput.readDataToEndOfFile()
+
+// SessionStart/SessionEnd mode: record claude's own session id in the
+// phantom registry instead of leaving it to the mtime-scanning probe. See
+// ClaudeSessionHookInstaller's doc comment for why.
+if CommandLine.arguments.contains("--session-event") {
+    ClaudeSessionHook.apply(
+        payload: stdinData,
+        phantomId: ProcessInfo.processInfo.environment["ORRERY_PHANTOM_ID"],
+        registry: PhantomRegistry(homeURL: EnvironmentStore.default.homeURL))
+    exit(0)
+}
 
 func accountDirArgument() -> String? {
     let args = CommandLine.arguments
