@@ -256,6 +256,21 @@ struct PhantomTriggerTests {
                          comms: [10: "zsh", 11: "claude-helper", 12: "claude"]) == 12)
     }
 
+    @Test("a busy claude with several of its own children still resolves via the first-level fallback")
+    func downwardBusyClaudeWithChildrenStillResolves() {
+        // Real-world case: claude's own comm is a version string (e.g.
+        // "2.1.228"), so isClaudeComm never matches it, and while claude is
+        // busy it spawns its own children (MCP servers, tool subprocesses) —
+        // branching one level below the supervisor's unique direct child.
+        // That deeper branching must not erase the fallback: the
+        // supervisor's own child is still the right answer regardless of
+        // what its own children look like.
+        #expect(downward(
+            supervisor: 10,
+            children: [10: [11], 11: [12, 13, 14]],
+            comms: [10: "zsh", 11: "2.1.228", 12: "worker", 13: "worker", 14: "worker"]) == 11)
+    }
+
     @Test("an ambiguous tree with no claude-named process returns nil rather than guessing")
     func downwardRefusesToGuessWhenAmbiguous() {
         // Two unnamed branches: any pid we picked here would be a guess, and
