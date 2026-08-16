@@ -2646,5 +2646,6 @@
     "parameters": [
       { "label": "_", "name": "count", "type": "Int" }
     ]
-  }
+  },
+  { "path": ["Show", "supervisedHeader"], "kind": "var", "parameters": [] }
 ]

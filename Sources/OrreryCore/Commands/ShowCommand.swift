@@ -57,6 +57,27 @@ public struct ShowCommand: ParsableCommand {
                 print(L10n.Account.showRowUnpinned(tool.rawValue))
             }
         }
+
+        let registry = PhantomRegistry(homeURL: envStore.homeURL)
+        for line in Self.supervisedSessionLines(
+            entries: registry.liveEntries(isAlive: ProcessLiveness.isAlive)) {
+            print(line)
+        }
+    }
+
+    /// Rendered lines for the live supervised sessions, or an empty array when
+    /// there are none — `orrery show` stays unchanged for anyone not using
+    /// phantom.
+    static func supervisedSessionLines(
+        entries: [(id: String, entry: PhantomEntry)]
+    ) -> [String] {
+        guard !entries.isEmpty else { return [] }
+        var lines = [L10n.Show.supervisedHeader]
+        for (_, e) in entries {
+            let session = e.sessionId.map { String($0.prefix(8)) } ?? "-"
+            lines.append("  \(e.tool)  \(e.account ?? "-")  \(e.cwd)  \(session)")
+        }
+        return lines
     }
 
     private func printDetails(
