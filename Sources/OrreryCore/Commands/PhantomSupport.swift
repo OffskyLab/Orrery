@@ -47,10 +47,6 @@ public enum PhantomSupport {
 
     // MARK: - Sentinel
 
-    public static func sentinelURL(store: EnvironmentStore) -> URL {
-        store.homeURL.appendingPathComponent(".phantom-sentinel")
-    }
-
     /// Sentinel format is shell-sourceable so the supervisor loop can simply
     /// `. "$sentinel"` to read it. Single-quoted values guard against names
     /// containing shell metacharacters (account names are validated
@@ -58,35 +54,56 @@ public enum PhantomSupport {
     ///
     /// `SESSION_ID` is always emitted (empty string when nil); the account
     /// fields are only emitted when non-nil.
-    static func writeSentinel(
+    ///
+    /// The destination is passed in rather than derived: sentinels live inside
+    /// a supervisor's own registry directory, because a single shared path let
+    /// concurrent sessions read each other's switch requests.
+    public static func writeSentinel(
         targetAccountTool: String?,
         targetAccountName: String?,
         sessionId: String?,
-        store: EnvironmentStore
+        to url: URL
     ) throws {
-        let url = Self.sentinelURL(store: store)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         var lines: [String] = []
         if let targetAccountTool {
-            lines.append("TARGET_ACCOUNT_TOOL='\(shellEscape(targetAccountTool))'")
+            lines.append("TARGET_ACCOUNT_TOOL=\(ShellQuote.single(targetAccountTool))")
         }
         if let targetAccountName {
-            lines.append("TARGET_ACCOUNT_NAME='\(shellEscape(targetAccountName))'")
+            lines.append("TARGET_ACCOUNT_NAME=\(ShellQuote.single(targetAccountName))")
         }
-        if let sessionId {
-            lines.append("SESSION_ID='\(shellEscape(sessionId))'")
-        } else {
-            lines.append("SESSION_ID=''")
-        }
+        lines.append("SESSION_ID=\(ShellQuote.single(sessionId ?? ""))")
         let content = lines.joined(separator: "\n") + "\n"
         try content.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    private static func shellEscape(_ s: String) -> String {
-        s.replacingOccurrences(of: "'", with: "'\\''")
+    /// Parse a sentinel written by `writeSentinel`. Returns nil when the file
+    /// is absent or unreadable. An empty `SESSION_ID` reads back as nil so
+    /// callers never have to special-case the empty string.
+    public static func readSentinel(
+        at url: URL
+    ) -> (tool: String?, name: String?, sessionId: String?)? {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        var values: [String: String] = [:]
+        for line in text.split(separator: "\n") {
+            guard let eq = line.firstIndex(of: "=") else { continue }
+            let key = String(line[line.startIndex..<eq])
+            var value = String(line[line.index(after: eq)...])
+            if value.hasPrefix("'") && value.hasSuffix("'") && value.count >= 2 {
+                value = String(value.dropFirst().dropLast())
+                value = value.replacingOccurrences(of: #"'\''"#, with: "'")
+            }
+            values[key] = value
+        }
+        let session = values["SESSION_ID"]
+        return (
+            tool: values["TARGET_ACCOUNT_TOOL"],
+            name: values["TARGET_ACCOUNT_NAME"],
+            sessionId: (session?.isEmpty ?? true) ? nil : session
+        )
     }
 
     // MARK: - Session id discovery
