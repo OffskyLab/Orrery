@@ -298,46 +298,50 @@ public enum PhantomSupport {
     /// no search. Out-of-band callers have no such ancestry — they only know
     /// the supervisor pid from the registry — so they descend instead.
     ///
-    /// The supervisor's loop runs claude in the foreground, so at any moment
-    /// there is one relevant subtree. We prefer a process whose comm names
-    /// claude (keeping the right target when a wrapper such as `caffeinate`
-    /// sits in between) and otherwise fall back to the deepest single
-    /// descendant, because Claude Code frequently reports its comm as a bare
-    /// version string like "2.1.201".
+    /// The supervisor's loop runs claude (or a wrapper directly above it, e.g.
+    /// `caffeinate`) as its one foreground child, so that child's pid is
+    /// trustworthy on its own: killing it cascades down through any wrapper
+    /// layers to whatever is actually running underneath, regardless of what
+    /// THAT process's own children look like. We still prefer a process whose
+    /// comm names claude — that's what lets us return the actual claude pid
+    /// rather than the wrapper sitting above it — but Claude Code itself
+    /// reports its comm as a bare version string (e.g. "2.1.228"), so
+    /// `isClaudeComm` can never match it directly, and while claude is busy it
+    /// spawns its own children (MCP servers, tool subprocesses) — so the
+    /// level below the supervisor's direct child branches constantly. That
+    /// deeper branching must NOT invalidate the fallback: we are not choosing
+    /// among the supervisor's own children there, we already know which one
+    /// to signal.
+    ///
+    /// Ambiguity only matters at the FIRST level. If the supervisor itself
+    /// has zero or several direct children, there is nothing to fall back to
+    /// — picking one there really would be a guess, and the guess gets
+    /// signalled, so a wrong one kills an unrelated process. A comm that
+    /// names claude still wins immediately at any depth, first level or
+    /// below.
     static func resolveClaudePidDownward(
         supervisorPid: Int32,
         maxDepth: Int = 8,
         children: (Int32) -> [Int32],
         lookup: (Int32) -> (ppid: Int32, comm: String)?
     ) -> Int32? {
-        var frontier = children(supervisorPid)
-        var depth = 0
-        // The returned pid gets signalled, so a wrong guess kills an unrelated
-        // process rather than merely failing. Only trust the single-descendant
-        // fallback while every level walked has had exactly one child; once the
-        // tree branches, refuse to guess and let the caller report that claude
-        // could not be found.
-        var unambiguous = frontier.count == 1
-        var fallback: Int32? = unambiguous ? frontier.first : nil
+        let firstLevel = children(supervisorPid)
+        // Fixed once, from the first level only — see doc comment above for
+        // why deeper branching must not touch this.
+        let fallback: Int32? = firstLevel.count == 1 ? firstLevel.first : nil
 
+        var frontier = firstLevel
+        var depth = 0
         while !frontier.isEmpty, depth < maxDepth {
             for pid in frontier {
                 if let info = lookup(pid), isClaudeComm(info.comm) {
                     return pid
                 }
             }
-            let next = frontier.flatMap { children($0) }
-            if next.isEmpty { break }
-            if next.count > 1 {
-                unambiguous = false
-                fallback = nil
-            } else if unambiguous {
-                fallback = next.first
-            }
-            frontier = next
+            frontier = frontier.flatMap { children($0) }
             depth += 1
         }
-        return unambiguous ? fallback : nil
+        return fallback
     }
 
     /// Direct children of `pid`, via a full process-table snapshot.
