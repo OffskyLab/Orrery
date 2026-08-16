@@ -82,12 +82,22 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
 
         switch selection {
         case .none:
+            // An explicit --session that matched nothing gets its own message
+            // — "no supervised session at all" is misleading when sessions
+            // ARE running and the selector was simply wrong.
+            if let session {
+                throw ValidationError(L10n.Phantom.sessionNotFound(session))
+            }
             throw ValidationError(L10n.Phantom.notUnderPhantom)
 
         case .ambiguous(let candidates):
             var lines = [L10n.Phantom.ambiguousHeader]
             for (i, c) in candidates.enumerated() {
-                lines.append("  \(i + 1)) \(c.entry.tool)  \(c.entry.account ?? "-")"
+                // The id is shown so `--session <number|id>` (per
+                // ambiguousHint) is actually usable — a number alone only
+                // resolves within THIS list, but an id names the session
+                // directly regardless of cwd.
+                lines.append("  \(i + 1)) \(c.id)  \(c.entry.tool)  \(c.entry.account ?? "-")"
                     + "  \(c.entry.cwd)  \(c.entry.sessionId?.prefix(8) ?? "-")")
             }
             lines.append(L10n.Phantom.ambiguousHint)
@@ -97,17 +107,27 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
             guard let claudePid = Self.findTarget(entry: entry, env: env) else {
                 throw ValidationError(L10n.Phantom.claudeNotFound)
             }
+            // Only probe locally when we're in-chain for THIS entry. Out of
+            // band, our own cwd/CLAUDE_CONFIG_DIR differ from the target
+            // session's, so a local probe would guess a session id belonging
+            // to a different conversation — worse than nil, because
+            // PhantomNextCommand.advance prefers a non-nil sentinel value
+            // over its own (correctly-scoped) probe.
+            let inChain = env["ORRERY_PHANTOM_ID"] == String(entry.supervisorPid)
             let sessionId = entry.sessionIdSource == .hook
                 ? entry.sessionId
-                : (entry.sessionId ?? PhantomSupport.findCurrentClaudeSessionId())
+                : (entry.sessionId ?? (inChain ? PhantomSupport.findCurrentClaudeSessionId() : nil))
             try PhantomSupport.writeSentinel(
                 targetAccountTool: tool.rawValue,
                 targetAccountName: name,
                 sessionId: sessionId,
                 to: registry.sentinelURL(id: id))
 
-            if let sid = entry.sessionId {
-                print(L10n.Phantom.switchingAccount(name, String(sid.prefix(8))))
+            // Report the same value the sentinel actually got — not
+            // entry.sessionId, which can differ (e.g. entry has none, but a
+            // local probe just resolved one to write).
+            if let sessionId {
+                print(L10n.Phantom.switchingAccount(name, String(sessionId.prefix(8))))
             } else {
                 print(L10n.Phantom.switchingAccountNoSession(name))
             }

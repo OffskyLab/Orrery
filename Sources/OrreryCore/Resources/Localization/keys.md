@@ -262,7 +262,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 
 | Key | Context |
 | --- | --- |
-| `phantom.accountTriggerAbstract` | Help text for `orrery phantom`. Shown in `--help` for the subcommand. |
+| `phantom.accountTriggerAbstract` | Help text for `orrery phantom`. Shown in `--help` for the subcommand. Mentions `--session` — the command can target any supervised session, not just the current one. |
 | `phantom.notUnderPhantom` | Error when no live registry entry can be found and there is no legacy fallback either. References `orrery setup` — keep literal. |
 | `phantom.claudeNotFound` | Error when the claude process can't be located in the process tree. |
 | `phantom.signalFailed` | Error when SIGTERM delivery fails. |
@@ -272,6 +272,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `phantom.ambiguousHeader` | First line of the error printed when more than one supervised session is live and none can be disambiguated by cwd. |
 | `phantom.ambiguousHint` | Last line of that same error, telling the user how to pick one with `--session`. |
 | `phantom.legacySupervisor` | Notice (stderr) printed when falling back to the pre-registry single global sentinel, because the shell integration predates `orrery setup`'s registry support. |
+| `phantom.sessionNotFound` | Error when an explicit `--session <number|id>` matches no live entry. `{selector}` = the raw value the user passed. Distinct from `phantom.notUnderPhantom`, which is only for "no sessions at all." |
 
 ## setup — `orrery setup` (shell integration install)
 
