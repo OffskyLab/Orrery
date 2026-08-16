@@ -292,6 +292,75 @@ struct PrepareClaudeLaunchCommandTests {
             #expect(notifications.count == 2, "different command → different hook-matcher signature → appended, not deduped")
         }
     }
+
+    @Test("patchSessionHook adds SessionStart and SessionEnd hooks, preserving existing settings")
+    func patchSessionHookAddsEntries() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+
+            // Pre-existing settings.json with an unrelated key and an
+            // existing Notification/auth_success hook — both must survive.
+            let settingsURL = acctDir.appendingPathComponent("settings.json")
+            let existing = """
+            {"theme":"dark","hooks":{"Notification":[{"matcher":"auth_success","hooks":[{"type":"command","command":"/usr/local/bin/orrery-claude-hook --account-dir \(acctDir.path)"}]}]}}
+            """
+            try existing.write(to: settingsURL, atomically: true, encoding: .utf8)
+
+            PrepareClaudeLaunchCommand.patchSessionHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+
+            let data = try Data(contentsOf: settingsURL)
+            let obj = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            #expect(obj["theme"] as? String == "dark") // untouched
+            let hooks = try #require(obj["hooks"] as? [String: Any])
+
+            let notifications = try #require(hooks["Notification"] as? [[String: Any]])
+            #expect(notifications.count == 1) // untouched
+
+            let sessionStart = try #require(hooks["SessionStart"] as? [[String: Any]])
+            let sessionStartInner = try #require(sessionStart.first?["hooks"] as? [[String: Any]])
+            #expect(sessionStartInner.first?["command"] as? String
+                == "/usr/local/bin/orrery-claude-hook --session-event")
+
+            let sessionEnd = try #require(hooks["SessionEnd"] as? [[String: Any]])
+            let sessionEndInner = try #require(sessionEnd.first?["hooks"] as? [[String: Any]])
+            #expect(sessionEndInner.first?["command"] as? String
+                == "/usr/local/bin/orrery-claude-hook --session-event")
+        }
+    }
+
+    @Test("patchSessionHook is idempotent — a second call doesn't duplicate the entries")
+    func patchSessionHookIdempotent() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let acct = Account(tool: .claude, displayName: "alice")
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+
+            PrepareClaudeLaunchCommand.patchSessionHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+            PrepareClaudeLaunchCommand.patchSessionHook(
+                accountDir: acctDir, hookBinaryPath: "/usr/local/bin/orrery-claude-hook"
+            )
+
+            let data = try Data(contentsOf: acctDir.appendingPathComponent("settings.json"))
+            let obj = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let hooks = try #require(obj["hooks"] as? [String: Any])
+            let sessionStart = try #require(hooks["SessionStart"] as? [[String: Any]])
+            let sessionEnd = try #require(hooks["SessionEnd"] as? [[String: Any]])
+            #expect(sessionStart.count == 1)
+            #expect(sessionEnd.count == 1)
+        }
+    }
     #endif
 }
 
