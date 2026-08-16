@@ -68,6 +68,24 @@ struct ClaudeSessionHookTests {
         #expect(try #require(registry.read(id: "4242")).sessionId == nil)
     }
 
+    @Test("a SessionEnd payload is ignored — SessionStart is the only trusted event")
+    func sessionEndIsIgnored() throws {
+        ClaudeSessionHook.apply(
+            payload: payload(#"{"hook_event_name":"SessionEnd","session_id":"real-1"}"#),
+            phantomId: "4242", registry: registry)
+
+        #expect(try #require(registry.read(id: "4242")).sessionId == nil)
+    }
+
+    @Test("a payload with no hook_event_name at all is ignored")
+    func missingHookEventNameIsIgnored() throws {
+        ClaudeSessionHook.apply(
+            payload: payload(#"{"session_id":"real-1"}"#),
+            phantomId: "4242", registry: registry)
+
+        #expect(try #require(registry.read(id: "4242")).sessionId == nil)
+    }
+
     @Test("installer adds SessionStart and SessionEnd hooks")
     func installerWrites() throws {
         let settings = tmpDir.appendingPathComponent("settings.json")

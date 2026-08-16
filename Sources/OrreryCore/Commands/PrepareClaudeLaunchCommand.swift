@@ -116,11 +116,7 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
         // settings.json IS read from the account dir even on origin, because
         // ~/.claude symlinks to it. Origin sessions need accurate session ids
         // just as much as pinned ones do.
-        if let hookBinaryPath = Self.resolvedHookBinaryPath() {
-            ClaudeSessionHookInstaller.install(
-                command: "\(hookBinaryPath) --session-event",
-                settingsURL: acctDirURL.appendingPathComponent("settings.json"))
-        }
+        ensureSessionHookInstalled(accountDir: acctDirURL)
         #endif
 
         // Launch only mirrors the workspace into the account: symlink any shared
@@ -156,6 +152,28 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
     static func patchAuthSuccessHook(accountDir: URL, hookBinaryPath: String) {
         ClaudeAuthSuccessHookInstaller.install(
             command: "\(hookBinaryPath) --account-dir \(accountDir.path)",
+            settingsURL: accountDir.appendingPathComponent("settings.json")
+        )
+    }
+
+    /// Patches `<accountDir>/settings.json` to add matcher-less `SessionStart`
+    /// and `SessionEnd` hooks, pointing at `orrery-claude-hook --session-event`
+    /// — see `ClaudeSessionHookInstaller`'s doc comment for what that hook
+    /// does and why `SessionEnd` is registered but not relied upon.
+    /// Idempotent and additive, same as `ensureAuthSuccessHookInstalled`
+    /// above. Best-effort: silently no-ops if the sibling `orrery-claude-hook`
+    /// binary can't be found or the file can't be read/written.
+    private func ensureSessionHookInstalled(accountDir: URL) {
+        guard let hookBinaryPath = Self.resolvedHookBinaryPath() else { return }
+        Self.patchSessionHook(accountDir: accountDir, hookBinaryPath: hookBinaryPath)
+    }
+
+    /// The actual patch, taking `hookBinaryPath` as a plain parameter so
+    /// tests can pin an arbitrary path instead of depending on where the
+    /// sibling `orrery-claude-hook` binary actually lives.
+    static func patchSessionHook(accountDir: URL, hookBinaryPath: String) {
+        ClaudeSessionHookInstaller.install(
+            command: "\(hookBinaryPath) --session-event",
             settingsURL: accountDir.appendingPathComponent("settings.json")
         )
     }

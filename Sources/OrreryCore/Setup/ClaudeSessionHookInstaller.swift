@@ -53,10 +53,31 @@ public enum ClaudeSessionHookInstaller {
 }
 
 /// The hook's payload handler, separated from the executable so it is testable.
+///
+/// Only reacts to `SessionStart`, even though the installer registers both
+/// `SessionStart` and `SessionEnd` (see `ClaudeSessionHookInstaller` above).
+/// `apply` does an unlocked read-modify-write on the registry entry, and
+/// `SessionEnd` fires as claude exits — exactly the window in which
+/// `_phantom-next`/`_phantom-end` are doing their own read-modify-write on
+/// the same entry (switching `account`, or removing the entry outright). A
+/// `SessionEnd`-triggered write built on a pre-switch read could revert the
+/// `account` field the supervisor just set, or — if it lands after
+/// `_phantom-end` has removed the directory — recreate it as a zombie.
+/// `SessionStart` fires at launch, far from that window, so restricting to
+/// it removes essentially the entire overlap; ignoring `SessionEnd` costs
+/// nothing since nothing depends on it (see the installer's doc comment).
+///
+/// This does not fully eliminate the race: two `SessionStart` hooks fired by
+/// two different claude processes racing on one entry could still
+/// interleave. That's accepted, not solved — no locking is added. A stale
+/// write from that narrow window self-heals on its own: `liveEntries` prunes
+/// any entry whose pid/start-time no longer matches, so a wrong value left
+/// behind by a dead session doesn't linger.
 public enum ClaudeSessionHook {
     public static func apply(payload: Data, phantomId: String?, registry: PhantomRegistry) {
         guard let phantomId,
               let obj = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+              obj["hook_event_name"] as? String == "SessionStart",
               let sessionId = obj["session_id"] as? String,
               !sessionId.isEmpty,
               var entry = registry.read(id: phantomId)
