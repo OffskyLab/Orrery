@@ -35,10 +35,18 @@ public struct PhantomBeginCommand: ParsableCommand {
     public func run() throws {
         let store = EnvironmentStore.default
 
+        // Judge interactivity from stderr, not stdout: the claude() shim
+        // invokes this command inside `$( )`, which replaces fd 1 with a
+        // pipe — isatty(1) would then be false on every real terminal
+        // launch, vetoing every supervised session unconditionally. Stderr
+        // is left attached to the controlling terminal by that same command
+        // substitution, so it is the only fd here that still reflects
+        // reality. Accepted trade: `claude 2>/dev/null` will not be
+        // supervised — the fail-safe direction.
         guard PhantomLaunchPolicy.shouldSupervise(
             args: args,
             stdinIsTTY: isatty(0) == 1,
-            stdoutIsTTY: isatty(1) == 1
+            outputIsTTY: isatty(2) == 1
         ) else {
             throw ExitCode.failure
         }

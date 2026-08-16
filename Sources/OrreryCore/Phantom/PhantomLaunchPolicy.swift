@@ -31,10 +31,10 @@ public enum PhantomLaunchPolicy {
     public static func shouldSupervise(
         args: [String],
         stdinIsTTY: Bool,
-        stdoutIsTTY: Bool
+        outputIsTTY: Bool
     ) -> Bool {
         // A supervisor loop only makes sense around an interactive TUI.
-        guard stdinIsTTY, stdoutIsTTY else { return false }
+        guard stdinIsTTY, outputIsTTY else { return false }
 
         // One-shot print mode exits immediately on its own.
         //
