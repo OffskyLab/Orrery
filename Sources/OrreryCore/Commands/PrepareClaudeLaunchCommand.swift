@@ -110,6 +110,19 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
             #endif
         }
 
+        #if os(macOS)
+        // Outside the !linksOnly guard on purpose: unlike .claude.json (which
+        // bare origin launches read from ~/.claude.json, not the account dir),
+        // settings.json IS read from the account dir even on origin, because
+        // ~/.claude symlinks to it. Origin sessions need accurate session ids
+        // just as much as pinned ones do.
+        if let hookBinaryPath = Self.resolvedHookBinaryPath() {
+            ClaudeSessionHookInstaller.install(
+                command: "\(hookBinaryPath) --session-event",
+                settingsURL: acctDirURL.appendingPathComponent("settings.json"))
+        }
+        #endif
+
         // Launch only mirrors the workspace into the account: symlink any shared
         // dir the account is missing. It never moves/merges account dirs into the
         // workspace — that account→workspace seeding happens once at pin time
