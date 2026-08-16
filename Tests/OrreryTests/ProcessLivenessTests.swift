@@ -30,7 +30,7 @@ struct ProcessLivenessTests {
 
     @Test("start time of a nonexistent pid is nil")
     func missingPid() {
-        // pid 0 is the kernel/swapper; KERN_PROC_PID lookup for it yields no
+        // -1 is not a valid pid; KERN_PROC_PID lookup for it yields no
         // usable kinfo_proc for our purposes.
         #expect(ProcessLiveness.startTime(pid: -1) == nil)
     }
@@ -38,5 +38,13 @@ struct ProcessLivenessTests {
     @Test("nonexistent pid is not alive")
     func missingPidNotAlive() {
         #expect(!ProcessLiveness.isAlive(pid: -1, startedAt: 1.0))
+    }
+
+    @Test("isAlive can be passed directly as PhantomRegistry's liveEntries closure")
+    func isAliveMatchesRegistryClosureType() {
+        // Task 1's PhantomRegistry.liveEntries takes exactly (Int32, Double) -> Bool.
+        // A defaulted extra parameter would silently break this conversion.
+        let closure: (Int32, Double) -> Bool = ProcessLiveness.isAlive
+        #expect(!closure(-1, 1.0))
     }
 }
