@@ -18,10 +18,10 @@ struct PhantomTriggerTests {
 
     @Test("sentinel is shell-sourceable with target account and session id")
     func sentinelRoundTrip() throws {
+        let url = tmpDir.appendingPathComponent("sentinel")
         try PhantomSupport.writeSentinel(
             targetAccountTool: "claude", targetAccountName: "work",
-            sessionId: "abc123-def", store: store)
-        let url = PhantomSupport.sentinelURL(store: store)
+            sessionId: "abc123-def", to: url)
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains("TARGET_ACCOUNT_TOOL='claude'"))
         #expect(text.contains("TARGET_ACCOUNT_NAME='work'"))
@@ -33,10 +33,11 @@ struct PhantomTriggerTests {
 
     @Test("sentinel handles nil session id (fresh conversation)")
     func sentinelNoSession() throws {
+        let url = tmpDir.appendingPathComponent("sentinel")
         try PhantomSupport.writeSentinel(
             targetAccountTool: "claude", targetAccountName: "personal",
-            sessionId: nil, store: store)
-        let text = try String(contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
+            sessionId: nil, to: url)
+        let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains("TARGET_ACCOUNT_NAME='personal'"))
         #expect(text.contains("SESSION_ID=''"))
     }
@@ -46,10 +47,11 @@ struct PhantomTriggerTests {
         // Account names with quotes should never reach the sentinel (they're
         // rejected upstream), but test the shell escaping anyway because this
         // is the IPC trust boundary.
+        let url = tmpDir.appendingPathComponent("sentinel")
         try PhantomSupport.writeSentinel(
             targetAccountTool: "claude", targetAccountName: "weird'name",
-            sessionId: nil, store: store)
-        let text = try String(contentsOf: PhantomSupport.sentinelURL(store: store), encoding: .utf8)
+            sessionId: nil, to: url)
+        let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains(#"TARGET_ACCOUNT_NAME='weird'\''name'"#))
     }
 

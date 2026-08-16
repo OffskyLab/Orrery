@@ -68,11 +68,17 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         // would make that sync-back copy the old claude's live token into the
         // NEW account's pool entry.
         let sessionId = PhantomSupport.findCurrentClaudeSessionId()
+        // TODO(Task 8): this stopgap keys the sentinel by the supervisor's own
+        // pid, which happens to be unique per-supervisor already — Task 8
+        // rewrites this command to address entries via PhantomRegistry
+        // properly (meta.json, liveness pruning, etc).
+        let sentinelURL = PhantomRegistry(homeURL: store.homeURL)
+            .sentinelURL(id: supervisorPidStr)
         try PhantomSupport.writeSentinel(
             targetAccountTool: tool.rawValue,
             targetAccountName: name,
             sessionId: sessionId,
-            store: store
+            to: sentinelURL
         )
 
         if let sessionId {
@@ -85,7 +91,7 @@ public struct PhantomAccountTriggerCommand: ParsableCommand {
         if kill(claudePid, SIGTERM) != 0 {
             // Signal failed (race with claude exiting) — pull the sentinel back
             // so it doesn't fire on the next manual claude launch.
-            try? FileManager.default.removeItem(at: PhantomSupport.sentinelURL(store: store))
+            try? FileManager.default.removeItem(at: sentinelURL)
             throw ValidationError(L10n.Phantom.signalFailed)
         }
     }
