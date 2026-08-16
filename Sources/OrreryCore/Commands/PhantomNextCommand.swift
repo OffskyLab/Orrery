@@ -75,10 +75,18 @@ public struct PhantomNextCommand: ParsableCommand {
         // re-fire on every subsequent iteration.
         try? FileManager.default.removeItem(at: sentinelURL)
 
+        // `switchedAccountName` is the single source of truth for whether the
+        // switch actually took effect — it drives BOTH the export line and
+        // the entry update below, so the two can never drift apart (e.g. the
+        // entry claiming a switch that never got an export line, which would
+        // mislead a user picking a session by its recorded account in Task
+        // 8's supervisor list).
         var lines: [String] = []
+        var switchedAccountName: String?
         if let tool = sentinel.tool, let name = sentinel.name {
             if let dirPath = resolveAccountDir(tool, name), let varName = Self.exportVarName(forTool: tool) {
                 lines.append(Self.exportLine(varName: varName, dirPath: dirPath))
+                switchedAccountName = name
             } else {
                 let warning = "orrery: phantom: could not resolve the account dir for "
                     + "\(tool) '\(name)'; continuing on the current account\n"
@@ -98,7 +106,7 @@ public struct PhantomNextCommand: ParsableCommand {
         }
 
         if var e = entry {
-            if let name = sentinel.name { e.account = name }
+            if let switchedAccountName { e.account = switchedAccountName }
             e.sessionId = sessionId
             e.updatedAt = Date().timeIntervalSince1970
             try? registry.write(e, id: id)

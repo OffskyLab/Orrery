@@ -123,6 +123,29 @@ struct PhantomNextCommandTests {
         #expect(!(result?.contains("export") ?? true))
     }
 
+    @Test("a failed resolve leaves the entry's account unchanged, but still updates the session")
+    func nilResolveDoesNotStampTheEntry() throws {
+        // Fixture entry from init() starts at account "old" — the sentinel
+        // targets "work", but resolveAccountDir fails (account missing, or
+        // not in v3.1 layout), so the switch never actually took effect.
+        try PhantomSupport.writeSentinel(
+            targetAccountTool: "claude", targetAccountName: "work",
+            sessionId: nil, to: registry.sentinelURL(id: "4242"))
+
+        let result = try PhantomNextCommand.advance(
+            id: "4242", registry: registry,
+            resolveAccountDir: { _, _ in nil },
+            resolveSessionId: { "sess-new" })
+
+        #expect(!(result?.contains("export") ?? true))
+
+        let entry = try #require(registry.read(id: "4242"))
+        // The registry must not claim a switch that never happened.
+        #expect(entry.account == "old")
+        // The session still has to survive even though the switch didn't.
+        #expect(entry.sessionId == "sess-new")
+    }
+
     @Test("a resolved dir containing a quote stays valid for eval")
     func quotedDirPath() throws {
         try PhantomSupport.writeSentinel(
