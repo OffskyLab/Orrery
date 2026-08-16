@@ -323,10 +323,14 @@
   "thirdparty.listItem": "  {id}  {shortRef}  安裝於 {date}",
   "thirdparty.availableAbstract": "列出 orrery 內建支援的第三方外掛",
   "phantom.accountTriggerAbstract": "在目前的 phantom session 中切換工具的帳號。",
-  "phantom.notUnderPhantom": "目前不是在 phantom 監督下執行。請改用 'orrery run claude'（預設啟用 phantom）啟動 claude 才能就地切換 account/sandbox。",
+  "phantom.notUnderPhantom": "找不到受監督中的 session。請正常啟動 claude（預設會啟用 phantom）；如果你剛更新 orrery，請執行 'orrery setup' 來更新 shell 整合。",
   "phantom.claudeNotFound": "找不到 phantom 監督下的 claude 進程。",
   "phantom.signalFailed": "通知 claude 結束失敗，已取消重啟。",
   "phantom.switchingAccount": "切換到帳號「{account}」，將以 session {session} 接續對話…",
   "phantom.switchingAccountNoSession": "切換到帳號「{account}」（找不到可接續的 session — 將開新對話）…",
+  "phantom.sessionSelectorHelp": "當有多個 session 同時在執行時，指定要切換哪一個受監督的 session（索引或 id）。",
+  "phantom.ambiguousHeader": "目前有多個受監督的 session 正在執行：",
+  "phantom.ambiguousHint": "請加上 --session <編號|id> 重新執行以指定其中一個。",
+  "phantom.legacySupervisor": "orrery：這個 session 使用的是較舊版的 shell 整合，請執行 'orrery setup' 以啟用跨終端機切換。",
   "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n"
 }
