@@ -28,8 +28,15 @@ struct PhantomShowTests {
         #expect(joined.contains("claude"))
         #expect(joined.contains("work"))
         #expect(joined.contains("/tmp/p"))
-        #expect(joined.contains("abcdef01"))
-        #expect(!joined.contains("abcdef0123456789"))  // truncated to 8
+        // Must be truncated to EXACTLY 8 characters — a `contains` check on
+        // the 8-char prefix alone would still pass for prefix(9), prefix(10),
+        // etc., since those all contain "abcdef01" as a substring. Split on
+        // whitespace and require the truncated id to appear as its own
+        // field, not merely as a substring of something longer.
+        let fields = joined.split(whereSeparator: { $0 == " " || $0 == "\n" })
+        #expect(fields.contains("abcdef01"))
+        #expect(!fields.contains("abcdef012"))
+        #expect(!joined.contains("abcdef0123456789"))
     }
 
     @Test("a session with no account or session id renders placeholders")
@@ -37,7 +44,13 @@ struct PhantomShowTests {
         let lines = ShowCommand.supervisedSessionLines(entries: [
             ("10", entry(pid: 10, account: nil, cwd: "/tmp/p", session: nil)),
         ])
-        #expect(lines.joined().contains("-"))
+        // Two placeholders are expected on the entry line: one for the
+        // missing account, one for the missing session id. A regression
+        // where only one branch renders "-" (the other rendering "" or
+        // "nil") must fail this, so count occurrences rather than just
+        // checking presence.
+        let fields = lines.joined(separator: "\n").split(whereSeparator: { $0 == " " || $0 == "\n" })
+        #expect(fields.filter { $0 == "-" }.count == 2)
     }
 
     @Test("multiple sessions each get a line")

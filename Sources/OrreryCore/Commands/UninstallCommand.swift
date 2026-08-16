@@ -86,7 +86,7 @@ public struct UninstallCommand: ParsableCommand {
         // 6. Remove the supervised-session registry: entries are per-process
         //    and meaningless once the shell integration is gone.
         try? FileManager.default.removeItem(
-            at: EnvironmentStore.default.homeURL.appendingPathComponent("phantom"))
+            at: store.homeURL.appendingPathComponent("phantom"))
 
         print(L10n.Uninstall.done)
     }
