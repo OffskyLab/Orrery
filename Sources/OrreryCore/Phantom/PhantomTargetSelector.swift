@@ -27,14 +27,26 @@ public enum PhantomTargetSelector {
     ) -> Selection {
         guard !entries.isEmpty else { return .none }
 
+        let sameCwd = entries.filter { $0.entry.cwd == cwd }
+        // The candidate set is whatever the `.ambiguous` branch below would
+        // show for this cwd: the cwd-scoped subset when it's non-empty,
+        // otherwise every live entry. A numeric `--session` index has to
+        // resolve against THIS set, not the raw registry list — otherwise
+        // the number printed on screen (1, 2, …) can point at a different
+        // entry than the one actually signalled whenever the cwd-scoped
+        // subset is smaller than `entries`.
+        let candidates = sameCwd.isEmpty ? entries : sameCwd
+
         // An explicit selector is either a registry id or a 1-based index into
         // the candidate list the user was just shown.
         if let explicit {
+            // An id can name any live session, in or out of this cwd — it
+            // isn't scoped to what would have been displayed.
             if let hit = entries.first(where: { $0.id == explicit }) {
                 return .selected(id: hit.id, entry: hit.entry)
             }
-            if let n = Int(explicit), n >= 1, n <= entries.count {
-                let hit = entries[n - 1]
+            if let n = Int(explicit), n >= 1, n <= candidates.count {
+                let hit = candidates[n - 1]
                 return .selected(id: hit.id, entry: hit.entry)
             }
             return .none
@@ -45,13 +57,9 @@ public enum PhantomTargetSelector {
             return .selected(id: hit.id, entry: hit.entry)
         }
 
-        let sameCwd = entries.filter { $0.entry.cwd == cwd }
         if sameCwd.count == 1 {
             return .selected(id: sameCwd[0].id, entry: sameCwd[0].entry)
         }
-        if sameCwd.count > 1 {
-            return .ambiguous(sameCwd.map { Candidate(id: $0.id, entry: $0.entry) })
-        }
-        return .ambiguous(entries.map { Candidate(id: $0.id, entry: $0.entry) })
+        return .ambiguous(candidates.map { Candidate(id: $0.id, entry: $0.entry) })
     }
 }
