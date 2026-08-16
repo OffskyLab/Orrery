@@ -79,7 +79,12 @@ public struct ShellFunctionGenerator {
               # the first element via "$1" — bash and zsh disagree on whether
               # ${arr[0]} or ${arr[1]} is the first element (zsh is 1-indexed
               # by default), but $1 means the same thing in both.
-              set -- "${_run_args[@]}"
+              #
+              # ${_run_args[@]+"${_run_args[@]}"} rather than "${_run_args[@]}":
+              # bash 3.2 (the macOS system bash) treats expanding an empty
+              # array under `set -u` as an unbound variable and aborts —
+              # reachable via plain `orrery run` with no command at all.
+              set -- ${_run_args[@]+"${_run_args[@]}"}
 
               # Phantom mode only applies to `claude` — other commands have no
               # session-resume semantics so a supervisor loop adds no value.
@@ -292,10 +297,21 @@ public struct ShellFunctionGenerator {
 
           local _args=("$@")
           local _rc=0
+          local _next
           while true; do
-            _orrery_claude_launch "${_args[@]}"
+            # ${_args[@]+"${_args[@]}"} rather than "${_args[@]}": bash 3.2
+            # (the macOS system bash, and the only one many users ever have)
+            # treats expanding an empty array under `set -u` as an unbound
+            # variable and aborts the function — this is reachable any time
+            # `_phantom-next` emits a bare `set --` (no --resume id).
+            _orrery_claude_launch ${_args[@]+"${_args[@]}"}
             _rc=$?
-            local _next
+            # `_next` is declared once, above the loop, not re-declared here:
+            # in zsh, `local` naming a variable already local in the SAME
+            # scope is a listing request, not a declaration, and prints the
+            # variable's current value — so a `local _next` inside the loop
+            # body would spray shell-quoted internals onto the user's
+            # terminal on every iteration after the first.
             _next=$(command orrery-bin _phantom-next --id "$ORRERY_PHANTOM_ID") || break
             eval "$_next"
             _args=("$@")

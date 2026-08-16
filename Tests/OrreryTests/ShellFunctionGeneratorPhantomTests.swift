@@ -43,9 +43,26 @@ struct ShellFunctionGeneratorPhantomTests {
         #expect(!script.contains("_phantom_sentinel"))
     }
 
+    /// The text of the `run)` case only, not the whole script — an unscoped
+    /// `script.contains("claude \"$@\"")` is also satisfied by the three
+    /// `command claude "$@"` occurrences inside `_orrery_claude_launch`, so
+    /// it can't fail even if the `run)` delegation itself were deleted.
+    private func runCaseBody() -> Substring? {
+        guard let runCaseStart = script.range(of: "\n    run)") else {
+            Issue.record("run) case not found")
+            return nil
+        }
+        guard let runCaseEnd = script.range(of: "\n    add)", range: runCaseStart.upperBound..<script.endIndex) else {
+            Issue.record("add) case not found after run)")
+            return nil
+        }
+        return script[runCaseStart.upperBound..<runCaseEnd.lowerBound]
+    }
+
     @Test("orrery run claude delegates to the shim")
     func runDelegates() {
-        #expect(script.contains("claude \"$@\""))
+        guard let body = runCaseBody() else { return }
+        #expect(body.contains("claude \"$@\""))
     }
 
     @Test("orrery run claude still strips claude IPC env vars before delegating")
@@ -53,18 +70,8 @@ struct ShellFunctionGeneratorPhantomTests {
         // Bare `claude` never stripped these — this is `run claude`-specific,
         // preserved from the pre-shim loop so a nested `orrery run claude`
         // (typed inside another claude session) doesn't leak IPC vars into
-        // the child and hang it waiting for an MCP host. Scoped to the run)
-        // case specifically, not just "somewhere in the script", so this
-        // can't silently move to (or vanish from) the wrong branch.
-        guard let runCaseStart = script.range(of: "\n    run)") else {
-            Issue.record("run) case not found")
-            return
-        }
-        guard let runCaseEnd = script.range(of: "\n    add)", range: runCaseStart.upperBound..<script.endIndex) else {
-            Issue.record("add) case not found after run)")
-            return
-        }
-        let runCaseBody = script[runCaseStart.upperBound..<runCaseEnd.lowerBound]
-        #expect(runCaseBody.contains("unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH"))
+        // the child and hang it waiting for an MCP host.
+        guard let body = runCaseBody() else { return }
+        #expect(body.contains("unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH"))
     }
 }

@@ -4,7 +4,7 @@ import Testing
 @Suite("PhantomLaunchPolicy")
 struct PhantomLaunchPolicyTests {
     private func decide(_ args: [String], tty: Bool = true) -> Bool {
-        PhantomLaunchPolicy.shouldSupervise(args: args, stdinIsTTY: tty, stdoutIsTTY: tty)
+        PhantomLaunchPolicy.shouldSupervise(args: args, stdinIsTTY: tty, outputIsTTY: tty)
     }
 
     @Test("a bare interactive launch is supervised")
@@ -57,13 +57,13 @@ struct PhantomLaunchPolicyTests {
     @Test("non-tty stdin is not supervised (piped input)")
     func pipedStdin() {
         #expect(!PhantomLaunchPolicy.shouldSupervise(
-            args: [], stdinIsTTY: false, stdoutIsTTY: true))
+            args: [], stdinIsTTY: false, outputIsTTY: true))
     }
 
     @Test("non-tty stdout is not supervised (output redirected)")
     func redirectedStdout() {
         #expect(!PhantomLaunchPolicy.shouldSupervise(
-            args: [], stdinIsTTY: true, stdoutIsTTY: false))
+            args: [], stdinIsTTY: true, outputIsTTY: false))
     }
 
     @Test("a subcommand's own arguments do not change the decision")
