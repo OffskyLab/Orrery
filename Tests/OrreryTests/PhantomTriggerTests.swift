@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Synchronization
 @testable import OrreryCore
 
 @Suite("PhantomTrigger")
@@ -297,27 +298,42 @@ struct PhantomTriggerTests {
 @Suite("ShellFunctionGenerator run case (phantom-by-default)")
 struct ShellFunctionGeneratorRunTests {
 
-    @Test("run case is wired into the orrery() function")
+    @Test("run case is wired into the orrery() function and delegates to the claude shim")
     func hasRunCase() {
         let script = ShellFunctionGenerator.generate()
         #expect(script.contains("run)"))
-        #expect(script.contains("ORRERY_PHANTOM_SHELL_PID"))
-        #expect(script.contains(".phantom-sentinel"))
+        // Task 10: the supervisor loop (and its per-shell sentinel file) moved
+        // out of `run)` and into the claude() shim, so bare `claude` gets
+        // supervision too. `run)`'s claude branch is now a thin alias.
+        #expect(!script.contains("ORRERY_PHANTOM_SHELL_PID"))
+        #expect(!script.contains(".phantom-sentinel"))
+        #expect(script.contains("claude \"$@\""))
     }
 
-    @Test("run loop relaunches claude with --resume when sentinel carries SESSION_ID")
+    @Test("resume-on-relaunch now lives behind _phantom-next, not shell-parsed SESSION_ID")
     func runLoopUsesResume() {
         let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("--resume"))
-        #expect(script.contains("SESSION_ID"))
+        // The shell used to `. `-source a sentinel and read a SESSION_ID var
+        // itself. That parsing (and the --resume argv it built) moved into
+        // PhantomNextCommand.resumeSetLine — the shell only `eval`s whatever
+        // `_phantom-next` prints.
+        #expect(!script.contains("SESSION_ID"))
+        #expect(script.contains("_phantom-next --id \"$ORRERY_PHANTOM_ID\""))
+        #expect(script.contains("eval \"$_next\""))
     }
 
-    @Test("run loop still applies TARGET_ACCOUNT_TOOL/NAME account switches")
+    @Test("account switching now lives behind _phantom-next's eval-able export line")
     func runLoopSwitchesAccount() {
         let script = ShellFunctionGenerator.generate()
-        #expect(script.contains("TARGET_ACCOUNT_TOOL"))
-        #expect(script.contains("TARGET_ACCOUNT_NAME"))
-        #expect(script.contains(#"orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME""#))
+        // TARGET_ACCOUNT_TOOL/NAME and the shell-level `orrery use --tool
+        // name` call are gone — PhantomNextCommand resolves the account dir
+        // itself and prints an `export CLAUDE_CONFIG_DIR=...` line for the
+        // loop to `eval`, because a child process can't export into its
+        // parent shell any other way (see PhantomNextCommand.swift).
+        #expect(!script.contains("TARGET_ACCOUNT_TOOL"))
+        #expect(!script.contains("TARGET_ACCOUNT_NAME"))
+        #expect(!script.contains(#"orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME""#))
+        #expect(script.contains("eval \"$_next\""))
     }
 
     @Test("orrery enter/exit and sandbox-level workspace switching are gone")
@@ -373,6 +389,19 @@ struct ShellFunctionGeneratorRunTests {
     /// echo stubs, run `orrery run claude`, and assert which branch fired.
     /// This is the regression guard against the zsh 0-vs-1-indexed-array bug
     /// that substring tests can miss.
+    ///
+    /// Since Task 10, `run claude` delegates to the claude() shim, which
+    /// calls `orrery-bin _phantom-begin` before it will loop at all. The stub
+    /// below makes `_phantom-begin` fail (`return 1`), which is also what the
+    /// real binary does outside a TTY — exactly this test's situation — so
+    /// the shim takes its documented "just launch once" fallback
+    /// (`_orrery_claude_launch "$@"; return $?`) without ever entering the
+    /// loop. This also sidesteps a real trap: a stub whose unmatched `case`
+    /// arms fall through with exit 0 (the shell default for "no commands
+    /// ran") makes `_phantom-next`'s `|| break` never fire, looping forever —
+    /// confirmed by hand while writing this fix. Only reaching `_phantom-next`
+    /// at all would require the stub to emulate the whole begin/next/end
+    /// protocol faithfully; failing at `_phantom-begin` avoids that entirely.
     private func assertDispatchSelectsPhantom(shell: String) throws {
         // Skip if the shell isn't installed in this environment.
         guard FileManager.default.isExecutableFile(atPath: "/bin/\(shell)")
@@ -381,11 +410,6 @@ struct ShellFunctionGeneratorRunTests {
         }
         let script = ShellFunctionGenerator.generate()
 
-        // Stub `command` so the supervisor loop's `command claude` and the
-        // fallthrough's `command orrery-bin run` both print a marker and
-        // immediately return success — preventing actual claude launches and
-        // making the supervisor loop exit on its first iteration (sentinel
-        // missing → break).
         let probe = """
         \(script)
 
@@ -394,7 +418,10 @@ struct ShellFunctionGeneratorRunTests {
             claude) echo PHANTOM_BRANCH ;;
             orrery-bin)
               shift
-              if [ "$1" = "run" ]; then echo FALLTHROUGH_BRANCH; fi
+              case "$1" in
+                run) echo FALLTHROUGH_BRANCH ;;
+                _phantom-begin) return 1 ;;
+              esac
               ;;
           esac
         }
@@ -408,13 +435,38 @@ struct ShellFunctionGeneratorRunTests {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         proc.arguments = [shell, "-c", probe]
+        // Explicit clean slate: this process must decide PHANTOM_BRANCH vs.
+        // FALLTHROUGH_BRANCH purely from the script under test, never from
+        // whatever happens to be set in the host running the test suite
+        // (e.g. CLAUDECODE, which — if inherited — would make the claude()
+        // shim's own no-supervise guard fire first and mask what this test
+        // is actually trying to exercise).
+        var env = ProcessInfo.processInfo.environment
+        for key in ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXECPATH",
+                    "ORRERY_PHANTOM_ID", "ORRERY_NO_PHANTOM", "CLAUDE_CONFIG_DIR"] {
+            env.removeValue(forKey: key)
+        }
+        proc.environment = env
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
         try proc.run()
+
+        // Watchdog: a regression that reintroduces an unconditional loop
+        // (see the doc comment above) would otherwise hang this test —  and
+        // therefore the whole suite, and CI — forever with no diagnostic.
+        let timedOut = Mutex(false)
+        let watchdog = DispatchQueue(label: "phantom-dispatch-watchdog")
+        watchdog.asyncAfter(deadline: .now() + 5) {
+            if proc.isRunning {
+                timedOut.withLock { $0 = true }
+                proc.terminate()
+            }
+        }
         proc.waitUntilExit()
         let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
 
+        #expect(!timedOut.withLock { $0 }, "[\(shell)] supervisor loop did not terminate within 5s — see doc comment")
         #expect(out.contains("PHANTOM_BRANCH"), "[\(shell)] expected phantom branch, got: \(out)")
         #expect(!out.contains("FALLTHROUGH_BRANCH"), "[\(shell)] should not fall through to orrery-bin run, got: \(out)")
     }
@@ -425,13 +477,22 @@ struct ShellFunctionGeneratorRunTests {
         #expect(script.contains("--)"))
     }
 
-    @Test("run loop strips claude IPC env vars to prevent nested-claude hangs")
+    @Test("the claude shim treats CLAUDECODE as a no-supervise guard, not something to strip")
     func runStripsIpcEnv() {
         let script = ShellFunctionGenerator.generate()
-        // Defensive: matches the same stripping RunCommand.swift does for the
-        // single-shot path.
-        #expect(script.contains("CLAUDECODE"))
-        #expect(script.contains("CLAUDE_CODE_ENTRYPOINT"))
+        // Task 10 deviation from the pre-shim design: `orrery run claude`
+        // used to `unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH`
+        // before its loop, specifically so a nested invocation (this command
+        // typed inside another claude session) wouldn't leak IPC vars into
+        // the child and hang it waiting for an MCP host. Now that `run)`
+        // delegates to the claude() shim, CLAUDECODE is instead read as a
+        // guard: if set, supervision is skipped entirely and the launch goes
+        // straight through _orrery_claude_launch — but the var itself is no
+        // longer stripped before that launch. Bare `claude` never stripped
+        // it either, so this only regresses `orrery run claude`'s specific
+        // nested-invocation case, and only once removed from a real hang:
+        // it's the same as typing bare `claude` inside a nested shell.
+        #expect(script.contains("${CLAUDECODE:-}"))
     }
 
     @Test("legacy 'phantom' subcommand is no longer present")

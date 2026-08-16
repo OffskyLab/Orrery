@@ -88,34 +88,10 @@ public struct ShellFunctionGenerator {
                   echo "orrery run claude: -e/--env is not supported for claude — run 'orrery use <account>' first, then 'orrery run claude'." >&2
                   return 1
                 fi
-                local _phantom_sentinel="$_orrery_home/.phantom-sentinel"
-                rm -f "$_phantom_sentinel"
-                export ORRERY_PHANTOM_SHELL_PID=$$
-                # Drop the leading "claude" — `command claude` below adds it back.
+                # Supervision now lives in the claude() shim, so bare `claude`
+                # gets it too. This branch stays as an equivalent alias.
                 shift
-                local _phantom_args=("$@")
-                # Strip claude IPC env vars defensively: if `orrery run claude` is
-                # ever invoked from inside another claude, these would leak in and
-                # make the child claude hang waiting for an MCP host.
-                unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH
-                while true; do
-                  claude "${_phantom_args[@]}"
-                  [ -f "$_phantom_sentinel" ] || break
-                  local TARGET_ACCOUNT_TOOL='' TARGET_ACCOUNT_NAME='' SESSION_ID=''
-                  . "$_phantom_sentinel"
-                  rm -f "$_phantom_sentinel"
-                  if [ -n "$TARGET_ACCOUNT_TOOL" ] && [ -n "$TARGET_ACCOUNT_NAME" ]; then
-                    orrery use --"$TARGET_ACCOUNT_TOOL" "$TARGET_ACCOUNT_NAME" || break
-                  fi
-                  # After a phantom switch, --resume <new-session-id> is the only
-                  # arg we want — the user's original flags don't carry over (they
-                  # may have included --resume themselves with a now-stale id).
-                  _phantom_args=()
-                  if [ -n "$SESSION_ID" ]; then
-                    _phantom_args=(--resume "$SESSION_ID")
-                  fi
-                done
-                unset ORRERY_PHANTOM_SHELL_PID
+                claude "$@"
               else
                 # Single-shot path: hand off to Swift's `orrery-bin run`, which
                 # execvp's the target directly. This branch covers --non-phantom,
@@ -256,11 +232,14 @@ public struct ShellFunctionGenerator {
           command orrery-bin _link-memory 2>/dev/null || true
         }
 
-        # v3.1 launch wrapper. If CLAUDE_CONFIG_DIR is set and the dir
-        # contains a metadata.json (v3.1 account dir marker), invoke
-        # orrery-bin _prepare-claude-launch + _capture-claude-exit around
-        # the real claude. Otherwise, pass through to claude unchanged.
-        claude() {
+        # v3.1 launch wrapper, extracted so the supervisor loop can call it once
+        # per iteration: each relaunch may land on a different account dir, so
+        # prepare/capture must run every time, not once around the whole loop.
+        # If CLAUDE_CONFIG_DIR is set and the dir contains a metadata.json
+        # (v3.1 account dir marker), invoke orrery-bin _prepare-claude-launch +
+        # _capture-claude-exit around the real claude. Otherwise, pass through
+        # to claude unchanged.
+        _orrery_claude_launch() {
           if [ -n "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$CLAUDE_CONFIG_DIR/metadata.json" ]; then
             if ! command orrery-bin _prepare-claude-launch --account-dir "$CLAUDE_CONFIG_DIR"; then
               echo "orrery: prepare-claude-launch failed; launching with existing .claude.json" >&2
@@ -271,15 +250,52 @@ public struct ShellFunctionGenerator {
             return $_rc
           elif [ -z "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$HOME/.claude/metadata.json" ]; then
             # Bare launch on origin: ~/.claude points at the origin account dir.
-            # claude reads ~/.claude.json here (NOT ~/.claude/.claude.json), so we
-            # must NOT merge .claude.json — only sync the workspace symlinks so
-            # origin shares plugins/sessions/etc. like a pinned account.
-            # Best-effort: link failures/warnings never block the launch.
+            # claude reads ~/.claude.json here (NOT accountdir/.claude.json), so
+            # we must NOT merge .claude.json — only sync the workspace symlinks.
             command orrery-bin _prepare-claude-launch --account-dir "$HOME/.claude" --links-only || true
             command claude "$@"
           else
             command claude "$@"
           fi
+        }
+
+        # Phantom supervisor. Kept deliberately thin: this text is written into
+        # the user's rc file, so it only changes when they re-run `orrery setup`.
+        # Every decision that might need updating lives behind orrery-bin.
+        #
+        # Fast-path guards, in order:
+        #   ORRERY_PHANTOM_ID   already inside a supervised relaunch — avoids
+        #                       a supervisor-inside-a-supervisor.
+        #   CLAUDECODE          already running inside a claude session (e.g. a
+        #                       nested `claude` call from a hook/tool) — no
+        #                       session-resume semantics apply there.
+        #   ORRERY_NO_PHANTOM   explicit opt-out.
+        claude() {
+          if [ -n "${ORRERY_PHANTOM_ID:-}" ] || [ -n "${CLAUDECODE:-}" ] ||
+             [ -n "${ORRERY_NO_PHANTOM:-}" ]; then
+            _orrery_claude_launch "$@"; return $?
+          fi
+
+          local _spec
+          _spec=$(command orrery-bin _phantom-begin --tool claude --supervisor-pid $$ -- "$@") || {
+            _orrery_claude_launch "$@"; return $?
+          }
+          eval "$_spec"
+
+          local _args=("$@")
+          local _rc=0
+          while true; do
+            _orrery_claude_launch "${_args[@]}"
+            _rc=$?
+            local _next
+            _next=$(command orrery-bin _phantom-next --id "$ORRERY_PHANTOM_ID") || break
+            eval "$_next"
+            _args=("$@")
+          done
+
+          command orrery-bin _phantom-end --id "$ORRERY_PHANTOM_ID"
+          unset ORRERY_PHANTOM_ID ORRERY_PHANTOM_DIR
+          return $_rc
         }
 
         # gemini-cli ignores GEMINI_CONFIG_DIR and always reads ~/.gemini/,
