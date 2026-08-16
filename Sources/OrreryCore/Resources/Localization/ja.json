@@ -322,7 +322,7 @@
   "thirdparty.listNone": "No third-party add-ons installed in '{env}'.",
   "thirdparty.listItem": "  {id}  {shortRef}  installed {date}",
   "thirdparty.availableAbstract": "List third-party add-ons shipped with orrery",
-  "phantom.accountTriggerAbstract": "現在の phantom セッション内でツールのアカウントを切り替えます。",
+  "phantom.accountTriggerAbstract": "Switch a tool's account for a supervised session (use --session to pick one when more than one is running).",
   "phantom.notUnderPhantom": "No supervised session found. Launch claude normally (phantom is on by default); if you just updated orrery, run 'orrery setup' to refresh the shell integration.",
   "phantom.claudeNotFound": "Could not find a running claude process under the phantom supervisor.",
   "phantom.signalFailed": "Failed to signal claude to exit. The relaunch was aborted.",
@@ -332,5 +332,6 @@
   "phantom.ambiguousHeader": "More than one supervised session is running:",
   "phantom.ambiguousHint": "Re-run with --session <number|id> to pick one.",
   "phantom.legacySupervisor": "orrery: this session uses an older shell integration; run 'orrery setup' to enable out-of-band switching.",
+  "phantom.sessionNotFound": "No supervised session matches '{selector}'. Re-run without --session to see the sessions that are running.",
   "setup.installedSlashCommand": "orrery: installed slash command at {path}\n"
 }

@@ -2107,6 +2107,13 @@
   { "path": ["Phantom", "ambiguousHint"], "kind": "var", "parameters": [] },
   { "path": ["Phantom", "legacySupervisor"], "kind": "var", "parameters": [] },
   {
+    "path": ["Phantom", "sessionNotFound"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "selector", "type": "String" }
+    ]
+  },
+  {
     "path": ["Setup", "installedSlashCommand"],
     "kind": "func",
     "parameters": [
