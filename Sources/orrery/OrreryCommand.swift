@@ -73,6 +73,8 @@ public struct OrreryCommand: AsyncParsableCommand {
             CaptureClaudeExitCommand.self,
             AccountDirLookupCommand.self,
             PhantomBeginCommand.self,
+            PhantomNextCommand.self,
+            PhantomEndCommand.self,
         ]
         #if os(macOS)
         cmds.append(AccountAddHealHookCommand.self)
