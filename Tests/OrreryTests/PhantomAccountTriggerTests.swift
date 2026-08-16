@@ -67,7 +67,22 @@ struct PhantomAccountTriggerTests {
         // Conflicting --claude/--codex flags fail tool resolution, which is the
         // very first thing run() does — this must throw regardless of account
         // or phantom/registry state.
+        //
+        // Unset ORRERY_PHANTOM_SHELL_PID defensively, as the other two tests
+        // in this suite do — this test relies on tool resolution throwing
+        // BEFORE that var is ever read, but if that ordering ever regresses,
+        // an unset var here would mean `switchLegacy` walks the real
+        // developer's process ancestry using their actual live supervisor
+        // pid, inherited from whatever shell launched `swift test`, and
+        // SIGTERMs their real claude. Isolating this defensively costs
+        // nothing and removes that failure mode entirely.
         try withIsolatedHome {
+            let saved = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
+            unsetenv("ORRERY_PHANTOM_SHELL_PID")
+            defer {
+                if let saved { setenv("ORRERY_PHANTOM_SHELL_PID", saved, 1) }
+            }
+
             let cmd = try PhantomAccountTriggerCommand.parse(["--claude", "--codex", "x"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
