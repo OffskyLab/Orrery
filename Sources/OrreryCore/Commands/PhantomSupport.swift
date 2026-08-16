@@ -21,16 +21,18 @@ public enum PhantomSupport {
     public static let slashCommandMarkdown: String = """
     ---
     description: Switch orrery account without restarting Claude
-    argument-hint: [name | <tool> <name>]
+    argument-hint: [name | <tool> <name>] [--session <number|id>]
     ---
 
     # Phantom: switch orrery account in-place
 
     Switch the active orrery account without losing the conversation. Claude exits and the orrery supervisor relaunches it with `--resume`, so the conversation continues where it left off.
 
-    **Prerequisite**: Claude must have been launched via `orrery run claude` (which is phantom-supervised by default). If Claude was launched directly or with `orrery run --non-phantom claude`, the trigger will error with a clear message.
+    **Prerequisite**: a bare `claude` launch is phantom-supervised by default — no special invocation needed. If the trigger errors saying no supervised session was found, either claude was started with `orrery run --non-phantom claude` / `--non-phantom`, or the shell integration predates phantom's registry support — run `orrery setup` to refresh it.
 
     **Tip**: this slash command is just a convenience wrapper — `orrery phantom <name>` (or `orrery phantom --codex <name>` / `--gemini`) is a plain CLI command and works the same way run directly (e.g. via `!` command-mode), including when the account's usage is exhausted and a Claude turn isn't available to parse this command.
+
+    **Multiple sessions running**: the trigger addresses sessions via a registry, not just the current terminal, so if more than one supervised session is live it can't guess which one you mean. It responds with a numbered list (tool, account, cwd, session id) and refuses to switch anything. Re-invoke with `--session <number|id>` — either the number from that list or the session id directly — to pick one, e.g. `orrery-bin phantom <name> --session 2`.
 
     ## What to do
 
@@ -41,6 +43,8 @@ public enum PhantomSupport {
     - **`$ARGUMENTS` is just `<name>`** (a single token, not `claude`/`codex`/`gemini`): default to switching the claude account. Run `orrery-bin phantom <name>`.
 
     - **`$ARGUMENTS` is empty**: run `orrery-bin list` to get the list of accounts, present it to the user, and ask which they want to switch to, then re-invoke this slash command with their choice.
+
+    - **The trigger reports multiple supervised sessions**: show the user the numbered list from its error output and ask which one they mean (using tool/account/cwd to disambiguate), then re-invoke with `--session <number|id>` appended.
 
     Do not narrate the relaunch — Claude will simply exit and reappear with the new account active. The user's next message lands in the new context.
     """
