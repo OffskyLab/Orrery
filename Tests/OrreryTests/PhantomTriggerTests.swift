@@ -199,6 +199,62 @@ struct PhantomTriggerTests {
         #expect(!PhantomSupport.isClaudeComm("2.1.201"))
         #expect(!PhantomSupport.isClaudeComm("claude-helper"))
     }
+
+    // MARK: - Downward resolution (out-of-band triggering)
+
+    /// Fake tree helper: children maps parent -> [child], comms maps pid -> comm.
+    private func downward(
+        supervisor: Int32,
+        children: [Int32: [Int32]],
+        comms: [Int32: String]
+    ) -> Int32? {
+        PhantomSupport.resolveClaudePidDownward(
+            supervisorPid: supervisor,
+            children: { children[$0] ?? [] },
+            lookup: { pid in comms[pid].map { (ppid: Int32(0), comm: $0) } })
+    }
+
+    @Test("finds a claude that is a direct child of the supervisor")
+    func downwardDirectChild() {
+        #expect(downward(supervisor: 10, children: [10: [11]],
+                         comms: [10: "zsh", 11: "claude"]) == 11)
+    }
+
+    @Test("finds claude behind a caffeinate wrapper")
+    func downwardThroughWrapper() {
+        #expect(downward(supervisor: 10, children: [10: [11], 11: [12]],
+                         comms: [10: "zsh", 11: "caffeinate", 12: "claude"]) == 12)
+    }
+
+    @Test("matches the Bun-compiled claude.exe comm")
+    func downwardBunName() {
+        #expect(downward(supervisor: 10, children: [10: [11]],
+                         comms: [10: "zsh", 11: "claude.exe"]) == 11)
+    }
+
+    @Test("falls back to the only child when nothing is named claude")
+    func downwardVersionStringComm() {
+        // Claude Code often reports its comm as a bare version string.
+        #expect(downward(supervisor: 10, children: [10: [11]],
+                         comms: [10: "zsh", 11: "2.1.201"]) == 11)
+    }
+
+    @Test("returns nil when the supervisor has no children")
+    func downwardNoChildren() {
+        #expect(downward(supervisor: 10, children: [:], comms: [10: "zsh"]) == nil)
+    }
+
+    @Test("prefers the claude-named process over an unrelated sibling")
+    func downwardPrefersNamed() {
+        #expect(downward(supervisor: 10, children: [10: [11, 12]],
+                         comms: [10: "zsh", 11: "sleep", 12: "claude"]) == 12)
+    }
+
+    @Test("does not mistarget a helper process whose name merely starts with claude")
+    func downwardIgnoresHelper() {
+        #expect(downward(supervisor: 10, children: [10: [11], 11: [12]],
+                         comms: [10: "zsh", 11: "claude-helper", 12: "claude"]) == 12)
+    }
 }
 
 @Suite("ShellFunctionGenerator run case (phantom-by-default)")

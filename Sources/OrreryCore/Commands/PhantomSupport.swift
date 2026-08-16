@@ -289,4 +289,62 @@ public enum PhantomSupport {
         let basename = URL(fileURLWithPath: commPath).lastPathComponent
         return (ppid, basename)
     }
+
+    // MARK: - Downward process discovery (out-of-band triggering)
+
+    /// Find claude by descending from a known supervisor.
+    ///
+    /// The in-chain trigger walks *up* from itself, which is shorter and needs
+    /// no search. Out-of-band callers have no such ancestry — they only know
+    /// the supervisor pid from the registry — so they descend instead.
+    ///
+    /// The supervisor's loop runs claude in the foreground, so at any moment
+    /// there is one relevant subtree. We prefer a process whose comm names
+    /// claude (keeping the right target when a wrapper such as `caffeinate`
+    /// sits in between) and otherwise fall back to the deepest single
+    /// descendant, because Claude Code frequently reports its comm as a bare
+    /// version string like "2.1.201".
+    static func resolveClaudePidDownward(
+        supervisorPid: Int32,
+        maxDepth: Int = 8,
+        children: (Int32) -> [Int32],
+        lookup: (Int32) -> (ppid: Int32, comm: String)?
+    ) -> Int32? {
+        var frontier = children(supervisorPid)
+        var depth = 0
+        var fallback: Int32? = frontier.count == 1 ? frontier.first : nil
+
+        while !frontier.isEmpty, depth < maxDepth {
+            for pid in frontier {
+                if let info = lookup(pid), isClaudeComm(info.comm) {
+                    return pid
+                }
+            }
+            let next = frontier.flatMap { children($0) }
+            if next.count == 1 { fallback = next.first }
+            frontier = next
+            depth += 1
+        }
+        return fallback
+    }
+
+    /// Direct children of `pid`, via a full process-table snapshot.
+    static func childPids(of pid: Int32) -> [Int32] {
+        #if canImport(Darwin)
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var size = 0
+        guard sysctl(&mib, 4, nil, &size, nil, 0) == 0, size > 0 else { return [] }
+
+        let count = size / MemoryLayout<kinfo_proc>.stride
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: count)
+        guard sysctl(&mib, 4, &procs, &size, nil, 0) == 0 else { return [] }
+
+        let actual = size / MemoryLayout<kinfo_proc>.stride
+        return procs.prefix(actual)
+            .filter { $0.kp_eproc.e_ppid == pid }
+            .map { $0.kp_proc.p_pid }
+        #else
+        return []
+        #endif
+    }
 }
