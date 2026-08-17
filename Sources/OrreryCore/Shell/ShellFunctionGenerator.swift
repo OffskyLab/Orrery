@@ -117,11 +117,17 @@ public struct ShellFunctionGenerator {
                 # invocation (set it for the target account, leave it unset
                 # for origin) and must not inherit a stale value exported by
                 # some earlier, unrelated command in this session.
-                unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR
+                #
+                # Wrapped in a subshell: `orrery()` is a plain shell function,
+                # not a script in its own process, so a bare `unset` here
+                # would strip these vars from the CALLER's interactive shell
+                # too — silently wiping their `orrery use` pin the next time
+                # they ran anything through this fallback. A subshell confines
+                # the unset to this one invocation.
                 if [ -n "$_run_target" ]; then
-                  command orrery-bin run -e "$_run_target" "$@"
+                  ( unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR; command orrery-bin run -e "$_run_target" "$@" )
                 else
-                  command orrery-bin run "$@"
+                  ( unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR; command orrery-bin run "$@" )
                 fi
               fi
               ;;
