@@ -50,6 +50,7 @@ public struct MCPSetupCommand: ParsableCommand {
             env.removeValue(forKey: "CLAUDECODE")
             env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
             env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+            env.removeValue(forKey: "ORRERY_PHANTOM_ID")
             process.environment = env
 
             do {
