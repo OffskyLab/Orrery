@@ -57,6 +57,7 @@ public struct ToolSetup {
         env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
         env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
         env.removeValue(forKey: "ANTHROPIC_API_KEY")
+        env.removeValue(forKey: "ORRERY_PHANTOM_ID")
         for (key, value) in env { setenv(key, value, 1) }
 
         let shellCmd = loginCommands.joined(separator: "; ")

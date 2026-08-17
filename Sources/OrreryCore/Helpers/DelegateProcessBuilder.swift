@@ -118,6 +118,10 @@ public struct DelegateProcessBuilder {
         processEnv.removeValue(forKey: "CLAUDECODE")
         processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
         processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+        // Strip the phantom supervision id so this delegated (throwaway) claude
+        // does not inherit the outer supervisor's id and stamp its own session
+        // into the supervisor's registry entry via the SessionStart hook.
+        processEnv.removeValue(forKey: "ORRERY_PHANTOM_ID")
         // When using the default environment, strip all tool config dir vars
         if let envName, envName == Workspace.reservedOriginName {
             for t in Tool.allCases {

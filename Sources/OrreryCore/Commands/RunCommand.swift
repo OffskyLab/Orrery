@@ -74,6 +74,9 @@ public struct RunCommand: ParsableCommand {
         processEnv.removeValue(forKey: "CLAUDECODE")
         processEnv.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
         processEnv.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
+        // Strip the phantom supervision id so this child claude does not
+        // inherit an outer supervisor's id and corrupt its registry entry.
+        processEnv.removeValue(forKey: "ORRERY_PHANTOM_ID")
         // If using default, unset tool config dirs
         if let envName, envName == Workspace.reservedOriginName {
             for tool in Tool.allCases {
