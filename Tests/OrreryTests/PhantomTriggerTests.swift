@@ -323,6 +323,56 @@ struct ShellFunctionGeneratorRunTests {
         #expect(runCaseBody.contains("claude \"$@\""))
     }
 
+    @Test("single-shot fallback clears stale tool config-dir exports before calling orrery-bin run")
+    func runFallbackClearsToolConfigDirExports() {
+        // A prior `orrery use` in this same shell may have exported
+        // CLAUDE_CONFIG_DIR / CODEX_HOME / GEMINI_CONFIG_DIR. The single-shot
+        // fallback (non-claude commands, --non-phantom, empty-args) hands
+        // off to `orrery-bin run` via execvp, which must decide the config
+        // dir fresh for this invocation rather than inherit a stale export.
+        //
+        // Scoped to the run) case's `else` (single-shot fallback) branch
+        // specifically — an unscoped `script.contains(...)` could also be
+        // satisfied by an unrelated `unset` elsewhere in the generated
+        // script, so this anchors within the same run)...add) slice the
+        // sibling `hasRunCase` test above uses.
+        let script = ShellFunctionGenerator.generate()
+        guard let runCaseStart = script.range(of: "\n    run)") else {
+            Issue.record("run) case not found")
+            return
+        }
+        guard let runCaseEnd = script.range(of: "\n    add)", range: runCaseStart.upperBound..<script.endIndex) else {
+            Issue.record("add) case not found after run)")
+            return
+        }
+        let runCaseBody = script[runCaseStart.upperBound..<runCaseEnd.lowerBound]
+
+        guard let elseRange = runCaseBody.range(of: "claude \"$@\"\n") else {
+            Issue.record("claude branch (which precedes the else) not found in run) case")
+            return
+        }
+        guard let elseKeywordRange = runCaseBody.range(of: "else", range: elseRange.upperBound..<runCaseBody.endIndex) else {
+            Issue.record("else (single-shot fallback) branch not found in run) case")
+            return
+        }
+        let elseBody = runCaseBody[elseKeywordRange.upperBound...]
+
+        guard let unsetRange = elseBody.range(of: "unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR") else {
+            Issue.record("expected unset line not found in the else (single-shot fallback) branch")
+            return
+        }
+        guard let targetedRunRange = elseBody.range(of: #"command orrery-bin run -e "$_run_target" "$@""#) else {
+            Issue.record("targeted orrery-bin run invocation not found in the else branch")
+            return
+        }
+        guard let plainRunRange = elseBody.range(of: #"command orrery-bin run "$@""#) else {
+            Issue.record("plain orrery-bin run invocation not found in the else branch")
+            return
+        }
+        #expect(unsetRange.upperBound <= targetedRunRange.lowerBound)
+        #expect(unsetRange.upperBound <= plainRunRange.lowerBound)
+    }
+
     @Test("resume-on-relaunch now lives behind _phantom-next, not shell-parsed SESSION_ID")
     func runLoopUsesResume() {
         let script = ShellFunctionGenerator.generate()
