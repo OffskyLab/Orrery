@@ -94,6 +94,9 @@ public struct RunCommand: ParsableCommand {
         if let envName, envName != Workspace.reservedOriginName {
             keysToUnset.append("ANTHROPIC_API_KEY")
         }
+        if let envName, envName == Workspace.reservedOriginName {
+            keysToUnset.append(contentsOf: Tool.allCases.map(\.envVarName))
+        }
 
         // Use execvp to replace this process — inherits full TTY for interactive tools
         Self.applyRealEnvironment(processEnv, strippingKeys: keysToUnset)

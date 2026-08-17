@@ -181,6 +181,41 @@ struct RunCommandApplyRealEnvironmentTests {
         }
     }
 
+    @Test("unsetenv removes tool config-dir vars from the real environment when targeting origin")
+    func stripsToolConfigDirKeysFromRealChildEnvironmentForOrigin() throws {
+        try withRealEnvironmentLock {
+            let keys = Tool.allCases.map(\.envVarName)
+            let saved = keys.map { ($0, ProcessInfo.processInfo.environment[$0]) }
+            defer {
+                for (key, value) in saved {
+                    if let value { setenv(key, value, 1) } else { unsetenv(key) }
+                }
+            }
+
+            // Simulate the leak precondition: a prior `orrery use` exported
+            // these tool config-dir vars into the real environment (as if
+            // inherited from the parent shell), but the origin-targeted
+            // `run()` invocation's `processEnv` dictionary does not contain
+            // them — mirroring run()'s state right before its `execvp` call
+            // when `envName == Workspace.reservedOriginName`.
+            for key in keys {
+                setenv(key, "leaked-value", 1)
+            }
+
+            var keysToUnset = RunCommand.strippedExecEnvKeys
+            keysToUnset.append(contentsOf: keys)
+
+            let processEnv: [String: String] = ["ORRERY_RUN_COMMAND_MARKER": "present"]
+            RunCommand.applyRealEnvironment(processEnv, strippingKeys: keysToUnset)
+
+            let childEnv = try childEnvironment()
+            for key in keys {
+                #expect(childEnv[key] == nil, "expected \(key) to be absent from the real child environment")
+            }
+            #expect(childEnv["ORRERY_RUN_COMMAND_MARKER"] == "present")
+        }
+    }
+
     @Test("keysToUnset includes ANTHROPIC_API_KEY only for a non-origin named env")
     func anthropicKeyStripIsConditional() {
         // This mirrors run()'s conditional construction of keysToUnset —
@@ -199,5 +234,26 @@ struct RunCommandApplyRealEnvironmentTests {
             originKeysToUnset.append("ANTHROPIC_API_KEY")
         }
         #expect(!originKeysToUnset.contains("ANTHROPIC_API_KEY"))
+    }
+
+    @Test("keysToUnset includes tool config-dir vars only for an origin-targeted run")
+    func toolConfigDirKeyStripIsConditional() {
+        // This mirrors run()'s conditional construction of keysToUnset for
+        // the origin case — regression guard so the condition can't
+        // silently drift from the dictionary-side removeValue(forKey:)
+        // condition above it (lines 80-85).
+        var keysToUnset = RunCommand.strippedExecEnvKeys
+        let envName: String? = "work"
+        if let envName, envName == Workspace.reservedOriginName {
+            keysToUnset.append(contentsOf: Tool.allCases.map(\.envVarName))
+        }
+        #expect(Tool.allCases.allSatisfy { !keysToUnset.contains($0.envVarName) })
+
+        var originKeysToUnset = RunCommand.strippedExecEnvKeys
+        let originEnvName: String? = Workspace.reservedOriginName
+        if let originEnvName, originEnvName == Workspace.reservedOriginName {
+            originKeysToUnset.append(contentsOf: Tool.allCases.map(\.envVarName))
+        }
+        #expect(Tool.allCases.allSatisfy { originKeysToUnset.contains($0.envVarName) })
     }
 }
