@@ -57,8 +57,12 @@ public enum PhantomTargetSelector {
             return .selected(id: hit.id, entry: hit.entry)
         }
 
-        if sameCwd.count == 1 {
-            return .selected(id: sameCwd[0].id, entry: sameCwd[0].entry)
+        // Unify both the "unique match in this cwd" case and the "no match in
+        // this cwd, but only one live session anywhere" case: `candidates` is
+        // already whichever set applies (see above), so checking its count
+        // — not `sameCwd.count` — is what actually determines uniqueness.
+        if candidates.count == 1 {
+            return .selected(id: candidates[0].id, entry: candidates[0].entry)
         }
         return .ambiguous(candidates.map { Candidate(id: $0.id, entry: $0.entry) })
     }

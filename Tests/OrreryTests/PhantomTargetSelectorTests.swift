@@ -70,6 +70,21 @@ struct PhantomTargetSelectorTests {
         #expect(candidates.count == 2)
     }
 
+    @Test("exactly one live entry in a different cwd is selected, not ambiguous")
+    func singleEntryDifferentCwdIsSelectedNotAmbiguous() {
+        // Regression guard: `candidates` falls back to the full entry list
+        // when nothing matches the query cwd. With exactly one live entry
+        // total, that fallback list also has exactly one element, so it
+        // must resolve unambiguously — not report "multiple sessions".
+        let entries = [("10", entry(pid: 10, cwd: "/elsewhere"))]
+        let result = PhantomTargetSelector.select(
+            entries: entries, envPhantomId: nil, cwd: "/here", explicit: nil)
+        guard case .selected(let id, _) = result else {
+            Issue.record("expected .selected, got \(result)"); return
+        }
+        #expect(id == "10")
+    }
+
     @Test("no live entries at all yields .none")
     func nothingLive() {
         let result = PhantomTargetSelector.select(
