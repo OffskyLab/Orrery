@@ -85,10 +85,18 @@ public struct RunCommand: ParsableCommand {
         }
         process.environment = processEnv
 
-        // Use execvp to replace this process — inherits full TTY for interactive tools
-        for (key, value) in processEnv {
-            setenv(key, value, 1)
+        // Keys stripped from `processEnv` above that must also be removed
+        // from this process's real environment before execvp — `setenv`
+        // only adds/overwrites keys, so anything already present in the
+        // real environment (inherited from the parent shell) would
+        // otherwise survive the swap and leak into the child unchanged.
+        var keysToUnset = Self.strippedExecEnvKeys
+        if let envName, envName != Workspace.reservedOriginName {
+            keysToUnset.append("ANTHROPIC_API_KEY")
         }
+
+        // Use execvp to replace this process — inherits full TTY for interactive tools
+        Self.applyRealEnvironment(processEnv, strippingKeys: keysToUnset)
         let argv = command.map { strdup($0) } + [nil]
         execvp(command[0], argv)
 
@@ -99,6 +107,28 @@ public struct RunCommand: ParsableCommand {
 }
 
 extension RunCommand {
+    /// IPC / phantom-supervision keys that must never leak into a child
+    /// launched via `execvp`. Unconditionally stripped regardless of env.
+    static let strippedExecEnvKeys = [
+        "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXECPATH", "ORRERY_PHANTOM_ID",
+    ]
+
+    /// Applies `processEnv` to the real process environment via `setenv`,
+    /// then removes `keys` from it via `unsetenv`. `execvp` inherits the
+    /// process's actual environment (not the `Process.environment` dict),
+    /// so keys removed only from `processEnv` — but already present in the
+    /// real environment — would otherwise leak into the child unchanged.
+    /// Pulled out of `run()` so the exact routine used before `execvp` is
+    /// directly testable without invoking `execvp` itself.
+    static func applyRealEnvironment(_ processEnv: [String: String], strippingKeys keys: [String]) {
+        for (key, value) in processEnv {
+            setenv(key, value, 1)
+        }
+        for key in keys {
+            unsetenv(key)
+        }
+    }
+
     /// 解析「當前 env / origin 釘在某工具上的 account + 它的 configDir」。
     /// envName == nil 或 "origin" 視為 origin（configDir = nil，工具預設位置）。
     /// 回傳 nil 代表沒有釘任何 account。
