@@ -110,6 +110,14 @@ public struct ShellFunctionGenerator {
                 # execvp's the target directly. This branch covers --non-phantom,
                 # non-claude commands, and the empty-args case (Swift produces
                 # the canonical "no command specified" error).
+                #
+                # Clear tool config-dir exports left over from an earlier
+                # `orrery use` in this same shell — `orrery-bin run` decides
+                # fresh what each tool's config dir should be for THIS
+                # invocation (set it for the target account, leave it unset
+                # for origin) and must not inherit a stale value exported by
+                # some earlier, unrelated command in this session.
+                unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR
                 if [ -n "$_run_target" ]; then
                   command orrery-bin run -e "$_run_target" "$@"
                 else
