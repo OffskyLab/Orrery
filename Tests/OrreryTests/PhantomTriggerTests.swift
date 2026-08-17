@@ -673,6 +673,59 @@ struct ShellFunctionGeneratorRunTests {
         #expect(out.isEmpty, "[\(shell)] unexpected stdout (possible zsh `local` leak — see I1): \(out)")
     }
 
+    @Test("the fallback path does not wipe the calling shell's own pin under bash")
+    func fallbackPreservesCallingShellEnvBash() throws {
+        try assertFallbackPreservesCallingShellEnv(shell: "bash")
+    }
+
+    @Test("the fallback path does not wipe the calling shell's own pin under zsh")
+    func fallbackPreservesCallingShellEnvZsh() throws {
+        try assertFallbackPreservesCallingShellEnv(shell: "zsh")
+    }
+
+    /// F1: `unset` inside a plain shell function mutates the CALLER's shell,
+    /// not just what a child inherits. This proves both halves at once: the
+    /// child spawned via the fallback path does not see the stale export
+    /// (the original fix's purpose), AND the calling shell's own copy
+    /// survives afterward (what F1 found broken).
+    private func assertFallbackPreservesCallingShellEnv(shell: String) throws {
+        guard FileManager.default.isExecutableFile(atPath: "/bin/\(shell)")
+            || FileManager.default.isExecutableFile(atPath: "/usr/bin/\(shell)") else {
+            return
+        }
+
+        let probe = """
+        \(scriptForProbe())
+
+        command() {
+          case "$1" in
+            orrery-bin)
+              shift
+              echo "CHILD_SEES=${CLAUDE_CONFIG_DIR:-<unset>}"
+              ;;
+          esac
+        }
+
+        export CLAUDE_CONFIG_DIR=/tmp/pinned-account-dir
+        orrery run --non-phantom npm
+        echo "PARENT_AFTER=${CLAUDE_CONFIG_DIR:-<unset>}"
+        """
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        proc.arguments = [shell, "-c", probe]
+        proc.environment = probeEnvironment()
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = FileHandle.nullDevice
+        try proc.run()
+        proc.waitUntilExit()
+        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+        #expect(out.contains("CHILD_SEES=<unset>"), "[\(shell)] child should not inherit the stale export, got: \(out)")
+        #expect(out.contains("PARENT_AFTER=/tmp/pinned-account-dir"), "[\(shell)] calling shell's own pin should survive, got: \(out)")
+    }
+
     @Test("run honors -- separator for unambiguous claude args")
     func runHonorsDoubleDash() {
         let script = ShellFunctionGenerator.generate()
