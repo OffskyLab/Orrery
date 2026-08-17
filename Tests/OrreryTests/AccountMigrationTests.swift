@@ -224,6 +224,73 @@ struct AccountMigrationTests {
         #expect(FileManager.default.fileExists(atPath: authFile.path))
     }
 
+    @Test("skips migration when a live phantom-supervised session is in the registry")
+    func skipsWhenPhantomSessionIsLive() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+
+        let envStore = EnvironmentStore(homeURL: home)
+        let env = Workspace(name: "work", tools: [.codex])
+        try envStore.save(env)
+        let codexDir = envStore.toolConfigDir(tool: .codex, environment: "work")
+        try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)
+        try Data(#"{"token":"x"}"#.utf8)
+            .write(to: codexDir.appendingPathComponent("auth.json"))
+
+        // Register a live phantom entry: use the TEST process's own pid/start
+        // time so `ProcessLiveness.isAlive` (the real, non-injected liveness
+        // check `runIfNeeded` uses) reports it as alive without spawning any
+        // real process.
+        let startedAt = try #require(ProcessLiveness.startTime(pid: getpid()))
+        let registry = PhantomRegistry(homeURL: home)
+        let entry = PhantomEntry(
+            supervisorPid: getpid(), supervisorStartedAt: startedAt, tool: "claude",
+            tty: nil, cwd: "/tmp", workspace: "origin", account: nil,
+            sessionId: nil, sessionIdSource: .probe, updatedAt: startedAt)
+        try registry.write(entry, id: "test-live-entry")
+
+        #expect(throws: AccountMigration.MigrationError.self) {
+            try AccountMigration.runIfNeeded(homeURL: home)
+        }
+
+        // Migration must not have run: no flag, no pool account, env not pinned.
+        let flag = home.appendingPathComponent(AccountMigration.flagFileName)
+        #expect(!FileManager.default.fileExists(atPath: flag.path))
+        let acctStore = AccountStore(homeURL: home)
+        #expect(try acctStore.list(tool: .codex).isEmpty)
+        #expect(try envStore.load(named: "work").account(for: .codex) == nil)
+    }
+
+    @Test("proceeds with migration when the phantom registry has no live entries")
+    func proceedsWhenNoLivePhantomEntries() throws {
+        let (home, cleanup) = makeTempHome()
+        defer { cleanup() }
+
+        let envStore = EnvironmentStore(homeURL: home)
+        let env = Workspace(name: "work", tools: [.codex])
+        try envStore.save(env)
+        let codexDir = envStore.toolConfigDir(tool: .codex, environment: "work")
+        try FileManager.default.createDirectory(at: codexDir, withIntermediateDirectories: true)
+        try Data(#"{"token":"x"}"#.utf8)
+            .write(to: codexDir.appendingPathComponent("auth.json"))
+
+        // A stale (dead) entry — pid -1 never resolves via ProcessLiveness —
+        // must be pruned/ignored rather than blocking migration.
+        let registry = PhantomRegistry(homeURL: home)
+        let staleEntry = PhantomEntry(
+            supervisorPid: -1, supervisorStartedAt: 1.0, tool: "claude",
+            tty: nil, cwd: "/tmp", workspace: "origin", account: nil,
+            sessionId: nil, sessionIdSource: .probe, updatedAt: 1.0)
+        try registry.write(staleEntry, id: "test-stale-entry")
+
+        try AccountMigration.runIfNeeded(homeURL: home)
+
+        let flag = home.appendingPathComponent(AccountMigration.flagFileName)
+        #expect(FileManager.default.fileExists(atPath: flag.path))
+        let acctStore = AccountStore(homeURL: home)
+        #expect(try acctStore.list(tool: .codex).count == 1)
+    }
+
     @Test("takes a backup before migrating a non-empty home")
     func takesBackupBeforeMigrating() throws {
         let (home, cleanup) = makeTempHome()

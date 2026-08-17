@@ -47,15 +47,19 @@ public enum AccountMigration {
             return
         }
 
-        // Refuse to migrate while running inside a phantom-supervised session.
-        // The supervisor exports `ORRERY_PHANTOM_SHELL_PID` to its children, so
-        // this catches the case where migration is triggered from within a
-        // phantom-supervised `claude`. It is NOT a cross-process / system-wide
-        // detector — a separate terminal cannot see another shell's env — so the
-        // pre-migration backup remains the real safety net (see report notes).
-        if ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"] != nil {
+        // Refuse to migrate while a phantom-supervised session is live. This
+        // used to check `ORRERY_PHANTOM_SHELL_PID`, an env var the shim no
+        // longer sets — so it now queries the phantom registry directly for
+        // any live supervisor entry. Unlike the old env check, this IS a
+        // system-wide detector: the registry is shared on disk under
+        // `homeURL`, so it also catches a supervisor running in a different
+        // terminal/shell. The pre-migration backup remains the real safety
+        // net regardless (see report notes).
+        let livePhantomEntries = PhantomRegistry(homeURL: homeURL)
+            .liveEntries(isAlive: ProcessLiveness.isAlive)
+        if !livePhantomEntries.isEmpty {
             let message = """
-                [orrery migration] A phantom-supervised session is active in this shell.
+                [orrery migration] A phantom-supervised session is active.
                 Account migration is deferred to avoid touching credentials mid-session.
                 Exit your phantom Claude session(s) and run any orrery command again.
 
