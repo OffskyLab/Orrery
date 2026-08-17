@@ -58,7 +58,7 @@ public struct ToolSetup {
         env.removeValue(forKey: "CLAUDE_CODE_EXECPATH")
         env.removeValue(forKey: "ANTHROPIC_API_KEY")
         env.removeValue(forKey: "ORRERY_PHANTOM_ID")
-        for (key, value) in env { setenv(key, value, 1) }
+        Self.applyRealEnvironment(env)
 
         let shellCmd = loginCommands.joined(separator: "; ")
         let shellArgs: [String] = ["/bin/sh", "-c", shellCmd]
@@ -68,6 +68,29 @@ public struct ToolSetup {
     }
 
     // MARK: - Internal
+
+    /// IPC / phantom-supervision keys that must never leak into a child
+    /// launched via `execvp`. Mirrors the `removeValue(forKey:)` list in
+    /// `execLoginIfNeeded` above.
+    static let strippedExecEnvKeys = [
+        "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXECPATH", "ANTHROPIC_API_KEY", "ORRERY_PHANTOM_ID",
+    ]
+
+    /// Applies `env` to the real process environment via `setenv`, then
+    /// removes `strippedExecEnvKeys` from it via `unsetenv`. `execvp`
+    /// inherits the process's actual environment (not a dictionary), so
+    /// keys removed only from `env` — but already present in the real
+    /// environment — would otherwise leak into the child unchanged.
+    /// Pulled out of `execLoginIfNeeded` so the exact routine used before
+    /// `execvp` is directly testable without invoking `execvp` itself.
+    static func applyRealEnvironment(_ env: [String: String]) {
+        for (key, value) in env {
+            setenv(key, value, 1)
+        }
+        for key in strippedExecEnvKeys {
+            unsetenv(key)
+        }
+    }
 
     static func isInstalled(_ tool: Tool) -> Bool {
         let process = Process()

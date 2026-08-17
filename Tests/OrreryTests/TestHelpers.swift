@@ -107,3 +107,20 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
 
     try body()
 }
+
+/// Process-global lock serializing every test that mutates the real process
+/// environment directly via `setenv`/`unsetenv` (as opposed to `ORRERY_HOME`,
+/// covered by `orreryHomeLock` above). `setenv`/`unsetenv`/`getenv` are not
+/// thread-safe against each other in the C runtime — concurrent calls from
+/// different swift-testing suites (which run in parallel by default) can
+/// corrupt or drop updates to the shared `environ` table, not just race on
+/// individual key values. Any test that calls `setenv`/`unsetenv` on the
+/// real process environment (outside of `withIsolatedHome`) must hold this
+/// lock for the duration.
+private let realEnvironmentLock = NSLock()
+
+func withRealEnvironmentLock(_ body: () throws -> Void) rethrows {
+    realEnvironmentLock.lock()
+    defer { realEnvironmentLock.unlock() }
+    try body()
+}
