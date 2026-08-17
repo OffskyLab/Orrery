@@ -74,4 +74,41 @@ struct ShellFunctionGeneratorPhantomTests {
         guard let body = runCaseBody() else { return }
         #expect(body.contains("unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_EXECPATH"))
     }
+
+    /// The text of the `claude()` shim's fast-path guard body only — between
+    /// the guard's `if` and its closing `fi` — not the whole shim. An
+    /// unscoped `script.contains("unset ORRERY_PHANTOM_ID")` would also be
+    /// satisfied by the supervisor loop's own legitimate
+    /// `unset ORRERY_PHANTOM_ID ORRERY_PHANTOM_DIR` after the loop exits, so
+    /// it can't distinguish "fast-path clears it before launching" from
+    /// "loop clears it on the way out".
+    private func fastPathGuardBody() -> Substring? {
+        let guardMarker = "if [ -n \"${ORRERY_PHANTOM_ID:-}\" ] || [ -n \"${CLAUDECODE:-}\" ] ||"
+        guard let guardStart = script.range(of: guardMarker) else {
+            Issue.record("claude() fast-path guard not found")
+            return nil
+        }
+        guard let fiEnd = script.range(of: "\n  fi", range: guardStart.upperBound..<script.endIndex) else {
+            Issue.record("closing fi for fast-path guard not found")
+            return nil
+        }
+        return script[guardStart.upperBound..<fiEnd.lowerBound]
+    }
+
+    @Test("the claude shim fast-path clears ORRERY_PHANTOM_ID before launching directly")
+    func fastPathClearsPhantomIdBeforeLaunch() {
+        // Regression guard: a nested claude (or CLAUDECODE / ORRERY_NO_PHANTOM
+        // fast-path) must not inherit an outer supervisor's ORRERY_PHANTOM_ID —
+        // otherwise the nested claude's SessionStart hook stamps its own
+        // session id into the OUTER supervisor's registry entry.
+        guard let body = fastPathGuardBody() else { return }
+        #expect(body.contains("unset ORRERY_PHANTOM_ID"))
+        // The clear must happen before the fast-path launch call, not after.
+        guard let unsetRange = body.range(of: "unset ORRERY_PHANTOM_ID"),
+              let launchRange = body.range(of: "_orrery_claude_launch \"$@\"; return $?") else {
+            Issue.record("expected both unset and the fast-path launch call in the guard body")
+            return
+        }
+        #expect(unsetRange.upperBound <= launchRange.lowerBound)
+    }
 }
