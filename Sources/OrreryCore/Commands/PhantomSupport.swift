@@ -32,7 +32,7 @@ public enum PhantomSupport {
 
     **Tip**: this slash command is just a convenience wrapper — `orrery phantom <name>` (or `orrery phantom --codex <name>` / `--gemini`) is a plain CLI command and works the same way run directly (e.g. via `!` command-mode), including when the account's usage is exhausted and a Claude turn isn't available to parse this command.
 
-    **Multiple sessions running**: the trigger addresses sessions via a registry, not just the current terminal, so if more than one supervised session is live it can't guess which one you mean. It responds with a numbered list (tool, account, cwd, session id) and refuses to switch anything. Re-invoke with `--session <number|id>` — either the number from that list or the session id directly — to pick one, e.g. `orrery-bin phantom <name> --session 2`.
+    **Multiple sessions running**: the trigger addresses sessions via a registry, not just the current terminal, so if more than one supervised session is live it can't guess which one you mean. It responds with a numbered list (id, tool, account, cwd, session id) and refuses to switch anything. Re-invoke with `--session <number|id>` — either the number from that list or the session id directly — to pick one, e.g. `orrery-bin phantom <name> --session 2`.
 
     ## What to do
 
@@ -149,12 +149,12 @@ public enum PhantomSupport {
     /// claude in the trigger's ancestry isn't guaranteed to be a *direct*
     /// child of the supervisor shell — only an ancestor.
     ///
-    /// Why we don't require `claude.ppid == supervisor`: some Claude Code
-    /// setups wrap the binary with `caffeinate` to keep the system awake
-    /// during long sessions, so the tree looks like `supervisor → caffeinate
-    /// → claude`. We instead walk up until we either reach the supervisor
-    /// (good — return the innermost claude we passed) or run out of
-    /// ancestors (bad — return nil).
+    /// Why we don't require `claude.ppid == supervisor`: an unrelated process
+    /// could in principle sit between the supervisor and claude in the tree,
+    /// and this walk tolerates that rather than assuming a direct
+    /// parent/child link. We instead walk up until we either reach the
+    /// supervisor (good — return the innermost claude we passed) or run out
+    /// of ancestors (bad — return nil).
     ///
     /// We return the *outermost* claude in the chain (the one closest to the
     /// supervisor). Killing it cascades down through any wrapper layers
@@ -302,14 +302,14 @@ public enum PhantomSupport {
     /// no search. Out-of-band callers have no such ancestry — they only know
     /// the supervisor pid from the registry — so they descend instead.
     ///
-    /// The supervisor's loop runs claude (or a wrapper directly above it, e.g.
-    /// `caffeinate`) as its one foreground child, so that child's pid is
-    /// trustworthy on its own: killing it cascades down through any wrapper
-    /// layers to whatever is actually running underneath, regardless of what
-    /// THAT process's own children look like. We still prefer a process whose
+    /// The supervisor's loop runs claude (or, if some unrelated process ever
+    /// sits directly above it, that process) as its one foreground child, so
+    /// that child's pid is trustworthy on its own: killing it cascades down
+    /// to whatever is actually running underneath, regardless of what THAT
+    /// process's own children look like. We still prefer a process whose
     /// comm names claude — that's what lets us return the actual claude pid
-    /// rather than the wrapper sitting above it — but Claude Code itself
-    /// reports its comm as a bare version string (e.g. "2.1.228"), so
+    /// rather than whatever intermediate process sits above it — but Claude
+    /// Code itself reports its comm as a bare version string (e.g. "2.1.228"), so
     /// `isClaudeComm` can never match it directly, and while claude is busy it
     /// spawns its own children (MCP servers, tool subprocesses) — so the
     /// level below the supervisor's direct child branches constantly. That

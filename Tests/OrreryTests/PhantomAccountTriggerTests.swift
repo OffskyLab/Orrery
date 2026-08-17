@@ -71,11 +71,14 @@ struct PhantomAccountTriggerTests {
         // Unset ORRERY_PHANTOM_SHELL_PID defensively, as the other two tests
         // in this suite do — this test relies on tool resolution throwing
         // BEFORE that var is ever read, but if that ordering ever regresses,
-        // an unset var here would mean `switchLegacy` walks the real
-        // developer's process ancestry using their actual live supervisor
-        // pid, inherited from whatever shell launched `swift test`, and
-        // SIGTERMs their real claude. Isolating this defensively costs
-        // nothing and removes that failure mode entirely.
+        // a var left SET here (leaked from whatever shell launched
+        // `swift test`) is what would make `run()` fall into `switchLegacy`,
+        // which walks the real developer's process ancestry using their
+        // actual live supervisor pid and SIGTERMs their real claude. An
+        // unset var is the safe state — `switchLegacy` is only reachable
+        // when the var IS present (see the `if let legacyPid = env[...]`
+        // guard in `run()`). Isolating this defensively costs nothing and
+        // removes that failure mode entirely.
         try withIsolatedHome {
             let saved = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
             unsetenv("ORRERY_PHANTOM_SHELL_PID")
