@@ -90,13 +90,7 @@ public struct RunCommand: ParsableCommand {
         // only adds/overwrites keys, so anything already present in the
         // real environment (inherited from the parent shell) would
         // otherwise survive the swap and leak into the child unchanged.
-        var keysToUnset = Self.strippedExecEnvKeys
-        if let envName, envName != Workspace.reservedOriginName {
-            keysToUnset.append("ANTHROPIC_API_KEY")
-        }
-        if let envName, envName == Workspace.reservedOriginName {
-            keysToUnset.append(contentsOf: Tool.allCases.map(\.envVarName))
-        }
+        let keysToUnset = Self.keysToUnset(forEnvName: envName)
 
         // Use execvp to replace this process — inherits full TTY for interactive tools
         Self.applyRealEnvironment(processEnv, strippingKeys: keysToUnset)
@@ -130,6 +124,31 @@ extension RunCommand {
         for key in keys {
             unsetenv(key)
         }
+    }
+
+    /// The full set of keys `applyRealEnvironment` must `unsetenv` for this
+    /// invocation, given the resolved `envName`.
+    ///
+    /// `nil` and `Workspace.reservedOriginName` are equivalent throughout
+    /// this codebase (see `resolvePinnedAccount`, `prepareMaterialize`,
+    /// `ListCommand`, `ThirdPartyCommand`) — nothing exports
+    /// `ORRERY_ACTIVE_ENV` any more, so `envName` is nil on every ordinary
+    /// invocation, not only when the user explicitly passes `-a origin`.
+    /// Treating only the explicit case as origin left the tool-config-dir
+    /// leak this function exists to close open in the common path.
+    ///
+    /// Extracted so this exact decision is directly testable — a test that
+    /// reimplements this conditional instead of calling it can drift from
+    /// production silently, which is exactly what happened here once
+    /// already.
+    static func keysToUnset(forEnvName envName: String?) -> [String] {
+        var keys = Self.strippedExecEnvKeys
+        if let envName, envName != Workspace.reservedOriginName {
+            keys.append("ANTHROPIC_API_KEY")
+        } else {
+            keys.append(contentsOf: Tool.allCases.map(\.envVarName))
+        }
+        return keys
     }
 
     /// 解析「當前 env / origin 釘在某工具上的 account + 它的 configDir」。
