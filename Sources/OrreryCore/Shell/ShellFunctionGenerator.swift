@@ -286,6 +286,13 @@ public struct ShellFunctionGenerator {
         claude() {
           if [ -n "${ORRERY_PHANTOM_ID:-}" ] || [ -n "${CLAUDECODE:-}" ] ||
              [ -n "${ORRERY_NO_PHANTOM:-}" ]; then
+            # Fast-path: launch directly, skipping the supervisor loop below.
+            # If we got here because ORRERY_PHANTOM_ID was already set (a
+            # nested claude call, e.g. triggered from a hook), clear it
+            # before launching so this nested claude's SessionStart hook
+            # does not stamp its own session id into the OUTER supervisor's
+            # registry entry.
+            unset ORRERY_PHANTOM_ID
             _orrery_claude_launch "$@"; return $?
           fi
 
