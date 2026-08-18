@@ -112,9 +112,14 @@ build_from_source() {
 
   # Bundle.module (used for the third-party manifest catalog) needs its
   # resource bundle shipped next to the binary or it fatal-errors at runtime.
+  # Remove any existing bundle dir first: merging a fresh bundle over a
+  # stale one of the same name (e.g. an older Contents/Resources/-style
+  # package layout) leaves old files behind, and Bundle resource lookup can
+  # silently prefer the stale ones forever.
   for suffix in bundle resources; do
     built="$TMP_DIR/orrery/.build/release/orrery_OrreryThirdParty.${suffix}"
     if [[ -d "$built" ]]; then
+      $USE_SUDO rm -rf "$INSTALL_DIR/orrery_OrreryThirdParty.${suffix}"
       $USE_SUDO cp -r "$built" "$INSTALL_DIR/"
       break
     fi
@@ -177,9 +182,13 @@ else
         $USE_SUDO chmod +x "$INSTALL_DIR/$extra"
       fi
     done
+    # Remove any existing bundle dir first — see the build_from_source note
+    # above on why merging over a stale bundle silently sticks.
     if [[ -d "$TMP_DIR/orrery_OrreryThirdParty.bundle" ]]; then
+      $USE_SUDO rm -rf "$INSTALL_DIR/orrery_OrreryThirdParty.bundle"
       $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.bundle" "$INSTALL_DIR/"
     elif [[ -d "$TMP_DIR/orrery_OrreryThirdParty.resources" ]]; then
+      $USE_SUDO rm -rf "$INSTALL_DIR/orrery_OrreryThirdParty.resources"
       $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.resources" "$INSTALL_DIR/"
     fi
     info "Installed pre-built binary to $INSTALL_DIR/$BINARY_NAME"

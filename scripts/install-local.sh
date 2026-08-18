@@ -68,12 +68,18 @@ info "Installing binary to $INSTALL_DIR/$BINARY_NAME"
 $USE_SUDO cp "$EXTRACTED" "$INSTALL_DIR/$BINARY_NAME"
 $USE_SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
-# Install resources if present
+# Install resources if present. Remove any existing bundle dir first: a
+# stale local macOS-style build (Contents/Resources/ package layout) merged
+# under a newer flat SPM bundle of the same name leaves the old nested
+# Contents/ untouched — and Foundation's Bundle resource lookup prefers
+# Contents/Resources/ when present, so stale manifests win silently forever.
 if [[ -d "$TMP_DIR/orrery_OrreryThirdParty.bundle" ]]; then
   info "Installing resource bundle..."
+  $USE_SUDO rm -rf "$INSTALL_DIR/orrery_OrreryThirdParty.bundle"
   $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.bundle" "$INSTALL_DIR/"
 elif [[ -d "$TMP_DIR/orrery_OrreryThirdParty.resources" ]]; then
   info "Installing resources..."
+  $USE_SUDO rm -rf "$INSTALL_DIR/orrery_OrreryThirdParty.resources"
   $USE_SUDO cp -r "$TMP_DIR/orrery_OrreryThirdParty.resources" "$INSTALL_DIR/"
 fi
 
