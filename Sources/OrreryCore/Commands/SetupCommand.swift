@@ -129,24 +129,33 @@ public struct SetupCommand: ParsableCommand {
     }
 
     static func installShellIntegration(to url: URL, activatePath: String) {
-        // Lazy-bootstrap stub: defines `orrery()` as a one-liner that sources
-        // activate.sh (which overwrites the function with the real one) and
-        // re-invokes it. The second `orrery "$@"` lookup resolves to the newly
-        // defined function because function names are resolved at call time.
+        // Eager, unconditional source: activate.sh defines `orrery()`,
+        // `claude()`, and `gemini()`. A previous "lazy bootstrap" shape only
+        // ever stubbed `orrery()` in the rc file, and left `claude()`/
+        // `gemini()` undefined until `orrery` itself had been invoked at
+        // least once in the shell session — so a brand-new shell where the
+        // user ran bare `claude` before ever running `orrery` got the raw,
+        // unwrapped binary on PATH, silently bypassing phantom supervision
+        // (and gemini's HOME-wrapper account isolation) entirely. Sourcing
+        // directly closes that gap: every function activate.sh defines is
+        // available from the very first prompt, no bootstrap trigger needed.
         //
-        // Why stub instead of `source activate.sh`:
-        //   1. Shell startup stays fast — activate.sh is only loaded when the
-        //      user actually invokes `orrery`.
-        //   2. Since the binary was renamed `orrery-bin`, calling `orrery`
-        //      MUST go through the shell function. A stub guarantees one is
-        //      always defined, even before activate.sh is sourced.
-        let stubMarker = "# orrery shell integration (lazy bootstrap)"
+        // The existence check guards the case where `~/.orrery` was removed
+        // (or moved) without re-running `orrery setup` — better to silently
+        // skip orrery integration for that shell than print a "no such
+        // file" error on every single prompt.
+        //
+        // Cost accepted: every new shell now pays activate.sh's own startup
+        // work (`_orrery_init`'s version-stamp check shells out to
+        // `orrery-bin --version`), not just shells that actually invoke
+        // `orrery`. That's a deliberate trade against the silent-bypass
+        // failure mode above.
+        let stubMarker = "# orrery shell integration (source)"
         let stub = """
         \(stubMarker)
-        orrery() {
+        if [ -f "\(activatePath)" ]; then
           source "\(activatePath)"
-          orrery "$@"
-        }
+        fi
         """
 
         var existing = ""
@@ -186,10 +195,11 @@ public struct SetupCommand: ParsableCommand {
     }
 
     /// Remove every legacy / stale orrery integration block from `text`.
-    /// Handles the three shapes we've shipped:
+    /// Handles the four shapes we've shipped:
     ///   1. `# orrery shell integration\nsource "…/activate.sh"`       (pre-stub)
     ///   2. `eval "$(orrery setup)"`                                   (oldest)
-    ///   3. `# orrery shell integration (lazy bootstrap)\norrery() { … }` (current)
+    ///   3. `# orrery shell integration (lazy bootstrap)\norrery() { … }` (orrery()-only stub)
+    ///   4. `# orrery shell integration (source)\nif [ -f … ]; then … fi` (current)
     /// Any trailing blank lines left behind are collapsed by the caller.
     static func stripOrreryBlocks(_ text: String) -> String {
         let lines = text.components(separatedBy: "\n")
@@ -197,6 +207,15 @@ public struct SetupCommand: ParsableCommand {
         var i = 0
         while i < lines.count {
             let line = lines[i]
+            // Shape 4: eager-source — comment + `if [ -f … ]; then … fi` guard
+            if line.trimmingCharacters(in: .whitespaces) == "# orrery shell integration (source)" {
+                i += 1
+                while i < lines.count && lines[i].trimmingCharacters(in: .whitespaces) != "fi" {
+                    i += 1
+                }
+                if i < lines.count { i += 1 } // consume closing `fi`
+                continue
+            }
             // Shape 3: lazy-bootstrap — comment + function body + closing brace
             if line.trimmingCharacters(in: .whitespaces) == "# orrery shell integration (lazy bootstrap)" {
                 i += 1
