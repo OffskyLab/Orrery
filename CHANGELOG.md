@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.5.1 - 2026-08-18
+
+### Fixed
+
+- **Bare `claude` silently wasn't phantom-supervised on a brand-new shell.**
+  The rc-file integration only ever stubbed `orrery()` as a lazy bootstrap
+  that sources `activate.sh` on first invocation — `claude()`/`gemini()` are
+  defined solely inside `activate.sh`, so a shell where the user ran bare
+  `claude` before ever running any `orrery` subcommand got the raw,
+  unwrapped binary on `PATH`, silently bypassing phantom supervision (and
+  gemini's account isolation) entirely, with no error of any kind.
+  `orrery phantom`/`/orrery:phantom` then correctly reported "no supervised
+  session found" — `_phantom-begin` was never even called. The rc file now
+  sources `activate.sh` eagerly (existence-guarded) instead, so every
+  function it defines is available from the very first prompt. Re-run
+  `orrery setup` to pick up the fix on an existing install.
+
 ## v3.5.0 - 2026-08-18
 
 ### Added
