@@ -1,9 +1,34 @@
 # Changelog
 
-## Unreleased
+## v3.5.0 - 2026-08-18
+
+### Added
+
+- **`orrery phantom` — switch a running `claude` session's account without restarting it.**
+  A bare `claude` launch is now supervised by a shim that watches for
+  `orrery phantom` (or the `/orrery:phantom` slash command) and re-execs the
+  session under the newly-selected account in place, mid-conversation. A
+  per-supervisor registry (`orrery show` lists supervised sessions) tracks
+  which process owns which account, using pid-recycle-safe liveness checks
+  so a stale entry can never hijack a live session. `orrery uninstall`
+  clears the registry.
+- **`orrery current`**: shows which account is globally pinned per tool — the
+  one a brand-new shell picks up automatically. `orrery use <account>`
+  persists that pin, and every new shell restores it on startup (via
+  `_current-export`, silently skipped for any tool whose export var is
+  already set in that shell — an explicit override always wins).
 
 ### Changed
 
+- **Statusline installs are now re-pin-aware.** `orrery thirdparty install
+  statusline` installs a small dispatcher into the account dir instead of
+  patching `settings.json` to point directly at one workspace's copy. The
+  dispatcher re-resolves the account's *current* workspace pin on every
+  render, so `orrery pin <account> --workspace <name>` takes effect
+  immediately — no `settings.json` edit or reinstall required.
+- **`set-env`/`unset-env`/`current`/`memory` removed from `orrery workspace`.**
+  `memory` and `sync` move to top-level commands; the old workspace-scoped
+  `current` is superseded by the new global `orrery current` above.
 - **`orrery workspace list` redesigned: grouped by tool, not by workspace.**
   Since v3.1 an `Account` carries its own `workspace` field — a workspace
   doesn't own accounts, accounts point at a workspace — so the old
