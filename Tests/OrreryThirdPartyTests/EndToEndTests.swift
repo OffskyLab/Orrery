@@ -24,6 +24,7 @@ struct EndToEndTests {
         let hooks = src.appendingPathComponent("hooks")
         try FileManager.default.createDirectory(at: hooks, withIntermediateDirectories: true)
         try Data("statusline".utf8).write(to: src.appendingPathComponent("statusline.js"))
+        try Data("statusline-dispatch".utf8).write(to: src.appendingPathComponent("statusline-dispatch.js"))
         for name in ["message-tracker.js", "summary-updater.js", "file-tracker.js"] {
             try Data(name.utf8).write(to: hooks.appendingPathComponent(name))
         }

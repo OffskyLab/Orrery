@@ -9,13 +9,14 @@
   },
   "steps": [
     { "type": "copyFile", "from": "statusline.js", "to": "<WORKSPACE_CLAUDE_DIR>/statusline.js" },
+    { "type": "copyFile", "from": "statusline-dispatch.js", "to": "statusline.js" },
     {
       "type": "patchSettings",
       "file": "settings.json",
       "patch": {
         "statusLine": {
           "type": "command",
-          "command": "node <WORKSPACE_CLAUDE_DIR>/statusline.js",
+          "command": "node <CLAUDE_DIR>/statusline.js",
           "refreshInterval": 30
         }
       }
