@@ -658,6 +658,14 @@
   },
   {
     "path": [
+      "CurrentAccount",
+      "abstract"
+    ],
+    "kind": "var",
+    "parameters": []
+  },
+  {
+    "path": [
       "Delegate",
       "abstract"
     ],

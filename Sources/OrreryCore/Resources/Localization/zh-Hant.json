@@ -102,6 +102,7 @@
   "create.tools": "工具：{list}",
   "create.unknownTool": "未知工具 '{raw}'。可用工具：claude, codex, gemini",
   "create.wizardTitle": "選擇要使用的工具（↑↓ 移動，Enter 確認）：",
+  "currentAccount.abstract": "顯示各工具目前釘住的帳號 — 也就是新開的 shell 會自動套用的帳號。",
   "delegate.abstract": "委派任務給指定環境的 AI 工具",
   "delegate.accountHelp": "帳號名稱（預設為目前啟用的帳號）",
   "delegate.noManagedSessions": "找不到已管理的 session。請先用 --session-name <name> 建立。",

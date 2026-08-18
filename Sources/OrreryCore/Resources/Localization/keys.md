@@ -107,6 +107,12 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `create.unknownTool` | Error for an unknown `--tool` value. `{raw}` = user input. Keep tool names literal. |
 | `create.wizardTitle` | Title for the initial tool picker. |
 
+## currentAccount — `orrery current`
+
+| Key | Context |
+| --- | --- |
+| `currentAccount.abstract` | Command help. Reuses `account.showRowHeader` / `account.showRowUnpinned` for its per-tool output lines — see the `account` section above. |
+
 ## delegate — `orrery delegate`
 
 | Key | Context |

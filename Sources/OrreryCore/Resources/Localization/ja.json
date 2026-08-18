@@ -102,6 +102,7 @@
   "create.tools": "Tools: {list}",
   "create.unknownTool": "Unknown tool '{raw}'. Valid tools: claude, codex, gemini",
   "create.wizardTitle": "Select a tool (↑↓ move, enter confirm):",
+  "currentAccount.abstract": "各ツールで現在ピン留めされているアカウントを表示します。新しいシェルでも自動的にこのアカウントが使われます。",
   "delegate.abstract": "Delegate a task to an AI tool in a specific environment",
   "delegate.accountHelp": "Account name (defaults to active account)",
   "delegate.noManagedSessions": "No managed sessions found. Create one with --session-name <name> first.",

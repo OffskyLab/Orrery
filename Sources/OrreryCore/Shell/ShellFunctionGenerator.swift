@@ -202,6 +202,10 @@ public struct ShellFunctionGenerator {
                 if _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null); then
                   export CODEX_HOME="$_dir"
                   echo "orrery: CODEX_HOME=$_dir" >&2
+                  # Persist so a brand-new shell restores this pin automatically
+                  # (see _current-export in _orrery_init). Best-effort — the
+                  # switch itself already succeeded.
+                  command orrery-bin _pin-current "$@" >/dev/null 2>&1 || true
                 else
                   command orrery-bin use "$@"
                   return $?
@@ -215,6 +219,7 @@ public struct ShellFunctionGenerator {
                 if _dir=$(command orrery-bin _account-dir "$@" 2>/dev/null); then
                   export ORRERY_GEMINI_HOME="$_dir"
                   echo "orrery: ORRERY_GEMINI_HOME=$_dir" >&2
+                  command orrery-bin _pin-current "$@" >/dev/null 2>&1 || true
                 else
                   command orrery-bin use "$@"
                   return $?
@@ -228,6 +233,7 @@ public struct ShellFunctionGenerator {
                 if _dir=$(command orrery-bin _account-dir "$@"); then
                   export CLAUDE_CONFIG_DIR="$_dir"
                   echo "orrery: CLAUDE_CONFIG_DIR=$_dir" >&2
+                  command orrery-bin _pin-current "$@" >/dev/null 2>&1 || true
                 else
                   return 1
                 fi
@@ -257,6 +263,12 @@ public struct ShellFunctionGenerator {
 
           # Ensure the Orrery memory directory is linked into Claude's auto-memory location
           command orrery-bin _link-memory 2>/dev/null || true
+
+          # Restore whichever account `orrery use` last pinned per tool, so a
+          # brand-new shell picks it up automatically — no re-running `use`
+          # needed. Silent no-op for any tool that's unpinned, already has its
+          # export var set (explicit override wins), or isn't in v3.1 layout.
+          eval "$(command orrery-bin _current-export 2>/dev/null)"
         }
 
         # v3.1 launch wrapper, extracted so the supervisor loop can call it once

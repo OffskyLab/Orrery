@@ -48,6 +48,15 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
             return
         }
 
+        // 自我碰撞防呆：當 target 所在目錄本身是指到 account dir 的 symlink
+        // （例如 codex 的 whole-dir account 架構下 ~/.codex -> account dir），
+        // target 展開後其實跟 source 是同一個實體檔案。這種情況下不能走
+        // remove+recreate，否則會刪掉唯一一份真憑證，再建出指向自己的
+        // 循環 symlink。已經就位，直接 return。
+        if target.resolvingSymlinksInPath().path == source.resolvingSymlinksInPath().path {
+            return
+        }
+
         // 移除任何既有的 target（regular file 或舊 symlink，含 broken symlink）。
         if fm.fileExists(atPath: target.path)
             || (try? fm.destinationOfSymbolicLink(atPath: target.path)) != nil {
