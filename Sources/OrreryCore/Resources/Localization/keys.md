@@ -18,7 +18,7 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | `account.addCreated` | Success after adding an account. `{tool}` = tool name; `{name}` = display name. |
 | `account.addDuplicateName` | Validation error when adding an account whose display name already exists for the same tool. `{name}` = display name; `{tool}` = tool name. |
 | `account.addEmptyName` | Validation error when an empty name is entered. |
-| `account.addNameHelp` | `--name` flag help text for `add`. |
+| `account.addNameHelp` | Help text for the positional account name in `add`. |
 | `account.flagClaudeHelp` | `--claude` flag help text for `add` (and other top-level account commands). |
 | `account.flagCodexHelp` | `--codex` flag help text for `add` (and other top-level account commands). |
 | `account.flagGeminiHelp` | `--gemini` flag help text for `add` (and other top-level account commands). |

@@ -9,8 +9,10 @@ import Testing
 ///     orrery add --claude --name demo-1
 ///     orrery remove --claude demo-1
 ///
-/// `add` now matches `remove`. `--name` keeps working, hidden and undocumented,
-/// because it was the documented spelling for every release up to this one.
+/// `add` now matches `remove`. `--name` is gone rather than deprecated: the
+/// releases that carried it were never announced, so there is no install base
+/// to keep limping along, and a hidden alias would just preserve the ambiguity
+/// this change exists to remove.
 @Suite("orrery add — positional name")
 struct AddCommandNameArgumentTests {
 
@@ -45,25 +47,10 @@ struct AddCommandNameArgumentTests {
         }
     }
 
-    @Test("--name still works — it was the documented spelling before this change")
-    func deprecatedNameOptionStillWorks() throws {
-        try withIsolatedHome {
-            try AddCommand.parse(["--claude", "--name", "legacy-flag-test", "--skip-login"]).run()
-            #expect(try AccountStore.default.list(tool: .claude)
-                .contains { $0.displayName == "legacy-flag-test" })
-        }
-    }
-
-    @Test("the positional wins when both spellings are given")
-    func positionalWinsOverDeprecatedOption() throws {
-        try withIsolatedHome {
-            try AddCommand.parse(
-                ["--claude", "from-positional", "--name", "from-option", "--skip-login"]
-            ).run()
-
-            let names = try AccountStore.default.list(tool: .claude).map(\.displayName)
-            #expect(names.contains("from-positional"))
-            #expect(!names.contains("from-option"))
+    @Test("--name is rejected outright, not silently accepted as an alias")
+    func nameOptionIsGone() {
+        #expect(throws: (any Error).self) {
+            try AddCommand.parse(["--claude", "--name", "gone", "--skip-login"])
         }
     }
 
@@ -75,12 +62,13 @@ struct AddCommandNameArgumentTests {
     @Test("_account-add-prepare accepts the positional name as well")
     func prepareCommandAcceptsPositionalName() throws {
         let cmd = try AccountAddPrepareCommand.parse(["--claude", "prepare-positional"])
-        #expect(cmd.resolvedName == "prepare-positional")
+        #expect(cmd.name == "prepare-positional")
     }
 
-    @Test("_account-add-prepare still accepts --name")
-    func prepareCommandAcceptsDeprecatedOption() throws {
-        let cmd = try AccountAddPrepareCommand.parse(["--claude", "--name", "prepare-legacy"])
-        #expect(cmd.resolvedName == "prepare-legacy")
+    @Test("_account-add-prepare rejects --name too, so both entry points agree")
+    func prepareCommandRejectsNameOption() {
+        #expect(throws: (any Error).self) {
+            try AccountAddPrepareCommand.parse(["--claude", "--name", "gone"])
+        }
     }
 }
