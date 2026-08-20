@@ -160,6 +160,33 @@ extension ClaudeJsonMerge {
         for (k, v) in identity { result[k] = v }
         return result
     }
+
+    /// Fold the credential store's `claudeAiOauth` fields into a
+    /// `.claude.json` `oauthAccount` object, keeping every field already
+    /// there.
+    ///
+    /// The two share a slot but not a schema:
+    /// - `oauthAccount` (written by claude itself) carries account IDENTITY —
+    ///   `accountUuid`, `emailAddress`, `organizationUuid`,
+    ///   `organizationRole`, `workspaceRole`, … — the fields claude reads to
+    ///   know *who* is logged in.
+    /// - `claudeAiOauth` (macOS Keychain / `.credentials.json`) carries the
+    ///   TOKENS — `accessToken`, `refreshToken`, `expiresAt`, … — proving
+    ///   that login is still valid.
+    ///
+    /// Assigning one over the other drops the identity half, and claude then
+    /// reports "Login expired" against a perfectly good token because it can
+    /// no longer resolve the account. Overlay, never replace: the credential
+    /// wins for the token fields it defines (it is the fresher source for
+    /// those) and every identity field survives untouched.
+    public static func overlayingOAuthCredential(
+        _ credential: [String: Any],
+        onto oauthAccount: [String: Any]
+    ) -> [String: Any] {
+        var result = oauthAccount
+        for (k, v) in credential { result[k] = v }
+        return result
+    }
 }
 
 extension ClaudeJsonMerge {

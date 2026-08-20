@@ -51,6 +51,43 @@ struct ClaudeAccountMigrationTests {
         }
     }
 
+    #if os(macOS)
+    /// Regression, same schema rule as `PrepareClaudeLaunchCommand`: seeding
+    /// the identity file from a stored credential must not throw away the
+    /// account-identity half of `oauthAccount`. The credential blob carries
+    /// tokens only; `emailAddress` is all the identity migration has, and it
+    /// has to survive alongside them.
+    @Test("migration keeps Account.email in oauthAccount when a credential is present")
+    func seedsIdentityKeepsEmailAlongsideCredential() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            let envStore = EnvironmentStore.default
+            var acct = Account(tool: .claude, displayName: "alice", email: "alice@example.com")
+            acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
+            try acctStore.save(acct)
+            defer { ClaudeKeychain.deleteKeychainItem(service: acct.keychainItem!) }
+
+            ClaudeKeychain.storePassword(
+                #"{"claudeAiOauth":{"accessToken":"tok-access","refreshToken":"tok-refresh","expiresAt":1787232311999}}"#,
+                forOrreryAccount: acct.id
+            )
+
+            try ClaudeAccountMigration.migrateAccount(
+                acct, accountStore: acctStore, environmentStore: envStore)
+
+            let identityURL = ClaudeJsonMerge.identityFileURL(
+                accountDir: acctStore.accountDir(id: acct.id, tool: .claude))
+            let identity = ClaudeJsonMerge.loadJSON(at: identityURL)
+            let oauthAccount = try #require(identity?["oauthAccount"] as? [String: Any])
+
+            #expect(oauthAccount["emailAddress"] as? String == "alice@example.com",
+                "the credential must not displace the account's identity fields")
+            #expect(oauthAccount["accessToken"] as? String == "tok-access")
+            #expect(oauthAccount["refreshToken"] as? String == "tok-refresh")
+        }
+    }
+    #endif
+
     @Test("migration with no email writes empty identity")
     func noEmailNoSnapshotEmptyIdentity() throws {
         try withIsolatedHome {

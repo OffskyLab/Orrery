@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Every account switch forced a re-login: launch prep wiped `oauthAccount`'s
+  identity fields.** `.claude.json`'s `oauthAccount` and the credential store's
+  `claudeAiOauth` blob share a slot but not a schema — the former holds account
+  identity (`accountUuid`, `emailAddress`, `organizationUuid`,
+  `organizationRole`, `workspaceRole`), the latter holds only tokens.
+  `_prepare-claude-launch`, rehydrating a `refreshToken`-less identity file from
+  the Keychain (or `.credentials.json`), *assigned* the credential over
+  `oauthAccount` instead of overlaying it, deleting every identity field. claude
+  could then no longer resolve which account was logged in and reported
+  `Login expired · Please run /login` against a perfectly valid, unexpired
+  token. Logging in fixed it only until the next launch: capture wrote claude's
+  identity-shaped (and therefore `refreshToken`-less) `oauthAccount` back to the
+  identity store, which re-armed the exact same branch — one forced re-login per
+  account switch, indefinitely. The credential's token fields are now overlaid
+  onto the existing `oauthAccount`, leaving every identity field intact.
+  `ClaudeAccountMigration` seeded identity files the same way and had the same
+  fix applied, so a migrated account keeps its `emailAddress` alongside its
+  tokens.
+
 ## v3.5.1 - 2026-08-18
 
 ### Fixed
