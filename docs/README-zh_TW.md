@@ -32,13 +32,13 @@ Orrery 以一個概念解決這些問題：
 
 ## 🧩 核心概念
 
-從 **account（帳號）** 開始 — 多數人這層就夠了。只有當特定情境需要完全隔離的設定空間時，才需要動到 **sandbox**。
+從 **account（帳號）** 開始 — 多數人這層就夠了。只有當特定情境需要完全隔離的設定空間時，才需要動到 **workspace（工作區）**。
 
 ### Account（帳號）
 
 工具的**身份**：Orrery 用來登入的憑證。帳號集中在共享 pool 中，註冊一次即可隨時切換，用 `orrery use` 切。這是你日常會碰的層。
 
-### Sandbox（沙盒）_（進階）_
+### Workspace（工作區）_（進階）_
 
 可選的**隔離層**：獨立的 memory、sessions、env vars，蓋在 account 之上。多數人從來不需要 — 客戶或專案需要獨立設定空間時再用。用 `orrery pin <account> --workspace <name>` 把帳號 pin 進去，再用 `orrery use <account>` 啟用。
 
@@ -48,11 +48,11 @@ Orrery 以一個概念解決這些問題：
 
 ### Phantom 模式
 
-`orrery run claude` 啟動 Claude 時會帶著一個 phantom supervisor。在那個 Claude session 裡，`/orrery:phantom` slash command 可以**不結束對話**就切換帳號 — Claude 退出後 supervisor 帶著新帳號與 `--resume` 把它叫回來。詳見下方 [Phantom 模式](#phantom-模式) 。
+執行 `claude` 時會帶著一個 phantom supervisor。在那個 Claude session 裡，`/orrery:phantom` slash command 可以**不結束對話**就切換帳號 — Claude 退出後 supervisor 帶著新帳號與 `--resume` 把它叫回來。詳見下方 [Phantom 模式](#phantom-模式) 。
 
 ### MCP Delegation（委派）
 
-在執行中的 session 內，將任務指派給特定帳號或 sandbox。讓一個 Claude instance 可以委派工作給另一個跑在不同身份下的 instance。
+在執行中的 session 內，將任務指派給特定帳號或 workspace。讓一個 Claude instance 可以委派工作給另一個跑在不同身份下的 instance。
 
 ---
 
@@ -61,10 +61,10 @@ Orrery 以一個概念解決這些問題：
 Orrery 為 AI 工具引入了結構化的 runtime 模型：
 
 - **Account** → 隔離身份（每個工具的憑證）
-- **Sandbox** _（可選）_ → 隔離設定（memory、sessions、env vars）
+- **Workspace** _（可選）_ → 隔離設定（memory、sessions、env vars）
 - **Session** → 代表連續性（對話、上下文、記憶）
 - **Phantom** → session 中切換而不打斷對話
-- **Delegation (MCP)** → 讓帳號與 sandbox 之間可以協調
+- **Delegation (MCP)** → 讓帳號與 workspace 之間可以協調
 
 傳統工具的類比：
 
@@ -183,7 +183,7 @@ claude --resume              # 無縫接續同一個 session
 
 ## Phantom 模式
 
-用 `orrery run claude` 啟動 Claude，會有一個 supervisor 在旁邊守著。在那個 Claude 裡，`orrery mcp setup` 安裝的 `/orrery:phantom` slash command 可以**不重啟對話**直接換 account：
+執行 `claude`，會有一個 supervisor 在旁邊守著。在那個 Claude 裡，`orrery mcp setup` 安裝的 `/orrery:phantom` slash command 可以**不重啟對話**直接換 account：
 
 ```text
 /orrery:phantom personal           # 把 claude 帳號切到 'personal'
@@ -196,31 +196,31 @@ Claude 退出後 supervisor 帶著新的 account 與 `--resume` 把它叫回來�
   <img src="../assets/demo/phatom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
 </p>
 
-Phantom 是 `orrery run claude` 的**預設**模式。若要關掉（單次執行、不帶 supervisor）：
+Phantom 監督是裸執行 `claude` 的**預設**行為 — shell 整合會自動包住它。若要單次關掉（不帶 supervisor）：
 
 ```bash
-orrery run --non-phantom claude
+ORRERY_NO_PHANTOM=1 claude   # 或：orrery run --non-phantom claude
 ```
 
 非 Claude 工具一律單次執行：
 
 ```bash
 orrery run codex             # 在目前 pin 的 codex 帳號下單次執行
-orrery run -a client-a npm install  # 在指定的 sandbox 內跑任意指令
+orrery run -a client-a npm install  # 在指定的 workspace 內跑任意指令
 ```
 
 ---
 
-## Sandboxes _（可選）_
+## Workspaces（工作區）_（可選）_
 
-Sandbox 是完整的設定隔離層：獨立的 memory、sessions、env vars，以及各工具的 config dir。當客戶或專案需要自己一塊牆內空間時用得到。如果只需要切帳號，可以完全跳過 sandbox。
+Workspace 是完整的設定隔離層：獨立的 memory、sessions、env vars，以及各工具的 config dir。當客戶或專案需要自己一塊牆內空間時用得到。如果只需要切帳號，可以完全跳過 workspace。
 
 ```bash
 orrery workspace create client-a   # 互動式 wizard：選工具、memory 模式、clone 來源
-orrery workspace list              # 列出所有 sandbox
+orrery workspace list              # 列出所有 workspace
 orrery workspace info client-a     # 詳細狀態（工具、帳號、env vars、memory）
 
-orrery pin work --workspace client-a --claude  # 把帳號 pin 進這個 sandbox
+orrery pin work --workspace client-a --claude  # 把帳號 pin 進這個 workspace
 orrery use work                                # 啟用它 — CLAUDE_CONFIG_DIR 解析到
                                                 # 該帳號的目錄，共享 client-a 的
                                                 # memory/sessions/設定
@@ -235,7 +235,7 @@ claude
 
 ## `origin` 基準
 
-`origin` 是你的預設設定 — 帳號在沒有選擇其他 sandbox 時所 pin 的 workspace。第一次 `orrery setup` 時，現有的工具設定（`~/.claude/`、`~/.codex/`、`~/.gemini/`）會被移入 `~/.orrery/origin/`，原位變成 symlink。你的資料完整保留，只是搬進 Orrery 的管理範圍。
+`origin` 是你的預設設定 — 帳號在沒有選擇其他 workspace 時所 pin 的 workspace。第一次 `orrery setup` 時，現有的工具設定（`~/.claude/`、`~/.codex/`、`~/.gemini/`）會被移入 `~/.orrery/origin/`，原位變成 symlink。你的資料完整保留，只是搬進 Orrery 的管理範圍。
 
 ```bash
 orrery use <origin 帳號>        # 啟用一個 pin 在 origin 的帳號
@@ -252,15 +252,15 @@ orrery uninstall
 
 ## Session 共享
 
-預設所有 sandbox 共享 session 資料：
+預設所有 workspace 共享 session 資料：
 
 - 從 `work` 切到 `personal` → Claude 對話仍在
 - 切換帳號後 `claude --resume` 可接續同一個 session
-- 各 sandbox 仍有**獨立的認證憑證**
+- 各帳號仍有**獨立的認證憑證**
 
 共享機制是把工具的 session 目錄（`projects/`、`sessions/`、`session-env/`）symlink 到 `~/.orrery/shared/`。
 
-需要在 sandbox 內完全隔離 session 時（例如合規要求），在 `orrery workspace create` wizard 中選 **isolate**，或之後用 `orrery memory isolate` / `share` 切換。
+需要在 workspace 內完全隔離 session 時（例如合規要求），在 `orrery workspace create` wizard 中選 **isolate**，或之後用 `orrery memory isolate` / `share` 切換。
 
 ---
 
@@ -274,19 +274,22 @@ orrery uninstall
 |---|---|
 | `orrery add [--claude\|--codex\|--gemini] --name <name>` | 註冊新帳號到 pool（並執行該工具的 login flow） |
 | `orrery list [--claude\|--codex\|--gemini]` | 列出帳號（依工具過濾或全部） |
-| `orrery show` | 顯示目前 pin 的帳號與啟用中的 sandbox |
+| `orrery show` | 顯示目前 pin 的帳號與該帳號所屬的 workspace |
 | `orrery use [--claude\|--codex\|--gemini] <name>` | 將指定帳號 pin 為該工具的當前帳號（預設工具：claude） |
+| `orrery current` | 顯示各工具目前 pin 的帳號 — 新開的 shell 會自動沿用 |
+| `orrery pin <name> --workspace <ws> [--claude\|--codex\|--gemini]` | 把帳號 pin 到某個 workspace（決定它共享哪組 session/memory 目錄） |
 | `orrery remove [--claude\|--codex\|--gemini] <name>` | 從 pool 移除帳號 |
+| `orrery refresh-token [<name>]` | 強制更新 Claude 帳號的 OAuth token |
 
-### Sandboxes
+### Workspaces
 
 | 指令 | 說明 |
 |---|---|
-| `orrery workspace create <name>` | 互動式 wizard 建立 sandbox |
-| `orrery workspace list` | 列出所有 sandbox |
-| `orrery workspace info [name]` | 顯示 sandbox 詳細資訊 |
-| `orrery workspace delete <name>` | 刪除 sandbox |
-| `orrery workspace rename <old> <new>` | 重新命名 sandbox |
+| `orrery workspace create <name>` | 互動式 wizard 建立 workspace |
+| `orrery workspace list` | 列出所有 workspace |
+| `orrery workspace info [name]` | 顯示 workspace 詳細資訊 |
+| `orrery workspace delete <name>` | 刪除 workspace |
+| `orrery workspace rename <old> <new>` | 重新命名 workspace |
 
 ### Memory
 
@@ -307,8 +310,8 @@ orrery uninstall
 |---|---|
 | `orrery run [-a <name>] claude` | 透過 phantom supervisor 啟動 Claude（預設）— 啟用 `/orrery:phantom` |
 | `orrery run --non-phantom claude` | 單次執行 Claude（無 supervisor） |
-| `orrery run [-a <name>] <command>` | 在指定（或當前）sandbox 內執行任意指令 |
-| `orrery delegate -a <name> "prompt"` | 委派任務給其他 sandbox 的 AI 工具 |
+| `orrery run [-a <name>] <command>` | 在指定（或當前）workspace 內執行任意指令 |
+| `orrery delegate -a <name> "prompt"` | 委派任務給其他 workspace 的 AI 工具 |
 | `orrery delegate --resume <id\|index> "prompt"` | 接續工具原生 session（UUID、短前綴、或 `orrery sessions` 中的編號） |
 | `orrery delegate --session [<name>]` | 開啟託管 session 選單（或 resume 指定的 mapping） |
 | `orrery magi "<topic>"` | 啟動多模型討論並達成共識 |
@@ -338,7 +341,7 @@ orrery magi --output report.md "該不該遷移到 Swift 6？"
 | `--claude` / `--codex` / `--gemini` | 選擇參與的工具（預設：所有已安裝） |
 | `--rounds <N>` | 最大討論輪數（預設：3） |
 | `--output <path>` | 將 markdown 報告輸出至檔案 |
-| `-e <name>` | 使用指定 sandbox |
+| `-e <name>` | 使用指定 workspace |
 
 至少需要 2 個已安裝的工具。每輪討論中，模型能看到自己前輪的完整推理過程，以及其他參與者的結構化立場摘要。最終共識採用確定性多數決：`agreed`（全數同意）、`majority`（≥2 同意）、`disputed`（≥2 反對）、`pending`（資料不足）。
 
@@ -425,9 +428,9 @@ orrery mcp setup
 | 工具 | 說明 |
 |---|---|
 | `orrery_delegate` | 委派任務給其他帳號的 AI 工具 |
-| `orrery_list` | 列出 accounts 與 sandboxes |
+| `orrery_list` | 列出 accounts 與 workspaces |
 | `orrery_sessions` | 列出當前專案的 session |
-| `orrery_current` | 查看當前 sandbox（或 `origin`） |
+| `orrery_current` | 查看當前 workspace（或 `origin`） |
 | `orrery_memory_read` | 讀取共享專案記憶 |
 | `orrery_memory_write` | 寫入共享專案記憶 |
 | `orrery_spec_status` | 輪詢 `orrery_spec_implement` session 狀態（直接讀本機 state file） |
@@ -504,7 +507,7 @@ orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
 
 ```
 ~/.orrery/
-  current                  # 目前啟用的 sandbox 名稱（空 / 未設定 = origin）
+  current                  # 目前啟用的 workspace 名稱（空 / 未設定 = origin）
   origin/                  # 原始工具設定（orrery setup 接管後）
     claude/                #   ~/.claude/ 的 symlink 指向此處
     codex/
@@ -514,14 +517,14 @@ orrery sync daemon --port 9527 --rendezvous rv.example.com:9600
       <uuid>/              #   每個註冊的 Claude 帳號一個目錄
     codex/
     gemini/
-  shared/                  # 跨 sandbox 共享的 session 資料
+  shared/                  # 跨 workspace 共享的 session 資料
     claude/
       projects/            #   各專案的對話歷史
       sessions/            #   session 中繼資料
-  envs/                    # sandbox 儲存（on-disk 目錄名沿用 v2）
+  envs/                    # workspace 儲存（on-disk 目錄名沿用 v2）
     <UUID>/
       env.json             #   中繼資料：工具、pin 的帳號、環境變數
-      claude/              #   啟用此 sandbox 時 CLAUDE_CONFIG_DIR 指向此處
+      claude/              #   啟用此 workspace 時 CLAUDE_CONFIG_DIR 指向此處
         .claude.json       #   pin 的帳號被 materialize 的憑證
         projects/  →  ~/.orrery/shared/claude/projects
         sessions/  →  ~/.orrery/shared/claude/sessions

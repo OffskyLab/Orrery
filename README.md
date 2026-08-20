@@ -32,15 +32,15 @@ Each environment has its own auth credentials and configuration. But sessions �
 
 ## 🧩 Core Concepts
 
-Start with **accounts** — that's all most people need. Reach for a **sandbox** only when a context needs fully isolated config.
+Start with **accounts** — that's all most people need. Reach for a **workspace** only when a context needs fully isolated config.
 
 ### Account
 
 Your **identity** for a tool — the credential Orrery logs in with. Accounts live in a shared pool: add once, switch any time with `orrery use`. This is the layer you'll touch every day.
 
-### Sandbox _(advanced)_
+### Workspace _(advanced)_
 
-An optional **isolation** layer: separate memory, sessions, and env vars on top of accounts. Most users never need one — reach for a sandbox when a client or project needs its own config space. Pin an account to it with `orrery pin <account> --workspace <name>`, then activate it with `orrery use <account>`.
+An optional **isolation** layer: separate memory, sessions, and env vars on top of accounts. Most users never need one — reach for a workspace when a client or project needs its own config space. Pin an account to it with `orrery pin <account> --workspace <name>`, then activate it with `orrery use <account>`.
 
 ### Session
 
@@ -48,11 +48,11 @@ Represents **continuity**: conversation history and project context. Shared acro
 
 ### Phantom mode
 
-`orrery run claude` launches Claude under a phantom supervisor. From inside that Claude session, the `/orrery:phantom` slash command can swap accounts without losing the conversation — Claude exits, the supervisor relaunches it with the new account and `--resume`. See the [Phantom Mode](#phantom-mode) section below.
+Running `claude` launches it under a phantom supervisor. From inside that Claude session, the `/orrery:phantom` slash command can swap accounts without losing the conversation — Claude exits, the supervisor relaunches it with the new account and `--resume`. See the [Phantom Mode](#phantom-mode) section below.
 
 ### MCP Delegation
 
-Assign tasks to specific accounts or sandboxes from within a running session. Enables multi-agent workflows where one Claude instance delegates to another running under a different account.
+Assign tasks to specific accounts or workspaces from within a running session. Enables multi-agent workflows where one Claude instance delegates to another running under a different account.
 
 ---
 
@@ -61,10 +61,10 @@ Assign tasks to specific accounts or sandboxes from within a running session. En
 Orrery introduces a structured runtime model for AI tools:
 
 - **Account** → isolates identity (credentials per tool)
-- **Sandbox** _(optional)_ → isolates config (memory, sessions, env vars)
+- **Workspace** _(optional)_ → isolates config (memory, sessions, env vars)
 - **Session** → represents continuity (conversation, context, memory)
 - **Phantom** → in-session switching without losing the conversation
-- **Delegation (MCP)** → enables coordination between accounts and sandboxes
+- **Delegation (MCP)** → enables coordination between accounts and workspaces
 
 In traditional tooling:
 
@@ -183,7 +183,7 @@ claude --resume              # pick up right where you left off
 
 ## Phantom Mode
 
-Launch Claude with `orrery run claude` and a supervisor stays alongside it. From inside that Claude, the `/orrery:phantom` slash command (installed by `orrery mcp setup`) swaps the active account **without restarting the conversation**:
+Run `claude` and a supervisor stays alongside it. From inside that Claude, the `/orrery:phantom` slash command (installed by `orrery mcp setup`) swaps the active account **without restarting the conversation**:
 
 ```text
 /orrery:phantom personal           # switch the claude account to 'personal'
@@ -203,31 +203,31 @@ orrery phantom --codex work        # switch the codex account
   <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
 </p>
 
-Phantom mode is the **default** for `orrery run claude`. To opt out (single-shot, no supervisor):
+Phantom supervision is the **default** for a bare `claude` — the shell integration wraps it. To opt out for one launch (single-shot, no supervisor):
 
 ```bash
-orrery run --non-phantom claude
+ORRERY_NO_PHANTOM=1 claude   # or: orrery run --non-phantom claude
 ```
 
 For non-Claude commands, `orrery run` is always single-shot:
 
 ```bash
 orrery run codex             # one-shot codex under the pinned codex account
-orrery run -a client-a npm install  # ad-hoc command inside a specific sandbox
+orrery run -a client-a npm install  # ad-hoc command inside a specific workspace
 ```
 
 ---
 
-## Sandboxes _(optional)_
+## Workspaces _(optional)_
 
-A sandbox is a full config-isolation layer: separate memory, sessions, env vars, and per-tool config dirs. Useful when a client or project needs its own walled-off context. If you only need to swap accounts, you can skip sandboxes entirely.
+A workspace is a full config-isolation layer: separate memory, sessions, env vars, and per-tool config dirs. Useful when a client or project needs its own walled-off context. If you only need to swap accounts, you can skip workspaces entirely.
 
 ```bash
 orrery workspace create client-a   # interactive wizard: pick tools, memory mode, clone source
-orrery workspace list              # show all sandboxes
+orrery workspace list              # show all workspaces
 orrery workspace info client-a     # full state (tools, accounts, env vars, memory)
 
-orrery pin work --workspace client-a --claude  # pin an account into the sandbox
+orrery pin work --workspace client-a --claude  # pin an account into the workspace
 orrery use work                                # activate it — CLAUDE_CONFIG_DIR now
                                                 # resolves to that account's dir, sharing
                                                 # client-a's memory/sessions/config
@@ -259,15 +259,15 @@ orrery uninstall
 
 ## Session Sharing
 
-By default, session data is shared across all sandboxes:
+By default, session data is shared across all workspaces:
 
 - Switch from `work` to `personal` → your Claude conversations are still there
 - `claude --resume` continues the same session after switching accounts
-- Each sandbox still has its own **isolated auth credentials**
+- Each account still has its own **isolated auth credentials**
 
 Session sharing works by symlinking tool session directories (`projects/`, `sessions/`, `session-env/`) to `~/.orrery/shared/`.
 
-For fully isolated sessions in a sandbox (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard, or switch later with `orrery memory isolate` / `share`.
+For fully isolated sessions in a workspace (e.g. compliance requirements), choose **isolate** when prompted by the `orrery workspace create` wizard, or switch later with `orrery memory isolate` / `share`.
 
 ---
 
@@ -279,19 +279,22 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 |---|---|
 | `orrery add [--claude\|--codex\|--gemini] --name <name>` | Register a new account in the pool (runs the tool's login flow) |
 | `orrery list [--claude\|--codex\|--gemini]` | List accounts (filtered by tool, or all) |
-| `orrery show` | Show the currently pinned accounts and active sandbox |
+| `orrery show` | Show which account is pinned per tool, and each account's workspace |
 | `orrery use [--claude\|--codex\|--gemini] <name>` | Pin the named account as active for the tool (default tool: claude) |
+| `orrery current` | Show which account is currently pinned per tool — the one new shells pick up automatically |
+| `orrery pin <name> --workspace <ws> [--claude\|--codex\|--gemini]` | Pin an account to a workspace (controls which session/memory dirs it shares) |
 | `orrery remove [--claude\|--codex\|--gemini] <name>` | Remove an account from the pool |
+| `orrery refresh-token [<name>]` | Force-refresh a Claude account's OAuth token |
 
-### Sandboxes
+### Workspaces
 
 | Command | Description |
 |---|---|
-| `orrery workspace create <name>` | Create a sandbox (interactive wizard) |
-| `orrery workspace list` | List all sandboxes |
-| `orrery workspace info [name]` | Show full details of a sandbox |
-| `orrery workspace delete <name>` | Delete a sandbox |
-| `orrery workspace rename <old> <new>` | Rename a sandbox |
+| `orrery workspace create <name>` | Create a workspace (interactive wizard) |
+| `orrery workspace list` | List all workspaces |
+| `orrery workspace info [name]` | Show full details of a workspace |
+| `orrery workspace delete <name>` | Delete a workspace |
+| `orrery workspace rename <old> <new>` | Rename a workspace |
 
 ### Memory
 
@@ -313,8 +316,8 @@ For fully isolated sessions in a sandbox (e.g. compliance requirements), choose 
 | `orrery run [-a <name>] claude` | Launch Claude under a phantom supervisor (default) — enables `/orrery:phantom` |
 | `orrery run --non-phantom claude` | Launch Claude as a single-shot (no supervisor) |
 | `orrery phantom [--codex\|--gemini] <name>` | Switch account inside a phantom-supervised session — see [Phantom Mode](#phantom-mode) |
-| `orrery run [-a <name>] <command>` | Run any other command inside the named (or active) sandbox |
-| `orrery delegate -a <name> "prompt"` | Delegate a task to an AI tool in another sandbox |
+| `orrery run [-a <name>] <command>` | Run any other command inside the named (or active) workspace |
+| `orrery delegate -a <name> "prompt"` | Delegate a task to an AI tool in another workspace |
 | `orrery delegate --resume <id\|index> "prompt"` | Resume a native tool session (UUID, short prefix, or index from `orrery sessions`) |
 | `orrery delegate --session [<name>]` | Open a managed-session picker (or resume a named mapping if `<name>` is given) |
 | `orrery magi "<topic>"` | Start a multi-model discussion and reach consensus |
@@ -344,7 +347,7 @@ orrery magi --output report.md "Should we migrate to Swift 6?"
 | `--claude` / `--codex` / `--gemini` | Select participating tools (default: all installed) |
 | `--rounds <N>` | Maximum discussion rounds (default: 3) |
 | `--output <path>` | Write the markdown report to a file |
-| `-e <name>` | Use a specific sandbox |
+| `-e <name>` | Use a specific workspace |
 
 At least 2 tools must be installed. Each round, models see their own previous reasoning in full and a structured summary of other participants' positions. The final consensus report uses deterministic majority voting: `agreed` (all agree), `majority` (≥2 agree), `disputed` (≥2 disagree), or `pending` (insufficient data).
 
@@ -431,9 +434,9 @@ This registers Orrery as an MCP server and installs slash commands.
 | Tool | Description |
 |---|---|
 | `orrery_delegate` | Delegate a task to another account's AI tool |
-| `orrery_list` | List accounts and sandboxes |
+| `orrery_list` | List accounts and workspaces |
 | `orrery_sessions` | List sessions for the current project |
-| `orrery_current` | Get the active sandbox (or `origin`) |
+| `orrery_current` | Get the active workspace (or `origin`) |
 | `orrery_memory_read` | Read shared project memory |
 | `orrery_memory_write` | Write to shared project memory |
 | `orrery_spec_status` | Poll the status of an `orrery_spec_implement` session (reads local state file) |
@@ -456,9 +459,9 @@ This registers Orrery as an MCP server and installs slash commands.
 
 | Slash command | Maps to |
 |---|---|
-| `/orrery:delegate` | `orrery_delegate` MCP tool with sandbox hints |
+| `/orrery:delegate` | `orrery_delegate` MCP tool with workspace hints |
 | `/orrery:sessions` | `orrery sessions` |
-| `/orrery:phantom` | In-session account or sandbox switch — see [Phantom Mode](#phantom-mode) |
+| `/orrery:phantom` | In-session account or workspace switch — see [Phantom Mode](#phantom-mode) |
 | `/orrery:magi` | `orrery_magi` (with a `/grill-me` pre-flight hint for product/scope topics) |
 | `/orrery:spec` | `orrery_spec` |
 | `/orrery:spec-verify` | `orrery_spec_verify` |
@@ -510,7 +513,7 @@ Only project memory is synced — sessions stay local. Memory changes are tracke
 
 ```
 ~/.orrery/
-  current                  # active sandbox name (empty / unset = origin)
+  current                  # active workspace name (empty / unset = origin)
   origin/                  # original tool configs (after orrery setup takeover)
     claude/                #   ~/.claude/ symlinks here
     codex/
@@ -520,14 +523,14 @@ Only project memory is synced — sessions stay local. Memory changes are tracke
       <uuid>/              #   one directory per registered Claude account
     codex/
     gemini/
-  shared/                  # shared session data across sandboxes
+  shared/                  # shared session data across workspaces
     claude/
       projects/            #   conversation history per project
       sessions/            #   session metadata
-  envs/                    # sandbox storage (on-disk dirname kept from v2)
+  envs/                    # workspace storage (on-disk dirname kept from v2)
     <UUID>/
       env.json             #   metadata: tools, pinned accounts, env vars
-      claude/              #   CLAUDE_CONFIG_DIR → here when this sandbox is active
+      claude/              #   CLAUDE_CONFIG_DIR → here when this workspace is active
         .claude.json       #   materialized credentials of the pinned account
         projects/  →  ~/.orrery/shared/claude/projects
         sessions/  →  ~/.orrery/shared/claude/sessions
