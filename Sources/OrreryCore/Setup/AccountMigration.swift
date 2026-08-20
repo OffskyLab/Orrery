@@ -472,6 +472,54 @@ public enum AccountMigration {
         repointClaudeDirSymlink(link: Tool.claude.defaultConfigDir, homeURL: homeURL)
     }
 
+    /// Ongoing invariant (runs every invocation, NOT flag-guarded): repair a
+    /// home dotfile (`~/.claude`, `~/.codex`, `~/.gemini`) that has become a
+    /// DANGLING symlink, pointing it back at this home's origin workspace dir
+    /// for that tool.
+    ///
+    /// The origin takeover owns those paths, but nothing stops another process
+    /// running as the same user from repointing them. A manual verification
+    /// script aimed all three at `/tmp/orrery-dispatch-test/...`; once that
+    /// scratch tree was cleaned up every link dangled, and the tools started
+    /// failing against a path the user never chose — gemini-cli's `mkdir`
+    /// follows the link and reports `ENOENT` for a directory it cannot
+    /// explain. `repointClaudeDirSymlink` below could not rescue any of it: it
+    /// only ever touches a link already aimed at the workspace dir.
+    ///
+    /// Only a dangling link is repaired. A link whose target exists may be a
+    /// deliberate choice holding real data, and a real directory certainly is
+    /// — both are left exactly as found. A dangling link, by definition,
+    /// protects nothing.
+    public static func healDanglingOriginSymlinks(homeURL: URL) {
+        for tool in Tool.allCases {
+            healDanglingOriginSymlink(link: tool.defaultConfigDir, tool: tool, homeURL: homeURL)
+        }
+    }
+
+    /// The per-tool repair, taking `link` as a plain parameter so it is
+    /// testable without touching the real `~/.<tool>` — `tool.defaultConfigDir`
+    /// resolves through `userHomeURL()`, which a test cannot redirect merely by
+    /// passing a different `homeURL` (the defect fixed in af08548).
+    static func healDanglingOriginSymlink(link: URL, tool: Tool, homeURL: URL) {
+        let fm = FileManager.default
+
+        // Not a symlink (missing path, or a real directory) → nothing to heal.
+        guard let dest = try? fm.destinationOfSymbolicLink(atPath: link.path) else { return }
+
+        // A relative target resolves against the link's own directory.
+        let resolved = dest.hasPrefix("/")
+            ? URL(fileURLWithPath: dest)
+            : link.deletingLastPathComponent().appendingPathComponent(dest)
+        guard !fm.fileExists(atPath: resolved.path) else { return }   // target is live → leave it
+
+        let target = EnvironmentStore(homeURL: homeURL).originConfigDir(tool: tool)
+        guard (try? fm.createDirectory(at: target, withIntermediateDirectories: true)) != nil
+        else { return }
+
+        try? fm.removeItem(at: link)
+        try? fm.createSymbolicLink(at: link, withDestinationURL: target)
+    }
+
     /// Point `link` at the origin account dir. Guarded: only acts when `link` is
     /// currently the takeover-managed symlink into this home's workspace claude
     /// dir — never clobbers a real directory or a foreign symlink target.

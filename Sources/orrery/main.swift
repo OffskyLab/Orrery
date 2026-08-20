@@ -40,6 +40,13 @@ private func runOrreryMain() async throws {
     // for the ~/.claude repoint below.
     OriginAccountSeeder.seedOriginAccountsIfNeeded()
 
+    // Ongoing invariant: repair any home dotfile left dangling by something
+    // outside orrery (a verification script or an unisolated test aiming
+    // ~/.claude, ~/.codex and ~/.gemini at a scratch tree that was later
+    // cleaned up). Must run BEFORE enforceOriginClaudeDir: this restores a
+    // dangling ~/.claude to the workspace target, which is the only shape the
+    // repoint below is willing to touch.
+    AccountMigration.healDanglingOriginSymlinks(homeURL: orreryHomeURL())
     // Ongoing invariant (every run, not flag-guarded): keep origin pinned and
     // ~/.claude pointing at the origin account dir. A ~/.claude still on the old
     // workspace target (upgrades / 3.0.4-damaged installs) self-heals here on the
