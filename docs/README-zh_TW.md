@@ -193,7 +193,7 @@ claude --resume              # 無縫接續同一個 session
 Claude 退出後 supervisor 帶著新的 account 與 `--resume` 把它叫回來，對話無感接續。
 
 <p align="center">
-  <img src="../assets/demo/phatom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
+  <img src="../assets/demo/phantom.gif" alt="/orrery:phantom session 中切帳號示範" width="640" />
 </p>
 
 Phantom 監督是裸執行 `claude` 的**預設**行為 — shell 整合會自動包住它。若要單次關掉（不帶 supervisor）：
@@ -228,7 +228,8 @@ claude
 ```
 
 <p align="center">
-  <img src="../assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
+  <img src="../assets/demo/workspace-create.gif" alt="orrery workspace create wizard" width="480" />
+  <img src="../assets/demo/workspace-pin.gif" alt="把帳號 pin 到 workspace 再 orrery use 啟用" width="480" />
 </p>
 
 ---
@@ -410,6 +411,12 @@ orrery spec-run --mode status --session-id <id>
 | `orrery setup` | 安裝 shell 整合（冪等）— 第一次執行會把工具設定移入 `~/.orrery/origin/` |
 | `orrery update` | 更新 Orrery 至最新版本 |
 | `orrery uninstall` | 還原所有已接管的設定並移除 shell 整合 |
+
+`orrery update` 會依照你當初的安裝方式選擇更新管道 — 透過 Homebrew tap 安裝的走 `brew upgrade`，否則走原生安裝腳本：
+
+<p align="center">
+  <img src="../assets/demo/update.gif" alt="orrery update 自我更新到最新版本" width="640" />
+</p>
 
 ---
 

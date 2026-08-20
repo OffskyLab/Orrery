@@ -30,8 +30,14 @@ Sleep 0.5s
 Enter
 Sleep 3s
 
-
 Type "orrery use work --gemini"
 Sleep 0.5s
 Enter
 Sleep 3s
+
+# `orrery use` also persists the pin, so a brand-new shell restores it
+# automatically — `orrery current` is what that shell reads back.
+Type "orrery current"
+Sleep 0.5s
+Enter
+Sleep 4s

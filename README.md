@@ -200,7 +200,7 @@ orrery phantom --codex work        # switch the codex account
 ```
 
 <p align="center">
-  <img src="assets/demo/phatom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
+  <img src="assets/demo/phantom.gif" alt="/orrery:phantom mid-session account switch" width="640" />
 </p>
 
 Phantom supervision is the **default** for a bare `claude` — the shell integration wraps it. To opt out for one launch (single-shot, no supervisor):
@@ -235,7 +235,8 @@ claude
 ```
 
 <p align="center">
-  <img src="assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" width="480" />
+  <img src="assets/demo/workspace-create.gif" alt="orrery workspace create wizard" width="480" />
+  <img src="assets/demo/workspace-pin.gif" alt="orrery pin an account to a workspace, then orrery use it" width="480" />
 </p>
 
 ---
@@ -416,6 +417,12 @@ The four mandatory headings (`介面合約` / `改動檔案` / `實作步驟` / 
 | `orrery setup` | Install shell integration (idempotent) — also moves existing tool configs into `~/.orrery/origin/` on first run |
 | `orrery update` | Update Orrery to the latest version |
 | `orrery uninstall` | Release all managed configs back to their original paths and remove shell integration |
+
+`orrery update` picks the channel matching how you installed — `brew upgrade` when Orrery came from the Homebrew tap, otherwise the native install script:
+
+<p align="center">
+  <img src="assets/demo/update.gif" alt="orrery update self-updating to the latest release" width="640" />
+</p>
 
 ---
 
