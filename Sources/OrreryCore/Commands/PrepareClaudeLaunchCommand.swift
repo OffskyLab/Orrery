@@ -72,6 +72,16 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
             // v3.1 fix: If claude-identity.json has incomplete oauthAccount (missing
             // refreshToken), load the full credentials from keychain/credentials file.
             // This handles accounts created before the identity/shared split was added.
+            //
+            // The credential is OVERLAID onto the existing oauthAccount, never
+            // assigned over it: `oauthAccount` holds claude's own account-identity
+            // fields (accountUuid, emailAddress, organizationUuid, organizationRole,
+            // workspaceRole) while the credential blob holds only tokens. Replacing
+            // the object wiped the identity half, so claude could not resolve the
+            // account and reported "Login expired" on a valid token — and because
+            // capture then wrote the identity-shaped (refreshToken-less) object back,
+            // the next launch re-entered this same branch: one forced re-login per
+            // account switch, indefinitely. See `overlayingOAuthCredential`.
             if let oauthDict = identity["oauthAccount"] as? [String: Any],
                !oauthDict.keys.contains("refreshToken"),
                let account = account {
@@ -82,14 +92,16 @@ public struct PrepareClaudeLaunchCommand: ParsableCommand {
                    let credData = credJSON.data(using: .utf8),
                    let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
                    let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-                    identity["oauthAccount"] = fullOauth
+                    identity["oauthAccount"] = ClaudeJsonMerge.overlayingOAuthCredential(
+                        fullOauth, onto: oauthDict)
                 }
                 #else
                 let credURL = acctDirURL.appendingPathComponent(".credentials.json")
                 if let credData = try? Data(contentsOf: credURL),
                    let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
                    let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-                    identity["oauthAccount"] = fullOauth
+                    identity["oauthAccount"] = ClaudeJsonMerge.overlayingOAuthCredential(
+                        fullOauth, onto: oauthDict)
                 }
                 #endif
             }

@@ -143,6 +143,67 @@ struct ClaudeJsonMergeMergeTests {
     }
 }
 
+@Suite("ClaudeJsonMerge.overlayingOAuthCredential")
+struct ClaudeJsonMergeOAuthOverlayTests {
+
+    /// The identity fields claude writes into `oauthAccount`, none of which
+    /// appear in a credential blob.
+    private var identityShaped: [String: Any] {
+        [
+            "accountUuid": "acct-uuid",
+            "emailAddress": "alice@example.com",
+            "organizationUuid": "org-uuid",
+            "organizationRole": "admin",
+            "workspaceRole": "member",
+        ]
+    }
+
+    /// The token fields the credential store holds, none of which are
+    /// identity.
+    private var credentialShaped: [String: Any] {
+        [
+            "accessToken": "tok-access",
+            "refreshToken": "tok-refresh",
+            "expiresAt": 1_787_232_311_999,
+            "subscriptionType": "team",
+        ]
+    }
+
+    @Test("keeps every identity field and adds every credential field")
+    func unionOfBothSchemas() {
+        let result = ClaudeJsonMerge.overlayingOAuthCredential(
+            credentialShaped, onto: identityShaped)
+
+        #expect(result["accountUuid"] as? String == "acct-uuid")
+        #expect(result["emailAddress"] as? String == "alice@example.com")
+        #expect(result["organizationUuid"] as? String == "org-uuid")
+        #expect(result["organizationRole"] as? String == "admin")
+        #expect(result["workspaceRole"] as? String == "member")
+
+        #expect(result["accessToken"] as? String == "tok-access")
+        #expect(result["refreshToken"] as? String == "tok-refresh")
+        #expect(result["subscriptionType"] as? String == "team")
+        #expect(result.count == 9)
+    }
+
+    @Test("the credential wins for a field both sides define — it is the fresher source")
+    func credentialWinsOnCollision() {
+        let stale: [String: Any] = ["subscriptionType": "pro", "emailAddress": "alice@example.com"]
+        let result = ClaudeJsonMerge.overlayingOAuthCredential(
+            ["subscriptionType": "team"], onto: stale)
+
+        #expect(result["subscriptionType"] as? String == "team")
+        #expect(result["emailAddress"] as? String == "alice@example.com")
+    }
+
+    @Test("an empty credential leaves the identity object untouched")
+    func emptyCredentialIsNoOp() {
+        let result = ClaudeJsonMerge.overlayingOAuthCredential([:], onto: identityShaped)
+        #expect(result.count == identityShaped.count)
+        #expect(result["accountUuid"] as? String == "acct-uuid")
+    }
+}
+
 // Helper used by split + merge tests.
 private func writeTempJSON(_ obj: [String: Any]) throws -> URL {
     let url = FileManager.default.temporaryDirectory

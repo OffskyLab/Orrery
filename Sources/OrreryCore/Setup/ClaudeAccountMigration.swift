@@ -45,6 +45,18 @@ public enum ClaudeAccountMigration {
 
         var identity: [String: Any] = [:]
 
+        // Seed whatever account identity we already know, then overlay the
+        // credential's token fields on top. Same schema rule as
+        // `PrepareClaudeLaunchCommand`: `oauthAccount` carries identity
+        // (emailAddress, and whatever claude later adds — accountUuid,
+        // organizationUuid, …) while the credential blob carries only tokens.
+        // Assigning one over the other drops the other half; see
+        // `ClaudeJsonMerge.overlayingOAuthCredential`.
+        var oauthAccount: [String: Any] = [:]
+        if let email = account.email {
+            oauthAccount["emailAddress"] = email
+        }
+
         // Load full OAuth credentials from keychain/credentials file if available.
         // This preserves refreshToken/accessToken so users don't need to re-login.
         #if os(macOS)
@@ -53,11 +65,8 @@ public enum ClaudeAccountMigration {
            let credData = credJSON.data(using: .utf8),
            let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
            let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-            // Full credentials available from keychain
-            identity["oauthAccount"] = fullOauth
-        } else if let email = account.email {
-            // Fallback: just email (user will need to login)
-            identity["oauthAccount"] = ["emailAddress": email]
+            oauthAccount = ClaudeJsonMerge.overlayingOAuthCredential(
+                fullOauth, onto: oauthAccount)
         }
         #else
         // Linux: try .credentials.json
@@ -65,11 +74,14 @@ public enum ClaudeAccountMigration {
         if let credData = try? Data(contentsOf: credURL),
            let credObj = try? JSONSerialization.jsonObject(with: credData) as? [String: Any],
            let fullOauth = credObj["claudeAiOauth"] as? [String: Any] {
-            identity["oauthAccount"] = fullOauth
-        } else if let email = account.email {
-            identity["oauthAccount"] = ["emailAddress": email]
+            oauthAccount = ClaudeJsonMerge.overlayingOAuthCredential(
+                fullOauth, onto: oauthAccount)
         }
         #endif
+
+        if !oauthAccount.isEmpty {
+            identity["oauthAccount"] = oauthAccount
+        }
 
         try ClaudeJsonMerge.saveJSON(identity, at: identityURL)
     }

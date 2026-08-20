@@ -206,6 +206,79 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     #if os(macOS)
+    /// Regression: the credential-store rehydration must OVERLAY the token
+    /// fields onto the existing `oauthAccount`, never replace the whole
+    /// object.
+    ///
+    /// `.claude.json`'s `oauthAccount` (written by claude itself) and the
+    /// credential store's `claudeAiOauth` blob are two different schemas:
+    /// the former carries account IDENTITY (`accountUuid`, `emailAddress`,
+    /// `organizationUuid`, `organizationRole`, `workspaceRole`), the latter
+    /// carries TOKENS (`accessToken`, `refreshToken`, `expiresAt`).
+    /// Replacing the former with the latter strips every identity field, so
+    /// claude can no longer tell which account is logged in and reports
+    /// "Login expired" on a perfectly valid token — then the user logs in,
+    /// capture writes the (identity-shaped, refreshToken-less) oauthAccount
+    /// back to the identity store, and the next launch re-triggers the same
+    /// replacement: an infinite re-login loop, one round per account switch.
+    @Test("keychain rehydration preserves the account-identity fields in oauthAccount")
+    func keychainRehydrationPreservesIdentityFields() throws {
+        try withIsolatedHome {
+            let acctStore = AccountStore.default
+            var acct = Account(tool: .claude, displayName: "alice")
+            acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
+            try acctStore.save(acct)
+            var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
+            try pin.run()
+
+            let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
+            defer { ClaudeKeychain.deleteKeychainItem(service: acct.keychainItem!) }
+
+            // The pool credential: tokens only, exactly as the credential
+            // store holds them.
+            ClaudeKeychain.storePassword(
+                #"{"claudeAiOauth":{"accessToken":"tok-access","refreshToken":"tok-refresh","expiresAt":1787232311999,"subscriptionType":"team"}}"#,
+                forOrreryAccount: acct.id
+            )
+
+            // The identity store as capture leaves it after a real login:
+            // claude's own identity-shaped oauthAccount, with NO refreshToken
+            // — which is precisely what triggers the rehydration branch.
+            try ClaudeJsonMerge.saveJSON(
+                ["oauthAccount": [
+                    "accountUuid": "acct-uuid-1",
+                    "emailAddress": "alice@example.com",
+                    "organizationUuid": "org-uuid-1",
+                    "organizationRole": "admin",
+                    "workspaceRole": "member",
+                ]],
+                at: ClaudeJsonMerge.identityFileURL(accountDir: acctDir))
+
+            var cmd = try PrepareClaudeLaunchCommand.parse(["--account-dir", acctDir.path])
+            try cmd.run()
+
+            let claudeJSON = ClaudeJsonMerge.loadJSON(
+                at: acctDir.appendingPathComponent(".claude.json"))
+            let oauth = try #require(claudeJSON?["oauthAccount"] as? [String: Any])
+
+            // The identity fields claude needs to know who is logged in.
+            #expect(oauth["accountUuid"] as? String == "acct-uuid-1",
+                "accountUuid must survive credential rehydration")
+            #expect(oauth["emailAddress"] as? String == "alice@example.com",
+                "emailAddress must survive credential rehydration")
+            #expect(oauth["organizationUuid"] as? String == "org-uuid-1",
+                "organizationUuid must survive credential rehydration")
+            #expect(oauth["organizationRole"] as? String == "admin",
+                "organizationRole must survive credential rehydration")
+            #expect(oauth["workspaceRole"] as? String == "member",
+                "workspaceRole must survive credential rehydration")
+
+            // …and the tokens the rehydration exists to supply.
+            #expect(oauth["accessToken"] as? String == "tok-access")
+            #expect(oauth["refreshToken"] as? String == "tok-refresh")
+        }
+    }
+
     @Test("patchAuthSuccessHook adds the Notification/auth_success hook, preserving existing settings")
     func patchAuthSuccessHookAddsEntry() throws {
         try withIsolatedHome {
