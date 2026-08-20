@@ -764,7 +764,8 @@
         <h4>進階：建立 workspace</h4>
         <p>當某個客戶或專案需要完全獨立的 config，執行 <code>orrery workspace create client-a</code>，用 <code>orrery pin work --workspace client-a</code> 把帳號 pin 進去，再用 <code>orrery use work</code> 啟用。如果你只切帳號，這步可以完全跳過。</p>
         <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/workspace-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/workspace-pin.gif" alt="把帳號 pin 到 workspace 再 orrery use 啟用" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
         </p>
       </div>
     </div>
@@ -790,7 +791,7 @@
     <span class="prompt">$ </span>orrery phantom personal
   </div>
   <p style="text-align:center;margin:0 auto 1.5rem">
-    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phatom.gif" alt="/orrery:phantom 對話中切換示範" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phantom.gif" alt="/orrery:phantom 對話中切換示範" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
   </p>
   <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
     Phantom 監督是裸執行 <code>claude</code> 的<strong style="color:var(--text)">預設</strong>行為 — shell 整合會自動包住它。
@@ -1014,6 +1015,10 @@
       </div>
     </div>
   </div>
+  <p style="text-align:center;margin:2.5rem auto 0;max-width:720px">
+    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/update.gif" alt="orrery update 自我更新到最新版本" style="max-width:640px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+    <span style="display:block;color:var(--muted);font-size:.85rem;margin-top:.75rem"><code>orrery update</code> 會依照你當初的安裝方式選擇更新管道 — Homebrew tap 走 <code>brew upgrade</code>，否則走原生安裝腳本。</span>
+  </p>
 </section>
 
 <!-- Footer -->

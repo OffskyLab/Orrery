@@ -765,7 +765,8 @@
         <h4>Optional: create a workspace</h4>
         <p>When a client or project needs fully isolated config, run <code>orrery workspace create client-a</code>, pin an account into it with <code>orrery pin work --workspace client-a</code>, then activate it with <code>orrery use work</code>. Skip this entirely if you only switch accounts.</p>
         <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/workspace-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/workspace-pin.gif" alt="orrery pin an account to a workspace, then orrery use it" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
         </p>
       </div>
     </div>
@@ -792,7 +793,7 @@
     <span class="prompt">$ </span>orrery phantom personal
   </div>
   <p style="text-align:center;margin:0 auto 1.5rem">
-    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phatom.gif" alt="/orrery:phantom mid-session switch" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phantom.gif" alt="/orrery:phantom mid-session switch" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
   </p>
   <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
     Phantom supervision is the <strong style="color:var(--text)">default</strong> for a bare <code>claude</code> — the shell integration wraps it.
@@ -1029,6 +1030,10 @@
       </div>
     </div>
   </div>
+  <p style="text-align:center;margin:2.5rem auto 0;max-width:720px">
+    <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/update.gif" alt="orrery update self-updating to the latest release" style="max-width:640px;width:100%;border-radius:8px;border:1px solid var(--border)" />
+    <span style="display:block;color:var(--muted);font-size:.85rem;margin-top:.75rem"><code>orrery update</code> picks the channel matching how you installed — <code>brew upgrade</code> for the Homebrew tap, otherwise the native install script.</span>
+  </p>
 </section>
 
 <!-- Footer -->
