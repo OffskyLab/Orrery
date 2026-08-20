@@ -2,6 +2,12 @@ Output ../assets/demo/use.gif
 
 Require orrery-bin
 
+# Requires throwaway demo accounts, so the recording never shows a real
+# identity and never disturbs a real pin:
+#   claude: demo-1, demo-2
+#   codex:  demo-1
+#   gemini: demo-1
+
 Set Shell "zsh"
 Set FontSize 32
 Set Width 1200
@@ -15,22 +21,22 @@ Type "clear"
 Enter
 Show
 
-Type "orrery use work"
+Type "orrery use demo-1"
 Sleep 0.5s
 Enter
 Sleep 3s
 
-Type "orrery use personal --claude"
+Type "orrery use demo-2 --claude"
 Sleep 0.5s
 Enter
 Sleep 3s
 
-Type "orrery use work --codex"
+Type "orrery use demo-1 --codex"
 Sleep 0.5s
 Enter
 Sleep 3s
 
-Type "orrery use work --gemini"
+Type "orrery use demo-1 --gemini"
 Sleep 0.5s
 Enter
 Sleep 3s

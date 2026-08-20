@@ -2,6 +2,10 @@ Output ../assets/demo/workspace-create.gif
 
 Require orrery-bin
 
+# Creates a throwaway `demo` workspace. Run this before workspace-pin.tape,
+# which pins an account into it. Delete it afterwards with
+# `orrery workspace delete demo` if you don't want it lying around.
+
 Set Shell "zsh"
 Set FontSize 32
 Set Width 1200
