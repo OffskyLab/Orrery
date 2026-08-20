@@ -59,7 +59,7 @@ struct AccountCommandsAllTests {
         @Test("defaults to claude when no tool flag is set")
         func defaultsToClaude() throws {
             try withIsolatedHome {
-                let cmd = try AddCommand.parse(["--name", "default-claude-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["default-claude-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .claude)
                 #expect(accounts.contains { $0.displayName == "default-claude-test" })
@@ -69,7 +69,7 @@ struct AccountCommandsAllTests {
         @Test("--codex flag creates a codex account")
         func codexFlag() throws {
             try withIsolatedHome {
-                let cmd = try AddCommand.parse(["--codex", "--name", "codex-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["--codex", "codex-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .codex)
                 #expect(accounts.contains { $0.displayName == "codex-test" })
@@ -81,7 +81,7 @@ struct AccountCommandsAllTests {
         func claudeAccountHasKeychainItem() throws {
             try withIsolatedHome {
                 let tmpDir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
-                let cmd = try AddCommand.parse(["--name", "keychain-test", "--skip-login"])
+                let cmd = try AddCommand.parse(["keychain-test", "--skip-login"])
                 try cmd.run()
                 let store = AccountStore(homeURL: tmpDir)
                 let accounts = try store.list(tool: .claude)
@@ -97,13 +97,13 @@ struct AccountCommandsAllTests {
         @Test("rejects a duplicate display name for the same tool")
         func rejectsDuplicateName() throws {
             try withIsolatedHome {
-                try AddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                try AddCommand.parse(["dup", "--skip-login"]).run()
                 // second add with the same name + tool must throw
                 #expect(throws: ValidationError.self) {
-                    try AddCommand.parse(["--name", "dup", "--skip-login"]).run()
+                    try AddCommand.parse(["dup", "--skip-login"]).run()
                 }
                 // a same-name account under a DIFFERENT tool is still allowed
-                try AddCommand.parse(["--codex", "--name", "dup", "--skip-login"]).run()
+                try AddCommand.parse(["--codex", "dup", "--skip-login"]).run()
             }
         }
     }
@@ -634,7 +634,7 @@ struct AccountCommandsAllTests {
         func prepareClaude() throws {
             try withIsolatedHome {
                 let output = try captureStdout {
-                    let cmd = try AccountAddPrepareCommand.parse(["--name", "prep-test"])
+                    let cmd = try AccountAddPrepareCommand.parse(["prep-test"])
                     try cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -662,11 +662,11 @@ struct AccountCommandsAllTests {
             }
         }
 
-        @Test("stdout contains only the staging path when --name is given")
+        @Test("stdout contains only the staging path when a name is given")
         func stdoutOnlyStagingPath() throws {
             try withIsolatedHome {
                 let output = try captureStdout {
-                    let cmd = try AccountAddPrepareCommand.parse(["--name", "stdout-only-test"])
+                    let cmd = try AccountAddPrepareCommand.parse(["stdout-only-test"])
                     try cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -683,7 +683,7 @@ struct AccountCommandsAllTests {
         func prepareDuplicate() throws {
             try withIsolatedHome {
                 let output = try captureStdout {
-                    let cmd = try AccountAddPrepareCommand.parse(["--name", "dup-prep"])
+                    let cmd = try AccountAddPrepareCommand.parse(["dup-prep"])
                     try cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -691,7 +691,7 @@ struct AccountCommandsAllTests {
 
                 // Second call with same name must throw.
                 #expect(throws: ValidationError.self) {
-                    try AccountAddPrepareCommand.parse(["--name", "dup-prep"]).run()
+                    try AccountAddPrepareCommand.parse(["dup-prep"]).run()
                 }
             }
         }
