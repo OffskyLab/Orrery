@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orrery — AI CLI 多帳號切換工具</title>
-  <meta name="description" content="Orrery 把你的 Claude Code、Codex、Gemini CLI 帳號集中成一個池，一行指令切換 — 不用登出、不用重新認證，對話無縫接續。Per-shell 生效，並有 optional 的 sandbox 層做完整 config 隔離。" />
+  <meta name="description" content="Orrery 把你的 Claude Code、Codex、Gemini CLI 帳號集中成一個池，一行指令切換 — 不用登出、不用重新認證，對話無縫接續。Per-shell 生效，並有 optional 的 workspace 層做完整 config 隔離。" />
   <link rel="icon" href="icon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -654,12 +654,12 @@
     <div class="feature-card">
       <span class="feature-icon">👻</span>
       <h3>對話中無痛切換</h3>
-      <p>用 <code>orrery run claude</code> 啟動，在 Claude 裡用 <code>/orrery:phantom</code> 直接切 account 或 sandbox，不會中斷對話。</p>
+      <p>執行 <code>claude</code>，在 Claude 裡用 <code>/orrery:phantom</code> 直接切 account，不會中斷對話。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📦</span>
-      <h3>Sandbox 做隔離</h3>
-      <p>需要每個客戶或專案有完全獨立的 config？optional 的 sandbox 在帳號之上再隔離 memory、session 與環境變數。</p>
+      <h3>Workspace 做隔離</h3>
+      <p>需要每個客戶或專案有完全獨立的 config？optional 的 workspace 在帳號之上再隔離 memory、session 與環境變數。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
@@ -700,7 +700,7 @@
   <h2 class="section-title">核心模型</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
     從<strong style="color:var(--text)">帳號</strong>開始 — 大多數人需要的就只有這個。
-    只有當某個情境需要完全獨立的 config 時，才會用到 <strong style="color:var(--text)">sandbox</strong>。
+    只有當某個情境需要完全獨立的 config 時，才會用到 <strong style="color:var(--text)">workspace</strong>。
   </p>
   <div class="features-grid">
     <div class="feature-card">
@@ -710,8 +710,8 @@
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4e6;</span>
-      <h3>Sandbox（沙盒）<span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">進階</span></h3>
-      <p>optional 的<strong style="color:var(--text)">隔離</strong>層：獨立的 memory、session 與環境變數。多數使用者用不到 — 當某個客戶或專案需要自己的 config 空間時才需要。用 <code>orrery enter</code> 進入、<code>orrery exit</code> 離開。</p>
+      <h3>Workspace（工作區）<span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">進階</span></h3>
+      <p>optional 的<strong style="color:var(--text)">隔離</strong>層：獨立的 memory、session 與環境變數。多數使用者用不到 — 當某個客戶或專案需要自己的 config 空間時才需要。用 <code>orrery pin &lt;帳號&gt; --workspace &lt;名稱&gt;</code> 把帳號 pin 進去，再用 <code>orrery use &lt;帳號&gt;</code> 啟用。</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4ac;</span>
@@ -761,11 +761,10 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <h4>進階：建立 sandbox</h4>
-        <p>當某個客戶或專案需要完全獨立的 config，執行 <code>orrery sandbox create client-a</code>，再用 <code>orrery enter client-a</code> / <code>orrery exit</code> 進出。如果你只切帳號，這步可以完全跳過。</p>
+        <h4>進階：建立 workspace</h4>
+        <p>當某個客戶或專案需要完全獨立的 config，執行 <code>orrery workspace create client-a</code>，用 <code>orrery pin work --workspace client-a</code> 把帳號 pin 進去，再用 <code>orrery use work</code> 啟用。如果你只切帳號，這步可以完全跳過。</p>
         <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
         </p>
       </div>
     </div>
@@ -776,26 +775,26 @@
 <section class="section" id="phantom">
   <h2 class="section-title">Phantom — 對話中切換</h2>
   <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2rem">
-    用 <code>orrery run claude</code> 啟動 Claude，會有一個 supervisor 守在旁邊。
+    執行 <code>claude</code>，會有一個 supervisor 守在旁邊。
     在那個 Claude 裡，<code>/orrery:phantom</code> slash command 可以
-    <strong style="color:var(--text)">不重啟對話</strong>直接換 account 或 sandbox —
+    <strong style="color:var(--text)">不重啟對話</strong>直接換 account —
     Claude 退出後 supervisor 帶著新設定與 <code>--resume</code> 把它叫回來，對話無感接續。
   </p>
   <div class="code-block" style="max-width:680px;margin:0 auto 1.5rem;font-size:.85rem">
-    <span style="color:var(--muted)"># 在以 `orrery run claude` 啟動的 Claude session 中</span><br/>
+    <span style="color:var(--muted)"># 在被 phantom 監督的 Claude session 中</span><br/>
     <span class="prompt">&gt; </span>/orrery:phantom personal<br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;# → 把 claude 帳號切到 'personal'</span><br/><br/>
     <span class="prompt">&gt; </span>/orrery:phantom codex work<br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;# → 切 codex 帳號</span><br/><br/>
-    <span class="prompt">&gt; </span>/orrery:phantom sandbox client-a<br/>
-    <span style="color:var(--muted)">&nbsp;&nbsp;# → 進入 sandbox 'client-a'</span>
+    <span style="color:var(--muted)"># 也可以直接在 shell 執行，不需要佔用 Claude 的一輪對話：</span><br/>
+    <span class="prompt">$ </span>orrery phantom personal
   </div>
   <p style="text-align:center;margin:0 auto 1.5rem">
     <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phatom.gif" alt="/orrery:phantom 對話中切換示範" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
   </p>
   <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
-    Phantom 是 <code>orrery run claude</code> 的<strong style="color:var(--text)">預設</strong>模式。
-    要關掉（單次執行、無 supervisor）：<code>orrery run --non-phantom claude</code>。
+    Phantom 監督是裸執行 <code>claude</code> 的<strong style="color:var(--text)">預設</strong>行為 — shell 整合會自動包住它。
+    要單次關掉（無 supervisor）：<code>ORRERY_NO_PHANTOM=1 claude</code>。
     slash command 由 <code>orrery mcp setup</code> 自動安裝。
   </p>
 </section>
@@ -804,28 +803,27 @@
 <section class="origin-section" id="origin">
   <h2 class="section-title"><code style="font-size:1.1rem;color:var(--accent2)">origin</code> 基準狀態</h2>
   <div class="origin-callout">
-    <h3>你的預設 config — 還沒進任何 sandbox 時所在的地方</h3>
+    <h3>你的預設 config — 帳號在沒有指定其他 workspace 時所屬的那一個</h3>
     <p>
       <code>origin</code> 就是你平常的設定：完全不用 Orrery 時你會用的那組帳號與工具 config。
       首次執行 <code>orrery setup</code> 時，原本的工具設定（<code>~/.claude/</code>、
       <code>~/.codex/</code>、<code>~/.gemini/</code>）會被搬進 <code>~/.orrery/origin/</code>，
       原路徑改為 symlink — 資料本身完全沒動，只是改住在 Orrery 可以管理與同步的位置。
       用 <code>orrery use</code> 切換帳號在 origin 就能做；只有當某個情境需要完全獨立的
-      config 時，才會用到 sandbox。
+      config 時，才會用到 workspace。
     </p>
     <p>
-      <code>orrery exit</code> 從任何 sandbox 切回 origin：Orrery 專屬的變數（如
-      <code>CLAUDE_CONFIG_DIR</code>）會被 unset，工具走自己原生的路徑 — 而這些路徑透過
-      symlink 指向 Orrery 管理的 config。從使用感受上像「離開 Orrery」，但實際上仍在
-      Orrery 管理的儲存之下。<code>orrery enter origin</code> 會被明確拒絕，並指向
-      <code>exit</code>：origin 是「沒有 sandbox」這個狀態，不是某個你會進去的 sandbox。
+      要把帳號移回 origin，重新 pin 即可：<code>orrery pin &lt;帳號&gt; --workspace origin</code>。
+      pin 在 origin 的帳號會解析到系統原生的 config 路徑 — 而這些路徑透過 symlink 指向
+      Orrery 管理的 config。從使用感受上像「在 Orrery 之外」，但實際上仍在 Orrery
+      管理的儲存之下，可以正常同步。
     </p>
     <p>
-      與一般 sandbox 不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config
+      與一般 workspace 不同，<code>origin</code> 無法被刪除或重新命名，且使用系統原生的 config
       路徑。不過它支援 memory 與 session 設定：可以用 <code>orrery memory isolate</code> /
       <code>share</code> / <code>storage</code> 控制 memory 存放位置，也可以在
       <code>orrery setup</code> 過程中選擇各工具的 session 是否隔離。執行
-      <code>orrery sandbox info origin</code> 查看完整狀態。
+      <code>orrery workspace info origin</code> 查看完整狀態。
     </p>
     <p style="margin-top:1rem">
       <strong style="color:var(--text)">還原接管。</strong>
@@ -871,11 +869,11 @@
     <div class="feature-card">
       <span class="feature-icon">🏢</span>
       <h3>多客戶 / 多專案 <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">SANDBOX</span></h3>
-      <p>接案者或顧問同時服務多個客戶，每個都需要自己的憑證、設定與 memory。給每個客戶一個 sandbox 做完整隔離。</p>
+      <p>接案者或顧問同時服務多個客戶，每個都需要自己的憑證、設定與 memory。給每個客戶一個 workspace 做完整隔離。</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sandbox create client-a<br/>
-        <span class="prompt">$ </span>orrery sandbox create client-b<br/>
-        <span class="prompt">$ </span>orrery enter client-a
+        <span class="prompt">$ </span>orrery workspace create client-a<br/>
+        <span class="prompt">$ </span>orrery pin work --workspace client-a<br/>
+        <span class="prompt">$ </span>orrery use work
       </div>
     </div>
   </div>
@@ -925,7 +923,7 @@
             <code style="color:var(--accent2);font-size:.9rem">/orrery:phantom</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">中途切環境 — Claude 自動 <code>--resume</code> 接續對話</span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">啟動時用：</span> orrery run claude<br/>
+              <span style="color:var(--muted)">啟動時用：</span> claude<br/>
               <span style="color:var(--muted)">在 Claude 內：</span> /orrery:phantom work
             </div>
           </div>
@@ -967,24 +965,25 @@
         <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">列出池子裡的帳號</span></div>
         <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; &lt;name&gt;</span><span class="cmd-desc">切換某工具當前的帳號</span></div>
         <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">顯示各工具當前的帳號</span></div>
+        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">顯示新 shell 會自動沿用的帳號</span></div>
         <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">從帳號池刪除帳號</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sandbox 狀態</div>
+      <div class="command-group-title">Workspace 指派</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">在當前 shell 進入 sandbox</span></div>
-        <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">離開目前的 sandbox 回到 origin</span></div>
+        <div class="command-item"><span class="cmd">orrery pin &lt;name&gt; --workspace &lt;ws&gt;</span><span class="cmd-desc">把帳號 pin 到某個 workspace</span></div>
+        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">啟用該帳號（連同它的 workspace）</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sandbox CRUD</div>
+      <div class="command-group-title">Workspace CRUD</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sandbox create &lt;name&gt;</span><span class="cmd-desc">建立 sandbox（wizard）</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox delete [name]</span><span class="cmd-desc">刪除 sandbox（不帶名稱會開多選）</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名 sandbox</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">列出 sandbox</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">顯示 sandbox 詳細</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace create &lt;name&gt;</span><span class="cmd-desc">建立 workspace（wizard）</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace delete [name]</span><span class="cmd-desc">刪除 workspace（不帶名稱會開多選）</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">重新命名 workspace</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace list</span><span class="cmd-desc">列出 workspace</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace info [name]</span><span class="cmd-desc">顯示 workspace 詳細</span></div>
       </div>
     </div>
     <div class="command-group">

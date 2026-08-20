@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orrery — switch AI CLI accounts without logging out</title>
-  <meta name="description" content="Orrery pools your Claude Code, Codex, and Gemini CLI accounts and switches between them with one command — no logout, no re-auth, conversations stay continuous. Per-shell, with an optional sandbox layer for full config isolation." />
+  <meta name="description" content="Orrery pools your Claude Code, Codex, and Gemini CLI accounts and switches between them with one command — no logout, no re-auth, conversations stay continuous. Per-shell, with an optional workspace layer for full config isolation." />
   <link rel="icon" href="icon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -654,12 +654,12 @@
     <div class="feature-card">
       <span class="feature-icon">👻</span>
       <h3>Switch mid-conversation</h3>
-      <p>Launch via <code>orrery run claude</code> and use <code>/orrery:phantom</code> inside Claude to swap account or sandbox without losing the conversation.</p>
+      <p>Run <code>claude</code> and use <code>/orrery:phantom</code> inside Claude to swap account without losing the conversation.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">📦</span>
-      <h3>Sandboxes for isolation</h3>
-      <p>Need a fully separate config per client or project? An optional sandbox isolates memory, sessions, and env vars on top of accounts.</p>
+      <h3>Workspaces for isolation</h3>
+      <p>Need a fully separate config per client or project? An optional workspace isolates memory, sessions, and env vars on top of accounts.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">🐚</span>
@@ -700,7 +700,7 @@
   <h2 class="section-title">The Model</h2>
   <p style="text-align:center;color:var(--muted);max-width:620px;margin:0 auto 2rem">
     Start with <strong style="color:var(--text)">accounts</strong> — that's all most people
-    need. Reach for a <strong style="color:var(--text)">sandbox</strong> only when a context
+    need. Reach for a <strong style="color:var(--text)">workspace</strong> only when a context
     needs fully isolated config.
   </p>
   <div class="features-grid">
@@ -711,8 +711,8 @@
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4e6;</span>
-      <h3>Sandbox <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">ADVANCED</span></h3>
-      <p>An optional <strong style="color:var(--text)">isolation</strong> layer: separate memory, sessions, and env vars. Most users never need one — reach for a sandbox when a client or project needs its own config space. Enter with <code>orrery enter</code>, leave with <code>orrery exit</code>.</p>
+      <h3>Workspace <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">ADVANCED</span></h3>
+      <p>An optional <strong style="color:var(--text)">isolation</strong> layer: separate memory, sessions, and env vars. Most users never need one — reach for a workspace when a client or project needs its own config space. Pin an account into it with <code>orrery pin &lt;account&gt; --workspace &lt;name&gt;</code>, then activate it with <code>orrery use &lt;account&gt;</code>.</p>
     </div>
     <div class="feature-card">
       <span class="feature-icon">&#x1f4ac;</span>
@@ -762,11 +762,10 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <h4>Optional: create a sandbox</h4>
-        <p>When a client or project needs fully isolated config, run <code>orrery sandbox create client-a</code>, then <code>orrery enter client-a</code> / <code>orrery exit</code> to move in and out. Skip this entirely if you only switch accounts.</p>
+        <h4>Optional: create a workspace</h4>
+        <p>When a client or project needs fully isolated config, run <code>orrery workspace create client-a</code>, pin an account into it with <code>orrery pin work --workspace client-a</code>, then activate it with <code>orrery use work</code>. Skip this entirely if you only switch accounts.</p>
         <p style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem">
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery sandbox create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
-          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-enter.gif" alt="orrery enter sandbox" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
+          <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/sandbox-create.gif" alt="orrery workspace create wizard" style="flex:1 1 280px;max-width:360px;border-radius:8px;border:1px solid var(--border)" />
         </p>
       </div>
     </div>
@@ -777,27 +776,27 @@
 <section class="section" id="phantom">
   <h2 class="section-title">Phantom mode — switch mid-conversation</h2>
   <p style="text-align:center;color:var(--muted);max-width:680px;margin:0 auto 2rem">
-    Launch Claude with <code>orrery run claude</code> and a supervisor stays alongside it.
+    Run <code>claude</code> and a supervisor stays alongside it.
     From inside that Claude, the <code>/orrery:phantom</code> slash command swaps the active
-    account or sandbox <strong style="color:var(--text)">without restarting the conversation</strong> —
+    account <strong style="color:var(--text)">without restarting the conversation</strong> —
     Claude exits, the supervisor relaunches it with the new context and <code>--resume</code>,
     and you continue where you left off.
   </p>
   <div class="code-block" style="max-width:680px;margin:0 auto 1.5rem;font-size:.85rem">
-    <span style="color:var(--muted)"># inside a Claude session started with `orrery run claude`</span><br/>
+    <span style="color:var(--muted)"># inside a supervised Claude session</span><br/>
     <span class="prompt">&gt; </span>/orrery:phantom personal<br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;# → switch the claude account to 'personal'</span><br/><br/>
     <span class="prompt">&gt; </span>/orrery:phantom codex work<br/>
     <span style="color:var(--muted)">&nbsp;&nbsp;# → switch the codex account</span><br/><br/>
-    <span class="prompt">&gt; </span>/orrery:phantom sandbox client-a<br/>
-    <span style="color:var(--muted)">&nbsp;&nbsp;# → enter sandbox 'client-a'</span>
+    <span style="color:var(--muted)"># or straight from the shell, no Claude turn needed:</span><br/>
+    <span class="prompt">$ </span>orrery phantom personal
   </div>
   <p style="text-align:center;margin:0 auto 1.5rem">
     <img src="https://raw.githubusercontent.com/OffskyLab/Orrery/main/assets/demo/phatom.gif" alt="/orrery:phantom mid-session switch" style="max-width:720px;width:100%;border-radius:8px;border:1px solid var(--border)" />
   </p>
   <p style="text-align:center;color:var(--muted);max-width:640px;margin:0 auto;font-size:.9rem">
-    Phantom mode is the <strong style="color:var(--text)">default</strong> for <code>orrery run claude</code>.
-    To opt out (single-shot, no supervisor): <code>orrery run --non-phantom claude</code>.
+    Phantom supervision is the <strong style="color:var(--text)">default</strong> for a bare <code>claude</code> — the shell integration wraps it.
+    To opt out for one launch: <code>ORRERY_NO_PHANTOM=1 claude</code>.
     The slash command is installed automatically by <code>orrery mcp setup</code>.
   </p>
 </section>
@@ -806,30 +805,28 @@
 <section class="origin-section" id="origin">
   <h2 class="section-title">The <code style="font-size:1.1rem;color:var(--accent2)">origin</code> baseline</h2>
   <div class="origin-callout">
-    <h3>Your default config — where you are before entering any sandbox</h3>
+    <h3>Your default config — the workspace an account uses when you haven't chosen another</h3>
     <p>
       <code>origin</code> is your normal setup: the accounts and per-tool config you'd use
       without Orrery at all. On first <code>orrery setup</code>, your existing tool configs
       (<code>~/.claude/</code>, <code>~/.codex/</code>, <code>~/.gemini/</code>) are moved into
       <code>~/.orrery/origin/</code> and the original paths become symlinks — your data is
       untouched, it just lives where Orrery can manage and sync it. Switching accounts with
-      <code>orrery use</code> works right here at origin; you only need a sandbox when a
+      <code>orrery use</code> works right here at origin; you only need a workspace when a
       context calls for fully isolated config.
     </p>
     <p>
-      <code>orrery exit</code> returns to origin from any sandbox. Orrery-specific variables
-      like <code>CLAUDE_CONFIG_DIR</code> get unset, so each tool falls back to its native
-      path — which now resolves to the managed config via the symlink. The experience feels
-      like "exit Orrery", but you're still on Orrery-managed storage. <code>orrery enter
-      origin</code> is rejected and points you at <code>exit</code>: origin is the absence
-      of a sandbox, not a sandbox you enter.
+      To move an account back to origin, re-pin it: <code>orrery pin &lt;account&gt; --workspace
+      origin</code>. An account pinned to origin resolves to the system's native config
+      paths — which now point at Orrery-managed storage via the symlinks — so the experience
+      feels like "outside Orrery" while everything stays managed and syncable.
     </p>
     <p>
-      Unlike regular sandboxes, <code>origin</code> cannot be deleted or renamed and
+      Unlike regular workspaces, <code>origin</code> cannot be deleted or renamed and
       uses the system's native config paths. It does support memory and session settings —
       use <code>orrery memory isolate</code> / <code>share</code> / <code>storage</code> to
       control where its project memory lives, and choose per-tool session sharing during
-      <code>orrery setup</code>. Run <code>orrery sandbox info origin</code> to see full state.
+      <code>orrery setup</code>. Run <code>orrery workspace info origin</code> to see full state.
     </p>
     <p style="margin-top:1rem">
       <strong style="color:var(--text)">Reverting the takeover.</strong>
@@ -874,12 +871,12 @@
     </div>
     <div class="feature-card">
       <span class="feature-icon">🏢</span>
-      <h3>Multiple Clients <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">SANDBOX</span></h3>
-      <p>Freelancers and consultants juggling different clients — each needs its own credentials, settings, and memory. Give each client a sandbox for full isolation.</p>
+      <h3>Multiple Clients <span style="font-size:.62rem;font-weight:600;background:var(--border);color:var(--muted);padding:.15rem .45rem;border-radius:999px;vertical-align:middle;letter-spacing:.04em">WORKSPACE</span></h3>
+      <p>Freelancers and consultants juggling different clients — each needs its own credentials, settings, and memory. Give each client a workspace for full isolation.</p>
       <div class="code-block" style="margin-top:.75rem;font-size:.8rem">
-        <span class="prompt">$ </span>orrery sandbox create client-a<br/>
-        <span class="prompt">$ </span>orrery sandbox create client-b<br/>
-        <span class="prompt">$ </span>orrery enter client-a
+        <span class="prompt">$ </span>orrery workspace create client-a<br/>
+        <span class="prompt">$ </span>orrery pin work --workspace client-a<br/>
+        <span class="prompt">$ </span>orrery use work
       </div>
     </div>
   </div>
@@ -929,7 +926,7 @@
             <code style="color:var(--accent2);font-size:.9rem">/orrery:phantom</code>
             <span style="color:var(--muted);font-size:.85rem;margin-left:.5rem">Switch env mid-conversation — Claude relaunches with <code>--resume</code></span>
             <div class="code-block" style="margin-top:.35rem;font-size:.8rem">
-              <span style="color:var(--muted)">launch with:</span> orrery run claude<br/>
+              <span style="color:var(--muted)">launch with:</span> claude<br/>
               <span style="color:var(--muted)">then in Claude:</span> /orrery:phantom work
             </div>
           </div>
@@ -971,24 +968,25 @@
         <div class="command-item"><span class="cmd">orrery list [--tool]</span><span class="cmd-desc">List accounts in the pool</span></div>
         <div class="command-item"><span class="cmd">orrery use --&lt;tool&gt; &lt;name&gt;</span><span class="cmd-desc">Switch the active account for a tool</span></div>
         <div class="command-item"><span class="cmd">orrery show</span><span class="cmd-desc">Show the active account per tool</span></div>
+        <div class="command-item"><span class="cmd">orrery current</span><span class="cmd-desc">Show the pinned account new shells pick up</span></div>
         <div class="command-item"><span class="cmd">orrery remove</span><span class="cmd-desc">Remove an account from the pool</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sandbox state</div>
+      <div class="command-group-title">Workspace assignment</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery enter &lt;name&gt;</span><span class="cmd-desc">Activate a sandbox in current shell</span></div>
-        <div class="command-item"><span class="cmd">orrery exit</span><span class="cmd-desc">Leave the current sandbox, return to origin</span></div>
+        <div class="command-item"><span class="cmd">orrery pin &lt;name&gt; --workspace &lt;ws&gt;</span><span class="cmd-desc">Pin an account to a workspace</span></div>
+        <div class="command-item"><span class="cmd">orrery use &lt;name&gt;</span><span class="cmd-desc">Activate that account (and its workspace)</span></div>
       </div>
     </div>
     <div class="command-group">
-      <div class="command-group-title">Sandbox CRUD</div>
+      <div class="command-group-title">Workspace CRUD</div>
       <div class="command-list">
-        <div class="command-item"><span class="cmd">orrery sandbox create &lt;name&gt;</span><span class="cmd-desc">Create a sandbox (wizard)</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox delete [name]</span><span class="cmd-desc">Delete sandbox(es) (multi-select if no name)</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename a sandbox</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox list</span><span class="cmd-desc">List sandboxes</span></div>
-        <div class="command-item"><span class="cmd">orrery sandbox info [name]</span><span class="cmd-desc">Show sandbox details</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace create &lt;name&gt;</span><span class="cmd-desc">Create a workspace (wizard)</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace delete [name]</span><span class="cmd-desc">Delete workspace(s) (multi-select if no name)</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace rename &lt;old&gt; &lt;new&gt;</span><span class="cmd-desc">Rename a workspace</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace list</span><span class="cmd-desc">List workspaces</span></div>
+        <div class="command-item"><span class="cmd">orrery workspace info [name]</span><span class="cmd-desc">Show workspace details</span></div>
       </div>
     </div>
     <div class="command-group">
