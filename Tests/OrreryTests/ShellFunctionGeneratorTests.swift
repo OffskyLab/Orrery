@@ -58,9 +58,12 @@ struct ShellFunctionGeneratorTests {
         #expect(script.contains("add)"))
         // The old account) dispatcher must be gone.
         #expect(!script.contains("            account)"))
-        // Claude detection logic.
+        // Claude detection logic. `--codex` and `--gemini` used to share one
+        // `--codex|--gemini) _is_claude=0` arm; gemini now needs its own so it
+        // can take the shell-routed branch too (see GeminiAddShellRoutingTests).
         #expect(script.contains("_is_claude=1"))
-        #expect(script.contains("--codex|--gemini"))
+        #expect(script.contains("--codex)  _is_claude=0"))
+        #expect(script.contains("--gemini) _is_claude=0; _is_gemini=1"))
         // Prepare / claude / finalize pipeline.
         #expect(script.contains("_account-add-prepare"))
         #expect(script.contains("command claude"))
@@ -80,13 +83,15 @@ struct ShellFunctionGeneratorTests {
         #expect(!script.contains("-h|--help) command orrery-bin account \"$@\""))
     }
 
-    @Test("account add --codex and --gemini fall through to orrery-bin, not claude")
-    func accountAddCodexGeminiFallThrough() {
+    @Test("account add --codex falls through to orrery-bin, not claude")
+    func accountAddCodexFallsThrough() {
         let script = ShellFunctionGenerator.generate()
-        // The non-claude path must fall through to orrery-bin "$@".
+        // The fall-through path must still exist for codex.
         #expect(script.contains("command orrery-bin \"$@\""))
-        // The detection logic must check for --codex and --gemini flags.
-        #expect(script.contains("--codex|--gemini) _is_claude=0"))
+        #expect(script.contains("--codex)  _is_claude=0"))
+        // `--gemini` deliberately no longer shares this path: `gemini` opens a
+        // TUI that takes SIGTTIN when spawned outside the foreground process
+        // group, so it is shell-routed like claude. See GeminiAddShellRoutingTests.
     }
 
     @Test("run -e/--env on phantom claude errors instead of switching workspace")

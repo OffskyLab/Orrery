@@ -43,6 +43,7 @@
   "account.usePinned": "已將 {tool} 帳號「{name}」釘到 sandbox「{env}」。",
   "account.loginManualFallbackHint": "直接從 orrery binary 啟動 {tool} — TTY 前景可能受限。若精靈未出現，請從已 source ~/.orrery/activate.sh 的 shell 執行此指令。",
   "account.loginReadyHint": "現在進行登入流程，完成後可以執行 /exit 結束，也可以繼續使用。",
+  "account.loginReadyHintGemini": "現在進行登入流程，完成後離開 Gemini 即可完成帳號新增。",
   "account.addFinalized": "已匯入 {tool} 帳號「{name}」。",
   "account.addFinalizedWithInfo": "已匯入 {tool} 帳號「{name}」（{info}）。",
   "origin.released": "✓ {tool}：已還原至 {path}。",
