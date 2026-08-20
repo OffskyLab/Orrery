@@ -11,8 +11,24 @@ public struct AddCommand: ParsableCommand {
     @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagCodexHelp)) public var codex: Bool = false
     @Flag(name: .long, help: ArgumentHelp(L10n.Account.flagGeminiHelp)) public var gemini: Bool = false
 
-    @Option(name: .long, help: ArgumentHelp(L10n.Account.addNameHelp))
+    @Argument(help: ArgumentHelp(L10n.Account.addNameHelp))
     public var name: String?
+
+    /// Deprecated spelling of the positional `name`, kept working but hidden.
+    /// `add` used to take `--name` while `remove` took its name positionally,
+    /// so the two halves of one workflow read differently; `add` now matches.
+    /// `--name` was the documented form for every release up to this one, so it
+    /// still parses rather than breaking existing scripts and muscle memory.
+    @Option(name: .customLong("name"), help: ArgumentHelp(visibility: .hidden))
+    public var nameOption: String?
+
+    /// The name the user asked for, whichever spelling they used. The
+    /// positional wins when both appear — it is the documented form now.
+    var resolvedName: String? {
+        if let name, !name.isEmpty { return name }
+        if let nameOption, !nameOption.isEmpty { return nameOption }
+        return nil
+    }
 
     /// 測試用隱藏旗標：略過實際登入流程，只把 account 寫進 store。
     @Flag(name: .customLong("skip-login"), help: ArgumentHelp(visibility: .hidden))
@@ -73,7 +89,7 @@ public struct AddCommand: ParsableCommand {
     }
 
     private func resolveName() throws -> String {
-        if let n = name, !n.isEmpty { return n }
+        if let n = resolvedName { return n }
         print(L10n.Account.addNamePrompt, terminator: "")
         guard let input = readLine()?.trimmingCharacters(in: .whitespaces),
               !input.isEmpty
