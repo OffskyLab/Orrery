@@ -17,8 +17,23 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     @Flag(name: .long) public var codex: Bool = false
     @Flag(name: .long) public var gemini: Bool = false
 
-    @Option(name: .long, help: ArgumentHelp(L10n.Account.addNameHelp))
+    @Argument(help: ArgumentHelp(L10n.Account.addNameHelp))
     public var name: String?
+
+    /// Deprecated spelling of the positional `name`, kept working but hidden.
+    /// `--name` was the documented form for every release before the positional
+    /// existed, and this command sits behind the `orrery add` shell wrapper, so
+    /// dropping it would break the exact invocation the README taught.
+    @Option(name: .customLong("name"), help: ArgumentHelp(visibility: .hidden))
+    public var nameOption: String?
+
+    /// The name the user asked for, whichever spelling they used. The
+    /// positional wins when both appear — it is the documented form now.
+    var resolvedName: String? {
+        if let name, !name.isEmpty { return name }
+        if let nameOption, !nameOption.isEmpty { return nameOption }
+        return nil
+    }
 
     public init() {}
 
@@ -118,7 +133,7 @@ public struct AccountAddPrepareCommand: ParsableCommand {
     #endif
 
     private func resolveName() throws -> String {
-        if let n = name, !n.isEmpty { return n }
+        if let n = resolvedName { return n }
         FileHandle.standardError.write(Data(L10n.Account.addNamePrompt.utf8))
         guard let input = readLine()?.trimmingCharacters(in: .whitespaces),
               !input.isEmpty

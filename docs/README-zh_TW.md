@@ -163,8 +163,8 @@ sudo apt update
 
 ```bash
 # 把帳號註冊到共享 pool（每個帳號做一次）
-orrery add --claude --name work
-orrery add --claude --name personal
+orrery add --claude work
+orrery add --claude personal
 
 # 切換目前的 Claude 帳號 — pin 是 per-shell 的
 orrery use work --claude    # 也可只打 `orrery use work`（預設工具是 claude）
@@ -273,7 +273,7 @@ orrery uninstall
 
 | 指令 | 說明 |
 |---|---|
-| `orrery add [--claude\|--codex\|--gemini] --name <name>` | 註冊新帳號到 pool（並執行該工具的 login flow） |
+| `orrery add [--claude\|--codex\|--gemini] <name>` | 註冊新帳號到 pool（並執行該工具的 login flow） |
 | `orrery list [--claude\|--codex\|--gemini]` | 列出帳號（依工具過濾或全部） |
 | `orrery show` | 顯示目前 pin 的帳號與該帳號所屬的 workspace |
 | `orrery use [--claude\|--codex\|--gemini] <name>` | 將指定帳號 pin 為該工具的當前帳號（預設工具：claude） |

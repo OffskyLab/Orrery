@@ -163,8 +163,8 @@ sudo apt update
 
 ```bash
 # Add accounts to the shared pool (one-time per account)
-orrery add --claude --name work
-orrery add --claude --name personal
+orrery add --claude work
+orrery add --claude personal
 
 # Switch the active Claude account — pinning is per-shell
 orrery use work --claude    # bare `orrery use work` also defaults to claude
@@ -278,7 +278,7 @@ For fully isolated sessions in a workspace (e.g. compliance requirements), choos
 
 | Command | Description |
 |---|---|
-| `orrery add [--claude\|--codex\|--gemini] --name <name>` | Register a new account in the pool (runs the tool's login flow) |
+| `orrery add [--claude\|--codex\|--gemini] <name>` | Register a new account in the pool (runs the tool's login flow) |
 | `orrery list [--claude\|--codex\|--gemini]` | List accounts (filtered by tool, or all) |
 | `orrery show` | Show which account is pinned per tool, and each account's workspace |
 | `orrery use [--claude\|--codex\|--gemini] <name>` | Pin the named account as active for the tool (default tool: claude) |
