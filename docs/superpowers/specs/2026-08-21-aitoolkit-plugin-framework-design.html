@@ -1,0 +1,438 @@
+<title>AIToolKit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* Palette inherited from docs/superpowers/plans/*.html — same house style
+     for design docs in this repo. Extended here with a dark set, which the
+     original predates. Neutrals are warm-biased toward the coral rather
+     than neutral grey, so the accent sits in the page instead of on it. */
+  :root {
+    --bg:        #f4f5f7;
+    --card:      #ffffff;
+    --ink:       #1f2328;
+    --muted:     #656d76;
+    --line:      #e3e6ea;
+    --coral:     #d97757;
+    --coral-dim: #f0e2db;
+    --ok:        #1a7f52;
+    --ok-dim:    #e2f0e8;
+    --warn:      #9a6700;
+    --warn-dim:  #f5ecd8;
+    --code-bg:   #f0f1f4;
+    --shadow:    0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #171514;
+      --card:      #201d1b;
+      --ink:       #ece8e4;
+      --muted:     #a09890;
+      --line:      #302b28;
+      --coral:     #e0906d;
+      --coral-dim: #33241d;
+      --ok:        #5cb185;
+      --ok-dim:    #1b2a22;
+      --warn:      #d6a95c;
+      --warn-dim:  #2d2519;
+      --code-bg:   #1a1817;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #171514;
+    --card:      #201d1b;
+    --ink:       #ece8e4;
+    --muted:     #a09890;
+    --line:      #302b28;
+    --coral:     #e0906d;
+    --coral-dim: #33241d;
+    --ok:        #5cb185;
+    --ok-dim:    #1b2a22;
+    --warn:      #d6a95c;
+    --warn-dim:  #2d2519;
+    --code-bg:   #1a1817;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    margin: 0;
+    padding: 3rem 1.5rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 50rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  code, pre, .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: .1em .38em; border-radius: 4px; font-size: .875em; }
+
+  /* ── Masthead ───────────────────────────────────────────── */
+  header { display: flex; flex-direction: column; gap: .85rem; }
+
+  .eyebrow {
+    font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.1; margin: 0;
+    letter-spacing: -.03em; font-weight: 700; text-wrap: balance;
+  }
+
+  .standfirst { font-size: 1.1rem; color: var(--muted); margin: 0; max-width: 40rem; text-wrap: pretty; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .chip {
+    font-size: .74rem; letter-spacing: .04em; padding: .22rem .6rem; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); background: var(--card);
+  }
+  .chip.status { border-color: var(--coral); color: var(--coral); background: var(--coral-dim); font-weight: 600; }
+
+  /* ── Sections ───────────────────────────────────────────── */
+  section { display: flex; flex-direction: column; gap: 1rem; }
+
+  h2 {
+    font-size: 1.35rem; margin: 0; letter-spacing: -.02em; font-weight: 700;
+    padding-bottom: .5rem; border-bottom: 2px solid var(--line); text-wrap: balance;
+  }
+  h3 { font-size: 1rem; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  p  { margin: 0; text-wrap: pretty; }
+  ul, ol { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .45rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.25rem 1.4rem; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: .75rem;
+  }
+
+  /* ── The organising rule — the one loud thing on the page ── */
+  .rule {
+    background: var(--coral-dim); border: 1px solid var(--coral);
+    border-radius: 10px; padding: 1.4rem 1.5rem;
+    display: flex; flex-direction: column; gap: .6rem;
+  }
+  .rule .label {
+    font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    font-weight: 700; color: var(--coral);
+  }
+  .rule blockquote {
+    margin: 0; font-size: 1.15rem; line-height: 1.5; font-weight: 600;
+    letter-spacing: -.01em; text-wrap: balance;
+  }
+  .rule .gloss { font-size: .92rem; color: var(--muted); margin: 0; }
+
+  /* ── Layer diagram: the thesis, so it gets real weight ──── */
+  .layers { display: flex; flex-direction: column; gap: 0; }
+  .layer {
+    border: 1px solid var(--line); background: var(--card);
+    padding: .95rem 1.2rem; display: flex; flex-wrap: wrap; gap: .2rem 1rem;
+    align-items: baseline;
+  }
+  .layer:first-child { border-radius: 10px 10px 0 0; }
+  .layer:last-child  { border-radius: 0 0 10px 10px; }
+  .layer + .layer { border-top: none; }
+  .layer .name { font-weight: 700; font-size: .95rem; }
+  .layer .role { color: var(--muted); font-size: .88rem; }
+  .layer.new { border-left: 4px solid var(--coral); }
+  .layer.new .name { color: var(--coral); }
+  .arrows {
+    display: flex; justify-content: center; color: var(--muted);
+    font-size: .8rem; padding: .25rem 0; letter-spacing: .3em;
+  }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 30rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  tr.total td { font-weight: 700; border-top: 2px solid var(--line); }
+
+  .home { font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 4px; white-space: nowrap; }
+  .home.core { background: var(--ok-dim);   color: var(--ok); }
+  .home.kit  { background: var(--coral-dim); color: var(--coral); }
+  .home.acct { background: var(--warn-dim); color: var(--warn); }
+
+  /* ── Phases: a real sequence, so numbering carries meaning ─ */
+  .phase { display: grid; grid-template-columns: auto 1fr; gap: 0 1.1rem; align-items: start; }
+  .phase + .phase { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px dashed var(--line); }
+  .phase .n {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .8rem; font-weight: 700;
+    color: var(--coral); background: var(--coral-dim); border-radius: 6px;
+    padding: .3rem .55rem; line-height: 1; white-space: nowrap;
+  }
+  .phase .body { display: flex; flex-direction: column; gap: .55rem; min-width: 0; }
+  .phase h3 { margin: .15rem 0 0; }
+
+  .delivers { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .tag { font-size: .76rem; padding: .16rem .55rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.yes { border-color: var(--ok); color: var(--ok); background: var(--ok-dim); }
+  .tag.no  { border-color: var(--warn); color: var(--warn); background: var(--warn-dim); }
+
+  /* ── Risks ──────────────────────────────────────────────── */
+  .risk { border-left: 4px solid var(--warn); background: var(--card); border-radius: 0 8px 8px 0;
+          padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+  .risk h3 { color: var(--warn); font-size: .95rem; }
+
+  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+
+  a { color: var(--coral); }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Design spec · Orrery</div>
+    <h1>AIToolKit</h1>
+    <p class="standfirst">
+      把 orrery 的 per-tool 支援從封閉的 <code>Tool</code> enum，變成一套開放的 plugin
+      framework — Claude 也是 plugin，第三方不必改 orrery 本體就能加新工具。
+    </p>
+    <div class="meta">
+      <span class="chip status">設計已確認 · 尚未實作</span>
+      <span class="chip">2026-08-21</span>
+      <span class="chip mono">docs/superpowers/specs/</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>為什麼</h2>
+    <p>三個動機，都被列為主要：</p>
+    <div class="card">
+      <div>
+        <h3>1 · 別的工具會拖累 core</h3>
+        <p>Gemini 就是活生生的例子：上游拿掉了 <code>gemini auth login</code> 子指令、gemini-cli
+        根本不理會 orrery 在設的 config dir 變數，最後 Google 直接封鎖個人版 Code Assist 帳號使用這個
+        client。沒有一件是 orrery 造成的，但每一件都落在 orrery 的 core、測試和發布節奏上。</p>
+      </div>
+      <div>
+        <h3>2 · 第三方應該能自己加工具</h3>
+        <p>想支援 Cursor 或 Copilot CLI 的人，不該需要去改 <code>Tool.swift</code>。</p>
+      </div>
+      <div>
+        <h3>3 · 縮小維護面積</h3>
+        <p>core 的測試、文件、發布只需要顧 framework 和 Claude；其他工具走自己的生命週期。</p>
+      </div>
+    </div>
+    <p><strong>動機 2 是決定性的那個。</strong> 它排除了所有便宜的替代方案（把非 Claude
+    工具標成 experimental、或乾脆刪掉），因為那些都產生不出擴充點。</p>
+  </section>
+
+  <section>
+    <h2>現況量測</h2>
+    <p>以 <code>main</code> 實測，不是估計：</p>
+    <div class="card scroll">
+      <table>
+        <thead>
+          <tr><th>項目</th><th style="text-align:right">數值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Sources/</code> 總計</td><td class="num">17,256 LOC</td></tr>
+          <tr><td>Claude 專屬檔案</td><td class="num">1,468 LOC</td></tr>
+          <tr><td>Phantom 子系統</td><td class="num">1,123 LOC</td></tr>
+          <tr class="total"><td>Claude 相關合計</td><td class="num">~2,600 LOC（~15%）</td></tr>
+          <tr><td><code>Tool</code> 出現次數</td><td class="num">197（51 個檔案）</td></tr>
+          <tr><td>per-tool <code>switch</code> / <code>case .claude</code></td><td class="num">62</td></tr>
+          <tr><td><code>Tool.allCases</code></td><td class="num">24</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>framework 已經是主體。</strong> 約 85% 的程式碼——帳號池、workspace、memory、session
+    共享、<code>run</code>/<code>delegate</code>、MCP、setup、shell 生成——本來就與工具無關。這比
+    「重寫 orrery」小得多。</p>
+    <p><strong>而且模式已經存在一半。</strong> <code>AccountDirectoryRuntime.makeManager</code> 加上
+    <code>ToolAccountManaging</code> protocol，正是這個設計需要的註冊接縫，只是範圍限縮在帳號目錄。
+    <code>ThirdPartyRuntime</code> 是同一套注入慣用法的第二個實例。AIToolKit 是把 codebase
+    已經信任的模式一般化，不是引入外來概念。</p>
+  </section>
+
+  <section>
+    <h2>核心洞見</h2>
+    <p><code>Tool</code> 現在同時扛兩個不相干的職責：</p>
+    <div class="card">
+      <p><strong>身分</strong> — 一個穩定字串，被當成字典 key、路徑片段（<code>accounts/claude/…</code>）、
+      JSON 值（<code>metadata.json</code> 的 <code>"tool": "claude"</code>）、以及 CLI flag（<code>--claude</code>）。</p>
+      <p><strong>行為</strong> — <code>envVarName</code>、<code>defaultConfigDir</code>、
+      <code>authLoginCommand</code>、<code>ansiColor</code>、<code>sessionSubdirectories</code> 等等。</p>
+    </div>
+    <p>這兩者可以分開拆，<strong>而且按這個順序拆才安全</strong>。行為可以搬走，身分原封不動 —
+    這代表整個第一階段不需要任何 on-disk migration，也不動 CLI。</p>
+  </section>
+
+  <section>
+    <h2>分層</h2>
+    <div class="layers">
+      <div class="layer"><span class="name">OrreryCore</span><span class="role">指令、workspace、memory、session</span></div>
+      <div class="arrows">▲</div>
+      <div class="layer"><span class="name">OrreryAccountKit</span><span class="role">orrery 的帳號池 — 維持原樣</span></div>
+      <div class="arrows">▲</div>
+      <div class="layer new"><span class="name">AIToolKit</span><span class="role">工具「是什麼」：啟動、config 位置、登入、resume</span></div>
+    </div>
+    <p>早期草稿讓 AIToolKit <em>吸收</em> OrreryAccountKit。那是錯的，而錯的理由值得寫下來，因為它同時
+    給了整個 framework 的判準：<strong>帳號管理是 orrery 的發明，不是工具的。</strong>
+    Claude Code、Codex、gemini-cli 都沒有「帳號池」這個概念 — 每個只知道自己有一個 config
+    目錄，是 orrery 在上面疊了池化。把帳號管理折進工具抽象，等於把消費者塞進被消費者裡面。</p>
+
+    <div class="rule">
+      <div class="label">判準</div>
+      <blockquote>AIToolKit 陳述工具的事實。AccountKit 決定 orrery 的政策。</blockquote>
+      <p class="gloss">實例：「gemini-cli 只讀 <code>$HOME/.gemini</code>、無視
+      <code>GEMINI_CONFIG_DIR</code>」是關於 gemini 的<em>事實</em> — 屬於 AIToolKit。
+      「所以要蓋一層 wrapper 目錄放 <code>.gemini → &lt;account dir&gt;</code> 並重導
+      <code>HOME</code>」是 orrery 的隔離<em>政策</em> — 屬於 AccountKit。同理
+      <code>privateSubdirs</code> / <code>baseSharedSubdirs</code> 是 orrery 的共享政策，
+      不是工具的屬性，留在 AccountKit。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>能力歸屬</h2>
+    <p>Claude 也是 plugin，不是特權案例。如果 Claude 能繞過介面，介面就永遠不會被它最嚴苛的
+    消費者壓測，第三方會撞上維護者從沒感受過的牆。</p>
+    <p>但「全部都變成 plugin 能力」會是過度抽象。套用上面的事實／政策判準：</p>
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>機制</th><th>歸屬</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>Phantom registry、liveness、supervisor shim loop</td><td><span class="home core">core</span></td><td>確實與工具無關</td></tr>
+          <tr><td><code>--resume</code> 語意、session id 探索</td><td><span class="home kit">AIToolKit</span></td><td>工具如何 resume，是事實</td></tr>
+          <tr><td>憑證存放位置（Keychain item vs config 內檔案）</td><td><span class="home kit">AIToolKit</span></td><td><code>CredentialAdapter</code> 已有雛形</td></tr>
+          <tr><td>把憑證匯入池化帳號</td><td><span class="home acct">AccountKit</span></td><td>池化是 orrery 的想法</td></tr>
+          <tr><td>啟動／結束時的設定檔 merge / split</td><td><span class="home kit">AIToolKit</span></td><td>只有 Claude 需要，但形狀可一般化</td></tr>
+          <tr><td><code>auth_success</code> 通知</td><td><span class="home kit">AIToolKit</span></td><td>「工具能告訴我們登入完成了」</td></tr>
+          <tr><td>帳號目錄共享政策</td><td><span class="home acct">AccountKit</span></td><td>orrery 的政策，非工具屬性</td></tr>
+          <tr><td>shell wrapper function 貢獻</td><td><span class="home kit">AIToolKit</span></td><td><strong>最沒有前例 — 見風險</strong></td></tr>
+          <tr><td>OAuth token refresh</td><td><span class="home kit">AIToolKit</span></td><td>各家細節不同</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>能力是選配的。每個 plugin 只實作它的工具需要的子集；Claude 會實作最多 —
+    這正是讓介面保持誠實的原因。</p>
+  </section>
+
+  <section>
+    <h2>分階段</h2>
+    <div class="card">
+      <div class="phase">
+        <div class="n">1a</div>
+        <div class="body">
+          <h3>行為搬家，身分不動</h3>
+          <p>引入 <code>ToolPlugin</code> + <code>ToolRegistry</code>，把行為從 <code>Tool</code> enum
+          搬到三個 plugin。enum 原封不動留著當 <code>ToolID</code>。</p>
+          <div class="delivers">
+            <span class="tag yes">on-disk 格式不變</span>
+            <span class="tag yes">CLI 不變</span>
+            <span class="tag yes">動機 1 · 3（部分）</span>
+            <span class="tag no">動機 2 尚未達成</span>
+          </div>
+          <p>結束時第三方擴充<strong>仍需</strong>改 enum。這個中間狀態是刻意接受的 —
+          用它換取風險大幅下降。</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="n">1b</div>
+        <div class="body">
+          <h3>身分開放</h3>
+          <p>把 enum 換成 <code>String</code>-backed 的 <code>ToolID</code> struct，透過 registry 查表。
+          <code>Tool.allCases</code> 和 ArgumentParser 的靜態 <code>--claude</code> flag
+          這些真正麻煩的東西，在這一步才需要解。</p>
+          <div class="delivers"><span class="tag yes">動機 2</span></div>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="n">2</div>
+        <div class="body">
+          <h3>拆 repo</h3>
+          <p>把 Codex 和 Gemini plugin 移到各自的 repo（<code>orrery-codex-support</code>、
+          <code>orrery-gemini-support</code>）。載入機制 — 編譯期 SPM 依賴，還是用約定協定溝通的獨立執行檔 —
+          <strong>刻意留白</strong>，等 1a/1b 顯示介面真正需要什麼再決定。現在選就是用猜的。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>相容性約束</h2>
+    <p>1a 與 1b 期間不可妥協：</p>
+    <div class="card">
+      <ul>
+        <li><code>metadata.json</code> 保持 <code>"tool": "claude"</code></li>
+        <li>帳號路徑保持 <code>accounts/&lt;tool&gt;/&lt;id&gt;/</code></li>
+        <li><code>--claude</code> / <code>--codex</code> / <code>--gemini</code> 繼續可用</li>
+        <li>既有安裝不得需要重新登入或遷移</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>風險</h2>
+    <div class="risk">
+      <h3>shell 片段貢獻毫無前例</h3>
+      <p><code>ShellFunctionGenerator</code> 是把 <code>claude()</code> / <code>gemini()</code>
+      當字面文字吐出來的。讓 plugin 貢獻 shell 是整個設計裡最沒被設計過的一塊，也最可能需要
+      自己一輪設計。而且它是介面爛掉代價最高的地方 — 產出會被寫進使用者的 rc 檔。</p>
+    </div>
+    <div class="risk">
+      <h3>62 個 switch 點是實打實的重構</h3>
+      <p>用 strangler 形狀緩解（protocol 與 enum 並存、逐步遷移、最後才刪），但仍會橫跨多個 PR。</p>
+    </div>
+    <div class="risk">
+      <h3>Phantom 的 core／plugin 邊界目前只是推測</h3>
+      <p>「registry 和 shim 與工具無關、只有 resume 語意因工具而異」這個主張看似合理但<strong>未經驗證</strong> —
+      從來沒有非 Claude 的工具被 supervise 過。1a 不該試圖解決它。</p>
+    </div>
+    <div class="risk">
+      <h3>Gemini 可能無論如何都撐不住</h3>
+      <p>Google 已封鎖個人版 Code Assist 帳號使用 gemini-cli。既有 gemini 帳號是否還能運作尚未查證。
+      如果 gemini 支援在上游已死，Phase 2 的意義本身就改變了 — 動手前值得先確認。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>不做什麼</h2>
+    <div class="card">
+      <ul>
+        <li>Runtime 動態載入（<code>dlopen</code>）。Swift ABI 與 macOS 簽章都不適合 —
+        產出這份設計的那個 session，才因為一個單純的 <code>cp</code> 破壞簽章而吃到 SIGKILL。</li>
+        <li>改動 on-disk 格式。</li>
+        <li>重寫 phantom。</li>
+        <li>在這次工作裡順便加新工具。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>待決問題</h2>
+    <div class="card">
+      <ol>
+        <li>Phase 1a 是一個 PR 還是多個？（建議多個，一次一個能力：憑證 → 啟動／結束 → shell → phantom）</li>
+        <li>Codex 和 Gemini 在 1b 之前都留在 repo 內，到 Phase 2 才搬？（假設是）</li>
+        <li>gemini 的上游封鎖，是否改變了 Gemini 值不值得繼續帶著？</li>
+        <li>AccountKit 最終是否也該有自己的 repo？它是 orrery 自己的層而非 per-tool 的，所以大概不用 —
+        但如果 AIToolKit 真的在 orrery 之外也能重用，問題就不一樣了。</li>
+        <li>剩下那幾個 Claude 專屬的<em>命令</em>放哪 — <code>_prepare-claude-launch</code>、
+        <code>_capture-claude-exit</code>、<code>orrery-claude-hook</code>？它們是進入點不是 library
+        code，可能需要自己一套 plugin 機制，而不是套進 <code>ToolPlugin</code> protocol。</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Orrery · AIToolKit 設計文件 · 對應 Markdown 版本：
+    <code>docs/superpowers/specs/2026-08-21-aitoolkit-plugin-framework-design.md</code>
+  </footer>
+
+</div>
