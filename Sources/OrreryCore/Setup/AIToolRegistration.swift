@@ -3,9 +3,9 @@ import AIToolKit
 
 /// Registers the tools this build ships with.
 ///
-/// No production code reads the registry yet: `AccountMigration`'s four
-/// one-shot migrations still derive their tool set from `Tool.allCases`, which
-/// is total at compile time and so cannot be affected by when this runs. The
+/// No production code reads the registry yet: `AccountMigration`'s five
+/// one-shot migrations still derive their tool set from `Tool`, which is total
+/// at compile time and so cannot be affected by when this runs. The
 /// enum remains the source of truth for this phase; this populates the registry
 /// alongside it.
 ///

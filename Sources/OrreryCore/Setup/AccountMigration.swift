@@ -387,8 +387,13 @@ public enum AccountMigration {
     /// Replaces rc.1's runV31AccountLayoutIfNeeded. Best-effort: never throws.
     public static func runWorkspaceAccountSymlinksIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = homeURL.appendingPathComponent(workspaceAccountSymlinksFlagFileName)
-        if fm.fileExists(atPath: flag.path) { return }
+        let flag = MigrationFlag(url: homeURL.appendingPathComponent(workspaceAccountSymlinksFlagFileName))
+        // Scoped to claude alone, because that is all the body below touches.
+        // A `Tool.allCases` pending set here would record coverage for codex
+        // and gemini on a run that never looked at them, so a later version
+        // that does handle them would find the work already marked done.
+        let pending = flag.pending(among: [Tool.claude.rawValue])
+        if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
         let acctStore = AccountStore(homeURL: homeURL)
@@ -412,7 +417,7 @@ public enum AccountMigration {
             }
         }
 
-        do { try Data("v1\n".utf8).write(to: flag) }
+        do { try flag.markCovered(pending) }
         catch {
             FileHandle.standardError.write(Data(
                 "[orrery workspace symlinks] could not write flag: \(error)\n".utf8))
