@@ -626,9 +626,24 @@ stateDiagram-v2
   </p>
   <p class="exit">
     <b>Exit:</b> the full suite passes with claude's facts sourced from a
-    separate process, and <code>Tool</code>'s claude-specific fact properties
-    are gone.
+    separate process, and a parity test pins the plugin's description against
+    the enum's so the two cannot diverge unnoticed.
   </p>
+  <div class="callout">
+    <span class="tag">Corrected while writing the plan</span>
+    <p>
+      An earlier draft said <code>Tool</code>'s fact properties would be gone
+      by this step. That was over-reach. Their call sites split by safety and
+      only one half is mechanical: <strong>32 are safe</strong>
+      (<code>defaultConfigDir</code>, <code>subdirectory</code>), but
+      <strong>11 are not</strong> — <code>Tool.gemini.envVarName</code> returns
+      <code>GEMINI_CONFIG_DIR</code> while <code>configDirEnvVar</code> is
+      <code>nil</code>, and PR #52 needs that literal string as a key to
+      <em>remove</em> from a child environment. Removing a property whose 11
+      remaining callers cannot be migrated is not a smaller step, it is a
+      broken one.
+    </p>
+  </div>
 </div>
 
 <h2>Testing</h2>

@@ -534,8 +534,14 @@ stateDiagram-v2
     <code>orrery-claude</code> 用 claude 真實的八個欄位回答 <code>tool/describe</code>。需要事實的呼叫點改從 registry 讀。codex 和 gemini 繼續走 enum 橋接。
   </p>
   <p class="exit">
-    <b>驗收：</b>整套測試在「claude 的事實來自另一個行程」的狀態下通過，而且 <code>Tool</code> 上 claude 專屬的事實屬性已經消失。
+    <b>驗收：</b>整套測試在「claude 的事實來自另一個行程」的狀態下通過，而且有一個對照測試把 plugin 的描述釘在 enum 的描述上，讓兩者不可能在沒人發現的情況下分歧。
   </p>
+  <div class="callout">
+    <span class="tag">寫計畫時修正的</span>
+    <p>
+      先前的草稿寫「<code>Tool</code> 的事實屬性到這一步會消失」。那是寫得太滿。這些屬性的呼叫點<strong>依安全性分成兩半，只有一半是機械式的</strong>：<strong>32 個可以安全搬</strong>（<code>defaultConfigDir</code>、<code>subdirectory</code>），但<strong>11 個不行</strong>——<code>Tool.gemini.envVarName</code> 回傳 <code>GEMINI_CONFIG_DIR</code>，而 <code>configDirEnvVar</code> 是 <code>nil</code>，PR #52 正需要那個字面字串當作要從子行程環境中<strong>移除</strong>的 key。把一個還有 11 個無法搬遷的呼叫者的屬性刪掉，不是比較小的一步，是壞掉的一步。
+    </p>
+  </div>
 </div>
 
 <h2>測試</h2>
