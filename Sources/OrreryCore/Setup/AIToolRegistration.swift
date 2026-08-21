@@ -18,14 +18,19 @@ import AIToolKit
 public enum AIToolRegistration {
 
     /// Registers into the shared registry. Idempotent.
-    public static func registerBuiltInTools() {
-        registerBuiltInTools(into: .shared)
+    ///
+    /// Throws whatever the registry refuses. Built-in ids come from
+    /// `Tool.rawValue` and are known-valid, so a throw here means a built-in
+    /// id has become something a host cannot write down — a bug that must
+    /// surface, not be swallowed at the call site.
+    public static func registerBuiltInTools() throws {
+        try registerBuiltInTools(into: .shared)
     }
 
     /// Registry taken as a parameter so tests never touch the shared instance.
-    public static func registerBuiltInTools(into registry: AIToolRegistry) {
+    public static func registerBuiltInTools(into registry: AIToolRegistry) throws {
         for tool in Tool.allCases {
-            registry.register(tool.aiTool)
+            try registry.register(tool.aiTool)
         }
     }
 }

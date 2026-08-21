@@ -14,7 +14,11 @@ private func runOrreryMain() async throws {
     // point a registry populated after a migration has run means the migration
     // covered fewer tools than exist and wrote its flag regardless, and the tool
     // it missed never migrates on that machine again.
-    AIToolRegistration.registerBuiltInTools()
+    // Not `try?`: the built-in ids are known-valid, so a rejection means one of
+    // them stopped being something a host can write down. That is a bug in this
+    // build, and it should stop the invocation loudly rather than leave the
+    // registry quietly short a tool.
+    try AIToolRegistration.registerBuiltInTools()
     LegacyOrbitalMigration.runIfNeeded()
     // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
     // unified workspaces/ layout BEFORE takeover, so takeover sees the new paths.
