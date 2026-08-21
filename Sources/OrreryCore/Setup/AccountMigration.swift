@@ -28,9 +28,12 @@ public enum AccountMigration {
     public static func runIfNeeded(homeURL: URL) throws {
         let fm = FileManager.default
         let flagURL = homeURL.appendingPathComponent(flagFileName)
+        let flag = MigrationFlag(url: flagURL)
+        let toolIDs = Set(Tool.allCases.map(\.rawValue))
+        let pending = flag.pending(among: toolIDs)
 
         // Already migrated.
-        if fm.fileExists(atPath: flagURL.path) { return }
+        if pending.isEmpty { return }
 
         // Nothing to migrate: home doesn't exist, or has neither workspaces nor legacy envs/origin.
         // Phase A migration (if needed) runs before this, so check both old and new paths.
@@ -74,8 +77,8 @@ public enum AccountMigration {
         let envStore = EnvironmentStore(homeURL: homeURL)
         let acctStore = AccountStore(homeURL: homeURL)
 
-        // 2. Migrate origin + every named env, every tool.
-        for tool in Tool.allCases {
+        // 2. Migrate origin + every named env, every tool still pending.
+        for tool in Tool.allCases where pending.contains(tool.rawValue) {
             try migrateOrigin(tool: tool, envStore: envStore, acctStore: acctStore)
             for envName in try envStore.listNames() {
                 try migrateEnv(envName: envName, tool: tool, envStore: envStore, acctStore: acctStore)
@@ -83,7 +86,7 @@ public enum AccountMigration {
         }
 
         // 3. Mark done.
-        try writeFlag(at: flagURL)
+        try flag.markCovered(pending)
     }
 
     // MARK: - Flag / backup
@@ -334,15 +337,17 @@ public enum AccountMigration {
     /// from which to harvest the email.
     public static func runInfoBackfillIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flagURL = homeURL.appendingPathComponent(infoBackfillFlagFileName)
-        if fm.fileExists(atPath: flagURL.path) { return }
+        let flag = MigrationFlag(url: homeURL.appendingPathComponent(infoBackfillFlagFileName))
+        let toolIDs = Set(Tool.allCases.map(\.rawValue))
+        let pending = flag.pending(among: toolIDs)
+        if pending.isEmpty { return }
         // No home means nothing to scan — but still no-op (the next call will
         // also see no home, so we don't write the flag prematurely).
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
         let acctStore = AccountStore(homeURL: homeURL)
 
-        for tool in Tool.allCases {
+        for tool in Tool.allCases where pending.contains(tool.rawValue) {
             let accounts: [Account]
             do { accounts = try acctStore.list(tool: tool) } catch { continue }
 
@@ -364,7 +369,7 @@ public enum AccountMigration {
 
         // Write the flag last so a partial run can retry.
         do {
-            try Data("v1\n".utf8).write(to: flagURL)
+            try flag.markCovered(pending)
         } catch {
             FileHandle.standardError.write(Data(
                 "[orrery backfill] warning: could not write flag file: \(error)\n".utf8
@@ -433,13 +438,15 @@ public enum AccountMigration {
     /// copies (they become harmless orphans).
     public static func runAccountConfigConsolidationIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName)
-        if fm.fileExists(atPath: flag.path) { return }
+        let flag = MigrationFlag(url: homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName))
+        let toolIDs = Set(Tool.allCases.map(\.rawValue))
+        let pending = flag.pending(among: toolIDs)
+        if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
-        consolidateClaudeAccountSettings(homeURL: homeURL)
+        consolidateClaudeAccountSettings(homeURL: homeURL, pending: pending)
 
-        do { try Data("v1\n".utf8).write(to: flag) }
+        do { try flag.markCovered(pending) }
         catch {
             FileHandle.standardError.write(Data(
                 "[orrery config consolidation] could not write flag: \(error)\n".utf8))
@@ -544,7 +551,16 @@ public enum AccountMigration {
     /// account dir's `settings.json`. Account values win; `statusLine` is never
     /// carried over from the workspace (it is per-account, owned by `orrery
     /// install`, and the workspace copy is typically a stale path).
-    static func consolidateClaudeAccountSettings(homeURL: URL) {
+    ///
+    /// - Parameter pending: the tool ids the caller's flag guard has not yet
+    ///   marked covered. Threaded through rather than recomputed here, so the
+    ///   guard and the work always agree. Defaults to "every known tool" so
+    ///   direct callers (tests, and anyone not going through the flag-guarded
+    ///   entry point) keep unconditionally consolidating claude settings.
+    static func consolidateClaudeAccountSettings(
+        homeURL: URL, pending: Set<String> = Set(Tool.allCases.map(\.rawValue))
+    ) {
+        guard pending.contains(Tool.claude.rawValue) else { return }
         let acctStore = AccountStore(homeURL: homeURL)
         let envStore = EnvironmentStore(homeURL: homeURL)
         let accounts = (try? acctStore.list(tool: .claude)) ?? []
@@ -607,8 +623,10 @@ public enum AccountMigration {
     /// Best-effort: never throws.
     public static func runWorkspaceStructureRelocationIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = homeURL.appendingPathComponent(workspaceStructureFlagFileName)
-        if fm.fileExists(atPath: flag.path) { return }
+        let flag = MigrationFlag(url: homeURL.appendingPathComponent(workspaceStructureFlagFileName))
+        let toolIDs = Set(Tool.allCases.map(\.rawValue))
+        let pending = flag.pending(among: toolIDs)
+        if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
         let oldEnvs = homeURL.appendingPathComponent("envs")
@@ -637,7 +655,7 @@ public enum AccountMigration {
                     try fm.moveItem(at: oldOrigin, to: newOrigin)
                     // Repoint ~/.claude (and codex/gemini if origin-managed) to the new root.
                     let store = EnvironmentStore(homeURL: homeURL)
-                    for tool in Tool.allCases {
+                    for tool in Tool.allCases where pending.contains(tool.rawValue) {
                         let link = tool.defaultConfigDir
                         if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
                            dest.contains("/origin/\(tool.subdirectory)"),
@@ -685,7 +703,7 @@ public enum AccountMigration {
             }
         }
 
-        do { try Data("v1\n".utf8).write(to: flag) }
+        do { try flag.markCovered(pending) }
         catch { warn("could not write flag: \(error)") }
     }
 }

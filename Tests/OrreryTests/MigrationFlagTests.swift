@@ -105,3 +105,43 @@ struct MigrationFlagTests {
         #expect(flag.pending(among: ["claude", "v2"]).isEmpty)
     }
 }
+
+@Suite("AccountMigration per-tool flags")
+struct AccountMigrationFlagTests {
+
+    /// The backfill is the cheapest of the four to drive end to end: it needs
+    /// only an accounts directory, no workspaces or credentials.
+    @Test("backfill records the tools it covered instead of a bare marker")
+    func backfillRecordsCoveredTools() throws {
+        try withIsolatedHome {
+            let home = orreryHomeURL()
+            try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+            AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+            let flag = MigrationFlag(
+                url: home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName))
+
+            // Every tool known at this point must be recorded by name — not a
+            // bare "done", which is what would silently skip a later tool.
+            let expected = Set(Tool.allCases.map(\.rawValue))
+            #expect(flag.coverage() == .ids(expected))
+        }
+    }
+
+    @Test("a legacy marker still short-circuits the backfill")
+    func backfillHonoursLegacyMarker() throws {
+        try withIsolatedHome {
+            let home = orreryHomeURL()
+            try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+            let url = home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName)
+            try Data("v1\n".utf8).write(to: url)
+
+            AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+            // Untouched: an upgrading install must not re-run what it already did.
+            let text = try String(contentsOf: url, encoding: .utf8)
+            #expect(text == "v1\n")
+        }
+    }
+}
