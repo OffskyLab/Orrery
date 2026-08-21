@@ -80,14 +80,67 @@ entire first phase.
 
 ## Design
 
+### What `Tool` is today
+
+Writing the whole thing out is worth doing, because it settles where the
+line falls:
+
+```swift
+public enum Tool: String, Codable, CaseIterable, Sendable {
+    case claude
+    case codex
+    case gemini
+
+    public var envVarName: String            // CLAUDE_CONFIG_DIR / CODEX_HOME / GEMINI_CONFIG_DIR
+    public var subdirectory: String          // rawValue
+    public var defaultConfigDir: URL         // ~/.claude / ~/.codex / ~/.gemini
+    public var displayName: String
+    public var installCommand: [String]?
+    public var installCommandDisplay: String
+    public var supportsSetup: Bool           // installCommand != nil
+    public var authLoginCommand: [String]?
+    public var ansiColor: String
+    public var coloredTag: String
+    public var sessionSubdirectories: [String]
+}
+```
+
+Of the eleven members, exactly two are identity — `rawValue`, and
+`subdirectory`, which *is* `rawValue`. The other nine are behaviour. The
+split is far more lopsided than the phrase "separate identity from
+behaviour" suggests.
+
+### The constraint that enum makes visible
+
+`CaseIterable` over three hardcoded cases is a closed world. That is fine
+inside a host application. It is fatal inside a framework third parties
+depend on: if `ToolID` were this enum living in AIToolKit, **adding a tool
+would mean editing the framework**, and AIToolKit would become the
+bottleneck rather than the extension point. Driver 2 would be defeated by
+the very package meant to deliver it.
+
+So the enum does not move. It is a fact about *this host*, not about tools
+in general.
+
 ### Types
 
-- **`ToolID`** — identity. Initially *literally the existing `Tool` enum*,
-  unchanged. Later a `String`-backed struct.
-- **`ToolPlugin`** — behaviour. A protocol carrying what is today the enum's
-  computed properties, plus the optional capabilities below.
-- **`ToolRegistry`** — `ToolID -> ToolPlugin`, and enumeration, replacing
-  `Tool.allCases`.
+- **`ToolPlugin`** — behaviour, in AIToolKit. Carries what are today the
+  enum's nine behavioural members, plus the optional capabilities below.
+- **Identity in AIToolKit is a string from the first commit** — `id: String`
+  on the plugin, or a thin `String`-backed struct. The framework never
+  ships a closed set.
+- **`Tool` enum stays in orrery**, demoted to a host-side allowlist: "these
+  are the tools this build accepts", mapping to and from the framework's
+  string id.
+- **`ToolRegistry`** — id → plugin, and enumeration, replacing
+  `Tool.allCases` at orrery's call sites.
+
+This keeps Phase 1a's guarantees exactly as before — orrery still accepts
+only three tools, CLI flags unchanged, on-disk format unchanged — while
+leaving the framework itself open. It also shrinks Phase 1b: the remaining
+work becomes "orrery drops its own allowlist", which is orrery's business
+alone, rather than "reopen a closed framework", which would be a breaking
+change inflicted on every third party.
 
 ### Repository layout
 
@@ -209,11 +262,14 @@ Explicitly **not** delivered: third-party extension still requires editing
 the enum. This intermediate state is accepted deliberately in exchange for a
 large drop in risk.
 
-### Phase 1b — identity opens
+### Phase 1b — the host's allowlist goes
 
-Replace the enum with a `String`-backed `ToolID` struct resolved through the
-registry. This is where `Tool.allCases` and static `--claude`/`--codex`
-ArgumentParser flags actually have to be solved.
+Drop orrery's `Tool` enum, leaving the framework's string id as the only
+identity. This is where `Tool.allCases` and the static `--claude` /
+`--codex` ArgumentParser flags actually have to be solved.
+
+Because AIToolKit was never closed, this is confined to orrery — no
+third-party rebuild, no framework breaking change.
 
 - Delivers driver 2
 
