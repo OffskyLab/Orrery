@@ -19,26 +19,26 @@ import AIToolKit
 struct RegistryCompletenessTests {
 
     @Test("registering built-ins covers every tool the enum knows")
-    func registrationIsComplete() {
+    func registrationIsComplete() throws {
         let registry = AIToolRegistry()
-        AIToolRegistration.registerBuiltInTools(into: registry)
+        try AIToolRegistration.registerBuiltInTools(into: registry)
 
         #expect(Set(registry.all.map(\.id)) == Set(Tool.allCases.map(\.rawValue)))
     }
 
     @Test("registration is idempotent")
-    func registrationIsIdempotent() {
+    func registrationIsIdempotent() throws {
         let registry = AIToolRegistry()
-        AIToolRegistration.registerBuiltInTools(into: registry)
-        AIToolRegistration.registerBuiltInTools(into: registry)
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        try AIToolRegistration.registerBuiltInTools(into: registry)
 
         #expect(registry.all.count == Tool.allCases.count)
     }
 
     @Test("each registered tool carries its bridged description, not a stub")
-    func registeredToolsAreFullyDescribed() {
+    func registeredToolsAreFullyDescribed() throws {
         let registry = AIToolRegistry()
-        AIToolRegistration.registerBuiltInTools(into: registry)
+        try AIToolRegistration.registerBuiltInTools(into: registry)
 
         let claude = registry.tool(id: "claude")
         #expect(claude?.configDirectoryName == ".claude")
