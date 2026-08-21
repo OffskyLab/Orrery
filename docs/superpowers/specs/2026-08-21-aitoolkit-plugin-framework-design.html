@@ -128,25 +128,6 @@
   }
   .rule .gloss { font-size: .92rem; color: var(--muted); margin: 0; }
 
-  /* ── Layer diagram: the thesis, so it gets real weight ──── */
-  .layers { display: flex; flex-direction: column; gap: 0; }
-  .layer {
-    border: 1px solid var(--line); background: var(--card);
-    padding: .95rem 1.2rem; display: flex; flex-wrap: wrap; gap: .2rem 1rem;
-    align-items: baseline;
-  }
-  .layer:first-child { border-radius: 10px 10px 0 0; }
-  .layer:last-child  { border-radius: 0 0 10px 10px; }
-  .layer + .layer { border-top: none; }
-  .layer .name { font-weight: 700; font-size: .95rem; }
-  .layer .role { color: var(--muted); font-size: .88rem; }
-  .layer.new { border-left: 4px solid var(--coral); }
-  .layer.new .name { color: var(--coral); }
-  .arrows {
-    display: flex; justify-content: center; color: var(--muted);
-    font-size: .8rem; padding: .25rem 0; letter-spacing: .3em;
-  }
-
   /* ── Tables ─────────────────────────────────────────────── */
   .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 30rem; }
@@ -181,6 +162,26 @@
   .risk { border-left: 4px solid var(--warn); background: var(--card); border-radius: 0 8px 8px 0;
           padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
   .risk h3 { color: var(--warn); font-size: .95rem; }
+
+  /* ── Figures ────────────────────────────────────────────── */
+  figure { margin: 0; display: flex; flex-direction: column; gap: .7rem; }
+  figure svg { width: 100%; max-width: 100%; height: auto; display: block; color: var(--ink); }
+  figcaption { font-size: .87rem; color: var(--muted); text-wrap: pretty; }
+  .fig-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fig-scroll > svg { min-width: 34rem; }
+  /* Diagram ink: everything inherits currentColor so both themes hold;
+     only the element carrying the argument takes the accent. */
+  .d-box   { fill: var(--card); stroke: currentColor; stroke-width: 1.25; }
+  .d-accent{ fill: var(--coral-dim); stroke: var(--coral); stroke-width: 1.5; }
+  .d-rule  { stroke: currentColor; stroke-width: 1; opacity: .35; }
+  .d-line  { stroke: currentColor; stroke-width: 1.25; fill: none; }
+  .d-life  { stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 4; opacity: .45; }
+  .d-hot   { stroke: var(--coral); stroke-width: 1.5; fill: none; }
+  .d-t     { fill: currentColor; font-size: 13px; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-name  { fill: currentColor; font-size: 13.5px; font-weight: 700; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  .d-sm    { fill: currentColor; font-size: 11.5px; opacity: .72; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-tag   { fill: var(--coral); font-size: 11.5px; font-weight: 700; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-stereo{ fill: currentColor; font-size: 11px; opacity: .6; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
 
   footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
 
@@ -270,17 +271,129 @@
     </div>
     <p>這兩者可以分開拆，<strong>而且按這個順序拆才安全</strong>。行為可以搬走，身分原封不動 —
     這代表整個第一階段不需要任何 on-disk migration，也不動 CLI。</p>
+
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 262" role="img"
+           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為兩個 compartment；Phase 1a 之後拆成不變的 ToolID enum 與新的 ToolPlugin protocol，兩者由 ToolRegistry 查表串起。">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="ar-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+
+        <text class="d-sm" x="16" y="22">現在</text>
+        <rect class="d-box" x="16" y="34" width="252" height="204" rx="6" />
+        <text class="d-name" x="142" y="58" text-anchor="middle">Tool</text>
+        <text class="d-stereo" x="142" y="74" text-anchor="middle">«enum»</text>
+        <line class="d-rule" x1="16" y1="86" x2="268" y2="86" />
+        <text class="d-tag" x="32" y="108">身分</text>
+        <text class="d-sm" x="32" y="128">字典 key · 路徑片段</text>
+        <text class="d-sm" x="32" y="146">JSON 值 · CLI flag</text>
+        <line class="d-rule" x1="16" y1="162" x2="268" y2="162" />
+        <text class="d-tag" x="32" y="184">行為</text>
+        <text class="d-sm" x="32" y="204">envVarName · defaultConfigDir</text>
+        <text class="d-sm" x="32" y="222">authLoginCommand · ansiColor …</text>
+
+        <line class="d-hot" x1="288" y1="136" x2="348" y2="136" marker-end="url(#ar-hot)" />
+        <text class="d-tag" x="318" y="126" text-anchor="middle">1a</text>
+
+        <text class="d-sm" x="372" y="22">Phase 1a 之後</text>
+        <rect class="d-box" x="372" y="34" width="164" height="120" rx="6" />
+        <text class="d-name" x="454" y="58" text-anchor="middle">ToolID</text>
+        <text class="d-stereo" x="454" y="74" text-anchor="middle">«enum»</text>
+        <line class="d-rule" x1="372" y1="86" x2="536" y2="86" />
+        <text class="d-tag" x="454" y="108" text-anchor="middle">身分</text>
+        <text class="d-sm" x="454" y="130" text-anchor="middle">就是現有 enum</text>
+        <text class="d-sm" x="454" y="146" text-anchor="middle">一個字元都不動</text>
+
+        <rect class="d-accent" x="580" y="34" width="164" height="120" rx="6" />
+        <text class="d-name" x="662" y="58" text-anchor="middle">ToolPlugin</text>
+        <text class="d-stereo" x="662" y="74" text-anchor="middle">«protocol»</text>
+        <line class="d-rule" x1="580" y1="86" x2="744" y2="86" />
+        <text class="d-tag" x="662" y="108" text-anchor="middle">行為</text>
+        <text class="d-sm" x="662" y="130" text-anchor="middle">Claude / Codex / Gemini</text>
+        <text class="d-sm" x="662" y="146" text-anchor="middle">各自實作</text>
+
+        <line class="d-line" x1="536" y1="94" x2="580" y2="94" marker-end="url(#ar)" />
+
+        <rect class="d-box" x="372" y="186" width="372" height="52" rx="6" />
+        <text class="d-name" x="558" y="208" text-anchor="middle">ToolRegistry</text>
+        <text class="d-sm" x="558" y="226" text-anchor="middle">ToolID → ToolPlugin，取代 24 處 Tool.allCases</text>
+        <line class="d-line" x1="454" y1="186" x2="454" y2="158" marker-end="url(#ar)" />
+        <line class="d-line" x1="662" y1="186" x2="662" y2="158" marker-end="url(#ar)" />
+      </svg>
+      <figcaption>
+        拆分只動右半邊。<code>ToolID</code> 是原本的 enum 原封不動 —— 所以
+        <code>metadata.json</code>、帳號路徑、CLI flag 全都不受影響；只有「行為」那個
+        compartment 被搬進 <code>ToolPlugin</code>。這就是 1a 不需要任何遷移的原因。
+      </figcaption>
+    </figure>
   </section>
 
   <section>
     <h2>分層</h2>
-    <div class="layers">
-      <div class="layer"><span class="name">OrreryCore</span><span class="role">指令、workspace、memory、session</span></div>
-      <div class="arrows">▲</div>
-      <div class="layer"><span class="name">OrreryAccountKit</span><span class="role">orrery 的帳號池 — 維持原樣</span></div>
-      <div class="arrows">▲</div>
-      <div class="layer new"><span class="name">AIToolKit</span><span class="role">工具「是什麼」：啟動、config 位置、登入、resume</span></div>
-    </div>
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 372" role="img"
+           aria-label="元件圖：OrreryCore 依賴 OrreryAccountKit，OrreryAccountKit 依賴新的 AIToolKit；三個具體 plugin 實作 AIToolKit 的 protocol。事實與政策的界線落在 AccountKit 與 AIToolKit 之間那條依賴線上。">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+            <path d="M0 0 L12 6 L0 12 z" fill="none" stroke="currentColor" stroke-width="1.4" />
+          </marker>
+        </defs>
+
+        <rect class="d-box" x="24" y="24" width="392" height="60" rx="6" />
+        <text class="d-name" x="44" y="50">OrreryCore</text>
+        <text class="d-sm" x="44" y="70">指令 · workspace · memory · session · MCP</text>
+
+        <line class="d-line" x1="220" y1="84" x2="220" y2="128" marker-end="url(#ar2)" />
+        <text class="d-stereo" x="232" y="110">«use»</text>
+
+        <rect class="d-box" x="24" y="128" width="392" height="72" rx="6" />
+        <text class="d-name" x="44" y="154">OrreryAccountKit</text>
+        <text class="d-sm" x="44" y="174">帳號池 · 目錄佈局 · 共享政策</text>
+        <text class="d-sm" x="44" y="192">維持原樣，改用下層事實表達</text>
+
+        <line class="d-hot" x1="220" y1="200" x2="220" y2="248" marker-end="url(#ar-hot2)" />
+        <defs>
+          <marker id="ar-hot2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+        <text class="d-tag" x="232" y="228">詢問事實</text>
+
+        <rect class="d-accent" x="24" y="248" width="392" height="72" rx="6" />
+        <text class="d-name" x="44" y="274">AIToolKit</text>
+        <text class="d-sm" x="44" y="294">工具「是什麼」：啟動 · config 位置</text>
+        <text class="d-sm" x="44" y="312">登入方式 · resume 語意 · 憑證存放</text>
+
+        <rect class="d-box" x="512" y="232" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="252">ClaudeToolPlugin</text>
+        <rect class="d-box" x="512" y="270" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="290">CodexToolPlugin</text>
+        <rect class="d-box" x="512" y="308" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="328">GeminiToolPlugin</text>
+
+        <line class="d-line" x1="512" y1="247" x2="428" y2="272" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <line class="d-line" x1="512" y1="285" x2="428" y2="284" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <line class="d-line" x1="512" y1="323" x2="428" y2="296" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <text class="d-stereo" x="624" y="356" text-anchor="middle">«realize» · 啟動時註冊</text>
+
+        <line class="d-hot" x1="12" y1="200" x2="12" y2="248" />
+        <text class="d-tag" x="8" y="196" text-anchor="start" transform="rotate(-90 8 196)">政策</text>
+        <text class="d-tag" x="8" y="264" text-anchor="start" transform="rotate(-90 8 264)">事實</text>
+      </svg>
+      <figcaption>
+        依賴只往下走。判準的界線就是 AccountKit 與 AIToolKit 之間那條線 ——
+        上面問「這個工具是怎麼回事」，下面回答；<strong>怎麼因應</strong>則完全是上面的事。
+        Claude 沒有捷徑，它跟另外兩個一樣只是實作者。
+      </figcaption>
+    </figure>
     <p>早期草稿讓 AIToolKit <em>吸收</em> OrreryAccountKit。那是錯的，而錯的理由值得寫下來，因為它同時
     給了整個 framework 的判準：<strong>帳號管理是 orrery 的發明，不是工具的。</strong>
     Claude Code、Codex、gemini-cli 都沒有「帳號池」這個概念 — 每個只知道自己有一個 config
@@ -296,6 +409,57 @@
       <code>privateSubdirs</code> / <code>baseSharedSubdirs</code> 是 orrery 的共享政策，
       不是工具的屬性，留在 AccountKit。</p>
     </div>
+
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 316" role="img"
+           aria-label="循序圖：AccountKit 向 AIToolKit 詢問 gemini 的設定位置，得到「只讀 HOME 底下的 .gemini、忽略 GEMINI_CONFIG_DIR」這項事實，據此自行決定建立 HOME wrapper 的政策，再交由 shell 在前景 process group 啟動 gemini。">
+        <defs>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="ar3-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+
+        <rect class="d-box" x="16" y="16" width="168" height="34" rx="5" />
+        <text class="d-name" x="100" y="38" text-anchor="middle">AccountKit</text>
+        <rect class="d-accent" x="232" y="16" width="184" height="34" rx="5" />
+        <text class="d-name" x="324" y="38" text-anchor="middle">GeminiToolPlugin</text>
+        <rect class="d-box" x="470" y="16" width="120" height="34" rx="5" />
+        <text class="d-name" x="530" y="38" text-anchor="middle">shell</text>
+        <rect class="d-box" x="632" y="16" width="112" height="34" rx="5" />
+        <text class="d-name" x="688" y="38" text-anchor="middle">gemini-cli</text>
+
+        <line class="d-life" x1="100" y1="50" x2="100" y2="300" />
+        <line class="d-life" x1="324" y1="50" x2="324" y2="300" />
+        <line class="d-life" x1="530" y1="50" x2="530" y2="300" />
+        <line class="d-life" x1="688" y1="50" x2="688" y2="300" />
+
+        <text class="d-sm" x="212" y="82" text-anchor="middle">設定在哪？吃哪個環境變數？</text>
+        <line class="d-line" x1="100" y1="92" x2="324" y2="92" marker-end="url(#ar3)" />
+
+        <text class="d-tag" x="212" y="122" text-anchor="middle">只讀 $HOME/.gemini</text>
+        <text class="d-sm" x="212" y="138" text-anchor="middle">GEMINI_CONFIG_DIR 無效</text>
+        <line class="d-hot" x1="324" y1="148" x2="100" y2="148" marker-end="url(#ar3-hot)" stroke-dasharray="5 4" />
+        <text class="d-stereo" x="352" y="152">事實</text>
+
+        <path class="d-line" d="M100 172 H160 V202 H104" marker-end="url(#ar3)" />
+        <text class="d-tag" x="172" y="182">政策</text>
+        <text class="d-sm" x="172" y="200">建 wrapper：.gemini → 帳號目錄</text>
+
+        <text class="d-sm" x="315" y="232" text-anchor="middle">HOME=wrapper 啟動</text>
+        <line class="d-line" x1="100" y1="242" x2="530" y2="242" marker-end="url(#ar3)" />
+
+        <text class="d-sm" x="609" y="272" text-anchor="middle">exec（前景 process group）</text>
+        <line class="d-line" x1="530" y1="282" x2="688" y2="282" marker-end="url(#ar3)" />
+      </svg>
+      <figcaption>
+        同一次往返裡兩種角色說得很清楚：plugin 只回報 gemini-cli 怎麼運作，<strong>沒有</strong>
+        說該怎麼隔離；「蓋 wrapper」是 AccountKit 自己的決定。換成一個吃 config-dir 變數的工具，
+        事實不同、政策自然不同，而 plugin 一行都不必知道帳號池的存在。
+      </figcaption>
+    </figure>
   </section>
 
   <section>
