@@ -272,9 +272,40 @@
     <p>這兩者可以分開拆，<strong>而且按這個順序拆才安全</strong>。行為可以搬走，身分原封不動 —
     這代表整個第一階段不需要任何 on-disk migration，也不動 CLI。</p>
 
+    <p>把整個 enum 寫出來值得，因為它一次定案了線該畫在哪：</p>
+    <pre style="background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:1rem 1.1rem;overflow-x:auto;font-size:.84rem;line-height:1.6;margin:0"><code>public enum Tool: String, Codable, CaseIterable, Sendable {
+    case claude
+    case codex
+    case gemini
+
+    public var envVarName: String            // CLAUDE_CONFIG_DIR / CODEX_HOME / GEMINI_CONFIG_DIR
+    public var subdirectory: String          // rawValue
+    public var defaultConfigDir: URL         // ~/.claude / ~/.codex / ~/.gemini
+    public var displayName: String
+    public var installCommand: [String]?
+    public var installCommandDisplay: String
+    public var supportsSetup: Bool           // installCommand != nil
+    public var authLoginCommand: [String]?
+    public var ansiColor: String
+    public var coloredTag: String
+    public var sessionSubdirectories: [String]
+}</code></pre>
+    <p>十一個成員裡，<strong>只有兩個是身分</strong> —— <code>rawValue</code>，以及
+    <code>subdirectory</code>（它<em>就是</em> <code>rawValue</code>）。其餘九個全是行為。
+    這個比例比「把身分和行為分開」這句話聽起來的要懸殊得多。</p>
+
+    <div class="rule">
+      <div class="label">這個 enum 讓一個限制浮現</div>
+      <blockquote><code>CaseIterable</code> + 三個寫死的 case，是一個封閉世界。</blockquote>
+      <p class="gloss">在宿主應用程式裡這沒問題。<strong>在第三方依賴的 framework 裡則是致命的</strong>：
+      如果 <code>ToolID</code> 是這個 enum、住在 AIToolKit，那麼加一個工具就等於<em>改 framework 本身</em>，
+      AIToolKit 會從擴充點變成瓶頸 —— 動機 2 被那個本該實現它的套件親手打敗。
+      所以 <strong>enum 不搬家</strong>：它是關於<em>這個宿主</em>的事實，不是關於工具的普遍事實。</p>
+    </div>
+
     <figure class="fig-scroll">
-      <svg viewBox="0 0 760 262" role="img"
-           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為兩個 compartment；Phase 1a 之後拆成不變的 ToolID enum 與新的 ToolPlugin protocol，兩者由 ToolRegistry 查表串起。">
+      <svg viewBox="0 0 760 288" role="img"
+           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為；Phase 1a 之後，九個行為成員移入 AIToolKit 的 ToolPlugin protocol，身分在框架端是開放的字串，而封閉的 Tool enum 留在 orrery 內作為宿主白名單。">
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
@@ -300,35 +331,30 @@
         <line class="d-hot" x1="288" y1="136" x2="348" y2="136" marker-end="url(#ar-hot)" />
         <text class="d-tag" x="318" y="126" text-anchor="middle">1a</text>
 
-        <text class="d-sm" x="372" y="22">Phase 1a 之後</text>
-        <rect class="d-box" x="372" y="34" width="164" height="120" rx="6" />
-        <text class="d-name" x="454" y="58" text-anchor="middle">ToolID</text>
-        <text class="d-stereo" x="454" y="74" text-anchor="middle">«enum»</text>
-        <line class="d-rule" x1="372" y1="86" x2="536" y2="86" />
-        <text class="d-tag" x="454" y="108" text-anchor="middle">身分</text>
-        <text class="d-sm" x="454" y="130" text-anchor="middle">就是現有 enum</text>
-        <text class="d-sm" x="454" y="146" text-anchor="middle">一個字元都不動</text>
+        <text class="d-tag" x="372" y="22">AIToolKit repo</text>
+        <rect class="d-accent" x="372" y="34" width="372" height="120" rx="6" />
+        <text class="d-name" x="558" y="58" text-anchor="middle">ToolPlugin</text>
+        <text class="d-stereo" x="558" y="74" text-anchor="middle">«protocol»</text>
+        <line class="d-rule" x1="372" y1="86" x2="744" y2="86" />
+        <text class="d-sm" x="388" y="108">id: String</text>
+        <text class="d-sm" x="560" y="108">← 身分是開放字串</text>
+        <text class="d-sm" x="388" y="128">envVarName · defaultConfigDir</text>
+        <text class="d-sm" x="388" y="146">authLoginCommand · … （九個行為成員）</text>
 
-        <rect class="d-accent" x="580" y="34" width="164" height="120" rx="6" />
-        <text class="d-name" x="662" y="58" text-anchor="middle">ToolPlugin</text>
-        <text class="d-stereo" x="662" y="74" text-anchor="middle">«protocol»</text>
-        <line class="d-rule" x1="580" y1="86" x2="744" y2="86" />
-        <text class="d-tag" x="662" y="108" text-anchor="middle">行為</text>
-        <text class="d-sm" x="662" y="130" text-anchor="middle">Claude / Codex / Gemini</text>
-        <text class="d-sm" x="662" y="146" text-anchor="middle">各自實作</text>
-
-        <line class="d-line" x1="536" y1="94" x2="580" y2="94" marker-end="url(#ar)" />
-
-        <rect class="d-box" x="372" y="186" width="372" height="52" rx="6" />
-        <text class="d-name" x="558" y="208" text-anchor="middle">ToolRegistry</text>
-        <text class="d-sm" x="558" y="226" text-anchor="middle">ToolID → ToolPlugin，取代 24 處 Tool.allCases</text>
-        <line class="d-line" x1="454" y1="186" x2="454" y2="158" marker-end="url(#ar)" />
-        <line class="d-line" x1="662" y1="186" x2="662" y2="158" marker-end="url(#ar)" />
+        <text class="d-sm" x="372" y="184">orrery repo</text>
+        <rect class="d-box" x="372" y="196" width="372" height="72" rx="6" />
+        <text class="d-name" x="558" y="220" text-anchor="middle">Tool</text>
+        <text class="d-stereo" x="558" y="236" text-anchor="middle">«enum» · 留在宿主</text>
+        <text class="d-sm" x="558" y="256" text-anchor="middle">本 build 接受哪些工具的白名單 · 與 id 字串對映</text>
+        <line class="d-line" x1="558" y1="196" x2="558" y2="158" marker-end="url(#ar)" />
+        <text class="d-sm" x="570" y="180">對映</text>
       </svg>
       <figcaption>
-        拆分只動右半邊。<code>ToolID</code> 是原本的 enum 原封不動 —— 所以
-        <code>metadata.json</code>、帳號路徑、CLI flag 全都不受影響；只有「行為」那個
-        compartment 被搬進 <code>ToolPlugin</code>。這就是 1a 不需要任何遷移的原因。
+        九個行為成員搬進 framework；<strong>封閉的 enum 沒有跟著搬</strong>。AIToolKit 端的身分
+        從第一個 commit 就是開放字串，所以第三方永遠不需要改 framework 才能加工具。orrery 自己
+        仍留著 enum 當白名單 —— 這就是 1a 期間 CLI flag 與 on-disk 格式都不動的原因，也讓 1b
+        縮小成「orrery 拿掉自己的白名單」這件<em>只關 orrery 的事</em>，而不是把一個已經封閉的
+        framework 重新打開、殃及每個第三方。
       </figcaption>
     </figure>
   </section>
@@ -556,7 +582,7 @@
         <div class="body">
           <h3>行為搬家，身分不動</h3>
           <p>引入 <code>ToolPlugin</code> + <code>ToolRegistry</code>，把行為從 <code>Tool</code> enum
-          搬到三個 plugin。enum 原封不動留著當 <code>ToolID</code>。</p>
+          搬到三個 plugin。<code>Tool</code> enum 原封不動留在 orrery，降級為宿主白名單。</p>
           <div class="delivers">
             <span class="tag yes">on-disk 格式不變</span>
             <span class="tag yes">CLI 不變</span>
@@ -570,10 +596,12 @@
       <div class="phase">
         <div class="n">1b</div>
         <div class="body">
-          <h3>身分開放</h3>
-          <p>把 enum 換成 <code>String</code>-backed 的 <code>ToolID</code> struct，透過 registry 查表。
+          <h3>宿主白名單退場</h3>
+          <p>拿掉 orrery 的 <code>Tool</code> enum，讓 framework 的字串 id 成為唯一身分。
           <code>Tool.allCases</code> 和 ArgumentParser 的靜態 <code>--claude</code> flag
           這些真正麻煩的東西，在這一步才需要解。</p>
+          <p>因為 <strong>AIToolKit 從來就沒有封閉過</strong>，這一步侷限在 orrery 內部 ——
+          不需要第三方重新編譯，也不是 framework 的 breaking change。</p>
           <div class="delivers"><span class="tag yes">動機 2</span></div>
         </div>
       </div>
