@@ -82,6 +82,20 @@ struct MigrationFlagTests {
         #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
     }
 
+    /// "v2" is `formatVersion`'s own value, so this is the one legacy content
+    /// a parser that compared line 1 against `formatVersion` before stripping
+    /// it would misread as "no marker, no ids" instead of a legacy marker. A
+    /// real machine's `.workspace-account-symlinks` flag holds exactly this.
+    @Test("a legacy flag whose version happens to equal formatVersion still covers everything")
+    func legacyFlagMatchingFormatVersion() throws {
+        let url = tmpFlag()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data("v2\n".utf8).write(to: url)
+
+        #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
+        #expect(MigrationFlag(url: url).pending(among: ["claude", "codex", "gemini"]).isEmpty)
+    }
+
     @Test("an empty flag file is legacy, not corrupt")
     func emptyFlagIsLegacy() throws {
         let url = tmpFlag()
