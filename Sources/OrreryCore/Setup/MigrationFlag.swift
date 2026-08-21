@@ -16,10 +16,14 @@ import Foundation
 ///     claude
 ///     codex
 ///
-/// A file with no id lines is a pre-existing marker (`v1` / `v3`) written
-/// before this type existed. Those are read as covering everything: the
-/// migration genuinely did run for every tool that existed then, and treating
-/// them as covering nothing would re-run every migration on upgrade.
+/// Line 1 is always the format/version marker, whatever text it holds —
+/// tool ids are never looked for there. A file with no non-empty lines
+/// after it is a pre-existing marker (`v1` / `v3`) written before this
+/// type existed. Those are read as covering everything: the migration
+/// genuinely did run for every tool that existed then, and treating them
+/// as covering nothing would re-run every migration on upgrade. This also
+/// means a tool id shaped like a version token (e.g. `v2`) is never
+/// mistaken for one, since only line 1 is ever treated as the marker.
 public struct MigrationFlag {
     public enum Coverage: Equatable {
         /// No flag file — the migration has never run.
@@ -43,10 +47,16 @@ public struct MigrationFlag {
               let text = String(data: data, encoding: .utf8)
         else { return .absent }
 
-        let ids = text
-            .split(separator: "\n")
+        // Line 1 is always the format/version marker, whatever it looks
+        // like. Every remaining non-empty line is a tool id — even one
+        // shaped like "v2", since AIToolKit ids are not under this type's
+        // control.
+        var lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        if !lines.isEmpty { lines.removeFirst() }
+
+        let ids = lines
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty && $0 != Self.formatVersion && !isVersionToken($0) }
+            .filter { !$0.isEmpty }
 
         return ids.isEmpty ? .legacyCoversAll : .ids(Set(ids))
     }
@@ -70,10 +80,5 @@ public struct MigrationFlag {
         }
         let body = ([Self.formatVersion] + all.sorted()).joined(separator: "\n") + "\n"
         try Data(body.utf8).write(to: url, options: .atomic)
-    }
-
-    /// `v1`, `v3`, … — a legacy marker line, not a tool id.
-    private func isVersionToken(_ s: String) -> Bool {
-        s.first == "v" && s.dropFirst().allSatisfy(\.isNumber) && s.count > 1
     }
 }
