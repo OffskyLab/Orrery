@@ -1,0 +1,618 @@
+<title>行程邊界</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #f7f8f9;
+    --panel:       #ffffff;
+    --seam:        #dde1e6;
+    --ink:         #1c2226;
+    --ink-soft:    #4e5a63;
+    --ink-faint:   #78868f;
+    --accent:      #0f6f76;
+    --accent-soft: #e2f0f0;
+    --warn:        #8a5a12;
+    --warn-soft:   #f8eeda;
+
+    --sans:  "IBM Plex Sans", "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+    --serif: "IBM Plex Serif", "Noto Serif TC", ui-serif, Georgia, serif;
+    --mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --measure: 42em;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #14181b;
+      --panel:       #1b2024;
+      --seam:        #2e363c;
+      --ink:         #e3e8ea;
+      --ink-soft:    #a8b4bb;
+      --ink-faint:   #77848c;
+      --accent:      #4fbcc0;
+      --accent-soft: #16302f;
+      --warn:        #d3a75a;
+      --warn-soft:   #2e2718;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #14181b;
+    --panel:       #1b2024;
+    --seam:        #2e363c;
+    --ink:         #e3e8ea;
+    --ink-soft:    #a8b4bb;
+    --ink-faint:   #77848c;
+    --accent:      #4fbcc0;
+    --accent-soft: #16302f;
+    --warn:        #d3a75a;
+    --warn-soft:   #2e2718;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 52em;
+    margin: 0 auto;
+    padding: clamp(2rem, 6vw, 5rem) clamp(1.1rem, 4vw, 2.5rem) 7rem;
+  }
+
+  .seamed {
+    border-left: 2px solid var(--seam);
+    padding-left: clamp(1rem, 3vw, 2rem);
+    margin-left: 2px;
+  }
+
+  header.head { margin-bottom: 3.5rem; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 5vw, 2.9rem);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 1.2rem;
+  }
+
+  .standfirst {
+    font-size: 1.14rem;
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 2rem;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.6rem;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--seam);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+  .meta a { color: var(--accent); }
+
+  h2 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    text-wrap: balance;
+    margin: 3.8rem 0 1.1rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--seam);
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 1.08rem;
+    margin: 2.4rem 0 0.7rem;
+    color: var(--ink);
+  }
+
+  p, li { max-width: var(--measure); }
+  p { margin: 0 0 1.05rem; }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: 0.5rem; }
+
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.87em;
+    background: var(--accent-soft);
+    color: var(--ink);
+    padding: 0.1em 0.36em;
+    border-radius: 3px;
+  }
+
+  pre.block {
+    font-family: var(--mono);
+    font-size: 0.83rem;
+    line-height: 1.6;
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 5px;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    margin: 0 0 1.4rem;
+  }
+  pre.block code { background: none; padding: 0; font-size: 1em; }
+
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 6px;
+    padding: 1.3rem 1.5rem;
+    margin: 0 0 1.1rem;
+  }
+  .step-n {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .step h3 { margin-top: 0; }
+  .step p:last-child { margin-bottom: 0; }
+
+  .exit {
+    font-family: var(--sans);
+    font-size: 0.93rem;
+    color: var(--ink-soft);
+    border-left: 2px solid var(--accent);
+    padding-left: 0.85rem;
+    margin: 1rem 0 0;
+  }
+  .exit b { color: var(--ink); font-weight: 500; }
+
+  .callout {
+    border-left: 3px solid var(--warn);
+    background: var(--warn-soft);
+    padding: 1rem 1.2rem;
+    border-radius: 0 5px 5px 0;
+    margin: 0 0 1.4rem;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag {
+    font-family: var(--sans);
+    font-size: 0.74rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--warn);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .rule {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--ink);
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    padding: 0.9rem 0;
+    margin: 0 0 1.4rem;
+    max-width: var(--measure);
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 1.5rem; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.9rem 0.6rem 0;
+    border-bottom: 1px solid var(--seam);
+    vertical-align: top;
+  }
+  th {
+    font-weight: 500;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+  td code { font-size: 0.83em; }
+
+  figure { margin: 0 0 1.8rem; }
+  pre.mermaid {
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 6px;
+    padding: 1.4rem 1rem;
+    overflow-x: auto;
+    text-align: center;
+    margin: 0;
+  }
+  figcaption {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    line-height: 1.75;
+    color: var(--ink-faint);
+    margin-top: 0.7rem;
+    max-width: var(--measure);
+  }
+
+  .scope-out li { color: var(--ink-soft); }
+  .scope-out li b { color: var(--ink); font-weight: 600; }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <p class="kicker">Orrery · 設計規格</p>
+  <h1>把 plugin 邊界從連結期移到行程</h1>
+  <p class="standfirst">
+    把一個工具搬出 orrery 的二進位檔、放到管線的另一端，讓「新增一個工具」不再等於「fork 整個 host」。
+  </p>
+  <div class="meta">
+    <span><b>日期</b> 2026-08-21</span>
+    <span><b>狀態</b> 設計，待審</span>
+    <span><b>前一份</b> <a href="2026-08-21-aitoolkit-plugin-framework-design.html">AIToolKit plugin framework</a></span>
+    <span><b>已發布</b> Orrery-AIToolKit 0.0.1-dev.3</span>
+  </div>
+</header>
+
+<div class="seamed">
+
+<h2>目標</h2>
+
+<p>
+  把 claude 這個工具，從「編譯進 orrery」變成「由一個獨立行程描述、orrery 透過 JSON-RPC 與它對話」，讓第三方不用 fork orrery 就能新增工具。
+</p>
+
+<p>
+  這份規格只涵蓋<strong>前三個步驟</strong>：協定、決定傳輸方式是否可行的量測、轉發代理，以及讓 claude 的<strong>事實</strong>經過管線。搬遷 claude 的<strong>行為</strong>刻意留給下一份規格——等真實數字和一條能動的管線都存在之後再寫，而不是現在用猜的。
+</p>
+
+<h2>為什麼是這個形狀</h2>
+
+<h3>已發布的版本問題在哪</h3>
+
+<p>
+  Orrery-AIToolKit 0.0.1-dev.3 定義了開放的 <code>AITool</code> protocol 和一個 registry，orrery 也確實在啟動時把三個內建工具註冊進去了。但<strong>沒有任何東西讀它</strong>：33 個呼叫點仍然在迭代 <code>Tool.allCases</code>，而 <code>Account.tool</code> 仍然是封閉 enum。
+</p>
+
+<p>
+  所以今天註冊一個第三方工具，它什麼都拿不到——沒有帳號目錄、沒有指令處理、沒有 migration 覆蓋。唯一可觀察的效果是出現在 <code>AIToolRegistry.shared.all</code> 裡，而沒有任何 production 程式碼會呼叫它。
+</p>
+
+<p>
+  更根本的是，那個邊界是<strong>連結期</strong>的邊界。第三方得 fork orrery 並加一個 target 才能參與。那不是 plugin 系統。
+</p>
+
+<h3>怎麼分解</h3>
+
+<p>
+  「第三方工具完整平權」對一份規格來說太大。考慮過兩條切法：<strong>按層切</strong>（先所有工具的事實、再身分、再行為），以及<strong>按工具切</strong>（一個工具一路做到底）。
+</p>
+
+<p>
+  <strong>按工具切勝出，因為只有它會測試到介面。</strong>按層切做完，只證明了八個靜態欄位裝得下三個工具的靜態資料——那本來就不會失敗。而 claude 是最複雜的那個（憑證解析、session 探索、sandbox 診斷、takeover 播種都有它的分支），把它一路做到底，才會逼出協定真正需要什麼。
+</p>
+
+<p>
+  codex 和 gemini 這階段繼續走現有的 <code>BuiltInAITool</code> 橋接，從 enum 取事實。registry 不在乎一份描述是從哪來的。
+</p>
+
+<h2>架構</h2>
+
+<h3>邊界在行程</h3>
+
+<p>
+  <code>orrery-claude</code> 是獨立執行檔，用 <code>orrery-sync</code> 已經在用的方式探索：<code>ORRERY_CLAUDE_PATH</code> → <code>~/.orrery/tools/</code> → <code>PATH</code>。它隨 orrery 一起發布，但<strong>用第三方完全相同的機制被載入</strong>。
+</p>
+
+<h3>代理本身就是一個 AITool</h3>
+
+<figure>
+<pre class="mermaid">
+classDiagram
+    direction TB
+
+    class AITool {
+        &lt;&lt;protocol&gt;&gt;
+        +id : String
+    }
+    class BuiltInAITool {
+        &lt;&lt;struct&gt;&gt;
+        bridged from the Tool enum
+    }
+    class RemoteAITool {
+        &lt;&lt;struct&gt;&gt;
+        -connection : JSONRPCConnection
+        -cached : Description
+    }
+    class JSONRPCConnection {
+        &lt;&lt;class&gt;&gt;
+        -transport : Transport
+        +call(method, params) Result
+    }
+    class Transport {
+        &lt;&lt;protocol&gt;&gt;
+        +send(Data)
+        +receive() Data
+    }
+    class StdioTransport {
+        &lt;&lt;struct&gt;&gt;
+        spawned child
+    }
+    class InMemoryTransport {
+        &lt;&lt;struct&gt;&gt;
+        tests only
+    }
+
+    BuiltInAITool ..|&gt; AITool
+    RemoteAITool ..|&gt; AITool
+    RemoteAITool o-- JSONRPCConnection
+    JSONRPCConnection o-- Transport
+    StdioTransport ..|&gt; Transport
+    InMemoryTransport ..|&gt; Transport
+</pre>
+<figcaption>
+  那兩條實現關係箭頭就是全部的論據：遠端工具<strong>就是</strong>一個 <code>AITool</code>，所以 registry 維持 <code>[String: any AITool]</code>，呼叫端分辨不出遠近。
+</figcaption>
+</figure>
+
+<p>有兩個承重的結果：</p>
+
+<ul>
+  <li><strong>內建與第三方走同一條路。</strong>用這種方式發布 claude，本身就是在證明第三方那條路可用。</li>
+  <li><strong>傳輸變成逐工具、可逆的決定。</strong>如果某個工具的往返成本太高，就把它連進行程內——<strong>一個呼叫點都不用改</strong>。</li>
+</ul>
+
+<h3>管線上跑 JSON-RPC 2.0</h3>
+
+<p>
+  以行分隔的 JSON-RPC，走 stdio——這正是 orrery 自己的 MCP server 已經在講的形狀：<code>initialize</code> 做版本與能力協商、標準錯誤碼。這<strong>不是重用那 499 行程式碼</strong>，MCP 是另一個協定。重用的是形狀，以及「這條路在這個 repo 裡走得通」這個已知事實。
+</p>
+
+<p>
+  另一個候選是 argv subcommand。否決的理由是它<strong>把行程模型寫進了協定</strong>：沒有 request id 就沒有並行請求，所以之後要換成常駐傳輸時，得重新設計協定而不是換掉底下的管路。
+</p>
+
+<pre class="block"><code>initialize     → { protocolVersion, capabilities: { … } }
+tool/describe  → { id, displayName, configDirectoryName, configDirEnvVar,
+                   authLoginCommand, installCommand, sessionSubdirectories,
+                   ansiColor }</code></pre>
+
+<p>
+  行為方法留給後續規格。<code>initialize</code> 的 <code>capabilities</code> 讓 plugin 可以只實作一部分，而 host 不必為了「發現它沒有」而付一次往返；<code>-32601 Method not found</code> 是漏網那個的後備。
+</p>
+
+<h3>序列化屬於 DTO，不屬於 protocol</h3>
+
+<p>
+  <code>AITool</code> 只 refine <code>Sendable</code>。wire 型別是一個獨立的具體 <code>Codable</code> struct。這正是當初把 <code>Codable</code> 從 protocol 拿掉是對的原因：protocol 無法 <code>Decodable</code>，而一個轉發代理也沒辦法乾淨地 conform 一個硬要 <code>Codable</code> 的 protocol。
+</p>
+
+<h2>失敗處理</h2>
+
+<div class="callout">
+  <span class="tag">信任邊界</span>
+  <p>
+    plugin 以使用者的身分、使用者的權限執行。以下所有機制<strong>都不限制惡意 plugin</strong>——安裝它的那一刻就是信任決定。這些規則限制的是意外，以及避免一個壞掉的 plugin 讓 host 失去其他還好好的工具。
+  </p>
+</div>
+
+<h3>stdout 只屬於協定</h3>
+
+<p>
+  診斷輸出一律走 stderr。host 讀到無法解析的行就<strong>跳過</strong>，而不是崩潰——這跟 orrery 的 MCP server 已經在做的容錯一致。
+</p>
+
+<h3>生命週期</h3>
+
+<figure>
+<pre class="mermaid">
+stateDiagram-v2
+    [*] --> Discovered
+    Discovered --> Initializing : spawn
+    Discovered --> Absent : no binary
+    Initializing --> Ready : initialize ok
+    Initializing --> Rejected : protocol major unknown
+    Initializing --> Absent : timeout or spawn failed
+    Ready --> Ready : call returns
+    Ready --> Unreachable : timeout or crash
+    Unreachable --> Initializing : next use respawns
+    Absent --> [*]
+    Rejected --> [*]
+
+    note left of Absent : never registered, so never recorded as covered by one-shot host work
+    note right of Unreachable : reads degrade, writes abort
+</pre>
+<figcaption>
+  <code>Absent</code> 和 <code>Rejected</code> 對這次執行是終止狀態，而且不影響任何其他工具。主版本不認識時<strong>明確拒絕並說明</strong>，不猜、也不降級硬跑。
+</figcaption>
+</figure>
+
+<h3>讀降級，寫中止</h3>
+
+<p class="rule">
+  答案缺席，可以呈現成缺席；但一個可能沒發生的動作，絕不回報成已完成。
+</p>
+
+<p>
+  少一個欄位仍然值得把帳號列出來。而把一份可能沒複製成功的憑證記錄成「已複製」，是那種<strong>看起來像成功</strong>的失敗。這份規格只有 <code>tool/describe</code>，而它是讀取：一個無法描述自己的 plugin，就是不註冊而已。
+</p>
+
+<h3>與一次性 migration 的互動</h3>
+
+<p>
+  orrery 的一次性 migration 會記錄<strong>覆蓋了哪些工具</strong>（<code>MigrationFlag</code>，PR #53 已發布）。一個因為 plugin 載入失敗而缺席的工具，<strong>絕不能被記錄成已覆蓋</strong>，否則 plugin 修好之後它會被永遠跳過。
+</p>
+
+<p>
+  好消息是這件事已經自動成立：<code>pending</code> 從 registry 取候選，缺席的工具根本不在集合裡；而 <code>markCovered</code> 是聯集而非覆寫，所以之後那一次執行會接住它。<strong>但這必須有測試，不能當成自然發生的性質。</strong>
+</p>
+
+<h3>一個安裝期的差異</h3>
+
+<p>
+  <code>orrery-claude</code> 隨 orrery 發布，所以它不存在＝安裝壞了，對 claude 是<strong>硬錯誤</strong>；第三方 plugin 不存在則是<strong>軟錯誤</strong>——那個工具消失，其他照常。這是<strong>包裝層面</strong>的差異，不是介面層面的：兩者走完全相同的協定路徑。
+</p>
+
+<h2>步驟</h2>
+
+<p>每一步結束時，claude 都仍然完全可用，而且有東西可以獨立驗證。</p>
+
+<div class="step">
+  <span class="step-n">步驟 1</span>
+  <h3>協定骨架與量測</h3>
+  <p>
+    在 AIToolKit 建 JSON-RPC 層：<code>Transport</code>、<code>StdioTransport</code>、<code>InMemoryTransport</code>、<code>JSONRPCConnection</code>，以及一個給 plugin 作者呼叫的 <code>serve()</code>。再加一個只回 <code>initialize</code> 和 <code>tool/describe</code> 的最小 plugin。
+  </p>
+  <p>然後量測，而且要誠實地量：</p>
+  <ul>
+    <li>一次 spawn + <code>initialize</code> + <code>tool/describe</code> 的往返成本</li>
+    <li><strong>用 instrumentation 找出 orrery 真正的高頻呼叫點</strong>，而不是推理哪個「聽起來很頻繁」</li>
+  </ul>
+  <div class="callout">
+    <span class="tag">為什麼這是驗收條件</span>
+    <p>
+      因為在這次設計過程中，純推理<strong>已經給出過一次錯誤答案</strong>：Claude Code 的 statusline 被假設成高頻 RPC 客戶端，實際上它根本不呼叫 orrery——它直接讀設定目錄、直接查 Keychain。
+    </p>
+  </div>
+  <p class="exit">
+    <b>驗收：</b>一個數字，以及一份具名的真實熱路徑清單。如果數字不能接受，我們會在寫任何 claude 邏輯之前就知道。
+  </p>
+</div>
+
+<div class="step">
+  <span class="step-n">步驟 2</span>
+  <h3>RemoteAITool 與探索</h3>
+  <p>
+    代理、執行檔探索、<code>initialize</code> 握手、版本拒絕、以及遠端工具的註冊。此時在 production 上還<strong>不可觀察</strong>——沒有東西讀 registry——所以它的驗證完全在測試裡。
+  </p>
+  <p class="exit">
+    <b>驗收：</b>磁碟上存在的 plugin 執行檔會出現在 <code>AIToolRegistry.all</code>；而缺席、hang 住、crash、或版本不合的那些不會出現，也不會干擾其他工具。
+  </p>
+</div>
+
+<div class="step">
+  <span class="step-n">步驟 3</span>
+  <h3>claude 的事實過管線</h3>
+  <p>
+    <code>orrery-claude</code> 用 claude 真實的八個欄位回答 <code>tool/describe</code>。需要事實的呼叫點改從 registry 讀。codex 和 gemini 繼續走 enum 橋接。
+  </p>
+  <p class="exit">
+    <b>驗收：</b>整套測試在「claude 的事實來自另一個行程」的狀態下通過，而且 <code>Tool</code> 上 claude 專屬的事實屬性已經消失。
+  </p>
+</div>
+
+<h2>測試</h2>
+
+<h3>多數測試不該 spawn</h3>
+
+<p>
+  會 spawn 行程的測試在 CI 上又慢又 flaky。<code>InMemoryTransport</code> 承擔大部分測試，只有少數幾個真的開子行程去證明真實管線可用。當初為了「stdio 換 socket」引進的傳輸抽象，在這裡<strong>第二次付紅利</strong>。
+</p>
+
+<h3>逾時必須可注入</h3>
+
+<p>
+  client 的逾時是參數，測試用毫秒級。這是<strong>對介面的設計約束</strong>、現在就決定——寫死十秒的逾時會產生一組沒人願意跑的測試。
+</p>
+
+<h3>假 plugin 同時也是一致性套件</h3>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>行為</th><th>它證明什麼</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ok</code></td><td>正常路徑</td></tr>
+    <tr><td><code>hang</code></td><td>呼叫逾時會觸發</td></tr>
+    <tr><td><code>crash-after-initialize</code></td><td>中途死亡有被處理</td></tr>
+    <tr><td><code>garbage</code></td><td>stdout 出現非 JSON 不會弄死 host</td></tr>
+    <tr><td><code>noisy</code></td><td>誤混入的 <code>print()</code> 會被跳過而非致命</td></tr>
+    <tr><td><code>partial</code></td><td>截斷的回應有被處理</td></tr>
+    <tr><td><code>wrong-version</code></td><td>不認識的主版本會被拒絕並說明</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  它同時是<strong>給第三方的一致性測試套件</strong>——plugin 作者可以拿它跑自己的執行檔。對一個 plugin 框架來說，這是實質交付物，不是附屬品。
+</p>
+
+<h3>最重要的斷言是否定式的</h3>
+
+<pre class="block"><code>給定  一個載入失敗的 plugin
+則    其他工具仍然註冊成功
+且    失敗的那個工具【沒有】被記錄成已覆蓋
+且    之後 plugin 修好再跑一次，它【確實】被覆蓋</code></pre>
+
+<p>
+  只斷言「有丟出錯誤」，會漏掉「丟了錯誤，但狀態已經被改到一半」那種情況。
+</p>
+
+<h2>不在範圍內</h2>
+
+<ul class="scope-out">
+  <li><b>行為搬遷。</b><code>accountInfo</code>、session 探索、憑證複製、登入狀態搬移。下一份規格，等量測數字和能動的管線都有了再寫。</li>
+  <li><b>目錄拆解能力</b>——工具宣告自己哪些路徑與欄位屬於身分、哪些屬於共享。已記在 AIToolKit 的 README 當作方向；它是最大也最有價值的一塊，而且要等失敗機制驗證過再做，因為它動的是使用者的實際資料。</li>
+  <li><b>Account.tool 的開放。</b>仍然是封閉 enum，第三方工具還不能擁有帳號。屬於子專案 B。</li>
+  <li><b>Workspace.isolatedSessionTools</b>——設計途中發現的第二處 enum 洩漏進持久化格式。跟子專案 B 一起做。</li>
+  <li><b>常駐或 socket 傳輸。</b>協定允許，但在量測要求之前不做。</li>
+</ul>
+
+<h2>刻意延後的問題</h2>
+
+<h3>一個工具不理、但必須從繼承環境清掉的變數</h3>
+
+<p>
+  gemini 宣告 <code>configDirEnvVar == nil</code>，因為 gemini-cli 只讀 <code>$HOME/.gemini</code>；但 PR #52 仍然需要 <code>GEMINI_CONFIG_DIR</code> 這個字面名稱，當作要從子行程環境中<strong>移除</strong>的 key。<code>AITool</code> 目前無法同時表達這兩個事實。
+</p>
+
+<p>
+  延後的理由是：在還沒有人實作 gemini 之前就為它設計欄位，是猜測。等 gemini 真的有 plugin 時，這個問題才會變成具體的。
+</p>
+
+<h3>register 對重複 id 是否該拒絕而非取代</h3>
+
+<p>
+  目前是取代，所以第三方可以註冊 <code>"claude"</code> 把內建工具<strong>擠掉</strong>。拒絕大概是對的，配合內建先註冊。這是對已發布套件的行為變更，現在改最便宜——但這份規格的三個步驟並不需要它。
+</p>
+
+</div>
+</div>
