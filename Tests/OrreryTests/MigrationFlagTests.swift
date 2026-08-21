@@ -109,7 +109,7 @@ struct MigrationFlagTests {
 @Suite("AccountMigration per-tool flags")
 struct AccountMigrationFlagTests {
 
-    /// The backfill is the cheapest of the four to drive end to end: it needs
+    /// The backfill is the cheapest of the five to drive end to end: it needs
     /// only an accounts directory, no workspaces or credentials.
     @Test("backfill records the tools it covered instead of a bare marker")
     func backfillRecordsCoveredTools() throws {
@@ -140,6 +140,45 @@ struct AccountMigrationFlagTests {
             AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
 
             // Untouched: an upgrading install must not re-run what it already did.
+            let text = try String(contentsOf: url, encoding: .utf8)
+            #expect(text == "v1\n")
+        }
+    }
+
+    /// The workspace-symlink migration only ever walks claude accounts, so its
+    /// flag must claim claude and nothing else. Recording codex and gemini here
+    /// would mark work complete that this migration never attempted.
+    @Test("the workspace-symlink migration records only the tool it processed")
+    func workspaceSymlinksRecordsClaudeOnly() throws {
+        try withIsolatedHome {
+            let home = orreryHomeURL()
+            try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+            AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: home)
+
+            let flag = MigrationFlag(
+                url: home.appendingPathComponent(
+                    AccountMigration.workspaceAccountSymlinksFlagFileName))
+
+            #expect(flag.coverage() == .ids([Tool.claude.rawValue]))
+            #expect(flag.pending(among: [Tool.claude.rawValue]).isEmpty)
+        }
+    }
+
+    /// Installs that ran this migration before it took a `MigrationFlag` have a
+    /// bare `v1` marker on disk. Rebuilding every account's symlinks again on
+    /// upgrade is not free, so the legacy marker must still stop it.
+    @Test("a legacy marker still short-circuits the workspace-symlink migration")
+    func workspaceSymlinksHonoursLegacyMarker() throws {
+        try withIsolatedHome {
+            let home = orreryHomeURL()
+            try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+            let url = home.appendingPathComponent(
+                AccountMigration.workspaceAccountSymlinksFlagFileName)
+            try Data("v1\n".utf8).write(to: url)
+
+            AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: home)
+
             let text = try String(contentsOf: url, encoding: .utf8)
             #expect(text == "v1\n")
         }

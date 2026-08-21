@@ -4,8 +4,8 @@ import AIToolKit
 @testable import OrreryCore
 
 /// A `CaseIterable` enum is total at compile time; a registry is total only
-/// once registration has run. Nothing depends on that difference yet — the four
-/// one-shot migrations in `AccountMigration` still read `Tool.allCases`. Once
+/// once registration has run. Nothing depends on that difference yet — the five
+/// one-shot migrations in `AccountMigration` still read the `Tool` enum. Once
 /// they take their tool set from the registry instead, a registry that is
 /// missing a tool when a migration runs means the migration skips it and marks
 /// itself complete regardless, and that tool never migrates on the machine
