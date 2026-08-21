@@ -54,13 +54,21 @@ enum and the migration-flag hazard closed.
 | File | Change |
 |---|---|
 | `Sources/OrreryCore/Setup/MigrationFlag.swift` | **New.** Per-tool coverage for one-shot migration flags. |
-| `Sources/OrreryCore/Setup/AccountMigration.swift` | Four flag-guarded functions switch to `MigrationFlag`. |
+| `Sources/OrreryCore/Setup/AccountMigration.swift` | ~~Four~~ **Five** flag-guarded functions switch to `MigrationFlag`. |
 | `Sources/OrreryCore/Models/Tool.swift` | Gains `var aiTool: AITool` — the bridge. Nothing removed. |
 | `Package.swift` | Adds the AIToolKit dependency; `OrreryCore` links it. |
 | `Sources/orrery/main.swift` | Registers all tools before any migration runs. |
 | `Tests/OrreryTests/MigrationFlagTests.swift` | **New.** |
 | `Tests/OrreryTests/ToolBridgeTests.swift` | **New.** |
 | `Tests/OrreryTests/RegistryCompletenessTests.swift` | **New.** |
+
+> **Correction, 2026-08-21.** The row above originally read "Four
+> flag-guarded functions". There were five: this plan missed
+> `runWorkspaceAccountSymlinksIfNeeded`, and because the count here was the
+> statement everyone worked from, the implementation missed it too. It was
+> found only by the whole-branch review at the end and converted separately in
+> commit `a45be10`. The rest of this document is left as written — it is the
+> record of what was planned, not of what shipped.
 
 ---
 
