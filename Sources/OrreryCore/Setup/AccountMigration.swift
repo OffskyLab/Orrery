@@ -27,8 +27,7 @@ public enum AccountMigration {
     /// of `~/.orrery/` is taken before any mutation.
     public static func runIfNeeded(homeURL: URL) throws {
         let fm = FileManager.default
-        let flagURL = homeURL.appendingPathComponent(flagFileName)
-        let flag = MigrationFlag(url: flagURL)
+        let flag = MigrationFlag(url: homeURL.appendingPathComponent(flagFileName))
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
         let pending = flag.pending(among: toolIDs)
 
@@ -43,9 +42,13 @@ public enum AccountMigration {
         let hasLegacy = fm.fileExists(atPath: envsURL.path) || fm.fileExists(atPath: originURL.path)
         let hasWorkspaces = fm.fileExists(atPath: workspacesURL.path)
         guard fm.fileExists(atPath: homeURL.path), hasLegacy || hasWorkspaces else {
-            // Fresh install (or home not created yet) — mark done so we never rescan.
+            // Fresh install (or home not created yet) — mark done so we never
+            // rescan. Records the same pending set as the real migration path
+            // below, not a bare marker: a bare marker reads back as covering
+            // every tool forever, including tools that do not exist yet, and
+            // this is the one place that shape survived.
             if fm.fileExists(atPath: homeURL.path) {
-                try writeFlag(at: flagURL)
+                try flag.markCovered(pending)
             }
             return
         }
@@ -90,10 +93,6 @@ public enum AccountMigration {
     }
 
     // MARK: - Flag / backup
-
-    private static func writeFlag(at url: URL) throws {
-        try Data("v3\n".utf8).write(to: url)
-    }
 
     private static func backup(homeURL: URL) throws {
         let ts = ISO8601DateFormatter().string(from: Date())
