@@ -1,4 +1,5 @@
 import Foundation
+import AIToolKit
 
 public enum Tool: String, Codable, CaseIterable, Sendable {
     case claude
@@ -83,6 +84,38 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
         case .claude: return ["projects", "sessions", "session-env"]
         case .codex:  return ["sessions"]
         case .gemini: return ["tmp"]
+        }
+    }
+}
+
+extension Tool {
+    /// This tool described in AIToolKit's terms.
+    ///
+    /// A bridge, not a replacement: nothing has been removed from the enum, so
+    /// call sites can move to the registry one at a time. The enum is deleted
+    /// once none of them read it.
+    public var aiTool: AITool {
+        AITool(
+            id: rawValue,
+            displayName: displayName,
+            configDirectoryName: defaultConfigDir.lastPathComponent,
+            configDirEnvVar: bridgedConfigDirEnvVar,
+            authLoginCommand: authLoginCommand,
+            installCommand: installCommand,
+            sessionSubdirectories: sessionSubdirectories,
+            ansiColor: ansiColor
+        )
+    }
+
+    /// `envVarName` returns a string for every case, including gemini — but
+    /// gemini-cli ignores `GEMINI_CONFIG_DIR` and reads only `$HOME/.gemini`.
+    /// Setting it was the bug behind `orrery add --gemini` writing to the
+    /// user's real config. The bridge reports `nil` rather than carrying that
+    /// claim forward; the enum keeps its old value until its callers are gone.
+    private var bridgedConfigDirEnvVar: String? {
+        switch self {
+        case .claude, .codex: return envVarName
+        case .gemini:         return nil
         }
     }
 }
