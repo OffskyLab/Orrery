@@ -254,7 +254,23 @@ call sites that need facts read them from the registry. codex and gemini stay
 bridged from the enum.
 
 **Exit criterion:** the full suite passes with claude's facts sourced from a
-separate process, and `Tool`'s claude-specific fact properties are gone.
+separate process, and a parity test pins the plugin's description against the
+enum's so the two cannot diverge unnoticed.
+
+`Tool`'s fact properties **stay** until their call sites migrate, which is the
+next plan. An earlier draft of this spec said they would be gone; that was
+over-reach, found while writing the implementation plan. The call sites split
+by safety and only one half is mechanical:
+
+- **32 safe** — `defaultConfigDir` and `subdirectory`. `configDirectoryName`
+  joined to `userHomeURL()` reproduces the first exactly; `id` is the second.
+- **11 unsafe** — `envVarName`. `Tool.gemini.envVarName` returns
+  `"GEMINI_CONFIG_DIR"` while `configDirEnvVar` is `nil`, and PR #52 needs that
+  literal string as a key to *remove* from a child environment. Migrating these
+  silently changes gemini's behaviour and collides with an unmerged PR.
+
+Removing a property whose 11 remaining callers cannot be migrated is not a
+smaller step, it is a broken one.
 
 ## Testing
 
