@@ -553,12 +553,14 @@ public enum AccountMigration {
     /// install`, and the workspace copy is typically a stale path).
     ///
     /// - Parameter pending: the tool ids the caller's flag guard has not yet
-    ///   marked covered. Threaded through rather than recomputed here, so the
-    ///   guard and the work always agree. Defaults to "every known tool" so
-    ///   direct callers (tests, and anyone not going through the flag-guarded
-    ///   entry point) keep unconditionally consolidating claude settings.
+    ///   marked covered. Threaded through rather than recomputed here — and
+    ///   required, not defaulted, so a call site can never silently drift
+    ///   from the flag it is meant to agree with. Callers outside the
+    ///   flag-guarded entry point (e.g. tests exercising the consolidation
+    ///   logic itself) pass `Set(Tool.allCases.map(\.rawValue))` explicitly
+    ///   to mean "unconditional."
     static func consolidateClaudeAccountSettings(
-        homeURL: URL, pending: Set<String> = Set(Tool.allCases.map(\.rawValue))
+        homeURL: URL, pending: Set<String>
     ) {
         guard pending.contains(Tool.claude.rawValue) else { return }
         let acctStore = AccountStore(homeURL: homeURL)

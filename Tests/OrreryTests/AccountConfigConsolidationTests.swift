@@ -72,7 +72,8 @@ struct AccountConfigConsolidationTests {
              "statusLine": ["command": "node /stale/origin/statusline.js"]],
             at: wsDir.appendingPathComponent("settings.json"))
 
-        AccountMigration.consolidateClaudeAccountSettings(homeURL: home)
+        AccountMigration.consolidateClaudeAccountSettings(
+            homeURL: home, pending: Set(Tool.allCases.map(\.rawValue)))
 
         let result = try #require(ClaudeJsonMerge.loadJSON(at: accountSettings))
         #expect(result["permissions"] != nil)            // gained from workspace
@@ -187,7 +188,8 @@ struct AccountConfigConsolidationTests {
             .appendingPathComponent("settings.json")
         try ClaudeJsonMerge.saveJSON(["theme": "dark"], at: accountSettings)
 
-        AccountMigration.consolidateClaudeAccountSettings(homeURL: home)
+        AccountMigration.consolidateClaudeAccountSettings(
+            homeURL: home, pending: Set(Tool.allCases.map(\.rawValue)))
 
         let result = try #require(ClaudeJsonMerge.loadJSON(at: accountSettings))
         #expect((result["theme"] as? String) == "dark")   // untouched
