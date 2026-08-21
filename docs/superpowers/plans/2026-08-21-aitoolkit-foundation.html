@@ -1,0 +1,824 @@
+<title>AIToolKit Foundation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* Matched pair with the AIToolKit spec page — same house palette as
+     docs/superpowers/plans/*.html, same dark extension. A plan is read while
+     working rather than read through, so the layout shifts toward scanning:
+     numbered task rail, checklist steps, and a visible RED/GREEN beat. */
+  :root {
+    --bg:        #f4f5f7;
+    --card:      #ffffff;
+    --ink:       #1f2328;
+    --muted:     #656d76;
+    --line:      #e3e6ea;
+    --coral:     #d97757;
+    --coral-dim: #f0e2db;
+    --ok:        #1a7f52;
+    --ok-dim:    #e2f0e8;
+    --warn:      #9a6700;
+    --warn-dim:  #f5ecd8;
+    --code-bg:   #f0f1f4;
+    --shadow:    0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171514; --card: #201d1b; --ink: #ece8e4; --muted: #a09890;
+      --line: #302b28; --coral: #e0906d; --coral-dim: #33241d;
+      --ok: #5cb185; --ok-dim: #1b2a22; --warn: #d6a95c; --warn-dim: #2d2519;
+      --code-bg: #1a1817;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171514; --card: #201d1b; --ink: #ece8e4; --muted: #a09890;
+    --line: #302b28; --coral: #e0906d; --coral-dim: #33241d;
+    --ok: #5cb185; --ok-dim: #1b2a22; --warn: #d6a95c; --warn-dim: #2d2519;
+    --code-bg: #1a1817;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px; line-height: 1.75; margin: 0;
+    padding: 3rem 1.5rem 6rem; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 52rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  code, pre { font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: .1em .38em; border-radius: 4px; font-size: .875em; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: .9rem 1.05rem; overflow-x: auto; font-size: .8rem; line-height: 1.6; margin: 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  header { display: flex; flex-direction: column; gap: .85rem; }
+  .eyebrow { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.1; margin: 0; letter-spacing: -.03em; font-weight: 700; text-wrap: balance; }
+  .standfirst { font-size: 1.08rem; color: var(--muted); margin: 0; max-width: 42rem; text-wrap: pretty; }
+  .meta { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip { font-size: .74rem; padding: .22rem .6rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--card); }
+  .chip.status { border-color: var(--coral); color: var(--coral); background: var(--coral-dim); font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  h2 { font-size: 1.3rem; margin: 0; letter-spacing: -.02em; font-weight: 700; padding-bottom: .5rem; border-bottom: 2px solid var(--line); text-wrap: balance; }
+  h3 { font-size: 1rem; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  p { margin: 0; text-wrap: pretty; }
+  ul, ol { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .4rem; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.2rem 1.35rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: .8rem; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 28rem; }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .72rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ── Task overview: dependency at a glance before diving in ── */
+  .overview { display: flex; flex-direction: column; gap: .5rem; }
+  .ov-row { display: grid; grid-template-columns: 2.1rem 1fr auto; gap: .9rem; align-items: baseline;
+            background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .6rem .85rem; }
+  .ov-row .n { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .78rem; font-weight: 700;
+               color: var(--coral); background: var(--coral-dim); border-radius: 5px; padding: .2rem 0; text-align: center; }
+  .ov-row .what { font-size: .93rem; min-width: 0; }
+  .ov-row .where { font-size: .74rem; color: var(--muted); white-space: nowrap; }
+  .ov-row.newrepo { border-left: 3px solid var(--coral); }
+
+  /* ── Tasks ── */
+  .task { display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 1rem; }
+  .task-head { display: grid; grid-template-columns: auto 1fr; gap: .9rem; align-items: baseline; }
+  .task-head .n { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .82rem; font-weight: 700;
+                  color: var(--coral); background: var(--coral-dim); border-radius: 6px; padding: .28rem .6rem; white-space: nowrap; }
+  .task-head h3 { font-size: 1.18rem; }
+
+  .files { font-size: .88rem; display: flex; flex-direction: column; gap: .28rem; }
+  .files .k { color: var(--muted); text-transform: uppercase; font-size: .7rem; letter-spacing: .07em; font-weight: 700; }
+
+  .step { display: flex; flex-direction: column; gap: .55rem; padding-top: .9rem; border-top: 1px dashed var(--line); }
+  .step-title { display: flex; gap: .55rem; align-items: baseline; font-weight: 700; font-size: .95rem; }
+  .step-title input { margin: 0; accent-color: var(--coral); transform: translateY(1px); }
+
+  /* The TDD heartbeat. Colour here is information: whether this run is
+     supposed to fail or pass is the whole point of the step. */
+  .run { display: flex; flex-direction: column; gap: .3rem; font-size: .84rem; }
+  .run .cmd { font-family: "SF Mono", ui-monospace, Menlo, monospace; background: var(--code-bg);
+              border: 1px solid var(--line); border-radius: 6px; padding: .45rem .7rem; overflow-x: auto; }
+  .run .expect { font-size: .82rem; padding: .3rem .6rem; border-radius: 6px; border: 1px solid; width: fit-content; max-width: 100%; }
+  .run .expect.red   { color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
+  .run .expect.green { color: var(--ok);   border-color: var(--ok);   background: var(--ok-dim); }
+
+  .note { font-size: .89rem; color: var(--muted); }
+  .rule { background: var(--coral-dim); border: 1px solid var(--coral); border-radius: 10px; padding: 1.2rem 1.35rem; display: flex; flex-direction: column; gap: .5rem; }
+  .rule .label { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--coral); }
+  .risk { border-left: 4px solid var(--warn); background: var(--card); border-radius: 0 8px 8px 0; padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+  .risk h3 { color: var(--warn); font-size: .95rem; }
+
+  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  a { color: var(--coral); }
+  :focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Implementation plan · Orrery</div>
+    <h1>AIToolKit Foundation</h1>
+    <p class="standfirst">
+      建立 AIToolKit 套件，讓 orrery 透過 registry 而非封閉 enum 解析工具 ——
+      而且這個階段<strong>不搬動任何 per-tool 行為</strong>。
+    </p>
+    <div class="meta">
+      <span class="chip status">6 tasks · 尚未執行</span>
+      <span class="chip">2026-08-21</span>
+      <span class="chip">Swift 6.0 · macOS 15</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>執行順序</h2>
+    <div class="overview">
+      <div class="ov-row"><span class="n">1</span><span class="what"><code>MigrationFlag</code> —— 記錄一次性遷移涵蓋了哪些工具</span><span class="where">orrery</span></div>
+      <div class="ov-row"><span class="n">2</span><span class="what">套用到四個旗標保護的遷移</span><span class="where">orrery</span></div>
+      <div class="ov-row newrepo"><span class="n">3</span><span class="what">AIToolKit repo + <code>AITool</code> struct</span><span class="where">新 repo</span></div>
+      <div class="ov-row newrepo"><span class="n">4</span><span class="what"><code>AIToolRegistry</code> + 發布 <code>0.1.0</code></span><span class="where">新 repo</span></div>
+      <div class="ov-row"><span class="n">5</span><span class="what">orrery 依賴 AIToolKit，<code>Tool</code> 橋接過去</span><span class="where">orrery</span></div>
+      <div class="ov-row"><span class="n">6</span><span class="what">啟動時註冊，排在所有 migration 之前</span><span class="where">orrery</span></div>
+    </div>
+    <p class="note">
+      Task 1–2 排在最前面是刻意的：它們是整條路上<strong>唯一不需要任何新架構就能先做</strong>的部分，
+      而且關掉的正是後面每一步都會繼承的風險。Task 3–4 在另一個 repo，Task 5 依賴 Task 4 已發布 tag。
+    </p>
+  </section>
+
+  <section>
+    <h2>範圍</h2>
+    <p>Spec 的 Phase 1 有五個步驟，這份計畫只涵蓋<strong>第 1、2 步 —— 也就是地基</strong>。</p>
+    <div class="card">
+      <p><strong>不在這份計畫裡</strong>：行為按能力搬家（憑證 → 啟動／結束 → shell → phantom）、
+      24 處 <code>Tool.allCases</code> 的遷移、刪除 enum、把 Codex 與 Gemini 移到各自 repo。</p>
+      <p class="note">那些屬於<strong>另一份計畫</strong>，等這個地基存在、介面被真實壓過一輪之後再寫。
+      現在寫等於在猜一個還沒有人用過的介面長什麼樣。</p>
+    </div>
+    <p>這份計畫本身能產出可運作的軟體：orrery 行為與今天完全相同，registry 就位在 enum 旁邊，
+    旗標的危險已經關閉。</p>
+  </section>
+
+  <section>
+    <h2>全域約束</h2>
+    <div class="card">
+      <ul>
+        <li><strong>AIToolKit 不得引用任何 orrery 型別。</strong>它是第三方可以單獨依賴、不必拖進 orrery 的套件。</li>
+        <li><strong>整份計畫期間 AIToolKit 停在 <code>0.x</code>。</strong>允許 breaking change，<code>1.0</code> 起才遵守 semver。</li>
+        <li><strong>on-disk 格式不變。</strong><code>metadata.json</code> 保持 <code>"tool": "claude"</code>；帳號路徑保持 <code>accounts/&lt;tool&gt;/&lt;id&gt;/</code>。</li>
+        <li><strong>CLI 介面不變。</strong><code>--claude</code> / <code>--codex</code> / <code>--gemini</code> 繼續可用。</li>
+        <li>既有安裝不得需要重新登入或遷移。</li>
+        <li>測試用 swift-testing 而非 XCTest。碰到 <code>ORRERY_HOME</code> 或真實 home 的測試必須包在 <code>withIsolatedHome { … }</code> 裡。</li>
+        <li><strong>這份計畫不搬動任何行為離開 <code>Tool</code> enum。</strong></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>檔案結構</h2>
+    <h3>新套件 <code>~/Dropbox/Work/OpenSource/AIToolKit</code></h3>
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>檔案</th><th>職責</th></tr></thead>
+        <tbody>
+          <tr><td><code>Package.swift</code></td><td>套件宣告，單一 library product</td></tr>
+          <tr><td><code>Sources/AIToolKit/AITool.swift</code></td><td><code>AITool</code> value type —— 一個工具對自己的描述</td></tr>
+          <tr><td><code>Sources/AIToolKit/AIToolRegistry.swift</code></td><td>註冊與查詢，取代 <code>Tool.allCases</code> 作為「有哪些工具」的來源</td></tr>
+          <tr><td><code>Tests/AIToolKitTests/…</code></td><td>value 語意、<code>Codable</code> round-trip、註冊與排序</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>orrery 的修改</h3>
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>檔案</th><th>改動</th></tr></thead>
+        <tbody>
+          <tr><td><code>Sources/OrreryCore/Setup/MigrationFlag.swift</code></td><td><strong>新增</strong>，一次性旗標的 per-tool 涵蓋記錄</td></tr>
+          <tr><td><code>Sources/OrreryCore/Setup/AccountMigration.swift</code></td><td>四個旗標保護的函式改用 <code>MigrationFlag</code></td></tr>
+          <tr><td><code>Sources/OrreryCore/Models/Tool.swift</code></td><td>新增 <code>var aiTool: AITool</code> 橋接，<strong>不刪任何東西</strong></td></tr>
+          <tr><td><code>Package.swift</code></td><td>加入 AIToolKit 依賴</td></tr>
+          <tr><td><code>Sources/orrery/main.swift</code></td><td>在所有 migration 之前註冊工具</td></tr>
+          <tr><td><code>Sources/OrreryCore/Setup/AIToolRegistration.swift</code></td><td><strong>新增</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 1  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 1</span><h3><code>MigrationFlag</code> —— per-tool 涵蓋記錄</h3></div>
+
+    <div class="risk">
+      <h3>為什麼這件事排第一</h3>
+      <p>四個一次性遷移各自只寫一個全域的「做完了」標記。一旦 <code>Tool.allCases</code> 被 registry 取代，
+      在那一刻沒有註冊的工具會被跳過 ——<strong>而旗標照樣寫下去</strong>，於是那台機器上它永遠不會被遷移。
+      這個 task 建造替代品，Task 2 才套用。</p>
+      <p>相容性在這裡很要緊：既有安裝的旗標檔內容是 <code>v1\n</code> 或 <code>v3\n</code>。
+      那些必須被讀成「已經涵蓋一切」，否則每個升級的使用者都會重跑已經跑過的遷移。</p>
+    </div>
+
+    <div class="files">
+      <span class="k">Files</span>
+      <div>Create · <code>Sources/OrreryCore/Setup/MigrationFlag.swift</code></div>
+      <div>Test · <code>Tests/OrreryTests/MigrationFlagTests.swift</code></div>
+    </div>
+
+    <div class="card">
+      <span class="files k">Produces</span>
+      <pre><code>public struct MigrationFlag
+public enum MigrationFlag.Coverage: Equatable { case absent, legacyCoversAll, ids(Set&lt;String&gt;) }
+public init(url: URL)
+public func coverage() -&gt; Coverage
+public func pending(among candidates: Set&lt;String&gt;) -&gt; Set&lt;String&gt;
+public func markCovered(_ ids: Set&lt;String&gt;) throws</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 寫會失敗的測試</div>
+      <p class="note">七個測試，涵蓋 absent / 記錄 / 後來才出現的工具 / union / 三種 legacy 情況。
+      完整程式碼見 markdown 版計畫的 Task 1 Step 1。關鍵三個：</p>
+      <pre><code>@Test("a tool absent when the migration ran is still pending afterwards")
+func laterToolIsPending() throws {
+    let flag = MigrationFlag(url: url)
+    try flag.markCovered(["claude", "codex"])
+    // gemini 後來才註冊 —— 這個型別存在的全部理由
+    #expect(flag.pending(among: ["claude", "codex", "gemini"]) == ["gemini"])
+}
+
+@Test("a legacy version-only flag counts as covering everything")
+func legacyFlagCoversAll() throws {
+    try Data("v3\n".utf8).write(to: url)
+    #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
+    #expect(MigrationFlag(url: url).pending(among: ["claude", "codex", "gemini"]).isEmpty)
+}
+
+@Test("marking again unions rather than replaces")
+func markingUnions() throws {
+    let flag = MigrationFlag(url: url)
+    try flag.markCovered(["claude"])
+    try flag.markCovered(["gemini"])
+    #expect(flag.coverage() == .ids(["claude", "gemini"]))
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">swift test --filter MigrationFlagTests</div>
+        <div class="expect red">預期 FAIL — cannot find 'MigrationFlag' in scope</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 實作</div>
+      <p class="note">檔案格式是版本行加上每行一個 tool id。沒有 id 行的檔案就是舊標記，讀成涵蓋一切。</p>
+      <pre><code>public struct MigrationFlag {
+    public enum Coverage: Equatable {
+        case absent            // 從未執行
+        case legacyCoversAll   // per-tool 之前的舊標記，視為涵蓋所有工具
+        case ids(Set&lt;String&gt;)
+    }
+
+    private static let formatVersion = "v2"
+    public let url: URL
+
+    public func coverage() -&gt; Coverage {
+        guard let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .utf8)
+        else { return .absent }
+
+        let ids = text.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty &amp;&amp; $0 != Self.formatVersion &amp;&amp; !isVersionToken($0) }
+
+        return ids.isEmpty ? .legacyCoversAll : .ids(Set(ids))
+    }
+
+    public func pending(among candidates: Set&lt;String&gt;) -&gt; Set&lt;String&gt; {
+        switch coverage() {
+        case .absent:          return candidates
+        case .legacyCoversAll: return []
+        case .ids(let done):   return candidates.subtracting(done)
+        }
+    }
+
+    /// union 而非覆寫：為了一個晚註冊的工具而重跑，不該抹掉已處理過的記錄。
+    public func markCovered(_ ids: Set&lt;String&gt;) throws {
+        var all = ids
+        if case .ids(let existing) = coverage() { all.formUnion(existing) }
+        let body = ([Self.formatVersion] + all.sorted()).joined(separator: "\n") + "\n"
+        try Data(body.utf8).write(to: url, options: .atomic)
+    }
+
+    /// v1、v3 …… 是舊標記行，不是 tool id。
+    private func isVersionToken(_ s: String) -&gt; Bool {
+        s.first == "v" &amp;&amp; s.dropFirst().allSatisfy(\.isNumber) &amp;&amp; s.count &gt; 1
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 執行測試，確認通過</div>
+      <div class="run">
+        <div class="cmd">swift test --filter MigrationFlagTests</div>
+        <div class="expect green">預期 PASS · 7 tests</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5 · 跑完整測試套件</div>
+      <div class="run">
+        <div class="cmd">swift test</div>
+        <div class="expect green">預期全部通過</div>
+      </div>
+      <p class="note">如果 <code>RunCommandTests</code> 的 “unsetenv removes the stripped keys…” 失敗，重跑一次 ——
+      那是既有的 flaky test，它會變動真實的 process 環境變數並與其他 suite 競態。<strong>其他任何失敗都是真的。</strong></p>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 6 · Commit</div>
+      <pre><code>git add Sources/OrreryCore/Setup/MigrationFlag.swift Tests/OrreryTests/MigrationFlagTests.swift
+git commit -m "[FEAT] MigrationFlag: record which tools a one-shot migration covered"</code></pre>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 2  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 2</span><h3>套用到四個一次性遷移</h3></div>
+
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>旗標檔</th><th>函式</th></tr></thead>
+        <tbody>
+          <tr><td><code>.migration-v3</code></td><td><code>runIfNeeded</code></td></tr>
+          <tr><td><code>.backfill-account-info-v1</code></td><td><code>runInfoBackfillIfNeeded</code></td></tr>
+          <tr><td><code>.account-config-consolidated</code></td><td><code>runAccountConfigConsolidationIfNeeded</code></td></tr>
+          <tr><td><code>.workspace-structure-relocated</code></td><td><code>runWorkspaceStructureRelocationIfNeeded</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rule">
+      <div class="label">刻意不在清單裡</div>
+      <p><code>OriginTakeoverBootstrap</code> 與 <code>OriginAccountSeeder</code> 也在跑
+      <code>Tool.allCases</code>，但它們的 guard 是 per-tool 的
+      （<code>!store.isOriginManaged(tool:)</code>、<code>origin.account(for: tool) == nil</code>）
+      而且<strong>沒有全域旗標</strong>，每次執行都會重跑 —— 晚註冊的工具下一個指令就被撿到，會自癒。
+      這是逐一讀 guard 確認的，不是假設。</p>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 寫會失敗的測試</div>
+      <p class="note">用 backfill 做端對端驗證 —— 四個裡面它最便宜，只需要 accounts 目錄，不需要 workspace 或憑證。</p>
+      <pre><code>@Test("backfill records the tools it covered instead of a bare marker")
+func backfillRecordsCoveredTools() throws {
+    try withIsolatedHome {
+        let home = orreryHomeURL()
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+
+        AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
+
+        let flag = MigrationFlag(
+            url: home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName))
+
+        // 每個工具都要被具名記錄 —— 而不是一個會靜默跳過後來者的「done」
+        #expect(flag.coverage() == .ids(Set(Tool.allCases.map(\.rawValue))))
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">swift test --filter AccountMigrationFlagTests</div>
+        <div class="expect red">預期 FAIL — 回報 .legacyCoversAll 而非 .ids([...])，因為現在的程式碼寫的是 "v1\n"</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 改 <code>runInfoBackfillIfNeeded</code></div>
+      <p class="note">四行變換。guard 換成 <code>pending</code>、迴圈依 <code>pending</code> 過濾、寫入換成 <code>markCovered</code>。</p>
+      <pre><code>// 取代：
+let flagURL = homeURL.appendingPathComponent(infoBackfillFlagFileName)
+if fm.fileExists(atPath: flagURL.path) { return }
+
+// 換成：
+let flag = MigrationFlag(url: homeURL.appendingPathComponent(infoBackfillFlagFileName))
+let toolIDs = Set(Tool.allCases.map(\.rawValue))
+let pending = flag.pending(among: toolIDs)
+if pending.isEmpty { return }
+
+// 迴圈：
+for tool in Tool.allCases where pending.contains(tool.rawValue) {
+
+// 結尾寫入：
+try? flag.markCovered(pending)</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 執行測試，確認通過</div>
+      <div class="run">
+        <div class="cmd">swift test --filter AccountMigrationFlagTests</div>
+        <div class="expect green">預期 PASS · 2 tests</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5 · 同樣手法套用到另外三個</div>
+      <ul>
+        <li><code>runIfNeeded</code> —— 旗標 <code>flagFileName</code>。<strong>這個函式會 throw</strong>，
+        用 <code>try flag.markCovered(pending)</code> 而非 <code>try?</code>，與它現有的 <code>try writeFlag(at:)</code> 一致。</li>
+        <li><code>runAccountConfigConsolidationIfNeeded</code> —— per-tool 的工作在
+        <code>consolidateClaudeAccountSettings(homeURL:)</code> 裡面，
+        <strong>把 <code>pending</code> 當參數傳下去</strong>而不是在那裡重算，否則 guard 與實際工作可能不一致。</li>
+        <li><code>runWorkspaceStructureRelocationIfNeeded</code> —— <code>Tool.allCases</code> 迴圈在
+        origin-relocation 分支的 symlink 重指部分。</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 6 · 跑完整測試套件</div>
+      <div class="run">
+        <div class="cmd">swift test</div>
+        <div class="expect green">預期全部通過</div>
+      </div>
+      <p class="note">特別留意 <code>V31AutoMigrationTests</code>、<code>AccountMigrationTests</code>、
+      <code>WorkspaceStructureRelocationTests</code>、<code>AccountConfigConsolidationTests</code> ——
+      它們直接演練這四個函式，這裡出錯會在那裡現形。</p>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 7 · Commit</div>
+      <pre><code>git commit -m "[FIX] one-shot migrations record which tools they covered"</code></pre>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 3  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 3</span><h3>AIToolKit 套件與 <code>AITool</code> 型別</h3></div>
+
+    <div class="rule">
+      <div class="label">兩個形狀決定，都是 spec 判準的實際應用</div>
+      <p><strong><code>configDirectoryName</code> 是名字不是 URL。</strong>解析它需要 home 目錄，
+      而用哪個 home 是 orrery 的決定 —— <code>userHomeURL()</code> 可被 <code>ORRERY_USER_HOME</code>
+      覆寫正是為了讓測試能重導。放 URL 會把那個政策拖進 framework。</p>
+      <p><strong><code>configDirEnvVar</code> 是 Optional，這修掉了一個現存的謊。</strong>
+      現在 <code>Tool.gemini.envVarName</code> 回傳 <code>"GEMINI_CONFIG_DIR"</code>，
+      但 gemini-cli 完全無視它、只讀 <code>$HOME/.gemini</code> ——
+      <strong>設定它正是 <code>orrery add --gemini</code> 寫進使用者真實設定的那個 bug</strong>。
+      <code>nil</code> 誠實地陳述事實；要不要改用 HOME wrapper 是宿主的決定。</p>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 建立 repo 骨架</div>
+      <pre><code>mkdir -p ~/Dropbox/Work/OpenSource/AIToolKit/Sources/AIToolKit
+mkdir -p ~/Dropbox/Work/OpenSource/AIToolKit/Tests/AIToolKitTests
+cd ~/Dropbox/Work/OpenSource/AIToolKit
+git init
+printf '.build/\n.DS_Store\n*.xcodeproj\n' &gt; .gitignore</code></pre>
+      <pre><code>// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "AIToolKit",
+    platforms: [.macOS(.v15)],
+    products: [ .library(name: "AIToolKit", targets: ["AIToolKit"]) ],
+    targets: [
+        .target(name: "AIToolKit", path: "Sources/AIToolKit"),
+        .testTarget(name: "AIToolKitTests", dependencies: ["AIToolKit"], path: "Tests/AIToolKitTests"),
+    ]
+)</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 寫會失敗的測試</div>
+      <p class="note">五個測試：身分即 id、編碼成裸字串、<code>supportsSetup</code>、無 config-dir 變數、<code>coloredTag</code>。</p>
+      <pre><code>/// metadata.json 存的是 "tool": "claude"。編碼成別的東西會弄壞每個既有安裝。
+@Test("encodes as its bare id string")
+func encodesAsID() throws {
+    let data = try JSONEncoder().encode(claude)
+    #expect(String(data: data, encoding: .utf8) == "\"claude\"")
+}
+
+/// gemini-cli 無視 GEMINI_CONFIG_DIR，只讀 $HOME/.gemini。
+/// 現在的 enum 照樣回傳變數名，那正是把 orrery add --gemini 導向使用者真實設定的原因。
+@Test("a tool with no config-dir variable says so with nil")
+func noConfigDirEnvVar() {
+    let gemini = AITool(id: "gemini", displayName: "Gemini CLI",
+                        configDirectoryName: ".gemini", configDirEnvVar: nil,
+                        authLoginCommand: nil, installCommand: nil,
+                        sessionSubdirectories: ["tmp"], ansiColor: "")
+    #expect(gemini.configDirEnvVar == nil)
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">cd ~/Dropbox/Work/OpenSource/AIToolKit &amp;&amp; swift test</div>
+        <div class="expect red">預期 FAIL — cannot find 'AITool' in scope</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 實作</div>
+      <pre><code>public struct AITool: Sendable, Hashable, Codable {
+    public let id: String
+    public let displayName: String
+    public let configDirectoryName: String   // ".claude" —— 名字，不是 URL
+    public let configDirEnvVar: String?      // nil = 這個工具沒有這種變數
+    public let authLoginCommand: [String]?   // nil = 首次互動啟動時認證
+    public let installCommand: [String]?
+    public let sessionSubdirectories: [String]
+    public let ansiColor: String
+
+    public var supportsSetup: Bool { installCommand != nil }
+    public var coloredTag: String { "\(ansiColor)[\(id)]\u{1B}[0m" }
+
+    // 身分即 id
+    public static func == (lhs: AITool, rhs: AITool) -&gt; Bool { lhs.id == rhs.id }
+    public func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    // 編碼成裸 id，讓宿主既有的 on-disk 格式原封不動
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(id)
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5 · 執行測試，確認通過</div>
+      <div class="run">
+        <div class="cmd">cd ~/Dropbox/Work/OpenSource/AIToolKit &amp;&amp; swift test</div>
+        <div class="expect green">預期 PASS · 5 tests</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 6 · Commit</div>
+      <pre><code>git commit -m "[FEAT] AITool — one tool's description of itself"</code></pre>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 4  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 4</span><h3><code>AIToolRegistry</code> 與發布</h3></div>
+
+    <p class="note"><code>all</code> 依 <code>id</code> 排序而非依註冊順序 ——
+    orrery 有數個呼叫點會把它變成給使用者看的輸出，set 的任意順序會讓輸出每次執行都不同。</p>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 寫會失敗的測試</div>
+      <pre><code>/// 數個呼叫點會把工具列表變成使用者看得到的輸出。任意順序會讓輸出每次都不一樣。
+@Test("all is sorted by id regardless of registration order")
+func allIsSorted() {
+    let registry = AIToolRegistry()
+    registry.register(tool("gemini"))
+    registry.register(tool("claude"))
+    registry.register(tool("codex"))
+    #expect(registry.all.map(\.id) == ["claude", "codex", "gemini"])
+}
+
+@Test("registering the same id again replaces the description")
+func reregisterReplaces() { /* … */ }</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">swift test --filter AIToolRegistryTests</div>
+        <div class="expect red">預期 FAIL — cannot find 'AIToolRegistry' in scope</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 實作</div>
+      <pre><code>/// 有哪些工具，取決於註冊了什麼。
+///
+/// 這取代宿主的編譯期清單。差別不是修辭：CaseIterable enum 在編譯期完整，
+/// registry 只有在註冊執行過之後才完整。宿主必須在任何會走訪工具的程式碼之前
+/// 完成註冊 —— 尤其是一次性遷移，否則它們會在靜默跳過某個工具的情況下
+/// 把自己標記成完成。
+public final class AIToolRegistry: @unchecked Sendable {
+    public static let shared = AIToolRegistry()
+
+    private let lock = NSLock()
+    private var storage: [String: AITool] = [:]
+
+    public func register(_ tool: AITool) { /* lock; storage[tool.id] = tool */ }
+    public func tool(id: String) -&gt; AITool? { /* lock; storage[id] */ }
+
+    /// 依 id 排序，讓走訪順序不受註冊順序影響。
+    public var all: [AITool] { /* lock; storage.values.sorted { $0.id &lt; $1.id } */ }
+
+    public var isEmpty: Bool { /* … */ }
+    public func reset() { /* 測試用 */ }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 執行測試，確認通過</div>
+      <div class="run">
+        <div class="cmd">cd ~/Dropbox/Work/OpenSource/AIToolKit &amp;&amp; swift test</div>
+        <div class="expect green">預期 PASS · 10 tests（Task 3 的 5 個 + 這裡 5 個）</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5 · 打 tag 並發布</div>
+      <pre><code>git commit -m "[FEAT] AIToolRegistry — tools come from registration, not compilation"
+git tag 0.1.0
+gh repo create OffskyLab/AIToolKit --public --source=. --push
+git push --tags</code></pre>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 5  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 5</span><h3>orrery 依賴 AIToolKit，<code>Tool</code> 橋接</h3></div>
+
+    <p class="note">這個 task <strong>不從 <code>Tool</code> 移除任何東西</strong>。
+    橋接讓兩種形狀並存，呼叫點才能之後一個一個搬。</p>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 加入依賴</div>
+      <pre><code>// Package.swift dependencies:
+.package(url: "https://github.com/OffskyLab/AIToolKit", from: "0.1.0"),
+
+// OrreryCore target dependencies:
+.product(name: "AIToolKit", package: "AIToolKit"),</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 寫會失敗的測試</div>
+      <p class="note">六個測試逐一斷言橋接與 enum 對每個 case 都一致 —— 兩者同時存在期間不能漂移。</p>
+      <pre><code>@Test("every case bridges to an AITool carrying its rawValue as id")
+func idMatchesRawValue() {
+    for tool in Tool.allCases { #expect(tool.aiTool.id == tool.rawValue) }
+}
+
+/// 橋接是那個謊被就地修正的地方：gemini 的 configDirEnvVar 是 nil，
+/// 即使 Tool.gemini.envVarName 仍然回傳字串。
+@Test("gemini bridges to no config-dir variable")
+func geminiHasNoConfigDirVariable() {
+    #expect(Tool.gemini.aiTool.configDirEnvVar == nil)
+    #expect(Tool.claude.aiTool.configDirEnvVar == "CLAUDE_CONFIG_DIR")
+    #expect(Tool.codex.aiTool.configDirEnvVar == "CODEX_HOME")
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">swift test --filter ToolBridgeTests</div>
+        <div class="expect red">預期 FAIL — value of type 'Tool' has no member 'aiTool'</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 寫橋接</div>
+      <pre><code>extension Tool {
+    /// 用 AIToolKit 的語彙描述這個工具。
+    ///
+    /// 是橋接不是取代：enum 沒有被移除任何東西，呼叫點可以一次搬一個。
+    /// 等到沒有人再讀它，enum 才刪掉。
+    public var aiTool: AITool {
+        AITool(id: rawValue, displayName: displayName,
+               configDirectoryName: defaultConfigDir.lastPathComponent,
+               configDirEnvVar: bridgedConfigDirEnvVar,
+               authLoginCommand: authLoginCommand, installCommand: installCommand,
+               sessionSubdirectories: sessionSubdirectories, ansiColor: ansiColor)
+    }
+
+    /// envVarName 對每個 case 都回傳字串，包括 gemini —— 但 gemini-cli 無視
+    /// GEMINI_CONFIG_DIR、只讀 $HOME/.gemini。設定它正是 orrery add --gemini
+    /// 寫進使用者真實設定的那個 bug。橋接不把這個主張帶過去；
+    /// enum 保留舊值直到它的呼叫者清空為止。
+    private var bridgedConfigDirEnvVar: String? {
+        switch self {
+        case .claude, .codex: return envVarName
+        case .gemini:         return nil
+        }
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5–6 · 測試通過並跑完整套件</div>
+      <div class="run">
+        <div class="cmd">swift test --filter ToolBridgeTests &amp;&amp; swift test</div>
+        <div class="expect green">預期 PASS · 6 tests，然後全套通過</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────  TASK 6  ───────────────────────── -->
+  <section class="task">
+    <div class="task-head"><span class="n">Task 6</span><h3>啟動時註冊，排在任何走訪工具的程式碼之前</h3></div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 1 · 寫會失敗的測試</div>
+      <pre><code>@Test("registering built-ins covers every tool the enum knows")
+func registrationIsComplete() {
+    let registry = AIToolRegistry()
+    AIToolRegistration.registerBuiltInTools(into: registry)
+    #expect(Set(registry.all.map(\.id)) == Set(Tool.allCases.map(\.rawValue)))
+}</code></pre>
+      <p class="note">registry 當參數傳入，測試就永遠不會動到 shared instance。</p>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 2 · 執行測試，確認失敗</div>
+      <div class="run">
+        <div class="cmd">swift test --filter RegistryCompletenessTests</div>
+        <div class="expect red">預期 FAIL — cannot find 'AIToolRegistration' in scope</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 3 · 實作</div>
+      <pre><code>public enum AIToolRegistration {
+    public static func registerBuiltInTools() { registerBuiltInTools(into: .shared) }
+
+    /// registry 當參數傳入，讓測試永遠不必碰 shared instance。
+    public static func registerBuiltInTools(into registry: AIToolRegistry) {
+        for tool in Tool.allCases { registry.register(tool.aiTool) }
+    }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 4 · 接進啟動流程</div>
+      <p class="note">放在 <code>runOrreryMain()</code> 的<strong>第一行</strong>，
+      在 <code>LegacyOrbitalMigration.runIfNeeded()</code> 之上。</p>
+      <pre><code>// 在任何走訪工具的程式碼之前註冊內建工具。順序是功能性的、不是風格：
+// AccountMigration 的一次性遷移會記錄它們涵蓋了哪些工具，所以在其中一個
+// 執行之後才註冊的工具會被跳過，而且那台機器上永遠不會再被遷移。
+AIToolRegistration.registerBuiltInTools()</code></pre>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 5 · 驗證順序真的成立</div>
+      <div class="run">
+        <div class="cmd">grep -n "registerBuiltInTools" Sources/orrery/main.swift
+grep -n "AccountMigration\|OriginTakeover\|OriginAccountSeeder" Sources/orrery/main.swift | head -3</div>
+        <div class="expect green">預期 registerBuiltInTools 的行號小於每一個 migration 呼叫</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title"><input type="checkbox" /> Step 6 · 跑完整套件並 commit</div>
+      <div class="run">
+        <div class="cmd">swift test</div>
+        <div class="expect green">預期全部通過</div>
+      </div>
+      <pre><code>git commit -m "[FEAT] register built-in tools before any migration runs"</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Self-review</h2>
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>Spec 要求</th><th>Task</th></tr></thead>
+        <tbody>
+          <tr><td><code>AITool</code> struct，承載 enum 的描述性成員</td><td>3</td></tr>
+          <tr><td>身分是開放字串，framework 內無封閉集合</td><td>3</td></tr>
+          <tr><td>透過 id 做 <code>Codable</code>，<code>metadata.json</code> 不變</td><td>3</td></tr>
+          <tr><td><code>AIToolRegistry</code>，成為「有哪些工具」的來源</td><td>4</td></tr>
+          <tr><td>AIToolKit 自成 repo，不依賴 orrery 任何東西</td><td>3、4</td></tr>
+          <tr><td>AIToolKit 停在 <code>0.x</code></td><td>4</td></tr>
+          <tr><td>註冊在 migration／takeover／seeding 之前完成</td><td>6</td></tr>
+          <tr><td>一次性旗標記錄涵蓋了哪些工具</td><td>1、2</td></tr>
+          <tr><td>有測試斷言 registry 完整性</td><td>6</td></tr>
+          <tr><td>Strangler：enum 橋接，兩者並存</td><td>5</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="risk">
+      <h3>這份計畫消不掉的一個風險</h3>
+      <p>Task 5 的 <code>Package.swift</code> 指向
+      <code>https://github.com/OffskyLab/AIToolKit</code> 的 <code>from: "0.1.0"</code>，
+      依賴 Task 4 的 <code>gh repo create … --push</code> 成功。
+      如果 repo 是 private 或 tag 沒推上去，<strong>Task 5 會在依賴解析時失敗，
+      而錯誤訊息不會提到這份計畫的任何東西</strong>。開始 Task 5 前先確認 tag 看得到。</p>
+    </div>
+  </section>
+
+  <footer>
+    Orrery · AIToolKit 地基實作計畫 · 完整程式碼見
+    <code>docs/superpowers/plans/2026-08-21-aitoolkit-foundation.md</code><br />
+    設計依據：<code>docs/superpowers/specs/2026-08-21-aitoolkit-plugin-framework-design.md</code>
+  </footer>
+
+</div>
