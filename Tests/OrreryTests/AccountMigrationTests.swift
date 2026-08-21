@@ -50,6 +50,10 @@ struct AccountMigrationTests {
 
         let flag = home.appendingPathComponent(AccountMigration.flagFileName)
         #expect(FileManager.default.fileExists(atPath: flag.path))
+        // Named coverage, not a bare marker: a bare one reads back as covering
+        // every tool that will ever exist, which is what per-tool flags exist
+        // to stop.
+        #expect(MigrationFlag(url: flag).coverage() == .ids(Set(Tool.allCases.map(\.rawValue))))
     }
 
     @Test("does not rerun when the flag already exists")
