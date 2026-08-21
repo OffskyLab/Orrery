@@ -297,15 +297,43 @@
     <div class="rule">
       <div class="label">這個 enum 讓一個限制浮現</div>
       <blockquote><code>CaseIterable</code> + 三個寫死的 case，是一個封閉世界。</blockquote>
-      <p class="gloss">在宿主應用程式裡這沒問題。<strong>在第三方依賴的 framework 裡則是致命的</strong>：
-      如果 <code>ToolID</code> 是這個 enum、住在 AIToolKit，那麼加一個工具就等於<em>改 framework 本身</em>，
-      AIToolKit 會從擴充點變成瓶頸 —— 動機 2 被那個本該實現它的套件親手打敗。
-      所以 <strong>enum 不搬家</strong>：它是關於<em>這個宿主</em>的事實，不是關於工具的普遍事實。</p>
+      <p class="gloss">在第三方依賴的 framework 裡這是致命的：加一個工具就等於<em>改 framework 本身</em>，
+      AIToolKit 會從擴充點變成瓶頸。但把 enum 留在 orrery 當「白名單」也只是<strong>把封閉性從
+      framework 搬到宿主</strong> —— 它仍然是一份編譯進去的三個名字，第三方依然加不了第四個。
+      所以 <strong>enum 哪裡都不留</strong>。</p>
+    </div>
+
+    <div class="card">
+      <h3>取而代之：struct + 註冊</h3>
+      <p><code>AITool</code> 是 AIToolKit 裡的一個 <strong>struct</strong>，裝的就是 enum 原本那些成員
+      （<code>id</code>、<code>envVarName</code>、<code>defaultConfigDir</code>、
+      <code>authLoginCommand</code>…）。<strong>每個工具自己建構一份描述自己</strong>，然後註冊給 orrery。</p>
+      <p><code>Tool.allCases</code> 變成 <code>registry.all</code> ——
+      答案來自<strong>註冊了什麼</strong>，而不是編譯進了什麼。啟動時註冊在這個 codebase 已有前例：
+      <code>OrreryAccountKitRuntime.register()</code> 和 <code>OrreryThirdPartyRuntime.register()</code>
+      現在就是從 <code>main.swift</code> 呼叫的。</p>
+      <p>on-disk 相容性仍然保住：<code>AITool</code> 透過 <code>id</code> 做 <code>Codable</code>，
+      <code>metadata.json</code> 照樣讀寫 <code>"tool": "claude"</code>。</p>
+    </div>
+
+    <div class="risk">
+      <h3>這個轉變帶進來的危險</h3>
+      <p><code>CaseIterable</code> 在<strong>編譯期</strong>是完整的；registry 只有在
+      <strong>註冊執行過</strong>之後才完整。這個差別不是修辭，而且有一類呼叫點真的會咬人：</p>
+      <pre style="background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:.7rem .9rem;overflow-x:auto;font-size:.8rem;line-height:1.55;margin:0"><code>Sources/OrreryCore/Setup/AccountMigration.swift        ×5
+Sources/OrreryCore/Setup/OriginTakeoverBootstrap.swift
+Sources/OrreryCore/Setup/OriginAccountSeeder.swift</code></pre>
+      <p>那些是<strong>旗標保護的一次性遷移</strong>。如果某個工具在其中一個執行的當下沒有註冊，
+      它會被靜默跳過 ——<strong>而完成旗標照樣寫下去</strong>。那台機器上，那個工具就永遠不會被遷移了。
+      失敗是隱形且永久的。</p>
+      <p>因此以下不是選配：註冊必須在任何 migration / takeover / seeding <em>之前</em>完成，
+      並在 <code>main.swift</code> 明確排序；一次性旗標改成 per-tool、或記錄它涵蓋了哪些工具，
+      讓後來才註冊的工具仍能補到；加一個測試斷言第一個旗標保護的流程執行時 registry 已完整。</p>
     </div>
 
     <figure class="fig-scroll">
       <svg viewBox="0 0 760 288" role="img"
-           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為；Phase 1a 之後，九個行為成員移入 AIToolKit 的 ToolPlugin protocol，身分在框架端是開放的字串，而封閉的 Tool enum 留在 orrery 內作為宿主白名單。">
+           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為；改造後 enum 消失，AIToolKit 提供 AITool struct 與 AIToolRegistry，Claude、Codex、Gemini 各自建構一份描述並註冊上去。">
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
@@ -332,29 +360,34 @@
         <text class="d-tag" x="318" y="126" text-anchor="middle">1a</text>
 
         <text class="d-tag" x="372" y="22">AIToolKit repo</text>
-        <rect class="d-accent" x="372" y="34" width="372" height="120" rx="6" />
-        <text class="d-name" x="558" y="58" text-anchor="middle">ToolPlugin</text>
-        <text class="d-stereo" x="558" y="74" text-anchor="middle">«protocol»</text>
+        <rect class="d-accent" x="372" y="34" width="372" height="104" rx="6" />
+        <text class="d-name" x="558" y="58" text-anchor="middle">AITool</text>
+        <text class="d-stereo" x="558" y="74" text-anchor="middle">«struct»</text>
         <line class="d-rule" x1="372" y1="86" x2="744" y2="86" />
-        <text class="d-sm" x="388" y="108">id: String</text>
-        <text class="d-sm" x="560" y="108">← 身分是開放字串</text>
-        <text class="d-sm" x="388" y="128">envVarName · defaultConfigDir</text>
-        <text class="d-sm" x="388" y="146">authLoginCommand · … （九個行為成員）</text>
+        <text class="d-sm" x="388" y="106">id · envVarName · defaultConfigDir</text>
+        <text class="d-sm" x="388" y="126">authLoginCommand · ansiColor · …</text>
 
-        <text class="d-sm" x="372" y="184">orrery repo</text>
-        <rect class="d-box" x="372" y="196" width="372" height="72" rx="6" />
-        <text class="d-name" x="558" y="220" text-anchor="middle">Tool</text>
-        <text class="d-stereo" x="558" y="236" text-anchor="middle">«enum» · 留在宿主</text>
-        <text class="d-sm" x="558" y="256" text-anchor="middle">本 build 接受哪些工具的白名單 · 與 id 字串對映</text>
-        <line class="d-line" x1="558" y1="196" x2="558" y2="158" marker-end="url(#ar)" />
-        <text class="d-sm" x="570" y="180">對映</text>
+        <rect class="d-box" x="372" y="158" width="372" height="46" rx="6" />
+        <text class="d-name" x="558" y="180" text-anchor="middle">AIToolRegistry</text>
+        <text class="d-sm" x="558" y="196" text-anchor="middle">registry.all —— 註冊了什麼，就是什麼</text>
+        <line class="d-line" x1="558" y1="158" x2="558" y2="142" marker-end="url(#ar)" />
+
+        <text class="d-sm" x="372" y="228">各 AITool 自己建構一份、註冊上去</text>
+        <rect class="d-box" x="372" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="430" y="258" text-anchor="middle">Claude</text>
+        <rect class="d-box" x="500" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="558" y="258" text-anchor="middle">Codex</text>
+        <rect class="d-box" x="628" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="686" y="258" text-anchor="middle">Gemini</text>
+        <line class="d-line" x1="430" y1="238" x2="500" y2="210" marker-end="url(#ar)" />
+        <line class="d-line" x1="558" y1="238" x2="558" y2="210" marker-end="url(#ar)" />
+        <line class="d-line" x1="686" y1="238" x2="616" y2="210" marker-end="url(#ar)" />
       </svg>
       <figcaption>
-        九個行為成員搬進 framework；<strong>封閉的 enum 沒有跟著搬</strong>。AIToolKit 端的身分
-        從第一個 commit 就是開放字串，所以第三方永遠不需要改 framework 才能加工具。orrery 自己
-        仍留著 enum 當白名單 —— 這就是 1a 期間 CLI flag 與 on-disk 格式都不動的原因，也讓 1b
-        縮小成「orrery 拿掉自己的白名單」這件<em>只關 orrery 的事</em>，而不是把一個已經封閉的
-        framework 重新打開、殃及每個第三方。
+        enum 沒有搬家，是<strong>消失</strong>。留一份「宿主白名單」只是把封閉性從 framework 搬到
+        orrery —— 依然是編譯進去的三個名字。改成 struct + 註冊之後，
+        <code>Tool.allCases</code> 變成 <code>registry.all</code>，第三方註冊自己那一份就成立，
+        沒有任何一處需要被改。代價是完整性從編譯期保證變成執行期保證 —— 見上方的危險說明。
       </figcaption>
     </figure>
   </section>
@@ -402,11 +435,11 @@
 
     <div class="card">
       <h3>接受的代價</h3>
-      <p>第一天就拆，代表 1a 期間每次介面調整都是跨 repo 的版本鼓動，而不是本地一次編輯。這比較慢，
+      <p>第一天就拆，代表 Phase 1 期間每次介面調整都是跨 repo 的版本鼓動，而不是本地一次編輯。這比較慢，
       而且是<strong>刻意</strong>選的 —— 另一個選項（介面磨定前先留在 orrery 內）雖然迭代快，但依賴
       故事要到最後才正確，而且介面很容易不知不覺伸手進 orrery 的內部型別。</p>
       <h3>因此需要的紀律</h3>
-      <p>AIToolKit 在 Phase 1a 全程停在 <code>0.x</code>，明確允許 breaking change，從
+      <p>AIToolKit 在 Phase 1 全程停在 <code>0.x</code>，明確允許 breaking change，從
       <code>1.0</code> 起遵守 semver。<strong>AIToolKit 內不得引用任何 orrery 型別。</strong></p>
     </div>
   </section>
@@ -451,11 +484,11 @@
         <text class="d-sm" x="44" y="312">登入方式 · resume 語意 · 憑證存放</text>
 
         <rect class="d-box" x="512" y="232" width="224" height="30" rx="5" />
-        <text class="d-name" x="528" y="252">ClaudeToolPlugin</text>
+        <text class="d-name" x="528" y="252">ClaudeAITool</text>
         <rect class="d-box" x="512" y="270" width="224" height="30" rx="5" />
-        <text class="d-name" x="528" y="290">CodexToolPlugin</text>
+        <text class="d-name" x="528" y="290">CodexAITool</text>
         <rect class="d-box" x="512" y="308" width="224" height="30" rx="5" />
-        <text class="d-name" x="528" y="328">GeminiToolPlugin</text>
+        <text class="d-name" x="528" y="328">GeminiAITool</text>
 
         <line class="d-line" x1="512" y1="247" x2="428" y2="272" marker-end="url(#tri)" stroke-dasharray="5 4" />
         <line class="d-line" x1="512" y1="285" x2="428" y2="284" marker-end="url(#tri)" stroke-dasharray="5 4" />
@@ -503,7 +536,7 @@
         <rect class="d-box" x="16" y="16" width="168" height="34" rx="5" />
         <text class="d-name" x="100" y="38" text-anchor="middle">AccountKit</text>
         <rect class="d-accent" x="232" y="16" width="184" height="34" rx="5" />
-        <text class="d-name" x="324" y="38" text-anchor="middle">GeminiToolPlugin</text>
+        <text class="d-name" x="324" y="38" text-anchor="middle">GeminiAITool</text>
         <rect class="d-box" x="470" y="16" width="120" height="34" rx="5" />
         <text class="d-name" x="530" y="38" text-anchor="middle">shell</text>
         <rect class="d-box" x="632" y="16" width="112" height="34" rx="5" />
@@ -578,31 +611,31 @@
         </div>
       </div>
       <div class="phase">
-        <div class="n">1a</div>
+        <div class="n">1</div>
         <div class="body">
-          <h3>行為搬家，身分不動</h3>
-          <p>引入 <code>ToolPlugin</code> + <code>ToolRegistry</code>，把行為從 <code>Tool</code> enum
-          搬到三個 plugin。<code>Tool</code> enum 原封不動留在 orrery，降級為宿主白名單。</p>
+          <h3>enum 讓位給 registry</h3>
+          <p>是 strangler 不是重寫。<code>AITool</code> 與 registry 先出現，既有 enum
+          <strong>橋接</strong>過去（每個 case 產生一份描述），呼叫點就能一次搬幾個、兩種形狀並存。
+          等到沒有人再讀它，enum 才刪掉。</p>
+          <p>階段內的順序，因為這一步對單一 PR 來說太大：</p>
+          <ol style="font-size:.94rem">
+            <li><code>AITool</code> + registry 就位；enum 橋接；註冊在 <code>main.swift</code>
+            排到所有 migration 路徑之前</li>
+            <li><strong>先修上面那個一次性旗標的危險</strong>，再動任何呼叫點 ——
+            這一步不能延後</li>
+            <li>行為按能力搬家：憑證 → 啟動／結束 → shell → phantom</li>
+            <li><code>Tool.allCases</code> → <code>registry.all</code>，24 處</li>
+            <li>刪掉 enum</li>
+          </ol>
           <div class="delivers">
             <span class="tag yes">on-disk 格式不變</span>
-            <span class="tag yes">CLI 不變</span>
-            <span class="tag yes">動機 1 · 3（部分）</span>
-            <span class="tag no">動機 2 尚未達成</span>
+            <span class="tag yes">動機 1 · 2 · 3</span>
           </div>
-          <p>結束時第三方擴充<strong>仍需</strong>改 enum。這個中間狀態是刻意接受的 —
-          用它換取風險大幅下降。</p>
-        </div>
-      </div>
-      <div class="phase">
-        <div class="n">1b</div>
-        <div class="body">
-          <h3>宿主白名單退場</h3>
-          <p>拿掉 orrery 的 <code>Tool</code> enum，讓 framework 的字串 id 成為唯一身分。
-          <code>Tool.allCases</code> 和 ArgumentParser 的靜態 <code>--claude</code> flag
-          這些真正麻煩的東西，在這一步才需要解。</p>
-          <p>因為 <strong>AIToolKit 從來就沒有封閉過</strong>，這一步侷限在 orrery 內部 ——
-          不需要第三方重新編譯，也不是 framework 的 breaking change。</p>
-          <div class="delivers"><span class="tag yes">動機 2</span></div>
+          <p><code>--claude</code> / <code>--codex</code> / <code>--gemini</code>
+          保留成 orrery 自己的便利 flag，對映到已註冊的 id。它們是<strong>宿主 UI，不是 framework
+          介面</strong>；沒有專屬 flag 的工具仍可用泛用方式指定。</p>
+          <p>那 62 個 per-tool <code>switch</code> 不是額外工作 —— 其中絕大多數<em>就是</em>正在搬家的
+          行為本身，會在第 3 步一併消化，而不是另一場遷移。</p>
         </div>
       </div>
       <div class="phase">
@@ -676,14 +709,14 @@
     <h2>待決問題</h2>
     <div class="card">
       <ol>
-        <li>Phase 1a 是一個 PR 還是多個？（建議多個，一次一個能力：憑證 → 啟動／結束 → shell → phantom）</li>
+        <li>Phase 1 內部的五個步驟各自是一個 PR，還是能力遷移那步再細切？</li>
         <li>Codex 和 Gemini 在 1b 之前都留在 repo 內，到 Phase 2 才搬？（假設是）</li>
         <li>gemini 的上游封鎖，是否改變了 Gemini 值不值得繼續帶著？</li>
         <li>AccountKit 最終是否也該有自己的 repo？它是 orrery 自己的層而非 per-tool 的，所以大概不用 —
         但如果 AIToolKit 真的在 orrery 之外也能重用，問題就不一樣了。</li>
         <li>剩下那幾個 Claude 專屬的<em>命令</em>放哪 — <code>_prepare-claude-launch</code>、
         <code>_capture-claude-exit</code>、<code>orrery-claude-hook</code>？它們是進入點不是 library
-        code，可能需要自己一套 plugin 機制，而不是套進 <code>ToolPlugin</code> protocol。</li>
+        code，可能需要自己一套 plugin 機制，而不是套進 <code>AITool</code> struct。</li>
       </ol>
     </div>
   </section>

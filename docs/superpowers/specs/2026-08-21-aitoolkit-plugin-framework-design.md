@@ -73,10 +73,10 @@ see "Target layout".
 - **Behaviour** — `envVarName`, `defaultConfigDir`, `authLoginCommand`,
   `ansiColor`, `sessionSubdirectories`, and friends.
 
-These can be separated independently, and separating them in that order is
-what makes the work safe. Behaviour can move out while identity stays
-exactly as it is, which means no on-disk migration and no CLI change for the
-entire first phase.
+Naming the two is what makes the work tractable: identity is a string that
+must stay byte-identical on disk, behaviour is nine members that can move
+anywhere. What must *not* be inferred from that is that the enum should
+survive as the identity carrier — see below.
 
 ## Design
 
@@ -112,35 +112,60 @@ behaviour" suggests.
 
 ### The constraint that enum makes visible
 
-`CaseIterable` over three hardcoded cases is a closed world. That is fine
-inside a host application. It is fatal inside a framework third parties
-depend on: if `ToolID` were this enum living in AIToolKit, **adding a tool
-would mean editing the framework**, and AIToolKit would become the
-bottleneck rather than the extension point. Driver 2 would be defeated by
-the very package meant to deliver it.
+`CaseIterable` over three hardcoded cases is a closed world. Inside a
+framework third parties depend on, that is fatal: **adding a tool would mean
+editing the framework**, so AIToolKit would become the bottleneck rather
+than the extension point, and driver 2 would be defeated by the very
+package meant to deliver it.
 
-So the enum does not move. It is a fact about *this host*, not about tools
-in general.
+An intermediate draft kept the enum inside orrery as a host-side
+"allowlist". That does not survive scrutiny either: it only relocates the
+closed set from the framework to the host. It is still three names compiled
+in, and a third party still cannot add a fourth. The enum has to go
+entirely.
 
 ### Types
 
-- **`ToolPlugin`** — behaviour, in AIToolKit. Carries what are today the
-  enum's nine behavioural members, plus the optional capabilities below.
-- **Identity in AIToolKit is a string from the first commit** — `id: String`
-  on the plugin, or a thin `String`-backed struct. The framework never
-  ships a closed set.
-- **`Tool` enum stays in orrery**, demoted to a host-side allowlist: "these
-  are the tools this build accepts", mapping to and from the framework's
-  string id.
-- **`ToolRegistry`** — id → plugin, and enumeration, replacing
-  `Tool.allCases` at orrery's call sites.
+- **`AITool`** — a **struct** in AIToolKit holding what the enum's members
+  described: `id`, `envVarName`, `defaultConfigDir`, `authLoginCommand`,
+  `ansiColor`, `sessionSubdirectories`, and the optional capabilities below.
+  Each tool *constructs one* describing itself.
+- **`AIToolRegistry`** — the registered set. `orrery`'s
+  `Tool.allCases` becomes `registry.all`: the answer comes from **what has
+  been registered**, not from what was compiled in.
 
-This keeps Phase 1a's guarantees exactly as before — orrery still accepts
-only three tools, CLI flags unchanged, on-disk format unchanged — while
-leaving the framework itself open. It also shrinks Phase 1b: the remaining
-work becomes "orrery drops its own allowlist", which is orrery's business
-alone, rather than "reopen a closed framework", which would be a breaking
-change inflicted on every third party.
+Registration at startup already has precedent in this codebase —
+`OrreryAccountKitRuntime.register()` and `OrreryThirdPartyRuntime.register()`
+are called from `main.swift` today.
+
+On-disk compatibility survives this: `AITool` is `Codable` through its `id`
+alone, so `metadata.json` keeps reading and writing `"tool": "claude"`.
+
+### The hazard this introduces
+
+`CaseIterable` is **total at compile time**. A registry is **total only if
+registration ran**. That difference is not cosmetic, and one class of call
+site is genuinely dangerous:
+
+```
+Sources/OrreryCore/Setup/AccountMigration.swift   ×5
+Sources/OrreryCore/Setup/OriginTakeoverBootstrap.swift
+Sources/OrreryCore/Setup/OriginAccountSeeder.swift
+```
+
+Those are **flag-guarded one-shot migrations**. If a tool is not registered
+at the moment one runs, that tool is silently skipped *and the completion
+flag is still written* — so it is never migrated, on that machine, ever.
+The failure is invisible and permanent.
+
+Requirements that follow, and they are not optional:
+
+- Registration completes before any migration, takeover, or seeding runs —
+  ordered explicitly in `main.swift`, not left to chance.
+- One-shot flags become per-tool, or record which tools they covered, so a
+  tool registered later still gets its migration.
+- A test asserts that the registry is non-empty and complete at the point
+  the first flag-guarded routine executes.
 
 ### Repository layout
 
@@ -164,14 +189,14 @@ practice while looking true on paper.
 Both sides depend on the framework; neither depends on the other.
 
 **Accepted cost.** Extracting on day one means every interface adjustment
-during Phase 1a is a cross-repo version bump rather than a local edit. That
+during Phase 1 is a cross-repo version bump rather than a local edit. That
 is slower, and it was chosen deliberately over the alternative — keeping
 AIToolKit inside orrery until the interface settles — because the
 dependency story is then correct from the first commit and the API is
 forced to be explicit rather than accidentally reaching into orrery
 internals.
 
-**Discipline this requires.** AIToolKit stays on `0.x` through Phase 1a,
+**Discipline this requires.** AIToolKit stays on `0.x` through Phase 1,
 with breaking changes expected and semver honoured from `1.0`. Nothing in
 AIToolKit may reference orrery types.
 
@@ -247,31 +272,33 @@ orrery takes it as an SPM dependency. No behaviour has moved yet; this
 phase exists so that every subsequent interface decision is made in the
 place third parties will consume it, not retrofitted later.
 
-### Phase 1a — behaviour moves, identity does not
+### Phase 1 — the enum gives way to the registry
 
-Introduce `ToolPlugin` + `ToolRegistry`. Move behaviour off the `Tool` enum
-into three plugins. Keep the enum as `ToolID`.
+A strangler, not a rewrite. `AITool` and the registry appear first, with the
+existing enum *bridging* into them — each case produces its descriptor — so
+call sites can migrate a few at a time while both shapes coexist. The enum
+is deleted once nothing reads it.
 
-- On-disk format: **unchanged**
-- CLI surface: **unchanged**
-- `Tool.allCases`: still valid, migrated opportunistically
-- Delivers: driver 1 and driver 3, partially; the interface exists and is
-  under real load
+Order within the phase, because it is too large for one change:
 
-Explicitly **not** delivered: third-party extension still requires editing
-the enum. This intermediate state is accepted deliberately in exchange for a
-large drop in risk.
+1. `AITool` + registry exist; enum bridges to them; registration wired into
+   `main.swift` ahead of every migration path.
+2. The one-shot flag hazard above is fixed *before* any call site moves —
+   this is the step that must not be deferred.
+3. Behaviour migrates per capability: credentials → launch/exit → shell →
+   phantom.
+4. `Tool.allCases` → `registry.all` across the 24 sites.
+5. Enum deleted.
 
-### Phase 1b — the host's allowlist goes
+- On-disk format: **unchanged** (`AITool` encodes as its id)
+- CLI: `--claude` / `--codex` / `--gemini` stay as orrery's own convenience
+  flags, mapped to registered ids. They are host UI, not framework surface;
+  a tool with no dedicated flag is still reachable generically.
+- Delivers all three drivers
 
-Drop orrery's `Tool` enum, leaving the framework's string id as the only
-identity. This is where `Tool.allCases` and the static `--claude` /
-`--codex` ArgumentParser flags actually have to be solved.
-
-Because AIToolKit was never closed, this is confined to orrery — no
-third-party rebuild, no framework breaking change.
-
-- Delivers driver 2
+The 62 per-tool `switch` sites are not extra work here — nearly all of them
+*are* the behaviour being moved, so they resolve as part of step 3 rather
+than as a separate migration.
 
 ### Phase 2 — plugins split
 
@@ -279,7 +306,7 @@ Move the Codex and Gemini plugins to their own repos
 (`orrery-codex-support`, `orrery-gemini-support`), each depending only on
 AIToolKit.
 
-The loading mechanism is **deliberately left open** until 1a/1b have shown
+The loading mechanism is **deliberately left open** until Phase 1 has shown
 what the interface really needs. Note that it interacts with Phase 0's
 choice: if plugins load as compile-time SPM dependencies, then AIToolKit as
 a Swift package is exactly the right artifact, but orrery must still
@@ -292,7 +319,7 @@ what it does not by itself deliver is runtime pluggability.
 
 ## Compatibility constraints
 
-Non-negotiable for phases 1a and 1b:
+Non-negotiable throughout Phase 1:
 
 - `metadata.json` keeps `"tool": "claude"`.
 - Account paths keep `accounts/<tool>/<id>/`.
@@ -314,7 +341,7 @@ span many PRs.
 **Phantom's core/plugin boundary is a guess until tested.** The claim that
 the registry and shim are tool-agnostic while only resume semantics vary is
 plausible but unproven; no non-Claude tool has ever been supervised. Phase
-1a should not try to settle it.
+Phase 1 should not try to settle it.
 
 **Gemini may be unsupportable regardless.** Google has blocked gemini-cli
 for individual Code Assist accounts. Whether existing gemini accounts keep
@@ -332,9 +359,9 @@ Phase 2 is even for — worth confirming before starting it.
 
 ## Open questions
 
-1. Does Phase 1a ship as one PR or several? (Recommendation: several, one
-   capability at a time — credentials, launch/exit, shell, phantom.)
-2. Do Codex and Gemini stay in-repo through 1b, moving only at Phase 2?
+1. Do Phase 1's five steps each ship as one PR, or does the capability
+   migration step get subdivided further?
+2. Do Codex and Gemini stay in-repo through Phase 1, moving only at Phase 2?
    (Assumed yes.)
 3. Does the gemini upstream block change whether Gemini is worth carrying at
    all?
@@ -344,4 +371,4 @@ Phase 2 is even for — worth confirming before starting it.
 5. Where do the several remaining Claude-specific *commands* live —
    `_prepare-claude-launch`, `_capture-claude-exit`, `orrery-claude-hook`?
    They are entry points, not library code, so they may need a plugin
-   mechanism of their own rather than fitting the `ToolPlugin` protocol.
+   mechanism of their own rather than fitting the `AITool` struct.
