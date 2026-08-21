@@ -89,10 +89,42 @@ entire first phase.
 - **`ToolRegistry`** — `ToolID -> ToolPlugin`, and enumeration, replacing
   `Tool.allCases`.
 
-### Target layout
+### Repository layout
 
-`AIToolKit` is a new SPM target that sits **below** `OrreryAccountKit`,
-which stays where it is:
+**AIToolKit is its own repository from day one**, published as a Swift
+package. It is not an orrery target.
+
+This is forced by driver 2 rather than chosen for tidiness. A plugin author
+writing `orrery-codex-support` must be able to depend on the protocol
+*alone*. If AIToolKit lived inside orrery, every plugin would have to pull
+in the entire application — its commands, its account store, its shell
+generator — to reach an interface. That is not a dependency anyone can
+reasonably take, and it would make "third parties can add tools" false in
+practice while looking true on paper.
+
+```
+                    AIToolKit  (own repo, versioned package)
+                    ↑        ↑
+                orrery     orrery-codex-support
+```
+
+Both sides depend on the framework; neither depends on the other.
+
+**Accepted cost.** Extracting on day one means every interface adjustment
+during Phase 1a is a cross-repo version bump rather than a local edit. That
+is slower, and it was chosen deliberately over the alternative — keeping
+AIToolKit inside orrery until the interface settles — because the
+dependency story is then correct from the first commit and the API is
+forced to be explicit rather than accidentally reaching into orrery
+internals.
+
+**Discipline this requires.** AIToolKit stays on `0.x` through Phase 1a,
+with breaking changes expected and semver honoured from `1.0`. Nothing in
+AIToolKit may reference orrery types.
+
+### Layering inside orrery
+
+`AIToolKit` sits **below** `OrreryAccountKit`, which stays where it is:
 
 ```
 AIToolKit         what a tool IS — launch, config location, login, resume
@@ -155,6 +187,13 @@ Claude will implement the most, which is what keeps the interface honest.
 
 ## Phasing
 
+### Phase 0 — the framework repo exists
+
+Create the AIToolKit repository with the protocol skeleton and nothing else.
+orrery takes it as an SPM dependency. No behaviour has moved yet; this
+phase exists so that every subsequent interface decision is made in the
+place third parties will consume it, not retrofitted later.
+
 ### Phase 1a — behaviour moves, identity does not
 
 Introduce `ToolPlugin` + `ToolRegistry`. Move behaviour off the `Tool` enum
@@ -178,13 +217,22 @@ ArgumentParser flags actually have to be solved.
 
 - Delivers driver 2
 
-### Phase 2 — repositories split
+### Phase 2 — plugins split
 
-Move Codex and Gemini plugins to their own repos (`orrery-codex-support`,
-`orrery-gemini-support`). The loading mechanism — compile-time SPM
-dependency versus a discovered executable speaking a defined protocol — is
-**deliberately left open** until 1a/1b have shown what the interface really
-needs. Choosing it now would be guessing.
+Move the Codex and Gemini plugins to their own repos
+(`orrery-codex-support`, `orrery-gemini-support`), each depending only on
+AIToolKit.
+
+The loading mechanism is **deliberately left open** until 1a/1b have shown
+what the interface really needs. Note that it interacts with Phase 0's
+choice: if plugins load as compile-time SPM dependencies, then AIToolKit as
+a Swift package is exactly the right artifact, but orrery must still
+enumerate every plugin in its own `Package.swift` — so a third party can
+*build* against the framework without orrery's cooperation, but not *ship*
+without it. Truly independent shipping needs a discovered executable
+speaking a wire protocol, at which point the Swift package matters less
+than the protocol document. Extracting AIToolKit early is right either way;
+what it does not by itself deliver is runtime pluggability.
 
 ## Compatibility constraints
 
