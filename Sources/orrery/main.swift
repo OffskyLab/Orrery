@@ -6,10 +6,14 @@ import OrreryAccountKit
 
 @MainActor
 private func runOrreryMain() async throws {
-    // Register the built-in tools before anything iterates them. Ordering is
-    // load-bearing, not stylistic: AccountMigration's one-shot migrations
-    // record which tools they covered, so a tool registered after one of them
-    // runs is skipped and never migrated on that machine again.
+    // Populate the tool registry before anything below could iterate it.
+    // Nothing reads the registry yet — the one-shot migrations still take their
+    // tool set from `Tool.allCases`, so moving this line below them would change
+    // no behaviour today. The ordering is established now so it is already right
+    // when those migrations switch to sourcing tools from the registry: at that
+    // point a registry populated after a migration has run means the migration
+    // covered fewer tools than exist and wrote its flag regardless, and the tool
+    // it missed never migrates on that machine again.
     AIToolRegistration.registerBuiltInTools()
     LegacyOrbitalMigration.runIfNeeded()
     // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
