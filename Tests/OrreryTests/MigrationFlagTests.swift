@@ -90,4 +90,18 @@ struct MigrationFlagTests {
 
         #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
     }
+
+    @Test("a tool id shaped like a version marker survives a round trip")
+    func versionShapedIDSurvives() throws {
+        let url = tmpFlag()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let flag = MigrationFlag(url: url)
+
+        try flag.markCovered(["claude", "v2"])
+
+        // "v2" is a tool id here, not a format marker. Dropping it would silently
+        // re-skip that tool on every read.
+        #expect(flag.coverage() == .ids(["claude", "v2"]))
+        #expect(flag.pending(among: ["claude", "v2"]).isEmpty)
+    }
 }
