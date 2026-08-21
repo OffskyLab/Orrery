@@ -3,10 +3,14 @@ import Testing
 import AIToolKit
 @testable import OrreryCore
 
-/// The registry is total only once registration has run. Four one-shot
-/// migrations in AccountMigration mark themselves complete for whichever tools
-/// they saw, so registering late means a tool is skipped and locked out
-/// permanently. These tests pin the invariant that makes that impossible.
+/// A `CaseIterable` enum is total at compile time; a registry is total only
+/// once registration has run. Nothing depends on that difference yet — the four
+/// one-shot migrations in `AccountMigration` still read `Tool.allCases`. Once
+/// they take their tool set from the registry instead, a registry that is
+/// missing a tool when a migration runs means the migration skips it and marks
+/// itself complete regardless, and that tool never migrates on the machine
+/// again. These tests assert the completeness that will make that impossible,
+/// so the guarantee is already in place when the call sites move.
 ///
 /// Every test builds its own `AIToolRegistry` rather than touching
 /// `.shared`, so nothing here depends on whether startup has run or on the
