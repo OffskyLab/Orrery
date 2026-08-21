@@ -6,6 +6,11 @@ import OrreryAccountKit
 
 @MainActor
 private func runOrreryMain() async throws {
+    // Register the built-in tools before anything iterates them. Ordering is
+    // load-bearing, not stylistic: AccountMigration's one-shot migrations
+    // record which tools they covered, so a tool registered after one of them
+    // runs is skipped and never migrated on that machine again.
+    AIToolRegistration.registerBuiltInTools()
     LegacyOrbitalMigration.runIfNeeded()
     // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
     // unified workspaces/ layout BEFORE takeover, so takeover sees the new paths.
