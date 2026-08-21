@@ -1,0 +1,735 @@
+<title>Process Boundary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --ground:      #f7f8f9;
+    --panel:       #ffffff;
+    --seam:        #dde1e6;
+    --ink:         #1c2226;
+    --ink-soft:    #4e5a63;
+    --ink-faint:   #78868f;
+    --accent:      #0f6f76;
+    --accent-soft: #e2f0f0;
+    --warn:        #8a5a12;
+    --warn-soft:   #f8eeda;
+    --stop:        #8f3232;
+
+    --sans:  "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --serif: "IBM Plex Serif", ui-serif, Georgia, serif;
+    --mono:  "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #14181b;
+      --panel:       #1b2024;
+      --seam:        #2e363c;
+      --ink:         #e3e8ea;
+      --ink-soft:    #a8b4bb;
+      --ink-faint:   #77848c;
+      --accent:      #4fbcc0;
+      --accent-soft: #16302f;
+      --warn:        #d3a75a;
+      --warn-soft:   #2e2718;
+      --stop:        #d98080;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #14181b;
+    --panel:       #1b2024;
+    --seam:        #2e363c;
+    --ink:         #e3e8ea;
+    --ink-soft:    #a8b4bb;
+    --ink-faint:   #77848c;
+    --accent:      #4fbcc0;
+    --accent-soft: #16302f;
+    --warn:        #d3a75a;
+    --warn-soft:   #2e2718;
+    --stop:        #d98080;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 78ch;
+    margin: 0 auto;
+    padding: clamp(2rem, 6vw, 5rem) clamp(1.1rem, 4vw, 2.5rem) 7rem;
+  }
+
+  /* ── the seam: this document is about where a line is drawn ───────── */
+  .seamed {
+    border-left: 2px solid var(--seam);
+    padding-left: clamp(1rem, 3vw, 2rem);
+    margin-left: 2px;
+  }
+
+  header.head { margin-bottom: 3.5rem; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: clamp(2rem, 5.5vw, 3.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 1.2rem;
+  }
+
+  .standfirst {
+    font-size: 1.16rem;
+    color: var(--ink-soft);
+    max-width: var(--measure);
+    margin: 0 0 2rem;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.6rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--seam);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+  .meta a { color: var(--accent); }
+
+  h2 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.62rem;
+    letter-spacing: -0.012em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 3.8rem 0 1.1rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--seam);
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.09rem;
+    letter-spacing: -0.005em;
+    margin: 2.4rem 0 0.7rem;
+    color: var(--ink);
+  }
+
+  p, li { max-width: var(--measure); }
+  p { margin: 0 0 1.05rem; }
+  ul, ol { margin: 0 0 1.05rem; padding-left: 1.3rem; }
+  li { margin-bottom: 0.45rem; }
+
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--accent-soft);
+    color: var(--ink);
+    padding: 0.1em 0.36em;
+    border-radius: 3px;
+  }
+
+  pre.block {
+    font-family: var(--mono);
+    font-size: 0.83rem;
+    line-height: 1.6;
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 5px;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    margin: 0 0 1.4rem;
+  }
+  pre.block code { background: none; padding: 0; font-size: 1em; }
+
+  /* ── numbered steps: the order is real, not decoration ────────────── */
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 6px;
+    padding: 1.3rem 1.5rem;
+    margin: 0 0 1.1rem;
+  }
+  .step-n {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .step h3 { margin-top: 0; }
+  .step p:last-child { margin-bottom: 0; }
+
+  .exit {
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    border-left: 2px solid var(--accent);
+    padding-left: 0.85rem;
+    margin: 1rem 0 0;
+  }
+  .exit b { color: var(--ink); font-weight: 600; }
+
+  .callout {
+    border-left: 3px solid var(--warn);
+    background: var(--warn-soft);
+    padding: 1rem 1.2rem;
+    border-radius: 0 5px 5px 0;
+    margin: 0 0 1.4rem;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warn);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .rule {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.12rem;
+    color: var(--ink);
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    padding: 0.9rem 0;
+    margin: 0 0 1.4rem;
+    max-width: var(--measure);
+  }
+
+  .tablewrap { overflow-x: auto; margin: 0 0 1.5rem; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.9rem 0.6rem 0;
+    border-bottom: 1px solid var(--seam);
+    vertical-align: top;
+  }
+  th {
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  td code { font-size: 0.82em; }
+
+  figure { margin: 0 0 1.8rem; }
+  pre.mermaid {
+    background: var(--panel);
+    border: 1px solid var(--seam);
+    border-radius: 6px;
+    padding: 1.4rem 1rem;
+    overflow-x: auto;
+    text-align: center;
+    margin: 0;
+  }
+  figcaption {
+    font-family: var(--sans);
+    font-size: 0.86rem;
+    color: var(--ink-faint);
+    margin-top: 0.7rem;
+    max-width: var(--measure);
+  }
+
+  .scope-out li { color: var(--ink-soft); }
+  .scope-out li b { color: var(--ink); font-weight: 600; }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <p class="kicker">Orrery · design spec</p>
+  <h1>The plugin boundary becomes a process boundary</h1>
+  <p class="standfirst">
+    Move one tool out of orrery's binary and behind a pipe, so that adding a
+    tool stops meaning forking the host.
+  </p>
+  <div class="meta">
+    <span><b>Date</b> 2026-08-21</span>
+    <span><b>Status</b> design, awaiting review</span>
+    <span><b>Predecessor</b> <a href="2026-08-21-aitoolkit-plugin-framework-design.html">AIToolKit plugin framework</a></span>
+    <span><b>Ships as</b> Orrery-AIToolKit 0.0.1-dev.3</span>
+  </div>
+</header>
+
+<div class="seamed">
+
+<h2>Goal</h2>
+
+<p>
+  Move one tool — claude — from being compiled into orrery to being described
+  by a separate process that orrery talks to over JSON-RPC, so that a third
+  party can add a tool without forking orrery.
+</p>
+
+<p>
+  This spec covers the <strong>first three steps</strong>: the protocol, the
+  measurement that decides whether the transport is viable, the forwarding
+  proxy, and claude's <em>facts</em> travelling over the wire. Migrating
+  claude's <em>behaviour</em> is deliberately left to a later spec, written
+  once real numbers and a working pipe exist.
+</p>
+
+<h2>Why this shape</h2>
+
+<h3>The problem with what shipped</h3>
+
+<p>
+  Orrery-AIToolKit 0.0.1-dev.3 defines an open <code>AITool</code> protocol and
+  a registry, and orrery registers its three built-in tools into it. But
+  nothing reads the registry: 33 call sites still iterate
+  <code>Tool.allCases</code>, and <code>Account.tool</code> is still the closed
+  enum. A third-party tool registered today gets nothing — no account
+  directory, no command handling, no migration coverage. Its only observable
+  effect is appearing in <code>AIToolRegistry.shared.all</code>, which no
+  production code calls.
+</p>
+
+<p>
+  More fundamentally, the boundary is a <em>link-time</em> boundary. A third
+  party would have to fork orrery and add a target. That is not a plugin
+  system.
+</p>
+
+<h3>The decomposition</h3>
+
+<p>
+  Full parity for a third-party tool is too large for one spec. Two axes were
+  considered: by layer — facts for all tools, then identity, then behaviour —
+  and by tool, taking one tool all the way.
+</p>
+
+<p>
+  <strong>By tool wins, because it is the only one that tests the
+  interface.</strong> Doing the facts layer across three tools proves that
+  eight static fields can hold three tools' static data, which was never in
+  doubt. Taking claude — the most complex tool, with credential parsing,
+  session discovery, sandbox diagnostics and takeover seeding — all the way is
+  what surfaces what the protocol actually needs.
+</p>
+
+<p>
+  codex and gemini stay on the existing <code>BuiltInAITool</code> bridge,
+  sourcing their facts from the enum. The registry does not care where a
+  description came from.
+</p>
+
+<h2>Architecture</h2>
+
+<h3>The boundary is a process</h3>
+
+<p>
+  <code>orrery-claude</code> is a separate executable, discovered the way
+  <code>orrery-sync</code> already is: <code>ORRERY_CLAUDE_PATH</code>, then
+  <code>~/.orrery/tools/</code>, then <code>PATH</code>. It ships with orrery
+  but is loaded through exactly the mechanism a third party would use.
+</p>
+
+<h3>The proxy is itself an AITool</h3>
+
+<figure>
+<pre class="mermaid">
+classDiagram
+    direction TB
+
+    class AITool {
+        &lt;&lt;protocol&gt;&gt;
+        +id : String
+    }
+    class BuiltInAITool {
+        &lt;&lt;struct&gt;&gt;
+        bridged from the Tool enum
+    }
+    class RemoteAITool {
+        &lt;&lt;struct&gt;&gt;
+        -connection : JSONRPCConnection
+        -cached : Description
+    }
+    class JSONRPCConnection {
+        &lt;&lt;class&gt;&gt;
+        -transport : Transport
+        +call(method, params) Result
+    }
+    class Transport {
+        &lt;&lt;protocol&gt;&gt;
+        +send(Data)
+        +receive() Data
+    }
+    class StdioTransport {
+        &lt;&lt;struct&gt;&gt;
+        spawned child
+    }
+    class InMemoryTransport {
+        &lt;&lt;struct&gt;&gt;
+        tests only
+    }
+
+    BuiltInAITool ..|&gt; AITool
+    RemoteAITool ..|&gt; AITool
+    RemoteAITool o-- JSONRPCConnection
+    JSONRPCConnection o-- Transport
+    StdioTransport ..|&gt; Transport
+    InMemoryTransport ..|&gt; Transport
+</pre>
+<figcaption>
+  The realization arrows are the argument: a remote tool <em>is</em> an
+  <code>AITool</code>, so the registry stays <code>[String: any AITool]</code>
+  and a call site cannot tell local from remote.
+</figcaption>
+</figure>
+
+<p>Two consequences are load-bearing:</p>
+
+<ul>
+  <li><strong>Built-in and third-party take the same path.</strong> Shipping
+    claude this way is what proves the third-party path works.</li>
+  <li><strong>Transport is a per-tool, reversible decision.</strong> If a round
+    trip proves too expensive for some tool, that tool can be linked
+    in-process instead without touching a single call site.</li>
+</ul>
+
+<h3>The wire is JSON-RPC 2.0</h3>
+
+<p>
+  Line-delimited JSON-RPC over stdio, the same shape orrery's own MCP server
+  already speaks — <code>initialize</code> for version and capability
+  negotiation, standard error codes. This is not code reuse; MCP is a different
+  protocol. It is reuse of a shape already proven in this codebase.
+</p>
+
+<p>
+  The alternative considered was argv subcommands. It was rejected because it
+  bakes the process model into the protocol: no request ids means no
+  concurrent requests, so moving to a persistent transport later would require
+  redesigning the protocol rather than swapping the plumbing underneath it.
+</p>
+
+<pre class="block"><code>initialize     → { protocolVersion, capabilities: { … } }
+tool/describe  → { id, displayName, configDirectoryName, configDirEnvVar,
+                   authLoginCommand, installCommand, sessionSubdirectories,
+                   ansiColor }</code></pre>
+
+<p>
+  Later specs add the behaviour methods. <code>initialize</code>'s
+  <code>capabilities</code> is what lets a plugin implement a subset without
+  the host paying a round trip to discover absence;
+  <code>-32601 Method not found</code> is the fallback for one that slips
+  through.
+</p>
+
+<h3>Serialization lives in a DTO, not the protocol</h3>
+
+<p>
+  <code>AITool</code> refines <code>Sendable</code> alone. The wire type is a
+  separate concrete <code>Codable</code> struct. This is why removing
+  <code>Codable</code> from the protocol was right: a protocol cannot be
+  <code>Decodable</code>, and a forwarding proxy could not conform to one that
+  tried.
+</p>
+
+<h2>Failure handling</h2>
+
+<div class="callout">
+  <span class="tag">Trust boundary</span>
+  <p>
+    A plugin runs as the user, with the user's privileges. Nothing here limits
+    a <em>malicious</em> plugin — installing one is the trust decision. These
+    rules limit accidents, and stop one broken plugin from costing the host its
+    working ones.
+  </p>
+</div>
+
+<h3>stdout belongs to the protocol</h3>
+
+<p>
+  Diagnostics go to stderr. A host reading a line it cannot parse
+  <strong>skips it</strong> rather than failing — the same tolerance orrery's
+  MCP server already applies.
+</p>
+
+<h3>Lifecycle</h3>
+
+<figure>
+<pre class="mermaid">
+stateDiagram-v2
+    [*] --> Discovered
+    Discovered --> Initializing : spawn
+    Discovered --> Absent : no binary
+    Initializing --> Ready : initialize ok
+    Initializing --> Rejected : protocol major unknown
+    Initializing --> Absent : timeout or spawn failed
+    Ready --> Ready : call returns
+    Ready --> Unreachable : timeout or crash
+    Unreachable --> Initializing : next use respawns
+    Absent --> [*]
+    Rejected --> [*]
+
+    note left of Absent : never registered, so never recorded as covered by one-shot host work
+    note right of Unreachable : reads degrade, writes abort
+</pre>
+<figcaption>
+  <code>Absent</code> and <code>Rejected</code> are terminal for the run and
+  leave every other tool untouched. An unknown protocol major version is
+  refused with an explanation, never guessed at or run degraded.
+</figcaption>
+</figure>
+
+<h3>Reads degrade, writes abort</h3>
+
+<p class="rule">
+  A missing answer may be rendered as missing. An action that may not have
+  happened is never reported as done.
+</p>
+
+<p>
+  Listing accounts is worth doing with one field blank. Recording a credential
+  as copied when it may not have been is the failure that looks like success.
+  For this spec only <code>tool/describe</code> exists, and it is a read: a
+  plugin that fails to describe itself simply does not register.
+</p>
+
+<h3>Interaction with one-shot migrations</h3>
+
+<p>
+  Orrery's one-shot migrations record <em>which tools</em> they covered
+  (<code>MigrationFlag</code>, shipped in PR #53). A tool whose plugin failed
+  to load must not be recorded as covered, or it would be skipped forever once
+  the plugin is fixed.
+</p>
+
+<p>
+  This already holds: <code>pending</code> is computed from the registry, so an
+  absent tool is never in the set and never recorded, and
+  <code>markCovered</code> unions rather than replaces, so a later run picks it
+  up. <strong>This must be covered by a test, not left as an emergent
+  property.</strong>
+</p>
+
+<h3>An installation-time distinction</h3>
+
+<p>
+  <code>orrery-claude</code> ships with orrery, so its absence means a broken
+  install and is a <strong>hard error</strong> for claude. A third-party
+  plugin's absence is a <strong>soft error</strong>: that tool disappears,
+  everything else continues. This is a packaging distinction, not an interface
+  one — both take the identical protocol path.
+</p>
+
+<h2>Steps</h2>
+
+<p>
+  Each step ends with claude fully working and something independently
+  verifiable.
+</p>
+
+<div class="step">
+  <span class="step-n">Step 1</span>
+  <h3>Protocol scaffolding, and measurement</h3>
+  <p>
+    Build the JSON-RPC layer in AIToolKit: <code>Transport</code>,
+    <code>StdioTransport</code>, <code>InMemoryTransport</code>,
+    <code>JSONRPCConnection</code>, and a <code>serve()</code> entry point a
+    plugin author calls. Add a minimal plugin answering only
+    <code>initialize</code> and <code>tool/describe</code>.
+  </p>
+  <p>Then measure, and measure honestly:</p>
+  <ul>
+    <li>one spawn + <code>initialize</code> + <code>tool/describe</code> round trip</li>
+    <li><strong>instrument orrery to find its actual high-frequency call
+      sites</strong>, rather than reasoning about which sound frequent</li>
+  </ul>
+  <div class="callout">
+    <span class="tag">Why this is an exit criterion</span>
+    <p>
+      Reasoning already produced a wrong answer during this design. The Claude
+      Code status line was assumed to be the hot RPC client; it turns out never
+      to invoke orrery at all — it reads the config tree and queries the
+      keychain directly.
+    </p>
+  </div>
+  <p class="exit">
+    <b>Exit:</b> a number, and a named list of real hot call sites. If the
+    numbers are bad, we learn it before writing any of claude's logic.
+  </p>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 2</span>
+  <h3>RemoteAITool and discovery</h3>
+  <p>
+    The proxy, binary discovery, the <code>initialize</code> handshake, version
+    refusal, and registration of a remote tool. Not observable in production
+    yet — nothing reads the registry — so its verification is entirely in
+    tests.
+  </p>
+  <p class="exit">
+    <b>Exit:</b> a plugin binary present on disk appears in
+    <code>AIToolRegistry.all</code>; an absent, hanging, crashing, or
+    wrong-version one does not, and does not disturb the other tools.
+  </p>
+</div>
+
+<div class="step">
+  <span class="step-n">Step 3</span>
+  <h3>claude's facts come over the wire</h3>
+  <p>
+    <code>orrery-claude</code> answers <code>tool/describe</code> with claude's
+    real eight fields. The call sites that need facts read them from the
+    registry. codex and gemini stay bridged from the enum.
+  </p>
+  <p class="exit">
+    <b>Exit:</b> the full suite passes with claude's facts sourced from a
+    separate process, and <code>Tool</code>'s claude-specific fact properties
+    are gone.
+  </p>
+</div>
+
+<h2>Testing</h2>
+
+<h3>Most tests must not spawn</h3>
+
+<p>
+  Process-spawning tests are slow and flaky in CI.
+  <code>InMemoryTransport</code> carries the bulk of the suite; a small number
+  use a real child process to prove the real pipe works. The transport
+  abstraction introduced for stdio-versus-socket pays for itself twice.
+</p>
+
+<h3>Timeouts must be injectable</h3>
+
+<p>
+  The client takes a timeout parameter; tests use milliseconds. This is a
+  constraint on the interface, decided now — a hardcoded ten-second timeout
+  produces a suite nobody will run.
+</p>
+
+<h3>The fake plugin is also a conformance suite</h3>
+
+<div class="tablewrap">
+<table>
+  <thead>
+    <tr><th>Behaviour</th><th>What it proves</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>ok</code></td><td>the happy path</td></tr>
+    <tr><td><code>hang</code></td><td>call timeouts fire</td></tr>
+    <tr><td><code>crash-after-initialize</code></td><td>mid-session death is handled</td></tr>
+    <tr><td><code>garbage</code></td><td>non-JSON on stdout does not kill the host</td></tr>
+    <tr><td><code>noisy</code></td><td>a stray <code>print()</code> is skipped, not fatal</td></tr>
+    <tr><td><code>partial</code></td><td>a truncated reply is handled</td></tr>
+    <tr><td><code>wrong-version</code></td><td>an unknown major is refused with an explanation</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  This doubles as a conformance suite a plugin author can run against their own
+  binary — a real deliverable for a plugin framework, not a by-product.
+</p>
+
+<h3>The important assertions are negative</h3>
+
+<pre class="block"><code>given  a plugin that fails to load
+then   the other tools still register
+and    the failed tool is NOT recorded as covered by one-shot work
+and    a later run with the plugin fixed DOES cover it</code></pre>
+
+<p>
+  Asserting only that an error was thrown misses the case where an error was
+  thrown <em>after</em> state was half-changed.
+</p>
+
+<h2>Out of scope</h2>
+
+<ul class="scope-out">
+  <li><b>Behaviour migration.</b> <code>accountInfo</code>, session discovery,
+    credential copying, login-state moves. Next spec, once measurement and a
+    working pipe exist.</li>
+  <li><b>The directory-decomposition capability</b> — a tool declaring which of
+    its paths and keys are identity-bound versus shared. Recorded in
+    AIToolKit's README as direction; it is the largest and most valuable
+    capability, and it belongs after the failure machinery is proven because it
+    moves users' real data.</li>
+  <li><b>Account.tool opening up.</b> Still the closed enum; a third-party tool
+    cannot have an account. Sub-project B.</li>
+  <li><b>Workspace.isolatedSessionTools</b> — a second place the enum leaks
+    into a persisted format, found during design. Belongs with sub-project
+    B.</li>
+  <li><b>A persistent or socket transport.</b> The protocol permits it; nothing
+    builds it until measurement demands it.</li>
+</ul>
+
+<h2>Open questions, deliberately deferred</h2>
+
+<h3>An env var a tool ignores but that must be cleared</h3>
+
+<p>
+  gemini declares <code>configDirEnvVar == nil</code> because gemini-cli reads
+  only <code>$HOME/.gemini</code>, but PR #52 still needs the literal name
+  <code>GEMINI_CONFIG_DIR</code> as a key to <em>remove</em> from a child
+  environment. <code>AITool</code> currently cannot express both facts.
+</p>
+
+<p>
+  Deferred because designing a field for gemini before anyone implements gemini
+  is guesswork. It becomes real when gemini gets a plugin.
+</p>
+
+<h3>Whether register should refuse a duplicate id</h3>
+
+<p>
+  Today it replaces, so a third party could register <code>"claude"</code> and
+  displace the built-in. Refusing is probably right, with built-ins registering
+  first. It is a behaviour change to a published package and is cheapest to
+  make early — but it is not required by this spec's steps.
+</p>
+
+</div>
+</div>
