@@ -319,13 +319,24 @@
     <div class="risk">
       <h3>這個轉變帶進來的危險</h3>
       <p><code>CaseIterable</code> 在<strong>編譯期</strong>是完整的；registry 只有在
-      <strong>註冊執行過</strong>之後才完整。這個差別不是修辭，而且有一類呼叫點真的會咬人：</p>
-      <pre style="background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:.7rem .9rem;overflow-x:auto;font-size:.8rem;line-height:1.55;margin:0"><code>Sources/OrreryCore/Setup/AccountMigration.swift        ×5
-Sources/OrreryCore/Setup/OriginTakeoverBootstrap.swift
-Sources/OrreryCore/Setup/OriginAccountSeeder.swift</code></pre>
-      <p>那些是<strong>旗標保護的一次性遷移</strong>。如果某個工具在其中一個執行的當下沒有註冊，
-      它會被靜默跳過 ——<strong>而完成旗標照樣寫下去</strong>。那台機器上，那個工具就永遠不會被遷移了。
-      失敗是隱形且永久的。</p>
+      <strong>註冊執行過</strong>之後才完整。這個差別不是修辭 —— 但危險的地方比乍看少，
+      而這個區分正是讓修法變小的關鍵。</p>
+      <p><strong>安全的：所有 per-tool guard。</strong> <code>OriginTakeoverBootstrap</code>
+      （<code>!store.isOriginManaged(tool:)</code>）和 <code>OriginAccountSeeder</code>
+      （<code>origin.account(for: tool) == nil</code>）雖然都在跑 <code>Tool.allCases</code>，
+      但它們<strong>沒有全域旗標</strong>、每次執行都會重跑。後來才註冊的工具下一個指令就會被撿到，會自癒。</p>
+      <p><strong>危險的：<code>AccountMigration</code> 裡那四個旗標保護的一次性遷移。</strong></p>
+      <div class="scroll"><table>
+        <thead><tr><th>旗標檔</th><th>函式</th></tr></thead>
+        <tbody>
+          <tr><td><code>.migration-v3</code></td><td><code>runIfNeeded</code></td></tr>
+          <tr><td><code>.backfill-account-info-v1</code></td><td><code>runInfoBackfillIfNeeded</code></td></tr>
+          <tr><td><code>.account-config-consolidated</code></td><td><code>runAccountConfigConsolidationIfNeeded</code></td></tr>
+          <tr><td><code>.workspace-structure-relocated</code></td><td><code>runWorkspaceStructureRelocationIfNeeded</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>每一個都只寫一個全域的「做完了」標記。如果某個工具在其中一個執行的當下沒有註冊，它會被跳過 ——
+      <strong>而旗標照樣寫下去</strong>。那台機器上，那個工具就永遠不會被遷移了。失敗是隱形且永久的。</p>
       <p>因此以下不是選配：註冊必須在任何 migration / takeover / seeding <em>之前</em>完成，
       並在 <code>main.swift</code> 明確排序；一次性旗標改成 per-tool、或記錄它涵蓋了哪些工具，
       讓後來才註冊的工具仍能補到；加一個測試斷言第一個旗標保護的流程執行時 registry 已完整。</p>

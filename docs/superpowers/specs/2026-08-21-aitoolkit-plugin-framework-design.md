@@ -144,19 +144,29 @@ alone, so `metadata.json` keeps reading and writing `"tool": "claude"`.
 ### The hazard this introduces
 
 `CaseIterable` is **total at compile time**. A registry is **total only if
-registration ran**. That difference is not cosmetic, and one class of call
-site is genuinely dangerous:
+registration ran**. That difference is not cosmetic — but it is dangerous in
+fewer places than it first appears, and the distinction is what makes the
+fix small.
 
-```
-Sources/OrreryCore/Setup/AccountMigration.swift   ×5
-Sources/OrreryCore/Setup/OriginTakeoverBootstrap.swift
-Sources/OrreryCore/Setup/OriginAccountSeeder.swift
-```
+**Safe: everything guarded per tool.** `OriginTakeoverBootstrap`
+(`!store.isOriginManaged(tool:)`) and `OriginAccountSeeder`
+(`origin.account(for: tool) == nil`) both loop `Tool.allCases` but hold no
+global flag and re-run every invocation. A tool registered later is simply
+picked up on the next command — they self-heal.
 
-Those are **flag-guarded one-shot migrations**. If a tool is not registered
-at the moment one runs, that tool is silently skipped *and the completion
-flag is still written* — so it is never migrated, on that machine, ever.
-The failure is invisible and permanent.
+**Dangerous: the four flag-guarded one-shots in `AccountMigration`.**
+
+| flag file | function |
+|---|---|
+| `.migration-v3` | `runIfNeeded` |
+| `.backfill-account-info-v1` | `runInfoBackfillIfNeeded` |
+| `.account-config-consolidated` | `runAccountConfigConsolidationIfNeeded` |
+| `.workspace-structure-relocated` | `runWorkspaceStructureRelocationIfNeeded` |
+
+Each writes a single global "done" marker. If a tool is not registered when
+one runs, that tool is skipped *and the flag is still written* — so it is
+never migrated on that machine again. The failure is invisible and
+permanent.
 
 Requirements that follow, and they are not optional:
 
