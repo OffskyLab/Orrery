@@ -12,6 +12,13 @@ import Foundation
 ///   place (a later `orrery run` materialize step replaces them with symlinks).
 /// - A full backup of `~/.orrery/` is taken before any mutation.
 public enum AccountMigration {
+    /// The tools that existed when the pre-per-tool flag markers were written,
+    /// and therefore the set a legacy marker in one of the all-tool migrations
+    /// stands for. A fixed historical fact, not `Tool.allCases` — the point is
+    /// that it must NOT grow as tools are added, or a legacy marker would keep
+    /// claiming to have covered whatever is newest.
+    static let legacyBuiltInTools: Set<String> = ["claude", "codex", "gemini"]
+
     public static let flagFileName = ".migration-v3"
 
     public enum MigrationError: Swift.Error {
@@ -27,7 +34,9 @@ public enum AccountMigration {
     /// of `~/.orrery/` is taken before any mutation.
     public static func runIfNeeded(homeURL: URL) throws {
         let fm = FileManager.default
-        let flag = MigrationFlag(url: homeURL.appendingPathComponent(flagFileName))
+        let flag = MigrationFlag(
+            url: homeURL.appendingPathComponent(flagFileName),
+            legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
         let pending = flag.pending(among: toolIDs)
 
@@ -336,7 +345,9 @@ public enum AccountMigration {
     /// from which to harvest the email.
     public static func runInfoBackfillIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = MigrationFlag(url: homeURL.appendingPathComponent(infoBackfillFlagFileName))
+        let flag = MigrationFlag(
+            url: homeURL.appendingPathComponent(infoBackfillFlagFileName),
+            legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
         let pending = flag.pending(among: toolIDs)
         if pending.isEmpty { return }
@@ -386,7 +397,11 @@ public enum AccountMigration {
     /// Replaces rc.1's runV31AccountLayoutIfNeeded. Best-effort: never throws.
     public static func runWorkspaceAccountSymlinksIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = MigrationFlag(url: homeURL.appendingPathComponent(workspaceAccountSymlinksFlagFileName))
+        let flag = MigrationFlag(
+            url: homeURL.appendingPathComponent(workspaceAccountSymlinksFlagFileName),
+            // This migration only ever walked claude accounts, so its
+            // legacy marker says nothing about codex or gemini.
+            legacyCoverage: [Tool.claude.rawValue])
         // Scoped to claude alone, because that is all the body below touches.
         // A `Tool.allCases` pending set here would record coverage for codex
         // and gemini on a run that never looked at them, so a later version
@@ -442,7 +457,9 @@ public enum AccountMigration {
     /// copies (they become harmless orphans).
     public static func runAccountConfigConsolidationIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = MigrationFlag(url: homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName))
+        let flag = MigrationFlag(
+            url: homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName),
+            legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
         let pending = flag.pending(among: toolIDs)
         if pending.isEmpty { return }
@@ -629,7 +646,9 @@ public enum AccountMigration {
     /// Best-effort: never throws.
     public static func runWorkspaceStructureRelocationIfNeeded(homeURL: URL) {
         let fm = FileManager.default
-        let flag = MigrationFlag(url: homeURL.appendingPathComponent(workspaceStructureFlagFileName))
+        let flag = MigrationFlag(
+            url: homeURL.appendingPathComponent(workspaceStructureFlagFileName),
+            legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
         let pending = flag.pending(among: toolIDs)
         if pending.isEmpty { return }

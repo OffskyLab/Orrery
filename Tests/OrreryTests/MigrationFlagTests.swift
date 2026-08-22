@@ -18,7 +18,7 @@ struct MigrationFlagTests {
     @Test("a missing flag means nothing has been covered")
     func absentFlag() {
         let url = tmpFlag()
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
         #expect(flag.coverage() == .absent)
         #expect(flag.pending(among: ["claude", "codex"]) == ["claude", "codex"])
@@ -28,7 +28,7 @@ struct MigrationFlagTests {
     func marksCoverage() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
         try flag.markCovered(["claude", "codex"])
 
@@ -40,7 +40,7 @@ struct MigrationFlagTests {
     func laterToolIsPending() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
         try flag.markCovered(["claude", "codex"])
 
@@ -52,7 +52,7 @@ struct MigrationFlagTests {
     func markingUnions() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
         try flag.markCovered(["claude"])
         try flag.markCovered(["gemini"])
@@ -62,15 +62,30 @@ struct MigrationFlagTests {
 
     /// Existing installs have flag files holding "v1\n" or "v3\n". Reading one
     /// as "covers nothing" would re-run every migration on upgrade.
-    @Test("a legacy version-only flag counts as covering everything")
-    func legacyFlagCoversAll() throws {
+    @Test("a legacy version-only flag counts as covering the tools it historically handled")
+    func legacyFlagCoversHistoricalSet() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
         try Data("v3\n".utf8).write(to: url)
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
-        #expect(flag.coverage() == .legacyCoversAll)
+        #expect(flag.coverage() == .ids(AccountMigration.legacyBuiltInTools))
         #expect(flag.pending(among: ["claude", "codex", "gemini"]).isEmpty)
+    }
+
+    /// The P2 this fixes: a legacy marker records that the migration ran in
+    /// some earlier version. It cannot record which tools existed then, and
+    /// treating it as "covered everything, forever" reintroduces exactly the
+    /// permanent-skip bug this type was built to close — for every tool added
+    /// after the flag was written.
+    @Test("a legacy flag does not mask a tool that did not exist when it was written")
+    func legacyFlagDoesNotMaskFutureTools() throws {
+        let url = tmpFlag()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data("v1\n".utf8).write(to: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
+
+        #expect(flag.pending(among: ["claude", "codex", "gemini", "cursor"]) == ["cursor"])
     }
 
     @Test("legacy detection does not depend on which version string was used")
@@ -79,21 +94,21 @@ struct MigrationFlagTests {
         defer { try? FileManager.default.removeItem(at: url) }
         try Data("v1\n".utf8).write(to: url)
 
-        #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
+        #expect(MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools).coverage() == .ids(AccountMigration.legacyBuiltInTools))
     }
 
     /// "v2" is `formatVersion`'s own value, so this is the one legacy content
     /// a parser that compared line 1 against `formatVersion` before stripping
     /// it would misread as "no marker, no ids" instead of a legacy marker. A
     /// real machine's `.workspace-account-symlinks` flag holds exactly this.
-    @Test("a legacy flag whose version happens to equal formatVersion still covers everything")
+    @Test("a legacy flag whose version happens to equal formatVersion is still legacy")
     func legacyFlagMatchingFormatVersion() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
         try Data("v2\n".utf8).write(to: url)
 
-        #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
-        #expect(MigrationFlag(url: url).pending(among: ["claude", "codex", "gemini"]).isEmpty)
+        #expect(MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools).coverage() == .ids(AccountMigration.legacyBuiltInTools))
+        #expect(MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools).pending(among: ["claude", "codex", "gemini"]).isEmpty)
     }
 
     @Test("an empty flag file is legacy, not corrupt")
@@ -102,14 +117,14 @@ struct MigrationFlagTests {
         defer { try? FileManager.default.removeItem(at: url) }
         try Data("".utf8).write(to: url)
 
-        #expect(MigrationFlag(url: url).coverage() == .legacyCoversAll)
+        #expect(MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools).coverage() == .ids(AccountMigration.legacyBuiltInTools))
     }
 
     @Test("a tool id shaped like a version marker survives a round trip")
     func versionShapedIDSurvives() throws {
         let url = tmpFlag()
         defer { try? FileManager.default.removeItem(at: url) }
-        let flag = MigrationFlag(url: url)
+        let flag = MigrationFlag(url: url, legacyCoverage: AccountMigration.legacyBuiltInTools)
 
         try flag.markCovered(["claude", "v2"])
 
@@ -134,7 +149,8 @@ struct AccountMigrationFlagTests {
             AccountMigration.runInfoBackfillIfNeeded(homeURL: home)
 
             let flag = MigrationFlag(
-                url: home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName))
+                url: home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName),
+                legacyCoverage: AccountMigration.legacyBuiltInTools)
 
             // Every tool known at this point must be recorded by name — not a
             // bare "done", which is what would silently skip a later tool.
@@ -172,7 +188,8 @@ struct AccountMigrationFlagTests {
 
             let flag = MigrationFlag(
                 url: home.appendingPathComponent(
-                    AccountMigration.workspaceAccountSymlinksFlagFileName))
+                    AccountMigration.workspaceAccountSymlinksFlagFileName),
+                legacyCoverage: [Tool.claude.rawValue])
 
             #expect(flag.coverage() == .ids([Tool.claude.rawValue]))
             #expect(flag.pending(among: [Tool.claude.rawValue]).isEmpty)

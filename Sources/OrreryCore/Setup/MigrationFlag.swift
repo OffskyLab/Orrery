@@ -16,21 +16,36 @@ import Foundation
 ///     claude
 ///     codex
 ///
-/// Line 1 is always the format/version marker, whatever text it holds —
-/// tool ids are never looked for there. A file with no non-empty lines
-/// after it is a pre-existing marker (`v1` / `v3`) written before this
-/// type existed. Those are read as covering everything: the migration
-/// genuinely did run for every tool that existed then, and treating them
-/// as covering nothing would re-run every migration on upgrade. This also
-/// means a tool id shaped like a version token (e.g. `v2`) is never
-/// mistaken for one, since only line 1 is ever treated as the marker.
+/// Line 1 is always the format/version marker, whatever text it holds — tool
+/// ids are never looked for there, so an id shaped like a version token (e.g.
+/// `v2`) is never mistaken for one.
+///
+/// ## Legacy markers
+///
+/// A file with no non-empty lines after line 1 is a pre-existing marker
+/// (`v1` / `v3`) written before this type existed. It records that the
+/// migration *ran* in some earlier version. What it cannot record is **which
+/// tools existed then** — so the caller declares that, per flag, via
+/// ``init(url:legacyCoverage:)``.
+///
+/// This is load-bearing. Reading a legacy marker as "covered everything"
+/// promotes "covered the tools this migration knew about" into "covered the
+/// unbounded future", which reintroduces the permanent-skip bug this type
+/// exists to close — for every tool added afterwards. Reading it as "covered
+/// nothing" is the opposite error: every migration re-runs on upgrade.
+/// Declaring the historical set is the only answer that is neither.
+///
+/// The set differs per migration and must not be shared: a migration that only
+/// ever touched claude did not cover codex, and claiming otherwise costs codex
+/// its migration forever.
 public struct MigrationFlag {
     public enum Coverage: Equatable {
         /// No flag file — the migration has never run.
         case absent
-        /// A pre-per-tool marker. Counts as covering every tool.
-        case legacyCoversAll
-        /// The tool ids this migration has covered.
+        /// The tool ids this migration has covered. A legacy marker resolves to
+        /// the `legacyCoverage` declared at construction, so there is no third
+        /// "covers everything" case to reason about — the wildcard is
+        /// unrepresentable rather than handled.
         case ids(Set<String>)
     }
 
@@ -38,8 +53,14 @@ public struct MigrationFlag {
 
     public let url: URL
 
-    public init(url: URL) {
+    /// The tool ids a legacy (version-only) marker in this file should be taken
+    /// to have covered — the set this migration genuinely handled in the
+    /// version that wrote the marker.
+    public let legacyCoverage: Set<String>
+
+    public init(url: URL, legacyCoverage: Set<String>) {
         self.url = url
+        self.legacyCoverage = legacyCoverage
     }
 
     public func coverage() -> Coverage {
@@ -47,10 +68,6 @@ public struct MigrationFlag {
               let text = String(data: data, encoding: .utf8)
         else { return .absent }
 
-        // Line 1 is always the format/version marker, whatever it looks
-        // like. Every remaining non-empty line is a tool id — even one
-        // shaped like "v2", since AIToolKit ids are not under this type's
-        // control.
         var lines = text.split(separator: "\n", omittingEmptySubsequences: false)
         if !lines.isEmpty { lines.removeFirst() }
 
@@ -58,21 +75,30 @@ public struct MigrationFlag {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
 
-        return ids.isEmpty ? .legacyCoversAll : .ids(Set(ids))
+        // No ids after the marker means a legacy file. It resolves to the
+        // declared historical set, never to "everything".
+        return .ids(ids.isEmpty ? legacyCoverage : Set(ids))
     }
 
     /// Which of `candidates` this migration has not yet covered.
     public func pending(among candidates: Set<String>) -> Set<String> {
         switch coverage() {
-        case .absent:         return candidates
-        case .legacyCoversAll: return []
-        case .ids(let done):  return candidates.subtracting(done)
+        case .absent:        return candidates
+        case .ids(let done): return candidates.subtracting(done)
         }
     }
 
     /// Adds `ids` to the covered set. Unions rather than replaces, so a
     /// migration that runs for one late-registered tool does not erase the
-    /// record of the tools it already handled.
+    /// record of the tools it already handled — including the ones a legacy
+    /// marker stands for, which `coverage()` has now resolved into the declared
+    /// historical set.
+    ///
+    /// That resolution is what makes the union correct here. While a legacy
+    /// marker read as a separate "covers everything" case, this method had
+    /// nothing to union against and silently replaced it, so the first
+    /// late-registered tool cost every built-in its coverage and re-ran them
+    /// all. The two bugs were the same one seen from either end.
     public func markCovered(_ ids: Set<String>) throws {
         var all = ids
         if case .ids(let existing) = coverage() {
