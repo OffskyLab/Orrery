@@ -188,4 +188,29 @@ struct RemoteAIToolTests {
             Issue.record("expected RemoteAIToolError, got \(type(of: error)): \(error)")
         }
     }
+
+    /// A plugin that never answers initialize at all — the handshake itself
+    /// times out, before tool/describe is ever reached.
+    private func hangingOnInitialize() -> InMemoryTransport {
+        InMemoryTransport { _ in
+            try? await Task.sleep(for: .seconds(30))
+            return nil
+        }
+    }
+
+    @Test("a handshake that times out surfaces as handshakeFailed, not a foreign RPC error")
+    func handshakeTimeoutSurfacesAsHandshakeFailed() async throws {
+        do {
+            _ = try await RemoteAITool.connect(
+                transport: hangingOnInitialize(), timeout: .milliseconds(50))
+            Issue.record("expected connect() to throw")
+        } catch let error as RemoteAIToolError {
+            guard case .handshakeFailed = error else {
+                Issue.record("expected .handshakeFailed, got \(error)")
+                return
+            }
+        } catch {
+            Issue.record("expected RemoteAIToolError, got \(type(of: error)): \(error)")
+        }
+    }
 }
