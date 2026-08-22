@@ -120,7 +120,7 @@ public enum PhantomSupport {
         let projectKey = cwd.replacingOccurrences(of: "/", with: "-")
 
         let configDirPath = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
-            ?? (FileManager.default.homeDirectoryForCurrentUser.path + "/.claude")
+            ?? (userHomeURL().path + "/.claude")
         let projectsDir = URL(fileURLWithPath: configDirPath)
             .appendingPathComponent("projects")
             .appendingPathComponent(projectKey)
