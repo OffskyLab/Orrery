@@ -1,0 +1,23 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `swift build` runs the L10n codegen plugin, so a localization key that
+      # exists in one locale but not another fails here. That is why this job
+      # used to be called "Localization Check" — but it has always run the whole
+      # build and the whole suite, and the old name sent people looking for a
+      # build-and-test workflow away empty-handed.
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
