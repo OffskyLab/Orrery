@@ -59,10 +59,12 @@ public enum AIToolRegistration {
     public static func registerPlugins(
         into registry: AIToolRegistry,
         toolIDs: [String],
-        timeout: Duration
+        timeout: Duration,
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) async {
         for toolID in toolIDs {
-            guard let binary = PluginDiscovery.locate(toolID: toolID) else { continue }
+            guard let binary = PluginDiscovery.locate(toolID: toolID, environment: environment)
+            else { continue }
 
             let transport = StdioTransport(
                 executable: binary, arguments: [], environment: [:])
