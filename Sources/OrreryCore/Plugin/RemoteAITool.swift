@@ -48,7 +48,17 @@ public struct RemoteAITool: AITool {
     ) async throws -> RemoteAITool {
         let connection = JSONRPCConnection(transport: transport, timeout: timeout)
 
-        let hello = try await connection.call("initialize", nil)
+        // The peer is a third-party process orrery does not control: a
+        // handshake timeout, a malformed response, an id mismatch and the
+        // rest of JSONRPCConnection's failure modes are all real outcomes of
+        // talking to one, not internal bugs, so they are wrapped the same
+        // way the describe step below is.
+        let hello: RPCValue
+        do {
+            hello = try await connection.call("initialize", nil)
+        } catch {
+            throw RemoteAIToolError.handshakeFailed(String(describing: error))
+        }
         guard case .object(let obj) = hello,
               case .string(let version)? = obj["protocolVersion"]
         else { throw RemoteAIToolError.handshakeFailed("initialize returned no protocolVersion") }
@@ -60,11 +70,10 @@ public struct RemoteAITool: AITool {
             throw RemoteAIToolError.unsupportedProtocol(version)
         }
 
-        // The peer is a third-party process orrery does not control. Both
-        // failure modes below are foreign errors (JSONRPCError, DecodingError)
-        // that get wrapped so a caller managing user credentials can say
-        // "plugin X sent a description I could not read" instead of leaking
-        // a decoder's key-not-found from deep inside Foundation.
+        // Same reasoning as the initialize call above: wrapped so a caller
+        // managing user credentials can say "plugin X sent a description I
+        // could not read" instead of leaking a decoder's key-not-found from
+        // deep inside Foundation.
         let described: RPCValue
         do {
             described = try await connection.call("tool/describe", nil)
