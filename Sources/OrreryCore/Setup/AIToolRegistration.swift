@@ -68,9 +68,28 @@ public enum AIToolRegistration {
 
             let transport = StdioTransport(
                 executable: binary, arguments: [], environment: [:])
+
+            // `connect` races its own read against `timeout`, but task
+            // cancellation cannot interrupt the blocking `read(2)` that
+            // race is stuck on — only killing the child releases it. This
+            // watchdog is the kill switch: it sleeps twice the connect
+            // timeout (so it can never pre-empt a connection that is merely
+            // slow, only one that has truly hung) and then terminates the
+            // transport. That closes the pipe, the blocked read returns 0,
+            // and the hung call surfaces through the ordinary
+            // `connectionClosed` failure path below instead of never
+            // returning at all. Cancelled the instant `connect` itself
+            // returns, on both the success and the failure path, so it
+            // never fires against a plugin that merely connected slowly.
+            let watchdog = Task {
+                try? await Task.sleep(for: timeout * 2)
+                await transport.terminate()
+            }
+
             do {
                 let tool = try await RemoteAITool.connect(
                     transport: transport, timeout: timeout)
+                watchdog.cancel()
 
                 guard registry.tool(id: tool.id) == nil else {
                     await transport.terminate()
@@ -81,6 +100,7 @@ public enum AIToolRegistration {
 
                 try registry.register(tool)
             } catch {
+                watchdog.cancel()
                 await transport.terminate()
                 FileHandle.standardError.write(Data(
                     "[orrery] tool plugin '\(toolID)' not loaded: \(error)\n".utf8))
