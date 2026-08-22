@@ -1,4 +1,12 @@
 import Foundation
+// `rename(2)`, `errno` and `strerror` come from the platform C library.
+// Foundation re-exports Darwin on Apple platforms but swift-corelibs-foundation
+// does not re-export Glibc, and this package builds for Linux too.
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 
 /// One-time v2→v3 migration: lifts credentials that used to live directly inside
 /// each env's tool dir (`~/.orrery/envs/<UUID>/<tool>/` and `~/.orrery/origin/<tool>/`)
@@ -21,6 +29,41 @@ public enum AccountMigration {
 
     public static let flagFileName = ".migration-v3"
 
+    /// Points `link` at `destination`, leaving whatever is already there
+    /// untouched if any step fails.
+    ///
+    /// The obvious `removeItem` then `createSymbolicLink` is not recoverable:
+    /// when the second step fails the old link is already gone, and the tool has
+    /// no config path at all. Worse, the next run then sees a missing link,
+    /// which is easy to misclassify as "nothing owed" — so a single transient
+    /// failure becomes a permanent one.
+    ///
+    /// Instead the new link is built under a temporary name in the same
+    /// directory and swapped in with `replaceItem`, which is atomic on the same
+    /// volume. A failure before the swap leaves the original in place.
+    static func replaceSymlink(at link: URL, withDestination destination: URL) throws {
+        let fm = FileManager.default
+        let staging = link.deletingLastPathComponent()
+            .appendingPathComponent(".orrery-link-\(UUID().uuidString)")
+
+        try fm.createSymbolicLink(at: staging, withDestinationURL: destination)
+
+        // `rename(2)`, not `FileManager.replaceItemAt` or `moveItem`. Those both
+        // want the destination to be a resolvable item: `replaceItemAt` fails on
+        // a dangling symlink, and `moveItem` refuses when anything is already
+        // there. `rename` replaces the *link itself* atomically regardless of
+        // whether it is valid, dangling, or absent — which is exactly the set of
+        // states a half-finished earlier run can leave behind.
+        guard rename(staging.path, link.path) == 0 else {
+            let code = errno
+            try? fm.removeItem(at: staging)
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(code), userInfo: [
+                NSLocalizedDescriptionKey:
+                    "could not swap \(link.path) into place: \(String(cString: strerror(code)))"
+            ])
+        }
+    }
+
     public enum MigrationError: Swift.Error {
         case backupFailed(underlying: Error)
         /// Migration aborted because it is running inside a phantom-supervised
@@ -38,7 +81,11 @@ public enum AccountMigration {
             url: homeURL.appendingPathComponent(flagFileName),
             legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
-        let pending = flag.pending(among: toolIDs)
+        // This one takes a full backup and rewrites credentials, so an
+        // unreadable flag propagates rather than being treated as never-run.
+        // Guessing "never ran" here means another backup and another credential
+        // rewrite on every startup for as long as the flag stays unreadable.
+        let pending = try flag.pending(among: toolIDs)
 
         // Already migrated.
         if pending.isEmpty { return }
@@ -349,7 +396,16 @@ public enum AccountMigration {
             url: homeURL.appendingPathComponent(infoBackfillFlagFileName),
             legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
-        let pending = flag.pending(among: toolIDs)
+        // Backfilling cached metadata is recoverable, so this one reports and
+        // skips rather than propagating — but it must not proceed as if the flag
+        // said "never ran".
+        let pending: Set<String>
+        do { pending = try flag.pending(among: toolIDs) }
+        catch {
+            FileHandle.standardError.write(Data(
+                "[orrery backfill] \(error); skipping\n".utf8))
+            return
+        }
         if pending.isEmpty { return }
         // No home means nothing to scan — but still no-op (the next call will
         // also see no home, so we don't write the flag prematurely).
@@ -406,7 +462,13 @@ public enum AccountMigration {
         // A `Tool.allCases` pending set here would record coverage for codex
         // and gemini on a run that never looked at them, so a later version
         // that does handle them would find the work already marked done.
-        let pending = flag.pending(among: [Tool.claude.rawValue])
+        let pending: Set<String>
+        do { pending = try flag.pending(among: [Tool.claude.rawValue]) }
+        catch {
+            FileHandle.standardError.write(Data(
+                "[orrery workspace symlinks] \(error); skipping\n".utf8))
+            return
+        }
         if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
@@ -457,11 +519,22 @@ public enum AccountMigration {
     /// copies (they become harmless orphans).
     public static func runAccountConfigConsolidationIfNeeded(homeURL: URL) {
         let fm = FileManager.default
+        // Claude-only, both ways. `consolidateClaudeAccountSettings` guards on
+        // `pending.contains(claude)` and has no logic for any other tool, so
+        // offering every tool as a candidate meant codex and gemini were written
+        // into the covered set having had nothing done for them — and a future
+        // tool would be marked covered the moment it appeared. The candidates and
+        // the legacy set both narrow to what this migration actually handles.
         let flag = MigrationFlag(
             url: homeURL.appendingPathComponent(accountConfigConsolidatedFlagFileName),
-            legacyCoverage: legacyBuiltInTools)
-        let toolIDs = Set(Tool.allCases.map(\.rawValue))
-        let pending = flag.pending(among: toolIDs)
+            legacyCoverage: [Tool.claude.rawValue])
+        let pending: Set<String>
+        do { pending = try flag.pending(among: [Tool.claude.rawValue]) }
+        catch {
+            FileHandle.standardError.write(Data(
+                "[orrery consolidation] \(error); skipping\n".utf8))
+            return
+        }
         if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
@@ -650,7 +723,13 @@ public enum AccountMigration {
             url: homeURL.appendingPathComponent(workspaceStructureFlagFileName),
             legacyCoverage: legacyBuiltInTools)
         let toolIDs = Set(Tool.allCases.map(\.rawValue))
-        let pending = flag.pending(among: toolIDs)
+        let pending: Set<String>
+        do { pending = try flag.pending(among: toolIDs) }
+        catch {
+            FileHandle.standardError.write(Data(
+                "[orrery workspace relocation] \(error); skipping\n".utf8))
+            return
+        }
         if pending.isEmpty { return }
         guard fm.fileExists(atPath: homeURL.path) else { return }
 
@@ -683,38 +762,60 @@ public enum AccountMigration {
         }
 
         // Repointing a tool's home symlink is per-tool and can be owed later, so
-        // it must NOT live inside the move branch above. A tool that was not
-        // registered on the run that did the move becomes pending on a later
-        // run, and by then `origin/` is gone — so nesting this under
-        // `fileExists(oldOrigin)` made the repair unreachable for exactly the
-        // tools per-tool flags exist to protect.
+        // it must NOT live inside the move branch above: a tool absent from the
+        // run that did the move becomes pending on a later run, and by then
+        // `origin/` is gone.
         //
-        // Only ids whose link is genuinely settled are collected. A tool whose
-        // repair fails stays out of `repaired`, so it stays pending and can be
-        // retried; the old code marked the whole `pending` set covered whether
-        // or not anything had been repaired.
+        // But it must not run unconditionally either. Repointing a live link at
+        // `workspaces/origin/` is only safe once that directory is genuinely the
+        // authority — legacy `origin/` gone and the new root present. While both
+        // exist the sources conflict and the new one cannot be shown complete;
+        // if the move failed outright, the link still points at valid data and
+        // moving it would break a working install to chase a migration.
+        let originReady = !fm.fileExists(atPath: oldOrigin.path)
+            && fm.fileExists(atPath: newOrigin.path)
+
         var repaired: Set<String> = []
-        let store = EnvironmentStore(homeURL: homeURL)
-        for tool in Tool.allCases where pending.contains(tool.rawValue) {
-            let link = tool.defaultConfigDir
-            guard let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
-                  dest.contains("/origin/\(tool.subdirectory)"),
-                  !dest.contains("/workspaces/origin/")
-            else {
-                // Nothing pointing at the pre-move location: either already
-                // correct, not a symlink, or this tool was never origin-managed.
-                // Either way there is no work owed, so it counts as settled.
-                repaired.insert(tool.rawValue)
-                continue
+        if originReady {
+            let store = EnvironmentStore(homeURL: homeURL)
+            for tool in Tool.allCases where pending.contains(tool.rawValue) {
+                let link = tool.defaultConfigDir
+                let target = store.originConfigDir(tool: tool)
+
+                if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path) {
+                    guard dest.contains("/origin/\(tool.subdirectory)"),
+                          !dest.contains("/workspaces/origin/")
+                    else {
+                        // Already correct, or pointing somewhere this migration
+                        // does not own. Nothing owed.
+                        repaired.insert(tool.rawValue)
+                        continue
+                    }
+                } else if fm.fileExists(atPath: link.path) {
+                    // A real directory or an externally managed path — not ours
+                    // to replace.
+                    repaired.insert(tool.rawValue)
+                    continue
+                } else if !fm.fileExists(atPath: target.path) {
+                    // Nothing there and nothing to point at. Not this
+                    // migration's business.
+                    repaired.insert(tool.rawValue)
+                    continue
+                }
+                // Falling through with no link present means it is missing and
+                // the canonical target exists — most likely a previous run that
+                // removed the old link and failed to create the new one. That is
+                // owed work, not settled, so it gets created below.
+
+                do {
+                    try replaceSymlink(at: link, withDestination: target)
+                    repaired.insert(tool.rawValue)
+                } catch {
+                    warn("could not repoint \(link.path) for \(tool.rawValue): \(error)")
+                }
             }
-            do {
-                try fm.removeItem(at: link)
-                try fm.createSymbolicLink(
-                    at: link, withDestinationURL: store.originConfigDir(tool: tool))
-                repaired.insert(tool.rawValue)
-            } catch {
-                warn("could not repoint \(link.path) for \(tool.rawValue): \(error)")
-            }
+        } else if fm.fileExists(atPath: oldOrigin.path) {
+            warn("legacy origin/ still present; leaving tool links untouched")
         }
 
         // 3. Per-workspace dir: env.json/config.json -> workspace.json;

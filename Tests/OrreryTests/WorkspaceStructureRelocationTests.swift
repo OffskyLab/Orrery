@@ -89,6 +89,76 @@ struct WorkspaceStructureRelocationTests {
         }
     }
 
+    /// The regression my own first fix introduced. Moving the repair loop out of
+    /// the once-only move branch made it reachable for late tools — and also made
+    /// it run when the move had *not* happened, repointing a link that still
+    /// pointed at valid data toward a target that may not exist. Too narrow
+    /// traded for too wide.
+    @Test("a link is left alone while legacy origin is still present")
+    func leavesLinkAloneWhenMoveHasNotHappened() throws {
+        try withIsolatedHome {
+            let fm = FileManager.default
+            let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
+
+            // Legacy origin/ is still here — the move has not run or failed —
+            // and workspaces/origin/ does not exist.
+            let legacyGemini = home.appendingPathComponent("origin/gemini")
+            try fm.createDirectory(at: legacyGemini, withIntermediateDirectories: true)
+            try fm.createDirectory(at: home.appendingPathComponent("workspaces"),
+                                   withIntermediateDirectories: true)
+
+            let link = Tool.gemini.defaultConfigDir
+            try? fm.removeItem(at: link)
+            try fm.createSymbolicLink(at: link, withDestinationURL: legacyGemini)
+
+            // Make the move fail by planting a conflicting target it must not
+            // overwrite.
+            try fm.createDirectory(at: home.appendingPathComponent("workspaces/origin"),
+                                   withIntermediateDirectories: true)
+
+            AccountMigration.runWorkspaceStructureRelocationIfNeeded(homeURL: home)
+
+            // The link still points at the data that is actually there.
+            let dest = try fm.destinationOfSymbolicLink(atPath: link.path)
+            #expect(dest.contains("/origin/gemini"))
+            #expect(!dest.contains("/workspaces/origin/"))
+
+            // And nothing was claimed as covered, so a later run can still act.
+            let flag = MigrationFlag(
+                url: home.appendingPathComponent(AccountMigration.workspaceStructureFlagFileName),
+                legacyCoverage: AccountMigration.legacyBuiltInTools)
+            #expect(try flag.pending(among: [Tool.gemini.rawValue])
+                    == [Tool.gemini.rawValue])
+        }
+    }
+
+    /// A link that a previous run deleted and failed to recreate is *owed* work,
+    /// not settled work. Classifying "no link" as settled is what turned one
+    /// transient failure into a permanently missing config path.
+    @Test("a missing link for a pending tool is created, not written off")
+    func createsMissingLinkForPendingTool() throws {
+        try withIsolatedHome {
+            let fm = FileManager.default
+            let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
+
+            // Post-move state, and gemini's link is simply gone.
+            try fm.createDirectory(at: home.appendingPathComponent("workspaces/origin/gemini"),
+                                   withIntermediateDirectories: true)
+            let link = Tool.gemini.defaultConfigDir
+            try? fm.removeItem(at: link)
+
+            let flag = MigrationFlag(
+                url: home.appendingPathComponent(AccountMigration.workspaceStructureFlagFileName),
+                legacyCoverage: AccountMigration.legacyBuiltInTools)
+            try flag.markCovered(["claude", "codex"])
+
+            AccountMigration.runWorkspaceStructureRelocationIfNeeded(homeURL: home)
+
+            let dest = try fm.destinationOfSymbolicLink(atPath: link.path)
+            #expect(dest.contains("/workspaces/origin/gemini"))
+        }
+    }
+
     @Test("idempotent — second run does not error or change the tree")
     func idempotent() throws {
         // Same isolation hazard as `relocatesTree()` above — see its comment.
