@@ -55,6 +55,13 @@ struct AIToolRegistrationTests {
         let builtInIDs = Set(registry.all.map(\.id))
         let claudeDisplayName = registry.tool(id: "claude")?.displayName
 
+        // Proves the script actually became a located, executable binary —
+        // without this, a script that failed to become executable would
+        // reach the same "cursor" absence via the missing-binary path
+        // instead of the one this test claims to exercise.
+        #expect(PluginDiscovery.locate(
+            toolID: "cursor", environment: ["ORRERY_CURSOR_PATH": script.path]) != nil)
+
         await AIToolRegistration.registerPlugins(
             into: registry, toolIDs: ["cursor"], timeout: timeout,
             environment: ["ORRERY_CURSOR_PATH": script.path])
@@ -73,6 +80,12 @@ struct AIToolRegistrationTests {
         try AIToolRegistration.registerBuiltInTools(into: registry)
         let builtInIDs = Set(registry.all.map(\.id))
 
+        // See exitsImmediately: without this, a script that never became
+        // executable would silently exercise the missing-binary path
+        // instead of the garbage-output path this test is named for.
+        #expect(PluginDiscovery.locate(
+            toolID: "cursor", environment: ["ORRERY_CURSOR_PATH": script.path]) != nil)
+
         await AIToolRegistration.registerPlugins(
             into: registry, toolIDs: ["cursor"], timeout: timeout,
             environment: ["ORRERY_CURSOR_PATH": script.path])
@@ -89,6 +102,12 @@ struct AIToolRegistrationTests {
         let registry = AIToolRegistry()
         try AIToolRegistration.registerBuiltInTools(into: registry)
         let builtInClaude = try #require(registry.tool(id: "claude"))
+
+        // See exitsImmediately: without this, a script that never became
+        // executable would silently exercise the missing-binary path
+        // instead of the duplicate-id path this test is named for.
+        #expect(PluginDiscovery.locate(
+            toolID: "claude", environment: ["ORRERY_CLAUDE_PATH": script.path]) != nil)
 
         await AIToolRegistration.registerPlugins(
             into: registry, toolIDs: ["claude"], timeout: timeout,
