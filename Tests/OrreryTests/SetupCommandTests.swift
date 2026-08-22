@@ -242,7 +242,14 @@ struct SetupCommandTests {
         try FileManager.default.createDirectory(at: activateDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: activateDir) }
         let activatePath = activateDir.appendingPathComponent("activate.sh")
-        try ShellFunctionGenerator.generate().write(to: activatePath, atomically: true, encoding: .utf8)
+        // Without stripping the trailing `_orrery_init` call, sourcing this
+        // file below shells out to the developer's real, globally-installed
+        // `orrery-bin` (not anything this test run built) — see
+        // `generatedShellScriptWithoutInit()` for the confirmed incidents
+        // this caused. This test only needs `claude`/`gemini`/`orrery` to be
+        // defined as functions, which sourcing the script already does
+        // before `_orrery_init` is ever reached.
+        try generatedShellScriptWithoutInit().write(to: activatePath, atomically: true, encoding: .utf8)
 
         let rcFile = activateDir.appendingPathComponent("rc")
         SetupCommand.installShellIntegration(to: rcFile, activatePath: activatePath.path)

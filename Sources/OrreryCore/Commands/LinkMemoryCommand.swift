@@ -15,7 +15,7 @@ public struct LinkMemoryCommand: ParsableCommand {
             .replacingOccurrences(of: "/", with: "-")
         let envName = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
         let claudeConfigDirPath = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
-            ?? (FileManager.default.homeDirectoryForCurrentUser.path + "/.claude")
+            ?? (userHomeURL().path + "/.claude")
         let claudeConfigDir = URL(fileURLWithPath: claudeConfigDirPath)
         EnvironmentStore.default.linkOrreryMemory(
             projectKey: projectKey,

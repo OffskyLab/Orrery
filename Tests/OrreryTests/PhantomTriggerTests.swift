@@ -447,25 +447,11 @@ struct ShellFunctionGeneratorRunTests {
         try assertDispatchSelectsPhantom(shell: "zsh")
     }
 
-    /// The generated script ends with a bare `_orrery_init` invocation so a
-    /// normal `. activate.sh` self-bootstraps. Every shell probe in this file
-    /// must strip that invocation before embedding the script, rather than
-    /// relying on a later stub redefinition to intercept it: `\(script)`'s
-    /// text executes top-to-bottom as it is interpreted, and the invocation
-    /// is the LAST line of that text — so it runs immediately, before any
-    /// `_orrery_init() { :; }` stub defined later in the same probe string
-    /// ever takes effect. Left unstripped, a version-stamp mismatch makes it
-    /// run the REAL `orrery-bin setup`, rewriting the developer's actual
-    /// `~/.zshrc`/`~/.bashrc` — confirmed to be exactly what the pre-fix
-    /// version of this helper did.
+    /// Every shell probe in this file must strip the trailing `_orrery_init`
+    /// invocation before embedding the script — see
+    /// `generatedShellScriptWithoutInit()` in TestHelpers.swift for why.
     private func scriptForProbe() -> String {
-        let script = ShellFunctionGenerator.generate()
-        let trailer = "\n_orrery_init"
-        guard script.hasSuffix(trailer) else {
-            Issue.record("generated script no longer ends with _orrery_init; update this probe-safety strip")
-            return script
-        }
-        return String(script.dropLast(trailer.count))
+        generatedShellScriptWithoutInit()
     }
 
     /// Explicit clean-slate environment for a shell probe `Process`, so its

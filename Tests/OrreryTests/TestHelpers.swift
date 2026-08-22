@@ -1,3 +1,4 @@
+import Testing
 import Foundation
 @testable import OrreryCore
 import OrreryAccountKit
@@ -11,6 +12,33 @@ import OrreryAccountKit
 private let registerAccountKitOnce: Void = {
     OrreryAccountKitRuntime.register()
 }()
+
+/// The generated shell integration script ends with a bare `_orrery_init`
+/// invocation so a normal `. activate.sh` self-bootstraps. Any test that
+/// sources this script in a real shell subprocess MUST strip that invocation
+/// before embedding the script, rather than relying on a later stub
+/// redefinition (e.g. a `command() { ... }` override defined further down in
+/// the same probe string) to intercept it: the script's text executes
+/// top-to-bottom as it is interpreted, and the invocation is the LAST line —
+/// so it runs immediately, before any later stub in the same probe ever
+/// takes effect.
+///
+/// `_orrery_init` shells out to the real `orrery-bin` found on `$PATH` (the
+/// developer's installed binary, not whatever this test run just built) to
+/// self-update, restore pinned accounts, and link the memory directory. Left
+/// unstripped, a version-stamp mismatch makes it run the REAL `orrery-bin
+/// setup`, rewriting the developer's actual `~/.zshrc`/`~/.bashrc`, and
+/// `_link-memory` can dangle the developer's real Claude memory symlink even
+/// when `ORRERY_HOME` is otherwise isolated — both confirmed incidents.
+func generatedShellScriptWithoutInit() -> String {
+    let script = ShellFunctionGenerator.generate()
+    let trailer = "\n_orrery_init"
+    guard script.hasSuffix(trailer) else {
+        Issue.record("generated script no longer ends with _orrery_init; update this probe-safety strip")
+        return script
+    }
+    return String(script.dropLast(trailer.count))
+}
 
 func ensureAccountKitRegistered() {
     _ = registerAccountKitOnce
