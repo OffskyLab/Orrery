@@ -5,7 +5,12 @@ public enum RemoteAIToolError: Error, Equatable, Sendable {
     /// The plugin speaks a protocol major this host does not know. Refused
     /// with an explanation rather than run degraded on a guess.
     case unsupportedProtocol(String)
+    /// `initialize` did not yield a usable protocolVersion.
+    case handshakeFailed(String)
+    /// `tool/describe` returned an error, or could not be called.
     case describeFailed(String)
+    /// `tool/describe` answered, but the answer was not a tool description.
+    case describeMalformed(String)
 }
 
 /// A tool that lives in another process.
@@ -46,7 +51,7 @@ public struct RemoteAITool: AITool {
         let hello = try await connection.call("initialize", nil)
         guard case .object(let obj) = hello,
               case .string(let version)? = obj["protocolVersion"]
-        else { throw RemoteAIToolError.describeFailed("initialize returned no protocolVersion") }
+        else { throw RemoteAIToolError.handshakeFailed("initialize returned no protocolVersion") }
 
         let theirMajor = version.split(separator: ".").first.map(String.init) ?? version
         let ourMajor = PluginServer.protocolVersion.split(separator: ".").first
@@ -55,9 +60,25 @@ public struct RemoteAITool: AITool {
             throw RemoteAIToolError.unsupportedProtocol(version)
         }
 
-        let described = try await connection.call("tool/describe", nil)
-        let data = try JSONEncoder().encode(described)
-        let description = try JSONDecoder().decode(ToolDescription.self, from: data)
+        // The peer is a third-party process orrery does not control. Both
+        // failure modes below are foreign errors (JSONRPCError, DecodingError)
+        // that get wrapped so a caller managing user credentials can say
+        // "plugin X sent a description I could not read" instead of leaking
+        // a decoder's key-not-found from deep inside Foundation.
+        let described: RPCValue
+        do {
+            described = try await connection.call("tool/describe", nil)
+        } catch {
+            throw RemoteAIToolError.describeFailed(String(describing: error))
+        }
+
+        let description: ToolDescription
+        do {
+            let data = try JSONEncoder().encode(described)
+            description = try JSONDecoder().decode(ToolDescription.self, from: data)
+        } catch {
+            throw RemoteAIToolError.describeMalformed(String(describing: error))
+        }
 
         return RemoteAITool(description: description, connection: connection)
     }
