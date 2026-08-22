@@ -45,4 +45,26 @@ struct RegistryCompletenessTests {
         #expect(claude?.configDirEnvVar == "CLAUDE_CONFIG_DIR")
         #expect(claude?.displayName == Tool.claude.displayName)
     }
+
+    @Test("a tool whose plugin is absent is never recorded as covered")
+    func absentPluginIsNotRecordedAsCovered() throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("cov-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        // Only claude is present; a hypothetical "cursor" plugin failed to load,
+        // so it is not in the registry and must not be claimed as covered.
+        let flag = MigrationFlag(url: home.appendingPathComponent(".test-flag"))
+        let present: Set<String> = ["claude"]
+        let pending = flag.pending(among: present)
+        try flag.markCovered(pending)
+
+        #expect(flag.coverage() == .ids(["claude"]))
+
+        // Later, the cursor plugin is fixed and registers.
+        let laterPending = flag.pending(among: ["claude", "cursor"])
+        #expect(laterPending == ["cursor"],
+                "a tool absent at migration time must become pending once it registers")
+    }
 }
