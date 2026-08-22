@@ -47,6 +47,48 @@ struct WorkspaceStructureRelocationTests {
         }
     }
 
+    /// Finding 2 of an external review of #53. The relocation function does two
+    /// jobs with completely different lifetimes: moving `origin/` into
+    /// `workspaces/origin/` happens once and globally, while repointing a tool's
+    /// home symlink is per-tool and can be owed later. Nesting the second inside
+    /// the first meant a tool that was not registered on the run that did the
+    /// move could never have its symlink repaired — and the unconditional
+    /// `markCovered(pending)` at the end then took away even its pending status.
+    ///
+    /// This reproduces the state after such a run: the move is already done, so
+    /// `origin/` is gone, and gemini is still owed its repair.
+    @Test("a tool still pending after the move has its home symlink repaired")
+    func repairsSymlinkForToolPendingAfterMove() throws {
+        try withIsolatedHome {
+            let fm = FileManager.default
+            let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
+
+            // Post-move state: workspaces/origin/ exists, legacy origin/ does not.
+            try fm.createDirectory(at: home.appendingPathComponent("workspaces/origin/gemini"),
+                                   withIntermediateDirectories: true)
+
+            // The flag records the move as done for claude and codex only,
+            // leaving gemini pending — what a partially-registered first run
+            // produces.
+            let flag = MigrationFlag(
+                url: home.appendingPathComponent(AccountMigration.workspaceStructureFlagFileName),
+                legacyCoverage: AccountMigration.legacyBuiltInTools)
+            try flag.markCovered(["claude", "codex"])
+
+            // gemini's home symlink still points into the pre-move location.
+            let link = Tool.gemini.defaultConfigDir
+            try? fm.removeItem(at: link)
+            try fm.createSymbolicLink(
+                at: link, withDestinationURL: home.appendingPathComponent("origin/gemini"))
+
+            AccountMigration.runWorkspaceStructureRelocationIfNeeded(homeURL: home)
+
+            let dest = try fm.destinationOfSymbolicLink(atPath: link.path)
+            #expect(dest.contains("/workspaces/origin/gemini"),
+                    "a late-registered tool must still get its symlink repaired")
+        }
+    }
+
     @Test("idempotent — second run does not error or change the tree")
     func idempotent() throws {
         // Same isolation hazard as `relocatesTree()` above — see its comment.

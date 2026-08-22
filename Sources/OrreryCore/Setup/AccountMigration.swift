@@ -672,24 +672,48 @@ public enum AccountMigration {
 
         // 2. origin/ -> workspaces/origin/ (do not overwrite an existing target —
         //    only possible from an rc artifact, never for real users).
+        // The move is global and succeeds exactly once.
         if fm.fileExists(atPath: oldOrigin.path) {
             if fm.fileExists(atPath: newOrigin.path) {
                 warn("workspaces/origin already exists; leaving legacy origin/ in place")
             } else {
-                do {
-                    try fm.moveItem(at: oldOrigin, to: newOrigin)
-                    // Repoint ~/.claude (and codex/gemini if origin-managed) to the new root.
-                    let store = EnvironmentStore(homeURL: homeURL)
-                    for tool in Tool.allCases where pending.contains(tool.rawValue) {
-                        let link = tool.defaultConfigDir
-                        if let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
-                           dest.contains("/origin/\(tool.subdirectory)"),
-                           !dest.contains("/workspaces/origin/") {
-                            try? fm.removeItem(at: link)
-                            try? fm.createSymbolicLink(at: link, withDestinationURL: store.originConfigDir(tool: tool))
-                        }
-                    }
-                } catch { warn("could not move origin/ -> workspaces/origin/: \(error)") }
+                do { try fm.moveItem(at: oldOrigin, to: newOrigin) }
+                catch { warn("could not move origin/ -> workspaces/origin/: \(error)") }
+            }
+        }
+
+        // Repointing a tool's home symlink is per-tool and can be owed later, so
+        // it must NOT live inside the move branch above. A tool that was not
+        // registered on the run that did the move becomes pending on a later
+        // run, and by then `origin/` is gone — so nesting this under
+        // `fileExists(oldOrigin)` made the repair unreachable for exactly the
+        // tools per-tool flags exist to protect.
+        //
+        // Only ids whose link is genuinely settled are collected. A tool whose
+        // repair fails stays out of `repaired`, so it stays pending and can be
+        // retried; the old code marked the whole `pending` set covered whether
+        // or not anything had been repaired.
+        var repaired: Set<String> = []
+        let store = EnvironmentStore(homeURL: homeURL)
+        for tool in Tool.allCases where pending.contains(tool.rawValue) {
+            let link = tool.defaultConfigDir
+            guard let dest = try? fm.destinationOfSymbolicLink(atPath: link.path),
+                  dest.contains("/origin/\(tool.subdirectory)"),
+                  !dest.contains("/workspaces/origin/")
+            else {
+                // Nothing pointing at the pre-move location: either already
+                // correct, not a symlink, or this tool was never origin-managed.
+                // Either way there is no work owed, so it counts as settled.
+                repaired.insert(tool.rawValue)
+                continue
+            }
+            do {
+                try fm.removeItem(at: link)
+                try fm.createSymbolicLink(
+                    at: link, withDestinationURL: store.originConfigDir(tool: tool))
+                repaired.insert(tool.rawValue)
+            } catch {
+                warn("could not repoint \(link.path) for \(tool.rawValue): \(error)")
             }
         }
 
@@ -728,7 +752,9 @@ public enum AccountMigration {
             }
         }
 
-        do { try flag.markCovered(pending) }
+        // Only what actually got settled. Marking the whole pending set here
+        // would tell a tool whose repair failed that it had nothing left to do.
+        do { try flag.markCovered(repaired) }
         catch { warn("could not write flag: \(error)") }
     }
 }
