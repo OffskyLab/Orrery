@@ -104,6 +104,36 @@ struct AIToolRegistrationTests {
         #expect(registry.all.count == Tool.allCases.count)
     }
 
+    @Test("a plugin that hangs mid-handshake does not hang registerPlugins, and a previously registered built-in survives")
+    func hangingPluginDoesNotHang() async throws {
+        // Reads one line (the "initialize" request) and then blocks for an
+        // hour instead of replying — a plugin wedged deep inside a
+        // `read(2)` that no amount of task cancellation can interrupt. Only
+        // killing the process unblocks it, which is exactly what the
+        // watchdog in `registerPlugins` must do.
+        let script = try makeScript("#!/bin/sh\nread x\nsleep 3600\n")
+        defer { try? FileManager.default.removeItem(at: script.deletingLastPathComponent()) }
+
+        let registry = AIToolRegistry()
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        let builtInIDs = Set(registry.all.map(\.id))
+        let claudeDisplayName = registry.tool(id: "claude")?.displayName
+
+        #expect(PluginDiscovery.locate(
+            toolID: "cursor", environment: ["ORRERY_CURSOR_PATH": script.path]) != nil)
+
+        // A short timeout keeps the suite fast: the watchdog fires at
+        // 2x this, so registerPlugins returns in well under a second even
+        // though the plugin itself would otherwise block for an hour.
+        await AIToolRegistration.registerPlugins(
+            into: registry, toolIDs: ["cursor"], timeout: .milliseconds(50),
+            environment: ["ORRERY_CURSOR_PATH": script.path])
+
+        #expect(registry.tool(id: "cursor") == nil)
+        #expect(Set(registry.all.map(\.id)) == builtInIDs)
+        #expect(registry.tool(id: "claude")?.displayName == claudeDisplayName)
+    }
+
     @Test("a missing binary is skipped silently, other tools unaffected")
     func missingBinarySkipped() async throws {
         let home = URL(fileURLWithPath: NSTemporaryDirectory())
