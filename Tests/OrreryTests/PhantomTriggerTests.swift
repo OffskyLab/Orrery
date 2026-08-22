@@ -361,7 +361,7 @@ struct ShellFunctionGeneratorRunTests {
             Issue.record("expected unset line not found in the else (single-shot fallback) branch")
             return
         }
-        guard let targetedRunRange = elseBody.range(of: #"command orrery-bin run -e "$_run_target" "$@""#) else {
+        guard let targetedRunRange = elseBody.range(of: #"command orrery-bin run -a "$_run_target" "$@""#) else {
             Issue.record("targeted orrery-bin run invocation not found in the else branch")
             return
         }

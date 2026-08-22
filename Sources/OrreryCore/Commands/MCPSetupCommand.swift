@@ -90,7 +90,7 @@ public struct MCPSetupCommand: ParsableCommand {
 
             When this command is invoked, run:
             ```
-            orrery delegate -e <environment> "$ARGUMENTS"
+            orrery delegate --account <environment> "$ARGUMENTS"
             ```
 
             Replace `<environment>` with the environment name the user specified.

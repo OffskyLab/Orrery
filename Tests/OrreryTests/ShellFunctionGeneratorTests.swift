@@ -106,6 +106,10 @@ struct ShellFunctionGeneratorTests {
         // The single-shot fallback path (non-claude / --non-phantom) still
         // supports targeting a specific environment for one-shot execution —
         // that's independent of the removed persistent enter/exit state.
-        #expect(script.contains(#"command orrery-bin run -e "$_run_target" "$@""#))
+        // `orrery-bin run` itself takes `-a`/`--account`, not `-e` — that was
+        // renamed by f41c089. The shell-level `-e`/`--env` flag parsed above
+        // is a separate, still-valid user-facing spelling for `orrery run`.
+        #expect(script.contains(#"command orrery-bin run -a "$_run_target" "$@""#))
+        #expect(!script.contains(#"orrery-bin run -e "$_run_target""#))
     }
 }

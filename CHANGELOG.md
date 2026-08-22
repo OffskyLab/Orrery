@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.5.3 - 2026-08-22
+
+### Fixed
+
+- **`orrery run -e`/`orrery delegate` via MCP or the generated `/orrery:delegate`
+  command silently broke.** Commit f41c089 renamed `RunCommand`'s and
+  `DelegateCommand`'s option from `-e`/`--env` to `-a`/`--account`, but three
+  callers still built argv with the removed `-e`: the shell function's
+  single-shot `orrery run` fallback (`RunCommand` accepts unrecognized
+  arguments, so `-e <target>` wasn't rejected — it was swallowed into the
+  command to execute, surfacing as a confusing `execvp: No such file or
+  directory` instead of an argument error), the MCP server's `orrery_delegate`
+  tool, and the `/orrery:delegate` slash command template `orrery mcp setup`
+  generates. All three now pass `-a`/`--account`. Re-run `orrery setup` (or
+  open a new shell) and `orrery mcp setup` to regenerate the fixed shell
+  function and slash command.
+- **`orrery add` takes the account name positionally, matching `remove`.**
+  `--name` is gone entirely rather than kept as a hidden alias — there was no
+  install base using it worth protecting.
+- **Home dotfiles (`~/.claude`, `~/.codex`, `~/.gemini`) left dangling by
+  something outside orrery now self-heal.** Nothing stops another process
+  running as the same user from repointing these symlinks; if their target
+  disappears, orrery now restores them to the workspace dir on the next
+  invocation instead of surfacing a confusing `ENOENT` from the tool itself.
+
 ## v3.5.2 - 2026-08-20
 
 ### Fixed

@@ -188,15 +188,7 @@ public struct MCPServer {
             guard let prompt = arguments["prompt"] as? String else {
                 return toolError("Missing required parameter: prompt")
             }
-            var args = ["orrery-bin", "delegate"]
-            if let env = arguments["environment"] as? String {
-                args += ["-e", env]
-            }
-            if let tool = arguments["tool"] as? String {
-                args.append("--\(tool)")
-            }
-            args.append(prompt)
-            return await execCommand(args)
+            return await execCommand(delegateArgs(prompt: prompt, arguments: arguments))
 
         case "orrery_current":
             return await execCommand(["orrery-bin", "current"])
@@ -217,6 +209,18 @@ public struct MCPServer {
             }
             return toolError("Unknown tool: \(name)")
         }
+    }
+
+    nonisolated static func delegateArgs(prompt: String, arguments: [String: Any]) -> [String] {
+        var args = ["orrery-bin", "delegate"]
+        if let env = arguments["environment"] as? String {
+            args += ["--account", env]
+        }
+        if let tool = arguments["tool"] as? String {
+            args.append("--\(tool)")
+        }
+        args.append(prompt)
+        return args
     }
 
     // MARK: - Process execution

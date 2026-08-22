@@ -125,7 +125,7 @@ public struct ShellFunctionGenerator {
                 # they ran anything through this fallback. A subshell confines
                 # the unset to this one invocation.
                 if [ -n "$_run_target" ]; then
-                  ( unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR; command orrery-bin run -e "$_run_target" "$@" )
+                  ( unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR; command orrery-bin run -a "$_run_target" "$@" )
                 else
                   ( unset CLAUDE_CONFIG_DIR CODEX_HOME GEMINI_CONFIG_DIR; command orrery-bin run "$@" )
                 fi
