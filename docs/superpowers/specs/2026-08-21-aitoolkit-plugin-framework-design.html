@@ -1,0 +1,740 @@
+<title>AIToolKit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* Palette inherited from docs/superpowers/plans/*.html — same house style
+     for design docs in this repo. Extended here with a dark set, which the
+     original predates. Neutrals are warm-biased toward the coral rather
+     than neutral grey, so the accent sits in the page instead of on it. */
+  :root {
+    --bg:        #f4f5f7;
+    --card:      #ffffff;
+    --ink:       #1f2328;
+    --muted:     #656d76;
+    --line:      #e3e6ea;
+    --coral:     #d97757;
+    --coral-dim: #f0e2db;
+    --ok:        #1a7f52;
+    --ok-dim:    #e2f0e8;
+    --warn:      #9a6700;
+    --warn-dim:  #f5ecd8;
+    --code-bg:   #f0f1f4;
+    --shadow:    0 1px 2px rgba(31, 35, 40, .06), 0 4px 14px rgba(31, 35, 40, .04);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #171514;
+      --card:      #201d1b;
+      --ink:       #ece8e4;
+      --muted:     #a09890;
+      --line:      #302b28;
+      --coral:     #e0906d;
+      --coral-dim: #33241d;
+      --ok:        #5cb185;
+      --ok-dim:    #1b2a22;
+      --warn:      #d6a95c;
+      --warn-dim:  #2d2519;
+      --code-bg:   #1a1817;
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .25);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #171514;
+    --card:      #201d1b;
+    --ink:       #ece8e4;
+    --muted:     #a09890;
+    --line:      #302b28;
+    --coral:     #e0906d;
+    --coral-dim: #33241d;
+    --ok:        #5cb185;
+    --ok-dim:    #1b2a22;
+    --warn:      #d6a95c;
+    --warn-dim:  #2d2519;
+    --code-bg:   #1a1817;
+    --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    margin: 0;
+    padding: 3rem 1.5rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 50rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.5rem; }
+
+  code, pre, .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
+  code { background: var(--code-bg); padding: .1em .38em; border-radius: 4px; font-size: .875em; }
+
+  /* ── Masthead ───────────────────────────────────────────── */
+  header { display: flex; flex-direction: column; gap: .85rem; }
+
+  .eyebrow {
+    font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.1; margin: 0;
+    letter-spacing: -.03em; font-weight: 700; text-wrap: balance;
+  }
+
+  .standfirst { font-size: 1.1rem; color: var(--muted); margin: 0; max-width: 40rem; text-wrap: pretty; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .chip {
+    font-size: .74rem; letter-spacing: .04em; padding: .22rem .6rem; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); background: var(--card);
+  }
+  .chip.status { border-color: var(--coral); color: var(--coral); background: var(--coral-dim); font-weight: 600; }
+
+  /* ── Sections ───────────────────────────────────────────── */
+  section { display: flex; flex-direction: column; gap: 1rem; }
+
+  h2 {
+    font-size: 1.35rem; margin: 0; letter-spacing: -.02em; font-weight: 700;
+    padding-bottom: .5rem; border-bottom: 2px solid var(--line); text-wrap: balance;
+  }
+  h3 { font-size: 1rem; margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  p  { margin: 0; text-wrap: pretty; }
+  ul, ol { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: .45rem; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.25rem 1.4rem; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: .75rem;
+  }
+
+  /* ── The organising rule — the one loud thing on the page ── */
+  .rule {
+    background: var(--coral-dim); border: 1px solid var(--coral);
+    border-radius: 10px; padding: 1.4rem 1.5rem;
+    display: flex; flex-direction: column; gap: .6rem;
+  }
+  .rule .label {
+    font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    font-weight: 700; color: var(--coral);
+  }
+  .rule blockquote {
+    margin: 0; font-size: 1.15rem; line-height: 1.5; font-weight: 600;
+    letter-spacing: -.01em; text-wrap: balance;
+  }
+  .rule .gloss { font-size: .92rem; color: var(--muted); margin: 0; }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 30rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  tr.total td { font-weight: 700; border-top: 2px solid var(--line); }
+
+  .home { font-size: .74rem; font-weight: 700; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 4px; white-space: nowrap; }
+  .home.core { background: var(--ok-dim);   color: var(--ok); }
+  .home.kit  { background: var(--coral-dim); color: var(--coral); }
+  .home.acct { background: var(--warn-dim); color: var(--warn); }
+
+  /* ── Phases: a real sequence, so numbering carries meaning ─ */
+  .phase { display: grid; grid-template-columns: auto 1fr; gap: 0 1.1rem; align-items: start; }
+  .phase + .phase { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px dashed var(--line); }
+  .phase .n {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .8rem; font-weight: 700;
+    color: var(--coral); background: var(--coral-dim); border-radius: 6px;
+    padding: .3rem .55rem; line-height: 1; white-space: nowrap;
+  }
+  .phase .body { display: flex; flex-direction: column; gap: .55rem; min-width: 0; }
+  .phase h3 { margin: .15rem 0 0; }
+
+  .delivers { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .tag { font-size: .76rem; padding: .16rem .55rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.yes { border-color: var(--ok); color: var(--ok); background: var(--ok-dim); }
+  .tag.no  { border-color: var(--warn); color: var(--warn); background: var(--warn-dim); }
+
+  /* ── Risks ──────────────────────────────────────────────── */
+  .risk { border-left: 4px solid var(--warn); background: var(--card); border-radius: 0 8px 8px 0;
+          padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+  .risk h3 { color: var(--warn); font-size: .95rem; }
+
+  /* ── Figures ────────────────────────────────────────────── */
+  figure { margin: 0; display: flex; flex-direction: column; gap: .7rem; }
+  figure svg { width: 100%; max-width: 100%; height: auto; display: block; color: var(--ink); }
+  figcaption { font-size: .87rem; color: var(--muted); text-wrap: pretty; }
+  .fig-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fig-scroll > svg { min-width: 34rem; }
+  /* Diagram ink: everything inherits currentColor so both themes hold;
+     only the element carrying the argument takes the accent. */
+  .d-box   { fill: var(--card); stroke: currentColor; stroke-width: 1.25; }
+  .d-accent{ fill: var(--coral-dim); stroke: var(--coral); stroke-width: 1.5; }
+  .d-rule  { stroke: currentColor; stroke-width: 1; opacity: .35; }
+  .d-line  { stroke: currentColor; stroke-width: 1.25; fill: none; }
+  .d-life  { stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 4; opacity: .45; }
+  .d-hot   { stroke: var(--coral); stroke-width: 1.5; fill: none; }
+  .d-t     { fill: currentColor; font-size: 13px; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-name  { fill: currentColor; font-size: 13.5px; font-weight: 700; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  .d-sm    { fill: currentColor; font-size: 11.5px; opacity: .72; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-tag   { fill: var(--coral); font-size: 11.5px; font-weight: 700; font-family: -apple-system, "PingFang TC", system-ui, sans-serif; }
+  .d-stereo{ fill: currentColor; font-size: 11px; opacity: .6; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+
+  footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+
+  a { color: var(--coral); }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Design spec · Orrery</div>
+    <h1>AIToolKit</h1>
+    <p class="standfirst">
+      把 orrery 的 per-tool 支援從封閉的 <code>Tool</code> enum，變成一套開放的 plugin
+      framework — Claude 也是 plugin，第三方不必改 orrery 本體就能加新工具。
+    </p>
+    <div class="meta">
+      <span class="chip status">設計已確認 · 尚未實作</span>
+      <span class="chip">2026-08-21</span>
+      <span class="chip mono">docs/superpowers/specs/</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>為什麼</h2>
+    <p>三個動機，都被列為主要：</p>
+    <div class="card">
+      <div>
+        <h3>1 · 別的工具會拖累 core</h3>
+        <p>Gemini 就是活生生的例子：上游拿掉了 <code>gemini auth login</code> 子指令、gemini-cli
+        根本不理會 orrery 在設的 config dir 變數，最後 Google 直接封鎖個人版 Code Assist 帳號使用這個
+        client。沒有一件是 orrery 造成的，但每一件都落在 orrery 的 core、測試和發布節奏上。</p>
+      </div>
+      <div>
+        <h3>2 · 第三方應該能自己加工具</h3>
+        <p>想支援 Cursor 或 Copilot CLI 的人，不該需要去改 <code>Tool.swift</code>。</p>
+      </div>
+      <div>
+        <h3>3 · 縮小維護面積</h3>
+        <p>core 的測試、文件、發布只需要顧 framework 和 Claude；其他工具走自己的生命週期。</p>
+      </div>
+    </div>
+    <p><strong>動機 2 是決定性的那個。</strong> 它排除了所有便宜的替代方案（把非 Claude
+    工具標成 experimental、或乾脆刪掉），因為那些都產生不出擴充點。</p>
+  </section>
+
+  <section>
+    <h2>現況量測</h2>
+    <p>以 <code>main</code> 實測，不是估計：</p>
+    <div class="card scroll">
+      <table>
+        <thead>
+          <tr><th>項目</th><th style="text-align:right">數值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Sources/</code> 總計</td><td class="num">17,256 LOC</td></tr>
+          <tr><td>Claude 專屬檔案</td><td class="num">1,468 LOC</td></tr>
+          <tr><td>Phantom 子系統</td><td class="num">1,123 LOC</td></tr>
+          <tr class="total"><td>Claude 相關合計</td><td class="num">~2,600 LOC（~15%）</td></tr>
+          <tr><td><code>Tool</code> 出現次數</td><td class="num">197（51 個檔案）</td></tr>
+          <tr><td>per-tool <code>switch</code> / <code>case .claude</code></td><td class="num">62</td></tr>
+          <tr><td><code>Tool.allCases</code></td><td class="num">24</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>framework 已經是主體。</strong> 約 85% 的程式碼——帳號池、workspace、memory、session
+    共享、<code>run</code>/<code>delegate</code>、MCP、setup、shell 生成——本來就與工具無關。這比
+    「重寫 orrery」小得多。</p>
+    <p><strong>而且模式已經存在一半。</strong> <code>AccountDirectoryRuntime.makeManager</code> 加上
+    <code>ToolAccountManaging</code> protocol，正是這個設計需要的註冊接縫，只是範圍限縮在帳號目錄。
+    <code>ThirdPartyRuntime</code> 是同一套注入慣用法的第二個實例。AIToolKit 是把 codebase
+    已經信任的模式一般化，不是引入外來概念。</p>
+  </section>
+
+  <section>
+    <h2>核心洞見</h2>
+    <p><code>Tool</code> 現在同時扛兩個不相干的職責：</p>
+    <div class="card">
+      <p><strong>身分</strong> — 一個穩定字串，被當成字典 key、路徑片段（<code>accounts/claude/…</code>）、
+      JSON 值（<code>metadata.json</code> 的 <code>"tool": "claude"</code>）、以及 CLI flag（<code>--claude</code>）。</p>
+      <p><strong>行為</strong> — <code>envVarName</code>、<code>defaultConfigDir</code>、
+      <code>authLoginCommand</code>、<code>ansiColor</code>、<code>sessionSubdirectories</code> 等等。</p>
+    </div>
+    <p>這兩者可以分開拆，<strong>而且按這個順序拆才安全</strong>。行為可以搬走，身分原封不動 —
+    這代表整個第一階段不需要任何 on-disk migration，也不動 CLI。</p>
+
+    <p>把整個 enum 寫出來值得，因為它一次定案了線該畫在哪：</p>
+    <pre style="background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:1rem 1.1rem;overflow-x:auto;font-size:.84rem;line-height:1.6;margin:0"><code>public enum Tool: String, Codable, CaseIterable, Sendable {
+    case claude
+    case codex
+    case gemini
+
+    public var envVarName: String            // CLAUDE_CONFIG_DIR / CODEX_HOME / GEMINI_CONFIG_DIR
+    public var subdirectory: String          // rawValue
+    public var defaultConfigDir: URL         // ~/.claude / ~/.codex / ~/.gemini
+    public var displayName: String
+    public var installCommand: [String]?
+    public var installCommandDisplay: String
+    public var supportsSetup: Bool           // installCommand != nil
+    public var authLoginCommand: [String]?
+    public var ansiColor: String
+    public var coloredTag: String
+    public var sessionSubdirectories: [String]
+}</code></pre>
+    <p>十一個成員裡，<strong>只有兩個是身分</strong> —— <code>rawValue</code>，以及
+    <code>subdirectory</code>（它<em>就是</em> <code>rawValue</code>）。其餘九個全是行為。
+    這個比例比「把身分和行為分開」這句話聽起來的要懸殊得多。</p>
+
+    <div class="rule">
+      <div class="label">這個 enum 讓一個限制浮現</div>
+      <blockquote><code>CaseIterable</code> + 三個寫死的 case，是一個封閉世界。</blockquote>
+      <p class="gloss">在第三方依賴的 framework 裡這是致命的：加一個工具就等於<em>改 framework 本身</em>，
+      AIToolKit 會從擴充點變成瓶頸。但把 enum 留在 orrery 當「白名單」也只是<strong>把封閉性從
+      framework 搬到宿主</strong> —— 它仍然是一份編譯進去的三個名字，第三方依然加不了第四個。
+      所以 <strong>enum 哪裡都不留</strong>。</p>
+    </div>
+
+    <div class="card">
+      <h3>取而代之：struct + 註冊</h3>
+      <p><code>AITool</code> 是 AIToolKit 裡的一個 <strong>struct</strong>，裝的就是 enum 原本那些成員
+      （<code>id</code>、<code>envVarName</code>、<code>defaultConfigDir</code>、
+      <code>authLoginCommand</code>…）。<strong>每個工具自己建構一份描述自己</strong>，然後註冊給 orrery。</p>
+      <p><code>Tool.allCases</code> 變成 <code>registry.all</code> ——
+      答案來自<strong>註冊了什麼</strong>，而不是編譯進了什麼。啟動時註冊在這個 codebase 已有前例：
+      <code>OrreryAccountKitRuntime.register()</code> 和 <code>OrreryThirdPartyRuntime.register()</code>
+      現在就是從 <code>main.swift</code> 呼叫的。</p>
+      <p>on-disk 相容性仍然保住：<code>AITool</code> 透過 <code>id</code> 做 <code>Codable</code>，
+      <code>metadata.json</code> 照樣讀寫 <code>"tool": "claude"</code>。</p>
+    </div>
+
+    <div class="risk">
+      <h3>這個轉變帶進來的危險</h3>
+      <p><code>CaseIterable</code> 在<strong>編譯期</strong>是完整的；registry 只有在
+      <strong>註冊執行過</strong>之後才完整。這個差別不是修辭 —— 但危險的地方比乍看少，
+      而這個區分正是讓修法變小的關鍵。</p>
+      <p><strong>安全的：所有 per-tool guard。</strong> <code>OriginTakeoverBootstrap</code>
+      （<code>!store.isOriginManaged(tool:)</code>）和 <code>OriginAccountSeeder</code>
+      （<code>origin.account(for: tool) == nil</code>）雖然都在跑 <code>Tool.allCases</code>，
+      但它們<strong>沒有全域旗標</strong>、每次執行都會重跑。後來才註冊的工具下一個指令就會被撿到，會自癒。</p>
+      <p><strong>危險的：<code>AccountMigration</code> 裡那四個旗標保護的一次性遷移。</strong></p>
+      <div class="scroll"><table>
+        <thead><tr><th>旗標檔</th><th>函式</th></tr></thead>
+        <tbody>
+          <tr><td><code>.migration-v3</code></td><td><code>runIfNeeded</code></td></tr>
+          <tr><td><code>.backfill-account-info-v1</code></td><td><code>runInfoBackfillIfNeeded</code></td></tr>
+          <tr><td><code>.account-config-consolidated</code></td><td><code>runAccountConfigConsolidationIfNeeded</code></td></tr>
+          <tr><td><code>.workspace-structure-relocated</code></td><td><code>runWorkspaceStructureRelocationIfNeeded</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>每一個都只寫一個全域的「做完了」標記。如果某個工具在其中一個執行的當下沒有註冊，它會被跳過 ——
+      <strong>而旗標照樣寫下去</strong>。那台機器上，那個工具就永遠不會被遷移了。失敗是隱形且永久的。</p>
+      <p>因此以下不是選配：註冊必須在任何 migration / takeover / seeding <em>之前</em>完成，
+      並在 <code>main.swift</code> 明確排序；一次性旗標改成 per-tool、或記錄它涵蓋了哪些工具，
+      讓後來才註冊的工具仍能補到；加一個測試斷言第一個旗標保護的流程執行時 registry 已完整。</p>
+    </div>
+
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 288" role="img"
+           aria-label="類別圖：現在的 Tool enum 同時持有身分與行為；改造後 enum 消失，AIToolKit 提供 AITool struct 與 AIToolRegistry，Claude、Codex、Gemini 各自建構一份描述並註冊上去。">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="ar-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+
+        <text class="d-sm" x="16" y="22">現在</text>
+        <rect class="d-box" x="16" y="34" width="252" height="204" rx="6" />
+        <text class="d-name" x="142" y="58" text-anchor="middle">Tool</text>
+        <text class="d-stereo" x="142" y="74" text-anchor="middle">«enum»</text>
+        <line class="d-rule" x1="16" y1="86" x2="268" y2="86" />
+        <text class="d-tag" x="32" y="108">身分</text>
+        <text class="d-sm" x="32" y="128">字典 key · 路徑片段</text>
+        <text class="d-sm" x="32" y="146">JSON 值 · CLI flag</text>
+        <line class="d-rule" x1="16" y1="162" x2="268" y2="162" />
+        <text class="d-tag" x="32" y="184">行為</text>
+        <text class="d-sm" x="32" y="204">envVarName · defaultConfigDir</text>
+        <text class="d-sm" x="32" y="222">authLoginCommand · ansiColor …</text>
+
+        <line class="d-hot" x1="288" y1="136" x2="348" y2="136" marker-end="url(#ar-hot)" />
+        <text class="d-tag" x="318" y="126" text-anchor="middle">1a</text>
+
+        <text class="d-tag" x="372" y="22">AIToolKit repo</text>
+        <rect class="d-accent" x="372" y="34" width="372" height="104" rx="6" />
+        <text class="d-name" x="558" y="58" text-anchor="middle">AITool</text>
+        <text class="d-stereo" x="558" y="74" text-anchor="middle">«struct»</text>
+        <line class="d-rule" x1="372" y1="86" x2="744" y2="86" />
+        <text class="d-sm" x="388" y="106">id · envVarName · defaultConfigDir</text>
+        <text class="d-sm" x="388" y="126">authLoginCommand · ansiColor · …</text>
+
+        <rect class="d-box" x="372" y="158" width="372" height="46" rx="6" />
+        <text class="d-name" x="558" y="180" text-anchor="middle">AIToolRegistry</text>
+        <text class="d-sm" x="558" y="196" text-anchor="middle">registry.all —— 註冊了什麼，就是什麼</text>
+        <line class="d-line" x1="558" y1="158" x2="558" y2="142" marker-end="url(#ar)" />
+
+        <text class="d-sm" x="372" y="228">各 AITool 自己建構一份、註冊上去</text>
+        <rect class="d-box" x="372" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="430" y="258" text-anchor="middle">Claude</text>
+        <rect class="d-box" x="500" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="558" y="258" text-anchor="middle">Codex</text>
+        <rect class="d-box" x="628" y="238" width="116" height="30" rx="5" />
+        <text class="d-name" x="686" y="258" text-anchor="middle">Gemini</text>
+        <line class="d-line" x1="430" y1="238" x2="500" y2="210" marker-end="url(#ar)" />
+        <line class="d-line" x1="558" y1="238" x2="558" y2="210" marker-end="url(#ar)" />
+        <line class="d-line" x1="686" y1="238" x2="616" y2="210" marker-end="url(#ar)" />
+      </svg>
+      <figcaption>
+        enum 沒有搬家，是<strong>消失</strong>。留一份「宿主白名單」只是把封閉性從 framework 搬到
+        orrery —— 依然是編譯進去的三個名字。改成 struct + 註冊之後，
+        <code>Tool.allCases</code> 變成 <code>registry.all</code>，第三方註冊自己那一份就成立，
+        沒有任何一處需要被改。代價是完整性從編譯期保證變成執行期保證 —— 見上方的危險說明。
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Repo 佈局</h2>
+    <p><strong>AIToolKit 從第一天就是獨立 repo</strong>，以 Swift package 發布，不是 orrery 的
+    target。</p>
+    <p>這不是為了整齊，是被動機 2 逼出來的。寫 <code>orrery-codex-support</code> 的人必須能
+    <em>只</em>依賴那個 protocol。如果 AIToolKit 住在 orrery 裡面，每個 plugin 都得把整個應用程式
+    —— 指令、帳號 store、shell 產生器 —— 整包拉進來才碰得到一個介面。那不是任何人會接受的依賴，
+    而且會讓「第三方能加工具」<em>紙面上成立、實際上不成立</em>。</p>
+
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 226" role="img"
+           aria-label="依賴圖：AIToolKit 是獨立的 versioned package；orrery 與 orrery-codex-support 各自依賴它，兩者之間沒有依賴關係。">
+        <defs>
+          <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="d-accent" x="256" y="20" width="248" height="62" rx="6" />
+        <text class="d-name" x="380" y="46" text-anchor="middle">AIToolKit</text>
+        <text class="d-sm" x="380" y="66" text-anchor="middle">獨立 repo · versioned package</text>
+
+        <line class="d-line" x1="180" y1="150" x2="300" y2="86" marker-end="url(#ar4)" />
+        <line class="d-line" x1="600" y1="150" x2="464" y2="86" marker-end="url(#ar4)" />
+
+        <rect class="d-box" x="56" y="150" width="248" height="56" rx="6" />
+        <text class="d-name" x="180" y="176" text-anchor="middle">orrery</text>
+        <text class="d-sm" x="180" y="194" text-anchor="middle">宿主應用程式</text>
+
+        <rect class="d-box" x="480" y="150" width="248" height="56" rx="6" />
+        <text class="d-name" x="604" y="176" text-anchor="middle">orrery-codex-support</text>
+        <text class="d-sm" x="604" y="194" text-anchor="middle">第三方 plugin</text>
+
+        <line class="d-rule" x1="316" y1="178" x2="468" y2="178" stroke-dasharray="4 5" />
+        <text class="d-sm" x="392" y="172" text-anchor="middle">無依賴關係</text>
+      </svg>
+      <figcaption>
+        兩邊都只依賴 framework，彼此互不依賴。這就是 AIToolKit 不能住在 orrery 裡的原因 ——
+        右邊那個框如果要拿到 protocol 就得把左邊整包拉進來，依賴關係會從一條線變成一團。
+      </figcaption>
+    </figure>
+
+    <div class="card">
+      <h3>接受的代價</h3>
+      <p>第一天就拆，代表 Phase 1 期間每次介面調整都是跨 repo 的版本鼓動，而不是本地一次編輯。這比較慢，
+      而且是<strong>刻意</strong>選的 —— 另一個選項（介面磨定前先留在 orrery 內）雖然迭代快，但依賴
+      故事要到最後才正確，而且介面很容易不知不覺伸手進 orrery 的內部型別。</p>
+      <h3>因此需要的紀律</h3>
+      <p>AIToolKit 在 Phase 1 全程停在 <code>0.x</code>，明確允許 breaking change，從
+      <code>1.0</code> 起遵守 semver。<strong>AIToolKit 內不得引用任何 orrery 型別。</strong></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>orrery 內部分層</h2>
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 372" role="img"
+           aria-label="元件圖：OrreryCore 依賴 OrreryAccountKit，OrreryAccountKit 依賴新的 AIToolKit；三個具體 plugin 實作 AIToolKit 的 protocol。事實與政策的界線落在 AccountKit 與 AIToolKit 之間那條依賴線上。">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="tri" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+            <path d="M0 0 L12 6 L0 12 z" fill="none" stroke="currentColor" stroke-width="1.4" />
+          </marker>
+        </defs>
+
+        <rect class="d-box" x="24" y="24" width="392" height="60" rx="6" />
+        <text class="d-name" x="44" y="50">OrreryCore</text>
+        <text class="d-sm" x="44" y="70">指令 · workspace · memory · session · MCP</text>
+
+        <line class="d-line" x1="220" y1="84" x2="220" y2="128" marker-end="url(#ar2)" />
+        <text class="d-stereo" x="232" y="110">«use»</text>
+
+        <rect class="d-box" x="24" y="128" width="392" height="72" rx="6" />
+        <text class="d-name" x="44" y="154">OrreryAccountKit</text>
+        <text class="d-sm" x="44" y="174">帳號池 · 目錄佈局 · 共享政策</text>
+        <text class="d-sm" x="44" y="192">維持原樣，改用下層事實表達</text>
+
+        <line class="d-hot" x1="220" y1="200" x2="220" y2="248" marker-end="url(#ar-hot2)" />
+        <defs>
+          <marker id="ar-hot2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+        <text class="d-tag" x="232" y="228">詢問事實</text>
+
+        <rect class="d-accent" x="24" y="248" width="392" height="72" rx="6" />
+        <text class="d-name" x="44" y="274">AIToolKit</text>
+        <text class="d-sm" x="44" y="294">工具「是什麼」：啟動 · config 位置</text>
+        <text class="d-sm" x="44" y="312">登入方式 · resume 語意 · 憑證存放</text>
+
+        <rect class="d-box" x="512" y="232" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="252">ClaudeAITool</text>
+        <rect class="d-box" x="512" y="270" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="290">CodexAITool</text>
+        <rect class="d-box" x="512" y="308" width="224" height="30" rx="5" />
+        <text class="d-name" x="528" y="328">GeminiAITool</text>
+
+        <line class="d-line" x1="512" y1="247" x2="428" y2="272" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <line class="d-line" x1="512" y1="285" x2="428" y2="284" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <line class="d-line" x1="512" y1="323" x2="428" y2="296" marker-end="url(#tri)" stroke-dasharray="5 4" />
+        <text class="d-stereo" x="624" y="356" text-anchor="middle">«realize» · 啟動時註冊</text>
+
+        <line class="d-hot" x1="12" y1="200" x2="12" y2="248" />
+        <text class="d-tag" x="8" y="196" text-anchor="start" transform="rotate(-90 8 196)">政策</text>
+        <text class="d-tag" x="8" y="264" text-anchor="start" transform="rotate(-90 8 264)">事實</text>
+      </svg>
+      <figcaption>
+        依賴只往下走。判準的界線就是 AccountKit 與 AIToolKit 之間那條線 ——
+        上面問「這個工具是怎麼回事」，下面回答；<strong>怎麼因應</strong>則完全是上面的事。
+        Claude 沒有捷徑，它跟另外兩個一樣只是實作者。
+      </figcaption>
+    </figure>
+    <p>早期草稿讓 AIToolKit <em>吸收</em> OrreryAccountKit。那是錯的，而錯的理由值得寫下來，因為它同時
+    給了整個 framework 的判準：<strong>帳號管理是 orrery 的發明，不是工具的。</strong>
+    Claude Code、Codex、gemini-cli 都沒有「帳號池」這個概念 — 每個只知道自己有一個 config
+    目錄，是 orrery 在上面疊了池化。把帳號管理折進工具抽象，等於把消費者塞進被消費者裡面。</p>
+
+    <div class="rule">
+      <div class="label">判準</div>
+      <blockquote>AIToolKit 陳述工具的事實。AccountKit 決定 orrery 的政策。</blockquote>
+      <p class="gloss">實例：「gemini-cli 只讀 <code>$HOME/.gemini</code>、無視
+      <code>GEMINI_CONFIG_DIR</code>」是關於 gemini 的<em>事實</em> — 屬於 AIToolKit。
+      「所以要蓋一層 wrapper 目錄放 <code>.gemini → &lt;account dir&gt;</code> 並重導
+      <code>HOME</code>」是 orrery 的隔離<em>政策</em> — 屬於 AccountKit。同理
+      <code>privateSubdirs</code> / <code>baseSharedSubdirs</code> 是 orrery 的共享政策，
+      不是工具的屬性，留在 AccountKit。</p>
+    </div>
+
+    <figure class="fig-scroll">
+      <svg viewBox="0 0 760 316" role="img"
+           aria-label="循序圖：AccountKit 向 AIToolKit 詢問 gemini 的設定位置，得到「只讀 HOME 底下的 .gemini、忽略 GEMINI_CONFIG_DIR」這項事實，據此自行決定建立 HOME wrapper 的政策，再交由 shell 在前景 process group 啟動 gemini。">
+        <defs>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+          <marker id="ar3-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+
+        <rect class="d-box" x="16" y="16" width="168" height="34" rx="5" />
+        <text class="d-name" x="100" y="38" text-anchor="middle">AccountKit</text>
+        <rect class="d-accent" x="232" y="16" width="184" height="34" rx="5" />
+        <text class="d-name" x="324" y="38" text-anchor="middle">GeminiAITool</text>
+        <rect class="d-box" x="470" y="16" width="120" height="34" rx="5" />
+        <text class="d-name" x="530" y="38" text-anchor="middle">shell</text>
+        <rect class="d-box" x="632" y="16" width="112" height="34" rx="5" />
+        <text class="d-name" x="688" y="38" text-anchor="middle">gemini-cli</text>
+
+        <line class="d-life" x1="100" y1="50" x2="100" y2="300" />
+        <line class="d-life" x1="324" y1="50" x2="324" y2="300" />
+        <line class="d-life" x1="530" y1="50" x2="530" y2="300" />
+        <line class="d-life" x1="688" y1="50" x2="688" y2="300" />
+
+        <text class="d-sm" x="212" y="82" text-anchor="middle">設定在哪？吃哪個環境變數？</text>
+        <line class="d-line" x1="100" y1="92" x2="324" y2="92" marker-end="url(#ar3)" />
+
+        <text class="d-tag" x="212" y="122" text-anchor="middle">只讀 $HOME/.gemini</text>
+        <text class="d-sm" x="212" y="138" text-anchor="middle">GEMINI_CONFIG_DIR 無效</text>
+        <line class="d-hot" x1="324" y1="148" x2="100" y2="148" marker-end="url(#ar3-hot)" stroke-dasharray="5 4" />
+        <text class="d-stereo" x="352" y="152">事實</text>
+
+        <path class="d-line" d="M100 172 H160 V202 H104" marker-end="url(#ar3)" />
+        <text class="d-tag" x="172" y="182">政策</text>
+        <text class="d-sm" x="172" y="200">建 wrapper：.gemini → 帳號目錄</text>
+
+        <text class="d-sm" x="315" y="232" text-anchor="middle">HOME=wrapper 啟動</text>
+        <line class="d-line" x1="100" y1="242" x2="530" y2="242" marker-end="url(#ar3)" />
+
+        <text class="d-sm" x="609" y="272" text-anchor="middle">exec（前景 process group）</text>
+        <line class="d-line" x1="530" y1="282" x2="688" y2="282" marker-end="url(#ar3)" />
+      </svg>
+      <figcaption>
+        同一次往返裡兩種角色說得很清楚：plugin 只回報 gemini-cli 怎麼運作，<strong>沒有</strong>
+        說該怎麼隔離；「蓋 wrapper」是 AccountKit 自己的決定。換成一個吃 config-dir 變數的工具，
+        事實不同、政策自然不同，而 plugin 一行都不必知道帳號池的存在。
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>能力歸屬</h2>
+    <p>Claude 也是 plugin，不是特權案例。如果 Claude 能繞過介面，介面就永遠不會被它最嚴苛的
+    消費者壓測，第三方會撞上維護者從沒感受過的牆。</p>
+    <p>但「全部都變成 plugin 能力」會是過度抽象。套用上面的事實／政策判準：</p>
+    <div class="card scroll">
+      <table>
+        <thead><tr><th>機制</th><th>歸屬</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>Phantom registry、liveness、supervisor shim loop</td><td><span class="home core">core</span></td><td>確實與工具無關</td></tr>
+          <tr><td><code>--resume</code> 語意、session id 探索</td><td><span class="home kit">AIToolKit</span></td><td>工具如何 resume，是事實</td></tr>
+          <tr><td>憑證存放位置（Keychain item vs config 內檔案）</td><td><span class="home kit">AIToolKit</span></td><td><code>CredentialAdapter</code> 已有雛形</td></tr>
+          <tr><td>把憑證匯入池化帳號</td><td><span class="home acct">AccountKit</span></td><td>池化是 orrery 的想法</td></tr>
+          <tr><td>啟動／結束時的設定檔 merge / split</td><td><span class="home kit">AIToolKit</span></td><td>只有 Claude 需要，但形狀可一般化</td></tr>
+          <tr><td><code>auth_success</code> 通知</td><td><span class="home kit">AIToolKit</span></td><td>「工具能告訴我們登入完成了」</td></tr>
+          <tr><td>帳號目錄共享政策</td><td><span class="home acct">AccountKit</span></td><td>orrery 的政策，非工具屬性</td></tr>
+          <tr><td>shell wrapper function 貢獻</td><td><span class="home kit">AIToolKit</span></td><td><strong>最沒有前例 — 見風險</strong></td></tr>
+          <tr><td>OAuth token refresh</td><td><span class="home kit">AIToolKit</span></td><td>各家細節不同</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>能力是選配的。每個 plugin 只實作它的工具需要的子集；Claude 會實作最多 —
+    這正是讓介面保持誠實的原因。</p>
+  </section>
+
+  <section>
+    <h2>分階段</h2>
+    <div class="card">
+      <div class="phase">
+        <div class="n">0</div>
+        <div class="body">
+          <h3>framework repo 先存在</h3>
+          <p>建立 AIToolKit repo，裡面只有 protocol 骨架。orrery 以 SPM 依賴引入。這時還沒有任何行為
+          搬家 —— 這一階段存在的意義是：<strong>之後每一個介面決定，都是在第三方將來消費它的那個地方
+          做的</strong>，而不是事後回頭補。</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="n">1</div>
+        <div class="body">
+          <h3>enum 讓位給 registry</h3>
+          <p>是 strangler 不是重寫。<code>AITool</code> 與 registry 先出現，既有 enum
+          <strong>橋接</strong>過去（每個 case 產生一份描述），呼叫點就能一次搬幾個、兩種形狀並存。
+          等到沒有人再讀它，enum 才刪掉。</p>
+          <p>階段內的順序，因為這一步對單一 PR 來說太大：</p>
+          <ol style="font-size:.94rem">
+            <li><code>AITool</code> + registry 就位；enum 橋接；註冊在 <code>main.swift</code>
+            排到所有 migration 路徑之前</li>
+            <li><strong>先修上面那個一次性旗標的危險</strong>，再動任何呼叫點 ——
+            這一步不能延後</li>
+            <li>行為按能力搬家：憑證 → 啟動／結束 → shell → phantom</li>
+            <li><code>Tool.allCases</code> → <code>registry.all</code>，24 處</li>
+            <li>刪掉 enum</li>
+          </ol>
+          <div class="delivers">
+            <span class="tag yes">on-disk 格式不變</span>
+            <span class="tag yes">動機 1 · 2 · 3</span>
+          </div>
+          <p><code>--claude</code> / <code>--codex</code> / <code>--gemini</code>
+          保留成 orrery 自己的便利 flag，對映到已註冊的 id。它們是<strong>宿主 UI，不是 framework
+          介面</strong>；沒有專屬 flag 的工具仍可用泛用方式指定。</p>
+          <p>那 62 個 per-tool <code>switch</code> 不是額外工作 —— 其中絕大多數<em>就是</em>正在搬家的
+          行為本身，會在第 3 步一併消化，而不是另一場遷移。</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="n">2</div>
+        <div class="body">
+          <h3>拆 plugin</h3>
+          <p>把 Codex 和 Gemini plugin 移到各自的 repo（<code>orrery-codex-support</code>、
+          <code>orrery-gemini-support</code>），各自只依賴 AIToolKit。</p>
+          <p>載入機制<strong>刻意留白</strong>，等 1a/1b 顯示介面真正需要什麼再決定。但要注意它跟
+          Phase 0 的選擇有交互作用：如果 plugin 是編譯期 SPM 依賴，AIToolKit 作為 Swift package
+          就完全正確，<em>但 orrery 仍得在自己的 <code>Package.swift</code> 裡列出每個 plugin</em> ——
+          第三方能不經 orrery 同意就<strong>建置</strong>，卻不能<strong>出貨</strong>。真正獨立出貨
+          需要「被探索到的執行檔 + 線路協定」，那時候 Swift package 的重要性反而低於協定文件本身。
+          早點拆 AIToolKit 兩種情況下都是對的；它本身沒有直接帶來的，是 runtime 可插拔。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>相容性約束</h2>
+    <p>1a 與 1b 期間不可妥協：</p>
+    <div class="card">
+      <ul>
+        <li><code>metadata.json</code> 保持 <code>"tool": "claude"</code></li>
+        <li>帳號路徑保持 <code>accounts/&lt;tool&gt;/&lt;id&gt;/</code></li>
+        <li><code>--claude</code> / <code>--codex</code> / <code>--gemini</code> 繼續可用</li>
+        <li>既有安裝不得需要重新登入或遷移</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>風險</h2>
+    <div class="risk">
+      <h3>shell 片段貢獻毫無前例</h3>
+      <p><code>ShellFunctionGenerator</code> 是把 <code>claude()</code> / <code>gemini()</code>
+      當字面文字吐出來的。讓 plugin 貢獻 shell 是整個設計裡最沒被設計過的一塊，也最可能需要
+      自己一輪設計。而且它是介面爛掉代價最高的地方 — 產出會被寫進使用者的 rc 檔。</p>
+    </div>
+    <div class="risk">
+      <h3>62 個 switch 點是實打實的重構</h3>
+      <p>用 strangler 形狀緩解（protocol 與 enum 並存、逐步遷移、最後才刪），但仍會橫跨多個 PR。</p>
+    </div>
+    <div class="risk">
+      <h3>Phantom 的 core／plugin 邊界目前只是推測</h3>
+      <p>「registry 和 shim 與工具無關、只有 resume 語意因工具而異」這個主張看似合理但<strong>未經驗證</strong> —
+      從來沒有非 Claude 的工具被 supervise 過。1a 不該試圖解決它。</p>
+    </div>
+    <div class="risk">
+      <h3>Gemini 可能無論如何都撐不住</h3>
+      <p>Google 已封鎖個人版 Code Assist 帳號使用 gemini-cli。既有 gemini 帳號是否還能運作尚未查證。
+      如果 gemini 支援在上游已死，Phase 2 的意義本身就改變了 — 動手前值得先確認。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>不做什麼</h2>
+    <div class="card">
+      <ul>
+        <li>Runtime 動態載入（<code>dlopen</code>）。Swift ABI 與 macOS 簽章都不適合 —
+        產出這份設計的那個 session，才因為一個單純的 <code>cp</code> 破壞簽章而吃到 SIGKILL。</li>
+        <li>改動 on-disk 格式。</li>
+        <li>重寫 phantom。</li>
+        <li>在這次工作裡順便加新工具。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>待決問題</h2>
+    <div class="card">
+      <ol>
+        <li>Phase 1 內部的五個步驟各自是一個 PR，還是能力遷移那步再細切？</li>
+        <li>Codex 和 Gemini 在 1b 之前都留在 repo 內，到 Phase 2 才搬？（假設是）</li>
+        <li>gemini 的上游封鎖，是否改變了 Gemini 值不值得繼續帶著？</li>
+        <li>AccountKit 最終是否也該有自己的 repo？它是 orrery 自己的層而非 per-tool 的，所以大概不用 —
+        但如果 AIToolKit 真的在 orrery 之外也能重用，問題就不一樣了。</li>
+        <li>剩下那幾個 Claude 專屬的<em>命令</em>放哪 — <code>_prepare-claude-launch</code>、
+        <code>_capture-claude-exit</code>、<code>orrery-claude-hook</code>？它們是進入點不是 library
+        code，可能需要自己一套 plugin 機制，而不是套進 <code>AITool</code> struct。</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Orrery · AIToolKit 設計文件 · 對應 Markdown 版本：
+    <code>docs/superpowers/specs/2026-08-21-aitoolkit-plugin-framework-design.md</code>
+  </footer>
+
+</div>
