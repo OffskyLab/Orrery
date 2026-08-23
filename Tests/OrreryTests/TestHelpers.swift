@@ -30,6 +30,21 @@ private let registerAccountKitOnce: Void = {
 /// setup`, rewriting the developer's actual `~/.zshrc`/`~/.bashrc`, and
 /// `_link-memory` can dangle the developer's real Claude memory symlink even
 /// when `ORRERY_HOME` is otherwise isolated — both confirmed incidents.
+/// To check nothing has regressed, pair up the shell spawns with the strips:
+///
+///     grep -c 'Process()'        Tests/OrreryTests/<file>.swift
+///     grep -c 'scriptForProbe()' Tests/OrreryTests/<file>.swift
+///
+/// in every file that both spawns a shell and mentions
+/// `ShellFunctionGenerator`. Each `Process()` that runs the script needs a strip
+/// feeding it. A bare `ShellFunctionGenerator.generate()` is fine on its own —
+/// inspecting the text is harmless; it is only executing it that bites.
+///
+/// Three confirmed incidents so far, all the same shape — isolation honoured
+/// for the value, ignored for the destination: a dangled memory symlink, a
+/// self-update that ran the *installed* binary rather than the built one, and a
+/// `source` block written into the developer's real `~/.zshrc` pointing at a
+/// temp directory that no longer existed.
 func generatedShellScriptWithoutInit() -> String {
     let script = ShellFunctionGenerator.generate()
     let trailer = "\n_orrery_init"
