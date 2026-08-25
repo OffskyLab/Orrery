@@ -270,6 +270,70 @@ struct AIToolRegistrationTests {
     /// ClaudePluginParityTests for why `Bundle.main` does not work here.
     private final class BundleMarker {}
 
+    /// The composed bootstrap at production defaults: the same two calls
+    /// `main.swift` makes, in the same order, with nothing overridden but the
+    /// home the plugin is discovered from.
+    ///
+    /// Every other test here drives one of the two calls with hand-picked
+    /// arguments. That is right for exercising a rule, and it is exactly how a
+    /// wiring mistake survives a green suite: `pluginProvidedTools` could name a
+    /// tool that `registerPlugins` is never asked for, and every test above
+    /// would still pass. This asserts the two halves agree.
+    ///
+    /// What it does **not** cover: that `main.swift` actually makes the calls.
+    /// It reproduces the composition rather than invoking the entry point, so
+    /// deleting the `registerPlugins` line from `main.swift` leaves this green.
+    /// Reaching that would mean driving the built `orrery-bin` as a subprocess
+    /// against an isolated home, which is a different and much heavier test than
+    /// this one — and the thing most likely to go wrong is the two halves
+    /// disagreeing, which is what is checked here.
+    ///
+    /// The type checks are the point. Matching field values would also pass if
+    /// claude were still coming from the enum bridge — the parity test exists
+    /// precisely because the two describe claude identically — so identity of
+    /// *source*, not equality of values, is what proves the wiring.
+    @Test("the production bootstrap gets claude from the plugin and the rest from the enum")
+    func productionBootstrapSourcesClaudeFromPlugin() async throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("registerPlugins-bootstrap-\(UUID().uuidString)")
+        let tools = home.appendingPathComponent("tools")
+        try FileManager.default.createDirectory(at: tools, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let built = Bundle(for: BundleMarker.self).bundleURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("orrery-claude")
+        try FileManager.default.copyItem(
+            at: built, to: tools.appendingPathComponent("orrery-claude"))
+
+        let registry = AIToolRegistry()
+        let diagnostics = Diagnostics()
+
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        await AIToolRegistration.registerPlugins(
+            into: registry,
+            toolIDs: AIToolRegistration.pluginProvidedTools.map { $0.rawValue },
+            timeout: .seconds(5),
+            environment: ["ORRERY_HOME": home.path, "PATH": ""],
+            warn: diagnostics.record)
+
+        let claude = try #require(registry.tool(id: "claude"),
+                                  "the plugin is installed, so claude must be present")
+        #expect(claude is RemoteAITool, "claude must come from the plugin process")
+        #expect(!(registry.tool(id: "codex") is RemoteAITool),
+                "codex has no plugin and must still come from the enum bridge")
+        #expect(!(registry.tool(id: "gemini") is RemoteAITool))
+
+        // Complete again, now that both halves have run.
+        #expect(Set(registry.all.map(\.id)) == Set(Tool.allCases.map(\.rawValue)))
+        #expect(diagnostics.joined.isEmpty,
+                "a healthy install reports nothing, got: \(diagnostics.joined)")
+
+        // The description really crossed the pipe rather than arriving empty.
+        #expect(claude.configDirectoryName == ".claude")
+        #expect(claude.sessionSubdirectories == Tool.claude.sessionSubdirectories)
+    }
+
     /// The case every other test in this file skips: a plugin that **works**.
     ///
     /// An external review found this gap and it was the expensive one. The

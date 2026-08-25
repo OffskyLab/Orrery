@@ -19,6 +19,25 @@ private func runOrreryMain() async throws {
     // build, and it should stop the invocation loudly rather than leave the
     // registry quietly short a tool.
     try AIToolRegistration.registerBuiltInTools()
+    // Then the tools a plugin describes — claude today. This spawns one child
+    // process per plugin, measured at ~7.6ms median for spawn + initialize +
+    // describe (docs/superpowers/notes/2026-08-21-rpc-measurement.md). The only
+    // call site that fires without the user typing a command is `_orrery_init`
+    // on new-shell startup, which is why that number was worth measuring before
+    // putting a process spawn on this path.
+    //
+    // Not `try`: unlike the built-ins above, a plugin failing is a runtime
+    // condition rather than a bug in this build. It is reported — loudly, when
+    // the plugin is one orrery ships — and the invocation continues, because a
+    // broken claude plugin must not cost the user codex and gemini.
+    //
+    // The timeout is stated here rather than defaulted inside registerPlugins:
+    // a bootstrap that can stall the CLI should have to name the number it is
+    // willing to stall for.
+    await AIToolRegistration.registerPlugins(
+        into: .shared,
+        toolIDs: AIToolRegistration.pluginProvidedTools.map(\.rawValue),
+        timeout: .seconds(5))
     LegacyOrbitalMigration.runIfNeeded()
     // Phase A of the workspace-layout migration: relocate the v3.0.x tree to the
     // unified workspaces/ layout BEFORE takeover, so takeover sees the new paths.
