@@ -17,8 +17,13 @@ INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="orrery-bin"
 # Sidecar binaries that ship alongside orrery-bin in every release artifact
 # (see .github/workflows/release.yml): the background token-refresh agent,
-# and the per-account claude Notification/auth_success hook target.
-EXTRA_BINARY_NAMES=("orrery-agent" "orrery-claude-hook")
+# the per-account claude Notification/auth_success hook target, and claude's
+# tool plugin. The plugin has to land on PATH specifically — PluginDiscovery
+# looks for $ORRERY_HOME/tools/orrery-claude and then walks PATH, so a plugin
+# left inside the tarball is a plugin orrery cannot find. Every loop below
+# guards on the file existing, so naming one an older tarball lacks is a
+# no-op rather than a failed install.
+EXTRA_BINARY_NAMES=("orrery-agent" "orrery-claude-hook" "orrery-claude")
 OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
 INCLUDE_PRERELEASE=false
