@@ -53,6 +53,22 @@ struct TokenRefreshRunnerTests {
         )
     }
 
+    @Test("excludingOrigin filters out only the account matching originAccountID")
+    func excludingOriginFiltersOnlyOriginAccount() {
+        let origin = Self.account(id: "origin-acct")
+        let other = Self.account(id: "other-acct")
+        let result = TokenRefreshRunner.excludingOrigin([origin, other], originAccountID: "origin-acct")
+        #expect(result.map(\.id) == ["other-acct"])
+    }
+
+    @Test("excludingOrigin is a no-op when there's no origin account")
+    func excludingOriginNoOpWhenNilOriginID() {
+        let a = Self.account(id: "a")
+        let b = Self.account(id: "b")
+        let result = TokenRefreshRunner.excludingOrigin([a, b], originAccountID: nil)
+        #expect(result.map(\.id) == ["a", "b"])
+    }
+
     @Test("skips accounts with no keychain item — never touches the transport")
     func skipsMissingKeychainItem() {
         let recorder = Recorder()

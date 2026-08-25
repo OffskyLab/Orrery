@@ -73,6 +73,21 @@ public struct TokenRefreshRunner: Sendable {
         accounts.map { account in (account, refreshIfNeeded(account, threshold: threshold, force: force)) }
     }
 
+    /// Accounts the *background* daemon may proactively refresh — excludes
+    /// `originAccountID`, since the origin account's pool credential is a
+    /// one-time copy of the real, live Claude Code credential made at seed
+    /// time (`OriginAccountSeeder`), sharing the same refresh token at that
+    /// instant. Anthropic's refresh tokens are single-use/rotating and
+    /// nothing syncs this pool copy's rotations back to the live item, so a
+    /// daemon-initiated refresh here would silently invalidate the refresh
+    /// token the user's real, non-orrery Claude Code CLI still holds — the
+    /// origin account is left to refresh itself the normal way instead.
+    /// Manual refreshes (`orrery refresh-token`) are unaffected — they call
+    /// `sweep` directly and may still target the origin account on purpose.
+    public static func excludingOrigin(_ accounts: [Account], originAccountID: AccountID?) -> [Account] {
+        accounts.filter { $0.id != originAccountID }
+    }
+
     private func refreshIfNeeded(_ account: Account, threshold: TimeInterval, force: Bool) -> Outcome {
         #if os(macOS)
         // macOS: the Keychain service name Account already carries.
