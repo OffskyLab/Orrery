@@ -18,7 +18,9 @@ TokenRefreshDaemonInstaller.rotateLogIfNeeded()
 #endif
 
 let threshold: TimeInterval = 60 * 60
-let accounts = (try? AccountStore.default.list(tool: .claude)) ?? []
+let allAccounts = (try? AccountStore.default.list(tool: .claude)) ?? []
+let originAccountID = EnvironmentStore.default.loadOriginWorkspace().account(for: .claude)
+let accounts = TokenRefreshRunner.excludingOrigin(allAccounts, originAccountID: originAccountID)
 let results = TokenRefreshRunner.live.sweep(accounts: accounts, threshold: threshold)
 
 for (account, outcome) in results {
