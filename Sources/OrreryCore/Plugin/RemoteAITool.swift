@@ -36,6 +36,27 @@ public struct RemoteAITool: AITool {
     public var sessionSubdirectories: [String] { description.sessionSubdirectories }
     public var ansiColor: String { description.ansiColor }
 
+    /// Whether the plugin behind this description still answers.
+    ///
+    /// The eight fields are cached at connect time, so they keep answering long
+    /// after the process they came from is gone — which means comparing them
+    /// cannot tell a live plugin from a dead one. This asks the process
+    /// something, and only a live one can reply.
+    ///
+    /// It exists because a defect of exactly that shape shipped: every plugin
+    /// that connected successfully was killed the instant it registered, and
+    /// the registry entry it left behind looked entirely correct.
+    public var isConnectionAlive: Bool {
+        get async {
+            do {
+                _ = try await connection.call("tool/describe", nil)
+                return true
+            } catch {
+                return false
+            }
+        }
+    }
+
     private init(description: ToolDescription, connection: JSONRPCConnection) {
         self.description = description
         self.connection = connection

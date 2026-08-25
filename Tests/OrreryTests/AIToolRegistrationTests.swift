@@ -171,4 +171,63 @@ struct AIToolRegistrationTests {
         #expect(registry.tool(id: "cursor") == nil)
         #expect(Set(registry.all.map(\.id)) == builtInIDs)
     }
+
+    /// Anchors `Bundle(for:)` to the loaded test bundle, whose directory is the
+    /// build-products directory `orrery-claude` lands in. See
+    /// ClaudePluginParityTests for why `Bundle.main` does not work here.
+    private final class BundleMarker {}
+
+    /// The case every other test in this file skips: a plugin that **works**.
+    ///
+    /// An external review found this gap and it was the expensive one. The
+    /// failure matrix above is thorough — seven behaviours, each asserting that
+    /// the other tools survive — and none of it ever registered a new id
+    /// successfully. That let a defect through in which every successfully
+    /// connected plugin had its process killed the instant it registered,
+    /// because cancelling the watchdog that guarded the connect ran the
+    /// termination it was supposed to skip.
+    ///
+    /// The binary is `orrery-claude` rather than a shell script. The scripts
+    /// above are right for breakage — a broken plugin is cheapest written as
+    /// three lines of sh — but a *working* plugin has to be the real shape: a
+    /// Swift executable driven by `PluginServer.serve(tool:)`, which is what a
+    /// third party's would be. Modelling the success path on the same fixture
+    /// style as the failures is how the failure style's limits leak into it.
+    @Test("a working plugin registers, and its connection is still alive afterwards")
+    func workingPluginRegistersAndSurvives() async throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("registerPlugins-live-\(UUID().uuidString)")
+        let tools = home.appendingPathComponent("tools")
+        try FileManager.default.createDirectory(at: tools, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        // Discovery looks for `orrery-<id>`, so the real claude plugin stands in
+        // for a third-party tool under an id no built-in uses.
+        let built = Bundle(for: BundleMarker.self).bundleURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("orrery-claude")
+        let installed = tools.appendingPathComponent("orrery-cursor")
+        try FileManager.default.copyItem(at: built, to: installed)
+
+        let registry = AIToolRegistry()
+        let builtInIDs = Set(Tool.allCases.map(\.rawValue))
+
+        await AIToolRegistration.registerPlugins(
+            into: registry, toolIDs: ["cursor"], timeout: .seconds(5),
+            environment: ["ORRERY_HOME": home.path, "PATH": ""])
+
+        // It describes itself as claude, since that is the binary — the id it
+        // registers under is its own, not the discovery id.
+        let registered = try #require(registry.tool(id: "claude"))
+        #expect(registered.displayName == Tool.claude.aiTool.displayName)
+        #expect(!builtInIDs.isEmpty)
+
+        // The part that would have caught the watchdog defect: the backing
+        // process must still be there. A killed plugin leaves a registry entry
+        // whose cached description still answers, so checking the fields alone
+        // proves nothing — the process itself has to be alive.
+        let remote = try #require(registered as? RemoteAITool)
+        #expect(await remote.isConnectionAlive,
+                "a registered plugin's process must outlive registration")
+    }
 }
