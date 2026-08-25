@@ -1,5 +1,51 @@
 # Changelog
 
+## v3.5.4 - 2026-08-25
+
+### Fixed
+
+- **The background token daemon was logging you out of your own, non-orrery
+  Claude Code CLI.** The origin account's Keychain item is a one-time copy of
+  the real live credential, taken at seed time and sharing its refresh token at
+  that instant. Anthropic's refresh tokens are single-use and rotating, and
+  nothing syncs the pool copy's rotations back to the live item — so whenever
+  `orrery-agent` refreshed the origin account first, it invalidated the refresh
+  token the user's real Claude Code CLI still held, which then failed with
+  `invalid_grant`. `orrery-agent` now filters origin out of its automatic sweep.
+  A manual `orrery refresh-token` is unaffected and may still target origin on
+  purpose.
+- **A one-shot upgrade migration could mark a tool "done" without doing
+  anything for it.** Three related holes in the per-tool migration ledger, which
+  exists precisely so a tool that was absent when a migration ran still gets its
+  turn later: a legacy version-only marker was read as covering *every* tool,
+  including tools added after it was written; the home-symlink repair sat inside
+  the once-only `origin/` move branch, so a tool registered later could never be
+  repaired yet was still marked covered — leaving its link dangling with no
+  record that anything was owed; and the fresh-install path still wrote a legacy
+  marker. A pre-per-tool flag file whose entire content is `v2` — found on a real
+  machine — is now pinned by a test, so a later "fix" cannot silently re-run a
+  migration that was already done.
+- **`orrery`'s own test suite no longer writes into the developer's real
+  `~/.claude`.** `_link-memory`, `MCPServer.ensureClaudeSymlink` and
+  `PhantomSupport.findCurrentClaudeSessionId` resolved their `CLAUDE_CONFIG_DIR`
+  fallback against the real home instead of the project's isolation seam, and one
+  test sourced the generated `activate.sh` including its trailing `_orrery_init`,
+  which shells out to the *installed* binary. Between them, an isolated test run
+  could repoint symlinks in the live account pool at a sandbox that was then
+  deleted. Developer-facing only; no effect on a normal install.
+
+### Added
+
+- **`orrery-claude` ships and is installed alongside the other sidecar
+  binaries.** It is the first tool plugin: a separate process that describes
+  Claude Code over a JSON-RPC pipe, loaded through exactly the mechanism a third
+  party would use rather than a special case. Groundwork — nothing in orrery
+  loads it yet, and Claude Code is still described by the built-in table, so this
+  release changes no behaviour. The plumbing behind it (AIToolKit's JSON-RPC
+  layer, `RemoteAITool`, plugin discovery and registration) is in place and
+  tested, with a parity test pinning the plugin's description against the
+  built-in one so the two cannot drift apart while both exist.
+
 ## v3.5.3 - 2026-08-22
 
 ### Fixed
