@@ -2655,5 +2655,13 @@
       { "label": "_", "name": "count", "type": "Int" }
     ]
   },
-  { "path": ["Show", "supervisedHeader"], "kind": "var", "parameters": [] }
+  { "path": ["Show", "supervisedHeader"], "kind": "var", "parameters": [] },
+  {
+    "path": ["Plugin", "shippedPluginFailed"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "tool", "type": "String" },
+      { "label": "_", "name": "reason", "type": "String" }
+    ]
+  }
 ]

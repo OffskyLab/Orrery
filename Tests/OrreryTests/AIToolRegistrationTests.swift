@@ -1,7 +1,28 @@
 import Foundation
+import Synchronization
 import Testing
 import AIToolKit
 @testable import OrreryCore
+
+/// Collects diagnostics instead of letting them reach stderr.
+///
+/// `registerPlugins` takes its sink as a parameter rather than these tests
+/// redirecting FD 2: FD 2 is process-wide and these tests spawn real child
+/// processes — the exact combination that already forced `captureStdout` to grow
+/// a lock and a post-mortem comment. An injected sink cannot interleave with
+/// another suite's output, and asserting on a value beats parsing a temp file.
+private final class Diagnostics: Sendable {
+    private let lines = Mutex<[String]>([])
+
+    /// Captures `self`, not `lines`: a `Mutex` is non-copyable, so naming it in
+    /// a capture list is a consume the compiler refuses. The class is the
+    /// `Sendable` thing worth passing around anyway.
+    var record: @Sendable (String) -> Void {
+        { [self] line in lines.withLock { $0.append(line) } }
+    }
+
+    var joined: String { lines.withLock { $0.joined() } }
+}
 
 /// Exercises `AIToolRegistration.registerPlugins`'s failure paths directly —
 /// the ones carrying the "one broken plugin must not cost the host its
@@ -163,6 +184,66 @@ struct AIToolRegistrationTests {
         #expect(registry.tool(id: "cursor") == nil)
         #expect(Set(registry.all.map(\.id)) == builtInIDs)
         #expect(registry.tool(id: "codex")?.displayName == survivorDisplayName)
+    }
+
+    /// The distinction the spec draws under *An installation-time distinction*:
+    /// `orrery-claude` ships with orrery, so its absence is a broken install and
+    /// must be said out loud. A third party's absence is that tool quietly not
+    /// being there.
+    ///
+    /// Asserts on the binary name and the repair command rather than on the
+    /// prose, so translating the message does not turn this red — while still
+    /// failing if the message stops naming either.
+    @Test("a shipped plugin that cannot be located is reported as a broken install")
+    func shippedPluginAbsenceIsLoud() async throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("registerPlugins-shipped-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let registry = AIToolRegistry()
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        let builtInIDs = Set(registry.all.map(\.id))
+        let diagnostics = Diagnostics()
+
+        #expect(AIToolRegistration.pluginProvidedTools.map { $0.rawValue }.contains("claude"),
+                "this test is meaningless unless claude is one of the shipped plugins")
+
+        await AIToolRegistration.registerPlugins(
+            into: registry, toolIDs: ["claude"], timeout: timeout,
+            environment: ["ORRERY_HOME": home.path, "PATH": ""],
+            warn: diagnostics.record)
+
+        let text = diagnostics.joined
+        #expect(text.contains("orrery-claude"), "must name the binary that is missing, got: \(text)")
+        #expect(text.contains("orrery update"), "must name the repair, got: \(text)")
+
+        // Loud, but still scoped: claude is absent and everything else stands.
+        #expect(registry.tool(id: "claude") == nil)
+        #expect(Set(registry.all.map(\.id)) == builtInIDs)
+        #expect(registry.tool(id: "codex") != nil)
+    }
+
+    @Test("a third-party plugin that cannot be located says nothing")
+    func thirdPartyAbsenceIsSilent() async throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("registerPlugins-third-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        let registry = AIToolRegistry()
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        let diagnostics = Diagnostics()
+
+        #expect(!AIToolRegistration.pluginProvidedTools.map { $0.rawValue }.contains("cursor"))
+
+        await AIToolRegistration.registerPlugins(
+            into: registry, toolIDs: ["cursor"], timeout: timeout,
+            environment: ["ORRERY_HOME": home.path, "PATH": ""],
+            warn: diagnostics.record)
+
+        #expect(diagnostics.joined.isEmpty,
+                "an absent third-party plugin is that tool not being installed, not a fault to report")
     }
 
     @Test("a missing binary is skipped silently, other tools unaffected")
