@@ -76,20 +76,63 @@ public enum AIToolRegistration {
     /// to the same `continue`, so no future failure mode added to this
     /// function can accidentally propagate past the plugin that hit it.
     ///
+    /// How loudly it is skipped depends on who shipped it. A plugin in
+    /// ``pluginProvidedTools`` ships *with orrery*, so its absence is a broken
+    /// install and says so, naming the binary and the repair — that tool is
+    /// unavailable and the user has no way to guess why from silence. A third
+    /// party's absence is just that tool not being installed, and reporting it
+    /// on every invocation would be noise about a tool the user may never have
+    /// had.
+    ///
+    /// Loud, but still not fatal: a missing `orrery-claude` must not take codex
+    /// and gemini down with it, so this reports and continues rather than
+    /// throwing out of the bootstrap.
+    ///
     /// `connect` can fail after the child process has already been spawned:
     /// `StdioTransport` is an actor with no `deinit`, so nothing else reaps
     /// that process. Every path out of the `do` block below — success or
     /// failure — terminates the transport it started, except the one where
     /// the tool is handed to the registry and kept alive for the run.
+    /// - Parameter warn: where diagnostics go. A parameter rather than a direct
+    ///   `FileHandle.standardError` write so a test can assert on what was
+    ///   reported: FD 2 is process-wide, and the tests around this spawn real
+    ///   child processes, which is the combination that already forced the
+    ///   suite's stdout capture to grow a lock and a post-mortem comment.
     public static func registerPlugins(
         into registry: AIToolRegistry,
         toolIDs: [String],
         timeout: Duration,
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        warn: @Sendable (String) -> Void = { message in
+            FileHandle.standardError.write(Data(message.utf8))
+        }
     ) async {
+        let shippedIDs = Set(pluginProvidedTools.map(\.rawValue))
+
+        /// Reports a plugin that did not load, framed by who shipped it.
+        func report(_ toolID: String, _ reason: String) {
+            if shippedIDs.contains(toolID) {
+                warn("[orrery] " + L10n.Plugin.shippedPluginFailed(toolID, reason) + "\n")
+            } else {
+                warn("[orrery] tool plugin '\(toolID)' not loaded: \(reason)\n")
+            }
+        }
+
         for toolID in toolIDs {
             guard let binary = PluginDiscovery.locate(toolID: toolID, environment: environment)
-            else { continue }
+            else {
+                // Only absence splits by provenance. A third-party plugin that
+                // is not on disk is a tool the user never installed, and saying
+                // so on every invocation would be noise about a tool they may
+                // never have had. A shipped one that is not on disk is a broken
+                // install, and silence leaves the user no way to learn why that
+                // tool vanished. Everything below this line — a plugin that is
+                // present and broken — is worth reporting either way.
+                if shippedIDs.contains(toolID) {
+                    report(toolID, "orrery-\(toolID) not found")
+                }
+                continue
+            }
 
             let transport = StdioTransport(
                 executable: binary, arguments: [], environment: [:])
@@ -112,16 +155,14 @@ public enum AIToolRegistration {
 
                 guard registry.tool(id: tool.id) == nil else {
                     await transport.terminate()
-                    FileHandle.standardError.write(Data(
-                        "[orrery] tool plugin '\(toolID)' not loaded: id '\(tool.id)' is already registered\n".utf8))
+                    report(toolID, "id '\(tool.id)' is already registered")
                     continue
                 }
 
                 try registry.register(tool)
             } catch {
                 await transport.terminate()
-                FileHandle.standardError.write(Data(
-                    "[orrery] tool plugin '\(toolID)' not loaded: \(error)\n".utf8))
+                report(toolID, "\(error)")
             }
         }
     }

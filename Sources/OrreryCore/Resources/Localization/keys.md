@@ -286,6 +286,12 @@ When a key has Bool/Optional branches (e.g. `memory.migrationDone.isolated` +
 | --- | --- |
 | `show.supervisedHeader` | Header line printed above the list of live supervised (phantom) sessions in `orrery show`, only when at least one is running. Distinct from the `account.show*` keys, which cover the rest of `orrery show`'s per-tool account output. |
 
+## plugin — tool plugin loading
+
+| Key | Context |
+| --- | --- |
+| `plugin.shippedPluginFailed` | stderr diagnostic when a plugin that **ships with orrery** (today only `orrery-claude`) cannot be loaded, so that tool is unavailable. `{tool}` is the tool id (`claude`), `{reason}` is the underlying failure, already-formatted and not localized (a missing binary, a handshake timeout, an unknown protocol version). Keep the literals `orrery update` and `orrery-{tool}` intact and untranslated — they are a command and a binary name the user has to type. A *third-party* plugin's absence is deliberately silent and has no key. |
+
 ## setup — `orrery setup` (shell integration install)
 
 | Key | Context |
