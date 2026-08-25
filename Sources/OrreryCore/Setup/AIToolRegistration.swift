@@ -17,6 +17,21 @@ import AIToolKit
 /// now, rather than relying on load order or on someone noticing later.
 public enum AIToolRegistration {
 
+    /// Tools orrery describes through a plugin process rather than the enum
+    /// bridge.
+    ///
+    /// A tool cannot be both. `registerPlugins` refuses a plugin whose id is
+    /// already registered — that rule is what stops a third party displacing a
+    /// tool orrery ships, so it must keep refusing. The way claude comes from
+    /// `orrery-claude` is therefore for the bridge to stop describing it, not
+    /// for the plugin to win a fight over the id.
+    ///
+    /// The consequence is deliberate: `registerBuiltInTools` alone no longer
+    /// produces a complete registry. Completeness needs the plugins too, which
+    /// is why a tool whose plugin failed to load must never be recorded as
+    /// covered by a one-shot migration.
+    public static let pluginProvidedTools: [Tool] = [.claude]
+
     /// Registers into the shared registry. Idempotent.
     ///
     /// Throws whatever the registry refuses. Built-in ids come from
@@ -28,8 +43,18 @@ public enum AIToolRegistration {
     }
 
     /// Registry taken as a parameter so tests never touch the shared instance.
-    public static func registerBuiltInTools(into registry: AIToolRegistry) throws {
-        for tool in Tool.allCases {
+    ///
+    /// - Parameter providedByPlugin: tools to leave out, because a plugin
+    ///   describes them. Injectable rather than read from
+    ///   ``pluginProvidedTools`` directly so a test can exercise the
+    ///   duplicate-id rule against a tool that really is a built-in — the rule
+    ///   is about built-ins in general, not about whichever tool happens to be
+    ///   plugin-provided this month.
+    public static func registerBuiltInTools(
+        into registry: AIToolRegistry,
+        providedByPlugin: [Tool] = pluginProvidedTools
+    ) throws {
+        for tool in Tool.allCases where !providedByPlugin.contains(tool) {
             try registry.register(tool.aiTool)
         }
     }

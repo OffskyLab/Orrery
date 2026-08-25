@@ -53,7 +53,10 @@ struct AIToolRegistrationTests {
         let registry = AIToolRegistry()
         try AIToolRegistration.registerBuiltInTools(into: registry)
         let builtInIDs = Set(registry.all.map(\.id))
-        let claudeDisplayName = registry.tool(id: "claude")?.displayName
+        // codex, not claude: claude is plugin-provided in production, so
+        // reading its displayName here would compare nil to nil and assert
+        // nothing. The survivor has to be a tool that is actually registered.
+        let survivorDisplayName = try #require(registry.tool(id: "codex")?.displayName)
 
         // Proves the script actually became a located, executable binary —
         // without this, a script that failed to become executable would
@@ -68,7 +71,7 @@ struct AIToolRegistrationTests {
 
         #expect(registry.tool(id: "cursor") == nil)
         #expect(Set(registry.all.map(\.id)) == builtInIDs)
-        #expect(registry.tool(id: "claude")?.displayName == claudeDisplayName)
+        #expect(registry.tool(id: "codex")?.displayName == survivorDisplayName)
     }
 
     @Test("a plugin that prints non-JSON and exits does not register, other tools unaffected")
@@ -100,7 +103,13 @@ struct AIToolRegistrationTests {
         defer { try? FileManager.default.removeItem(at: script.deletingLastPathComponent()) }
 
         let registry = AIToolRegistry()
-        try AIToolRegistration.registerBuiltInTools(into: registry)
+        // `providedByPlugin: []` so claude really is a built-in here. The rule
+        // under test is "a plugin cannot displace a built-in", which is about
+        // built-ins in general — not about whichever tool is plugin-provided
+        // this month. Production leaves claude out (see
+        // `AIToolRegistration.pluginProvidedTools`), and pinning this test to
+        // that choice would have deleted the coverage instead of moving it.
+        try AIToolRegistration.registerBuiltInTools(into: registry, providedByPlugin: [])
         let builtInClaude = try #require(registry.tool(id: "claude"))
 
         // See exitsImmediately: without this, a script that never became
@@ -136,7 +145,10 @@ struct AIToolRegistrationTests {
         let registry = AIToolRegistry()
         try AIToolRegistration.registerBuiltInTools(into: registry)
         let builtInIDs = Set(registry.all.map(\.id))
-        let claudeDisplayName = registry.tool(id: "claude")?.displayName
+        // codex, not claude: claude is plugin-provided in production, so
+        // reading its displayName here would compare nil to nil and assert
+        // nothing. The survivor has to be a tool that is actually registered.
+        let survivorDisplayName = try #require(registry.tool(id: "codex")?.displayName)
 
         #expect(PluginDiscovery.locate(
             toolID: "cursor", environment: ["ORRERY_CURSOR_PATH": script.path]) != nil)
@@ -150,7 +162,7 @@ struct AIToolRegistrationTests {
 
         #expect(registry.tool(id: "cursor") == nil)
         #expect(Set(registry.all.map(\.id)) == builtInIDs)
-        #expect(registry.tool(id: "claude")?.displayName == claudeDisplayName)
+        #expect(registry.tool(id: "codex")?.displayName == survivorDisplayName)
     }
 
     @Test("a missing binary is skipped silently, other tools unaffected")
