@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import OrreryCore
 
-@Suite("WorkspaceDirLookupCommand")
+@Suite("WorkspaceDirLookupCommand", .serialized)
 struct WorkspaceDirLookupCommandTests {
 
     @Test("resolves origin without a UUID scan")

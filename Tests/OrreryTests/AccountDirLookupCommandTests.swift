@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import OrreryCore
 
-@Suite("AccountDirLookupCommand")
+@Suite("AccountDirLookupCommand", .serialized)
 struct AccountDirLookupCommandTests {
 
     @Test("prints account dir path for v3.1-migrated account")

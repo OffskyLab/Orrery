@@ -8,9 +8,21 @@ import OrreryAccountKit
 
 /// Redirect stdout to a temp file, run body, restore stdout, and return output.
 /// Uses a file (not a pipe) to avoid blocking when the pipe write end is still open.
-/// The caller is responsible for ensuring this does not run concurrently with another
-/// call (e.g. by nesting inside a .serialized suite).
+///
+/// FD 1 is process-wide, so two concurrent captures interleave each other's
+/// output and, worse, the first to finish restores the saved descriptor while
+/// the second is still redirecting. `.serialized` on a suite orders the tests
+/// *within* it and says nothing about other suites, so it was never sufficient
+/// on its own — the guarantee has to live here, where the descriptor is.
+///
+/// This surfaced as `WorkspaceDirLookupCommand` failing in a full run and
+/// passing on its own, after a branch that added process-spawning tests raised
+/// the odds. Four of the five suites calling this had no `.serialized` at all.
+private let stdoutCaptureLock = NSLock()
+
 func captureStdout(_ body: () throws -> Void) throws -> String {
+    stdoutCaptureLock.lock()
+    defer { stdoutCaptureLock.unlock() }
     let tmpPath = FileManager.default.temporaryDirectory
         .appendingPathComponent("orrery-cap-\(UUID().uuidString).txt").path
     FileManager.default.createFile(atPath: tmpPath, contents: nil)

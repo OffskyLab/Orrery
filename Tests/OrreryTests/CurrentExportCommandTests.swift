@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import OrreryCore
 
-@Suite("CurrentExportCommand")
+@Suite("CurrentExportCommand", .serialized)
 struct CurrentExportCommandTests {
 
     @Test("prints an export line for a pinned, v3.1-migrated account")

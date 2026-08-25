@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import OrreryCore
 
-@Suite("CurrentCommand")
+@Suite("CurrentCommand", .serialized)
 struct CurrentCommandTests {
 
     @Test("shows all three tools as unpinned when nothing is pinned")
