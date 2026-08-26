@@ -91,6 +91,78 @@ struct RegistryCompletenessTests {
         #expect(codex?.sessionSubdirectories == Tool.codex.sessionSubdirectories)
     }
 
+    /// Anchors `Bundle(for:)` to the loaded test bundle, whose directory is the
+    /// build-products directory `orrery-claude` lands in.
+    private final class BundleMarker {}
+
+    /// The same guarantee as `absentPluginIsNotRecordedAsCovered`, but sourced
+    /// the way the migrations will source it — from the registry, after a real
+    /// bootstrap in which claude's plugin could not be found — instead of from a
+    /// hand-written set. That is the difference that matters: the hand-written
+    /// version stays green no matter what registration does.
+    ///
+    /// **This path is not live yet.** `AccountMigration`'s one-shot migrations
+    /// still take their tool set from `Tool.allCases`, which is total at compile
+    /// time and cannot be short a tool. So today this asserts a property of code
+    /// nothing in production calls, and passing it proves nothing about the
+    /// shipped migrations. It is written now because the moment those call sites
+    /// switch to the registry, a registry missing claude means the migration
+    /// skips claude and records itself complete anyway — and claude never
+    /// migrates on that machine again. The guard should already be in place when
+    /// that happens, not written afterwards in response to it.
+    @Test("a tool whose plugin failed to load is not covered by a migration that ran without it")
+    func failedPluginIsNotCoveredWhenPendingComesFromTheRegistry() async throws {
+        let home = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("cov-registry-\(UUID().uuidString)")
+        let tools = home.appendingPathComponent("tools")
+        try FileManager.default.createDirectory(at: tools, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+
+        // A bootstrap where the shipped plugin is not on disk: exactly the
+        // broken install that must not be papered over by marking claude done.
+        let registry = AIToolRegistry()
+        try AIToolRegistration.registerBuiltInTools(into: registry)
+        await AIToolRegistration.registerPlugins(
+            into: registry,
+            toolIDs: AIToolRegistration.pluginProvidedTools.map { $0.rawValue },
+            timeout: .milliseconds(500),
+            environment: ["ORRERY_HOME": home.path, "PATH": ""],
+            warn: { _ in })
+
+        #expect(registry.tool(id: "claude") == nil, "the premise: claude failed to load")
+
+        let flag = MigrationFlag(
+            url: home.appendingPathComponent(".test-flag"),
+            legacyCoverage: AccountMigration.legacyBuiltInTools)
+        let pending = try flag.pending(among: Set(registry.all.map(\.id)))
+        try flag.markCovered(pending)
+
+        #expect(!pending.contains("claude"),
+                "a tool that is not registered cannot be part of a migration's work")
+        #expect(flag.coverage() == .ids(["codex", "gemini"]))
+
+        // The repair: the plugin is installed, so the next run registers claude
+        // and the migration owes it a turn.
+        let built = Bundle(for: BundleMarker.self).bundleURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("orrery-claude")
+        try FileManager.default.copyItem(
+            at: built, to: tools.appendingPathComponent("orrery-claude"))
+
+        let repaired = AIToolRegistry()
+        try AIToolRegistration.registerBuiltInTools(into: repaired)
+        await AIToolRegistration.registerPlugins(
+            into: repaired,
+            toolIDs: AIToolRegistration.pluginProvidedTools.map { $0.rawValue },
+            timeout: .seconds(5),
+            environment: ["ORRERY_HOME": home.path, "PATH": ""],
+            warn: { _ in })
+
+        #expect(repaired.tool(id: "claude") != nil, "the premise: the plugin now loads")
+        #expect(try flag.pending(among: Set(repaired.all.map(\.id))) == ["claude"],
+                "claude must become pending once its plugin is back, not stay silently done")
+    }
+
     @Test("a tool whose plugin is absent is never recorded as covered")
     func absentPluginIsNotRecordedAsCovered() throws {
         let home = URL(fileURLWithPath: NSTemporaryDirectory())
