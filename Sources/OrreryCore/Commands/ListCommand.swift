@@ -38,8 +38,14 @@ public struct ListCommand: ParsableCommand {
         // account dir). Recover the account id from that dir's metadata.json so a
         // fresh shell at origin shows origin as the active default — not blank.
         let isOriginScope = activeEnv == nil || activeEnv == Workspace.reservedOriginName
+        // `configDir` rather than the enum's `defaultConfigDir`: claude is
+        // described by its plugin, so this is the answer that crossed the pipe.
+        // It is nil when that plugin did not load, and nil flows to the same
+        // place an unset CLAUDE_CONFIG_DIR does — the active-account line is
+        // left blank rather than filled in from a tool orrery cannot describe.
+        // A read degrading to "missing" is exactly what the spec asks for here.
         let activeClaudeDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
-            ?? (isOriginScope ? Tool.claude.defaultConfigDir.path : nil)
+            ?? (isOriginScope ? Tool.claude.configDir()?.path : nil)
         if let activeClaudeDir {
             let metadataURL = URL(fileURLWithPath: activeClaudeDir)
                 .appendingPathComponent("metadata.json")

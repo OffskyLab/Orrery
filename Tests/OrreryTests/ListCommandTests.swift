@@ -6,6 +6,12 @@ import Foundation
 struct ListCommandTests {
     let originPath = URL(fileURLWithPath: "/tmp/origin")
 
+    /// `ListCommand` resolves claude's config dir through the registry, which
+    /// `main.swift` fills at bootstrap and a test process does not. Without this
+    /// the suite would exercise the "claude is unavailable" branch while looking
+    /// exactly as green as it does now.
+    init() { seedSharedRegistryForTests() }
+
     @Test("groups by tool, not by workspace")
     func groupsByTool() {
         let workspaces = [EnvironmentStore.WorkspaceListing(name: "work", path: URL(fileURLWithPath: "/tmp/work"))]
