@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AIToolKit
 @testable import OrreryCore
 import OrreryAccountKit
 
@@ -57,6 +58,30 @@ func generatedShellScriptWithoutInit() -> String {
 
 func ensureAccountKitRegistered() {
     _ = registerAccountKitOnce
+}
+
+/// `main.swift` populates `AIToolRegistry.shared` during bootstrap; a test
+/// process has no bootstrap. Any call site that has moved from `Tool`'s fact
+/// properties to the registry therefore sees an *empty* shared registry under
+/// test and takes its "tool unavailable" branch — quietly, and while staying
+/// green, because a degraded read looks like a missing value rather than a
+/// failure.
+///
+/// claude is seeded from the enum bridge rather than by spawning the real
+/// `orrery-claude`. The two describe claude identically — `ClaudePluginParity`
+/// is the test that keeps them that way — so paying a process spawn per test run
+/// would buy no coverage that test does not already provide. A test that needs
+/// the *remote* path specifically builds its own registry and connects for real;
+/// `AIToolRegistrationTests` and `ToolFactsTests` both do.
+private let seedSharedRegistryOnce: Void = {
+    // `providedByPlugin: []` so claude is present: production gets it from the
+    // plugin, and a test process that skipped it would be asserting against a
+    // registry missing the very tool most call sites are about.
+    try? AIToolRegistration.registerBuiltInTools(into: .shared, providedByPlugin: [])
+}()
+
+func seedSharedRegistryForTests() {
+    _ = seedSharedRegistryOnce
 }
 
 /// Delete any per-account claude Keychain items for accounts under `home`.
