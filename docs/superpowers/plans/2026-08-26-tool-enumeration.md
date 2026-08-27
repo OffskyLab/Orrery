@@ -28,6 +28,11 @@ it. Every loop body would need an answer that does not exist.
 **This is the real blocker, and it is a capability boundary, not a plumbing one.**
 The plan below is shaped around that rather than around the 33 call sites.
 
+The direction is settled: `AITool` should be fully decoupled from orrery, and what
+is an enum today becomes a registry. So the answer is not to keep behaviour in the
+enum — it is to make behaviour part of what the framework asks a tool to implement,
+and leave orrery as the thing that triggers it. See Phase 2.
+
 Not urgent today, and worth writing down so it is not mistaken for a live bug:
 `registerPlugins` is only ever asked for `pluginProvidedTools` (claude), so no
 third-party tool can register yet. The half-present state described above is
@@ -60,24 +65,52 @@ Expected shape, to be confirmed rather than assumed:
 |---|---|---|
 | Description only | `ListCommand`, `ShowCommand`, `CurrentCommand`, `CurrentExportCommand`, `SessionsCommand` listing | the eight facts |
 | Behaviour | `AccountMigration` (7 sites), `OriginTakeoverBootstrap`, `OriginAccountSeeder`, `AccountStore`, `SandboxCommand`, `SetupCommand`, `UninstallCommand`, `RunCommand`, `DelegateProcessBuilder` | `flowType`, account-dir managers, `envVarName` |
-| Fixed point | `AIToolRegistration.registerBuiltInTools` | stays on the enum by definition — it is what *populates* the registry |
+| Last to move | `AIToolRegistration.registerBuiltInTools` | a *list* of built-ins — it is what populates the registry, so it cannot read from it. A list, not necessarily an enum: `[BuiltInAITool]` serves once nothing else needs the type |
 
-## Phase 2 — a registered tool can be *asked to do things*
+## Phase 2 — behaviour becomes part of the framework spec
 
-The capability boundary. Out of scope for this plan to design in full; in scope to
-state what it must cover and to get agreement on the shape before any call site
-moves.
+**Decided (2026-08-26).** A third-party tool implements the framework's spec and
+orrery *triggers* it. orrery's own vocabulary — account dir, workspace, origin —
+stays out of the framework; the tool is independent of orrery while conforming to
+it. "Third-party tools are description-only" is rejected: a tool that cannot be
+asked to do anything is not a tool orrery can manage.
 
-- [ ] **Step 2.1 — enumerate the behaviours a tool must supply**, from the loop
-  bodies in Phase 1 rather than from imagination: copy login state, copy non-login
-  settings, name its credential file, lay out an account directory, say which env
-  var exports its config dir.
-- [ ] **Step 2.2 — decide where they live.** Three candidates, and the choice is the
-  user's: extend the RPC protocol with these operations; keep them in-process behind
-  a second registry of behaviour providers, keyed by id; or accept that third-party
-  tools are description-only and *scope orrery's behaviour to built-ins forever*.
-  The third is a legitimate answer and is cheaper than it sounds — it means
-  `allCases` never fully dies.
+The load-bearing observation is that **`ToolFlow` is already framework-shaped**:
+
+```swift
+static func copyLoginState(sourceDir: URL?, targetDir: URL) -> Bool
+static func copyNonLoginSettings(sourceDir: URL, targetDir: URL)
+static var supportsMemoryIsolation: Bool { get }
+```
+
+Every member takes plain URLs and booleans. Not one mentions an account, a
+workspace, or origin. The only orrery-specific thing about it is *who decides
+those two URLs* — and that stays in orrery. So this is not a protocol to design
+from scratch; it is one that already exists in the right shape and needs moving.
+
+- [ ] **Step 2.1 — lift `ToolFlow` into the framework** as operations on a tool,
+  in the tool's own terms. orrery keeps deciding the paths and keeps calling.
+- [ ] **Step 2.2 — the same for account-directory layout**
+  (`AccountDirectoryRuntime.manager(for:)`). Check first whether it is already
+  path-shaped the way `ToolFlow` is, rather than assuming it needs redesigning.
+- [ ] **Step 2.3 — `ClaudeFlow`'s 148 lines move into `orrery-claude`.** Its
+  bespoke logic — the macOS Keychain service name derived from a hash of
+  `CLAUDE_CONFIG_DIR`, `.claude.json` living somewhere different for origin than
+  for an env, the identity/ephemeral key merge, `prepareForSelfLogin` — is
+  claude-specific knowledge, and the plugin is the claude-specific process. Codex
+  and gemini are 25 lines each and reduce to little more than "my credential file
+  is named this", which is a fact rather than a behaviour.
+
+**A consequence to design for, not discover later:** that logic will run in
+*another process*. `ClaudeFlow.swift:47` reaches for
+`fm.homeDirectoryForCurrentUser` today, and a plugin has its own process
+environment — `ORRERY_USER_HOME` does not follow it across the boundary. The
+protocol must therefore state that the paths orrery passes are the whole truth
+and a plugin may not derive a home of its own. This repo has fixed that same
+isolation-seam family three times already; moving code across a process boundary
+is exactly where it would come back.
+
+## Phase 3 — move the sites, in the order Phase 1 established
 
 ## Phase 3 — move the sites, in the order Phase 1 established
 
@@ -95,13 +128,15 @@ moves.
 
 ## Open questions for the user
 
-1. **Phase 2's shape** — RPC operations, in-process behaviour registry, or
-   built-ins-only behaviour. Everything in Phase 3 past Step 3.2 depends on it, and
-   the third option is a legitimate, much cheaper answer.
-2. **What a description-only third-party tool should do in listings** before Phase 2
-   exists. Appear with no accounts? Be hidden? Refuse to register with a diagnostic?
-   Today it cannot happen; the moment discovery widens past `pluginProvidedTools`,
-   it can.
+1. **What a third-party tool should do in listings before Phase 2 lands** — it can
+   be described but not yet triggered. Appear with no accounts? Be hidden? Refuse
+   to register with a diagnostic? Today it cannot happen at all, because discovery
+   is only ever asked for `pluginProvidedTools`; the question arrives the moment
+   that widens.
+2. **Whether `supportsMemoryIsolation` belongs in the framework.** It is the one
+   `ToolFlow` member that reads like an orrery policy question rather than a fact
+   about the tool — "does *orrery* offer per-env memory isolation for this tool"
+   rather than "can this tool do X".
 
 ## Explicitly not in this plan
 
@@ -112,5 +147,11 @@ moves.
 - **`Account.tool` and `Workspace.isolatedSessionTools`.** The enum is in a persisted
   format in both, so a third-party tool cannot own an account regardless of anything
   here. Sub-project B.
-- **Deleting `Tool`.** It survives this plan either way: as the built-in registration
-  source at minimum, and as the behaviour key if Phase 2's answer is the third option.
+- **Deleting `Tool`.** Now the destination rather than an open question, and out of
+  scope only in the sense that it is the *last* step: once behaviour is in the
+  framework and the sites iterate the registry, what is left of the enum is a list
+  of built-ins — which does not need to be an enum. An earlier draft of this plan
+  called `registerBuiltInTools` a fixed point that "stays on the enum by
+  definition"; that was wrong. It needs a *list*, and a `[BuiltInAITool]` serves.
+  What genuinely outlives this plan is sub-project B: `Account.tool` and
+  `Workspace.isolatedSessionTools` put the enum in a persisted format.
