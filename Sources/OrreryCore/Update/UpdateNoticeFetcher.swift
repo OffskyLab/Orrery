@@ -253,14 +253,11 @@ extension UpdateNoticeFetcher {
     }
 
     static func defaultCacheURL() -> URL {
-        let home: URL
-        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
-            home = URL(fileURLWithPath: custom)
-        } else {
-            home = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".orrery")
-        }
-        return home.appendingPathComponent(".update-notice-cache.json")
+        // Was an open-coded copy of `orreryHomeURL()`, and drifted from it: the
+        // copy honoured ORRERY_HOME but reached past ORRERY_USER_HOME for the
+        // fallback, so an isolated run with only the latter set wrote its cache
+        // into the developer's real ~/.orrery.
+        orreryHomeURL().appendingPathComponent(".update-notice-cache.json")
     }
 
     static let curlTransport: @Sendable (URL, String?) -> FetchResult = { url, etag in

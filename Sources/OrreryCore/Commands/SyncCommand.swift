@@ -62,13 +62,9 @@ public struct SyncCommand: ParsableCommand {
         }
 
         // 2. ~/.orrery/bin/
-        let home: String
-        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
-            home = custom
-        } else {
-            home = FileManager.default.homeDirectoryForCurrentUser.path + "/.orrery"
-        }
-        let localPath = home + "/bin/orrery-sync"
+        // `orreryHomeURL()` already prefers ORRERY_HOME, so the branch this
+        // replaced was the seam's own logic, copied and then left half-updated.
+        let localPath = orreryHomeURL().path + "/bin/orrery-sync"
         if FileManager.default.isExecutableFile(atPath: localPath) {
             return localPath
         }

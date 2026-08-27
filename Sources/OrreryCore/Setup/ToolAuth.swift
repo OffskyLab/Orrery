@@ -23,7 +23,7 @@ public enum ToolAuth {
             if let configDir {
                 url = configDir.appendingPathComponent(".claude.json")
             } else {
-                url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+                url = userHomeURL().appendingPathComponent(".claude.json")
             }
             guard let data = try? Data(contentsOf: url),
                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

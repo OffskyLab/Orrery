@@ -33,7 +33,7 @@ public enum ClaudeKeychain {
         if let configDir {
             dir = URL(fileURLWithPath: configDir)
         } else {
-            dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude")
+            dir = userHomeURL().appendingPathComponent(".claude")
         }
         return dir.appendingPathComponent(".credentials.json")
     }
@@ -47,7 +47,7 @@ public enum ClaudeKeychain {
         if let configDir {
             jsonURL = URL(fileURLWithPath: configDir).appendingPathComponent(".claude.json")
         } else {
-            jsonURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+            jsonURL = userHomeURL().appendingPathComponent(".claude.json")
         }
         let email = parseEmail(fromClaudeJSON: jsonURL)
         return ToolAuth.AccountInfo(email: email, plan: plan, model: nil, key: nil)

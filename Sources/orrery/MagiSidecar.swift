@@ -284,14 +284,10 @@ public enum MagiSidecar {
             return path
         }
 
-        let home: String
-        if let custom = ProcessInfo.processInfo.environment["ORRERY_HOME"] {
-            home = custom
-        } else {
-            home = fileManager.homeDirectoryForCurrentUser.path + "/.orrery"
-        }
-
-        let localPath = home + "/bin/orrery-magi"
+        // `orreryHomeURL()` is this branch, already written once: ORRERY_HOME if
+        // set, else the home seam plus `.orrery`. The copy here honoured the
+        // first and reached past the second.
+        let localPath = orreryHomeURL().path + "/bin/orrery-magi"
         if fileManager.isExecutableFile(atPath: localPath) {
             return localPath
         }
