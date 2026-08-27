@@ -3,6 +3,8 @@ import Foundation
 public struct FilesystemCredentialAdapter: CredentialAdapter {
     public enum Error: Swift.Error {
         case missingCredential(tool: Tool, accountID: String, expectedPath: String)
+        /// registry 裡沒有這個 tool——它的 plugin 沒載入，所以沒有目標目錄可寫。
+        case toolUnavailable(tool: Tool)
     }
 
     let tool: Tool
@@ -27,7 +29,13 @@ public struct FilesystemCredentialAdapter: CredentialAdapter {
         configDir: String?,
         accountStore: AccountStore
     ) throws {
-        let targetConfigDir: URL = configDir.map { URL(fileURLWithPath: $0) } ?? tool.defaultConfigDir
+        // 呼叫端指定的路徑優先；否則取該 tool 自己的預設值，現在來自 registry。
+        //
+        // 取不到就中止，不退回 enum：這是寫入，而 spec 對寫入的要求是
+        // 「可能沒發生的動作，絕不回報成已完成」。憑證 materialize 失敗
+        // 而被無聲跳過，會讓工具稍後爆出一個與真正原因無關的錯誤。
+        guard let targetConfigDir = configDir.map({ URL(fileURLWithPath: $0) }) ?? tool.configDir()
+        else { throw Error.toolUnavailable(tool: tool) }
         let fm = FileManager.default
         let fileName = Self.credentialFileName(for: tool)
         let source = accountStore.accountDir(id: account.id, tool: tool)

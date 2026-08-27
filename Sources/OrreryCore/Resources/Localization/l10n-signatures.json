@@ -2663,5 +2663,13 @@
       { "label": "_", "name": "tool", "type": "String" },
       { "label": "_", "name": "reason", "type": "String" }
     ]
+  },
+  {
+    "path": ["Create", "cloneFailed"],
+    "kind": "func",
+    "parameters": [
+      { "label": "_", "name": "source", "type": "String" },
+      { "label": "_", "name": "tool", "type": "String" }
+    ]
   }
 ]

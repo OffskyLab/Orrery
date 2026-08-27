@@ -336,5 +336,6 @@
   "phantom.sessionNotFound": "找不到符合「{selector}」的受監督 session。請不加 --session 重新執行，即可看到目前正在執行的 session 清單。",
   "setup.installedSlashCommand": "orrery：已安裝 slash command 到 {path}\n",
   "show.supervisedHeader": "受監督中的 session：",
-  "plugin.shippedPluginFailed": "安裝不完整：orrery 的 {tool} plugin 未載入（{reason}）。修好之前 {tool} 無法使用——執行 `orrery update` 重新安裝 orrery-{tool}。其他工具不受影響。"
+  "plugin.shippedPluginFailed": "安裝不完整：orrery 的 {tool} plugin 未載入（{reason}）。修好之前 {tool} 無法使用——執行 `orrery update` 重新安裝 orrery-{tool}。其他工具不受影響。",
+  "create.cloneFailed": "無法從 {source} 複製（{tool} 無法使用）"
 }
