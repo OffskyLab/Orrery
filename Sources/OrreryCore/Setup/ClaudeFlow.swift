@@ -44,7 +44,7 @@ public enum ClaudeFlow: ToolFlow {
 
         // .claude.json — location differs between origin and env configs.
         let srcJson: URL = isOrigin
-            ? fm.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+            ? userHomeURL().appendingPathComponent(".claude.json")
             : sourceDir!.appendingPathComponent(".claude.json")
         let dstJson = targetDir.appendingPathComponent(".claude.json")
 

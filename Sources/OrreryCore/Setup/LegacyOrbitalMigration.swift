@@ -21,9 +21,18 @@ public enum LegacyOrbitalMigration {
 
     public static func runIfNeeded() {
         let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser
+        // The legacy tree really was at `~/.orbital`, so it is home-relative —
+        // but through the seam, or an isolated run reads the developer's real one
+        // and this migration *moves directories*.
+        // Bound once: it is also where the rc files this rewrites live, and
+        // rewriting a real `~/.zshrc` from an isolated run is one of the
+        // incidents this seam exists for.
+        let home = userHomeURL()
         let legacyHome = home.appendingPathComponent(".orbital")
-        let newHome = home.appendingPathComponent(".orrery")
+        // The destination is orrery's home, not a fixed `~/.orrery`. Hardcoding
+        // it meant a user with a custom ORRERY_HOME had their old envs migrated
+        // into a directory orrery would never read again.
+        let newHome = orreryHomeURL()
 
         // Heal any already-migrated env whose .claude.json was lost but has backups.
         // This runs on every invocation (cheap: existence checks per env) so envs

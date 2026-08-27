@@ -182,7 +182,7 @@ public enum AccountMigration {
         }
         // For origin Claude, `.claude.json` lives at `~/.claude.json`.
         let claudeJSON: URL? = tool == .claude
-            ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude.json")
+            ? userHomeURL().appendingPathComponent(".claude.json")
             : nil
         let id = try resolveOrCreateAccount(
             credential: credential,

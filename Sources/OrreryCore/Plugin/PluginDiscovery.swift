@@ -23,8 +23,15 @@ public enum PluginDiscovery {
             return URL(fileURLWithPath: explicit)
         }
 
+        // Both halves come from the injected `environment`. Taking ORRERY_HOME
+        // from the caller and then the home from the real process was the
+        // inconsistency worth fixing: a caller that passed an environment
+        // *without* ORRERY_HOME — which the tests here do — silently searched the
+        // developer's real ~/.orrery/tools, where an installed plugin would be
+        // found and mistaken for the fixture.
         let home = environment["ORRERY_HOME"]
-            ?? fm.homeDirectoryForCurrentUser.appendingPathComponent(".orrery").path
+            ?? (environment["ORRERY_USER_HOME"].map { URL(fileURLWithPath: $0) } ?? userHomeURL())
+                .appendingPathComponent(".orrery").path
         let local = home + "/tools/orrery-\(toolID)"
         if fm.isExecutableFile(atPath: local) {
             return URL(fileURLWithPath: local)

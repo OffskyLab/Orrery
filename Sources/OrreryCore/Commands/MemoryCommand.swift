@@ -382,7 +382,7 @@ public struct MemoryCommand: ParsableCommand {
 
 /// Expand a leading `~` / `~/…` to the current user's home directory.
 private func expandingTilde(_ path: String) -> String {
-    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let home = userHomeURL().path
     if path == "~" { return home }
     if path.hasPrefix("~/") { return home + "/" + path.dropFirst(2) }
     return path
