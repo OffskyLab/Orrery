@@ -97,9 +97,16 @@ public enum ToolSetupRunner {
         // Order matters for Claude: copy non-login settings FIRST (brings the clone source's
         // `.claude.json` containing theme/prefs), then login copy merges identity keys into it.
         if let cloneSource = config.cloneSource {
-            let sourceDir = cloneSourceDir(for: cloneSource, tool: config.tool, store: store)
-            config.tool.flowType.copyNonLoginSettings(sourceDir: sourceDir, targetDir: targetDir)
-            print(L10n.Create.cloned(cloneSource))
+            // No source directory means the tool's plugin did not load, so there
+            // is nothing to clone from. Saying so beats printing "cloned" over a
+            // copy that never happened — the same distinction the login branch
+            // below already draws between copied and failed.
+            if let sourceDir = cloneSourceDir(for: cloneSource, tool: config.tool, store: store) {
+                config.tool.flowType.copyNonLoginSettings(sourceDir: sourceDir, targetDir: targetDir)
+                print(L10n.Create.cloned(cloneSource))
+            } else {
+                print(L10n.Create.cloneFailed(cloneSource, config.tool.rawValue))
+            }
         }
 
         if let loginSource = config.loginSource {
@@ -232,9 +239,13 @@ public enum ToolSetupRunner {
     }
 
     /// For clone: origin → tool's default config dir, else the env's tool config dir.
-    private static func cloneSourceDir(for source: String, tool: Tool, store: EnvironmentStore) -> URL {
+    ///
+    /// Optional because the origin branch now asks the registry, which has no
+    /// answer for a tool whose plugin did not load. The caller must not print
+    /// "cloned" in that case — see its comment.
+    private static func cloneSourceDir(for source: String, tool: Tool, store: EnvironmentStore) -> URL? {
         source == Workspace.reservedOriginName
-            ? tool.defaultConfigDir
+            ? tool.configDir()
             : store.toolConfigDir(tool: tool, environment: source)
     }
 }

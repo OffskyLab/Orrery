@@ -39,17 +39,26 @@ public enum ToolAuth {
     /// Look up account info for a tool in the given config dir.
     /// Pass `nil` for the tool's default/origin location.
     public static func accountInfo(tool: Tool, configDir: URL?) -> AccountInfo {
+        // `configDir` wins when the caller named one; otherwise the tool's own
+        // default, now sourced from the registry so a plugin-provided tool
+        // answers for itself.
+        //
+        // Nil means nothing is registered under this tool's id — its plugin did
+        // not load — so there is no directory to read account info out of. This
+        // is a read, and the spec lets a read degrade: an empty AccountInfo
+        // renders as the missing fields it honestly is. The bootstrap has
+        // already said out loud why they are missing.
+        guard let dir = configDir ?? tool.configDir() else {
+            return AccountInfo(email: nil, plan: nil, model: nil, key: nil)
+        }
         switch tool {
         case .claude:
-            let dir = configDir ?? tool.defaultConfigDir
             let model = jsonModel(dir: dir)
             let info = ClaudeKeychain.accountInfo(for: configDir?.path)
             return AccountInfo(email: info.email, plan: info.plan, model: model, key: nil)
         case .codex:
-            let dir = configDir ?? tool.defaultConfigDir
             return codexAccountInfo(dir: dir)
         case .gemini:
-            let dir = configDir ?? tool.defaultConfigDir
             return geminiAccountInfo(dir: dir)
         }
     }

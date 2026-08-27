@@ -120,6 +120,36 @@ demonstrably come from another process; the suite is green with no behaviour cha
 - [ ] **Step 2.2** — migrate `subdirectory`'s 6 sites (smallest, and `id` is exact).
 - [ ] **Step 2.3** — migrate `defaultConfigDir`'s 26 sites.
 
+## Two rules that emerged while migrating, and one limitation
+
+**Any reader reachable from a `for tool in Tool.allCases` loop stays on the enum.**
+Not a syntactic rule about where the line sits — `EnvironmentStore.isOriginManaged`
+is four call frames from a loop and is covered by it. Mixing an enum-sourced
+iteration with registry-sourced facts produces a tool the loop knows about and
+cannot describe, and the guard written in Step 1.4 only protects the case where
+*both* come from the registry. This defers `EnvironmentStore`'s four sites
+(`isOriginManaged`, `originTakeover`, `originRelease`), which are the highest-stakes
+writes in the codebase — they move the user's real `~/.claude` in and out of orrery
+storage — plus `SessionsCommand.sessionRoots`, `SetupCommand`, `UninstallCommand`
+and `SandboxCommand`. They move when `Tool.allCases` moves.
+
+**`Tool.subdirectory` is not worth migrating.** The registry equivalent is `.id`,
+which for a built-in *is* `rawValue` and for the claude plugin is pinned to it by
+`ClaudePluginParityTests`. Migrating its 6 sites buys nil-handling at each one and
+no new source of truth. Step 2.2 as originally written is dropped; `subdirectory`
+goes when the enum does.
+
+**The absent-tool branch at a migrated call site is not directly testable.**
+Production reads `AIToolRegistry.shared`, and the suite's seeding is process-wide,
+so once any suite seeds it every suite sees a populated registry — there is no way
+to ask a call site what it does when its tool is missing. The seam's own absence is
+covered (`ToolFactsTests.unregisteredToolHasNoConfigDir`, against a private
+registry), and the call sites are thin `guard let` branches, but that is coverage by
+inspection and should be named as such. Making it real means these call sites taking
+an injected registry the way `AIToolRegistration` does — cheap for a free function,
+not cheap for `CredentialAdapter.materialize`, which is a protocol requirement. Worth
+doing deliberately, not smuggled into a migration commit.
+
 ## Explicitly not in this plan
 
 - **`Tool.envVarName`'s 11 readers.** `Tool.gemini.envVarName` returns
