@@ -49,23 +49,70 @@ currently unreachable.
 
 ---
 
-## Phase 1 — split the 33 sites by what the loop body needs
+## Phase 1 — split the sites by what the loop body needs
 
-Not a code change: a survey that ends in a table in this file. The distinction that
-matters is not display-vs-write, it is **description-vs-behaviour**.
+Not a code change: a survey that ends in a table in this file. The heading used to
+say 33, which was the raw grep count; five of those are comments. The distinction
+this section was written around — description versus behaviour — turned out to be
+one of two that matter, and not the one that should decide the order. See below.
 
-- [ ] **Step 1.1 — classify every site.** For each, record which of the eight facts
-  it reads, and which enum-only behaviour it reaches for. A site that touches only
-  facts can move as soon as there is something to iterate; a site that reaches for
-  `flowType` or an account-dir manager cannot move until Phase 2 lands.
+- [x] **Step 1.1 — classify every site.** Done 2026-08-28. 28 real sites (the
+  other five `Tool.allCases` greps are comments).
 
-Expected shape, to be confirmed rather than assumed:
+A second axis showed up while doing it, and it is the more useful one: what a
+*missing* tool costs is independent of whether the loop needs description or
+behaviour. `OriginTakeoverBootstrap` needs nothing but a config-directory name
+and a tool id — pure description — and it moves the user's real `~/.claude`.
 
-| Group | Sites | Needs |
-|---|---|---|
-| Description only | `ListCommand`, `ShowCommand`, `CurrentCommand`, `CurrentExportCommand`, `SessionsCommand` listing | the eight facts |
-| Behaviour | `AccountMigration` (7 sites), `OriginTakeoverBootstrap`, `OriginAccountSeeder`, `AccountStore`, `SandboxCommand`, `SetupCommand`, `UninstallCommand`, `RunCommand`, `DelegateProcessBuilder` | `flowType`, account-dir managers, `envVarName` |
-| Last to move | `AIToolRegistration.registerBuiltInTools` | a *list* of built-ins — it is what populates the registry, so it cannot read from it. A list, not necessarily an enum: `[BuiltInAITool]` serves once nothing else needs the type |
+### Needs behaviour — blocked on Phase 2 (11)
+
+| Site | Reaches for |
+|---|---|
+| `CurrentExportCommand:29` | account-dir manager |
+| `ShowCommand:37` | account-dir manager |
+| `RunCommand:82`, `:149` | `envVarName` — also blocked on PR #52 |
+| `DelegateProcessBuilder:127` | `envVarName` — same |
+| `SandboxCommand:284`, `:320`, `:506` | per-case branching, `ClaudeKeychain` |
+| `SessionsCommand:34` | per-case work in `findSessions` |
+| `AccountMigration:140` | `migrateEnv` / `migrateOrigin` |
+| `OriginAccountSeeder:18` | `if tool == .claude`, credential capture |
+
+### Needs only description — movable once there is something to iterate (17)
+
+Grouped by what absence costs, because that is what should decide the order:
+
+**Cosmetic** — a listing omits the tool and says so: `CurrentCommand:30`,
+`ListCommand:99`, `SandboxCommand:61`, `SessionsCommand:64`, `:422`,
+`AccountStore:79`.
+
+**A write that does not happen this run** — recoverable, because the next
+invocation with a working plugin does it: `OriginTakeoverBootstrap:17`,
+`SetupCommand:103`, `UninstallCommand:28`. All three are
+`isOriginManaged` + `defaultConfigDir` + `originTakeover`/`originRelease`, which
+move the user's real config directory in and out of orrery storage.
+
+**Permanent if it goes wrong** — the one-shot migrations, where a skipped tool
+that is nonetheless recorded as covered never migrates again:
+`AccountMigration:83`, `:398`, `:416`, `:595`, `:703`, `:725`, `:781`. These are
+exactly what Step 1.4's guard in the wiring plan was written for, and they should
+move *with* the switch of `pending` to a registry source, never before it.
+
+**Populates the registry, so moves last**: `AIToolRegistration:57`.
+
+### How this was produced, and where it under-reports
+
+By script over `Sources/`, then verified by eye — because the first pass got it
+wrong in an instructive way. It looked only at a fixed window after each loop and
+so called `OriginAccountSeeder` description-only: its behaviour lives in
+`hasCapturableLogin` and `captureLogin`, not inline. The second pass resolves one
+level of same-file helper calls and counts per-case branching (`tool == .claude`,
+`switch tool`) as behaviour in its own right — a loop that asks *which* tool it is
+cannot be handed one it has never heard of.
+
+One level is not enough in general: `EnvironmentStore.isOriginManaged` sits four
+frames from `UninstallCommand`'s loop, in another file, and no window would catch
+it. The table above was checked by hand for that; a future site added to it
+should be too.
 
 ## Phase 2 — behaviour becomes part of the framework spec
 
