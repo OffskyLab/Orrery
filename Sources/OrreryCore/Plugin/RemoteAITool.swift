@@ -66,7 +66,7 @@ public struct RemoteAITool: AITool {
     public static func connect(
         transport: any Transport,
         timeout: Duration
-    ) async throws -> RemoteAITool {
+    ) async throws -> any AITool {
         let connection = JSONRPCConnection(transport: transport, timeout: timeout)
 
         // The peer is a third-party process orrery does not control: a
@@ -83,6 +83,14 @@ public struct RemoteAITool: AITool {
         guard case .object(let obj) = hello,
               case .string(let version)? = obj["protocolVersion"]
         else { throw RemoteAIToolError.handshakeFailed("initialize returned no protocolVersion") }
+
+        // What the plugin says it can do, taken at its word. A plugin that
+        // advertises an operation and then refuses it is a broken plugin; a
+        // host that called an unadvertised one would be the broken party.
+        var capabilities: Set<String> = []
+        if case .object(let caps)? = obj["capabilities"] {
+            capabilities = Set(caps.compactMap { $0.value == .bool(true) ? $0.key : nil })
+        }
 
         let theirMajor = version.split(separator: ".").first.map(String.init) ?? version
         let ourMajor = PluginServer.protocolVersion.split(separator: ".").first
@@ -110,6 +118,70 @@ public struct RemoteAITool: AITool {
             throw RemoteAIToolError.describeMalformed(String(describing: error))
         }
 
-        return RemoteAITool(description: description, connection: connection)
+        let base = RemoteAITool(description: description, connection: connection)
+
+        // Which *type* comes back is the load-bearing part. A conformance is
+        // static, so one remote type would conform to `AIToolStateTransfer` for
+        // every plugin — including the ones that cannot perform the operations —
+        // and `tool is any AIToolStateTransfer` is the entire mechanism by which
+        // a host is meant to see that absence. Returning the type that matches
+        // what the plugin advertised keeps that check honest.
+        if capabilities.contains("tool/copyLoginState"),
+           capabilities.contains("tool/copyNonLoginSettings") {
+            return RemoteTransferringAITool(base: base, connection: connection)
+        }
+        return base
+    }
+}
+
+/// A remote tool whose plugin advertised the state-transfer operations.
+///
+/// Composes ``RemoteAITool`` rather than inheriting from it — a struct cannot —
+/// and forwards the eight description fields to it. The duplication is eight
+/// one-line forwards, and it buys the property that matters: a describe-only
+/// plugin never produces a value that claims it can copy credentials.
+public struct RemoteTransferringAITool: AIToolStateTransfer {
+    private let base: RemoteAITool
+    private let connection: JSONRPCConnection
+
+    init(base: RemoteAITool, connection: JSONRPCConnection) {
+        self.base = base
+        self.connection = connection
+    }
+
+    public var id: String { base.id }
+    public var displayName: String { base.displayName }
+    public var configDirectoryName: String { base.configDirectoryName }
+    public var configDirEnvVar: String? { base.configDirEnvVar }
+    public var authLoginCommand: [String]? { base.authLoginCommand }
+    public var installCommand: [String]? { base.installCommand }
+    public var sessionSubdirectories: [String] { base.sessionSubdirectories }
+    public var ansiColor: String { base.ansiColor }
+
+    public var isConnectionAlive: Bool {
+        get async { await base.isConnectionAlive }
+    }
+
+    public func copyLoginState(from sourceDir: URL?, to targetDir: URL) async throws -> Bool {
+        // `.null` rather than omitting the key: nil is the instruction "your own
+        // default location", which is a different thing from an absent argument.
+        let result = try await connection.call("tool/copyLoginState", [
+            "sourceDir": sourceDir.map { RPCValue.string($0.path) } ?? .null,
+            "targetDir": .string(targetDir.path),
+        ])
+        // A reply that does not say whether it copied is not a usable answer:
+        // guessing either way risks reporting work that never happened.
+        guard case .object(let obj) = result, case .bool(let copied)? = obj["copied"] else {
+            throw RemoteAIToolError.describeMalformed(
+                "tool/copyLoginState returned no 'copied' flag")
+        }
+        return copied
+    }
+
+    public func copyNonLoginSettings(from sourceDir: URL, to targetDir: URL) async throws {
+        _ = try await connection.call("tool/copyNonLoginSettings", [
+            "sourceDir": .string(sourceDir.path),
+            "targetDir": .string(targetDir.path),
+        ])
     }
 }
