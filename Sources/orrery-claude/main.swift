@@ -17,4 +17,4 @@ struct ClaudeTool: AITool {
     let ansiColor = "\u{1B}[38;5;173m"
 }
 
-PluginServer.serve(tool: ClaudeTool())
+await PluginServer.serve(tool: ClaudeTool())
