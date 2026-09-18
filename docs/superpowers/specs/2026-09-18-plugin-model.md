@@ -56,9 +56,15 @@ And the distinction earns its keep. `resolve` currently takes this parameter:
 That is the host telling the tool how hard to work — how fresh an answer to go
 and get. It is a leak: how expensive it is to read an identity, and which source
 is authoritative when, is knowledge about the tool's own storage. With separate
-`list()` and `show()`, the tool decides its own cost profile for each view — a
-listing stays cheap, a detail view goes to the live source — and the parameter
-disappears.
+methods, the tool decides its own cost profile for each: a listing stays cheap, a
+detail view reaches for the freshest source it has.
+
+The flag does not vanish, and it would be wrong to say it does. What it actually
+decides is *which directory* orrery hands over — the live `CLAUDE_CONFIG_DIR`
+when this shell is pointed at that account, the pool directory otherwise. That is
+orrery's own knowledge, about its pins and this shell, and it stays on orrery's
+side. What stops crossing the boundary is the *instruction*: the tool is no
+longer told how fresh an answer to fetch, only which directory to look in.
 
 What the tool returns is *facts*, not formatting. The host still lays out the
 row; the tool decides which of its facts each view is worth.
