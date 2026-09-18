@@ -7,8 +7,8 @@ import Testing
 struct ClaudeLoginSyncTests {
 
     @Test("detects a changed refreshToken, syncs it, and fires AccountLoginHooks")
-    func detectsAndSyncsChange() throws {
-        try withIsolatedHome {
+    func detectsAndSyncsChange() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
@@ -52,8 +52,8 @@ struct ClaudeLoginSyncTests {
     }
 
     @Test("returns false and touches nothing when the refreshToken is unchanged")
-    func noChangeReturnsFalse() throws {
-        try withIsolatedHome {
+    func noChangeReturnsFalse() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
@@ -77,8 +77,8 @@ struct ClaudeLoginSyncTests {
     }
 
     @Test("returns false when the account has no keychainItem")
-    func noKeychainItemReturnsFalse() throws {
-        try withIsolatedHome {
+    func noKeychainItemReturnsFalse() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice") // keychainItem left nil
             try acctStore.save(acct)

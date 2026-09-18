@@ -107,8 +107,8 @@ struct AccountRefreshInfoTests {
 struct RunCommandPrepareSyncBackInfoTests {
 
     @Test("claude: prepareSyncBack is a no-op (v3.1 shell-function managed)")
-    func claudePrepareSyncBackIsNoOp() throws {
-        try withIsolatedHome {
+    func claudePrepareSyncBackIsNoOp() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "claude-sb-noop")
@@ -124,8 +124,8 @@ struct RunCommandPrepareSyncBackInfoTests {
     }
 
     @Test("codex: prepareSyncBack populates email and plan from auth.json JWT")
-    func codexSyncBackRefreshesAccountInfo() throws {
-        try withIsolatedHome {
+    func codexSyncBackRefreshesAccountInfo() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 

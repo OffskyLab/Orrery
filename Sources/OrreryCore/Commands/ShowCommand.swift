@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct ShowCommand: ParsableCommand {
+public struct ShowCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "show",
         abstract: L10n.Account.showAbstract
@@ -12,7 +12,7 @@ public struct ShowCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         let envStore = EnvironmentStore.default
         let acctStore = AccountStore.default
 
@@ -45,14 +45,14 @@ public struct ShowCommand: ParsableCommand {
                let live = Self.liveAccount(tool: tool, manager: manager, acctStore: acctStore),
                live.id != pins[tool.rawValue] {
                 print("\(tool.rawValue): \(live.displayName) [this shell only — via `orrery use`; default is \(Self.defaultLabel(tool: tool, pins: pins, acctStore: acctStore))]")
-                printDetails(for: live, tool: tool, isLiveInThisShell: true, acctStore: acctStore, envStore: envStore)
+                await printDetails(for: live, tool: tool, isLiveInThisShell: true, acctStore: acctStore, envStore: envStore)
                 continue
             }
 
             if let id = pins[tool.rawValue],
                let acct = try? acctStore.load(id: id, tool: tool) {
                 print(L10n.Account.showRowHeader(tool.rawValue, acct.displayName))
-                printDetails(for: acct, tool: tool, isLiveInThisShell: false, acctStore: acctStore, envStore: envStore)
+                await printDetails(for: acct, tool: tool, isLiveInThisShell: false, acctStore: acctStore, envStore: envStore)
             } else {
                 print(L10n.Account.showRowUnpinned(tool.rawValue))
             }
@@ -83,8 +83,9 @@ public struct ShowCommand: ParsableCommand {
     private func printDetails(
         for acct: Account, tool: Tool, isLiveInThisShell: Bool,
         acctStore: AccountStore, envStore: EnvironmentStore
-    ) {
-        let info = AccountAuthInfo.resolve(for: acct, isLiveInThisShell: isLiveInThisShell, store: acctStore)
+    ) async {
+        let info = await AccountAuthInfo.identity(
+            for: acct, isLiveInThisShell: isLiveInThisShell, store: acctStore)
         let authSuffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
         print("\(L10n.Account.showLabelAuth)\(authSuffix.isEmpty ? L10n.Account.showAuthNone : authSuffix)")
         print("\(L10n.Account.showLabelWorkspace)\(acct.workspace)")

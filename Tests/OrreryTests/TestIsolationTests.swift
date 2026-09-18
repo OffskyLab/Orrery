@@ -11,13 +11,13 @@ import Testing
 struct TestIsolationTests {
 
     @Test("withIsolatedHome isolates tool.defaultConfigDir from the real home")
-    func isolatesDefaultConfigDir() {
+    func isolatesDefaultConfigDir() async throws {
         // Captured OUTSIDE isolation: homeDirectoryForCurrentUser ignores $HOME,
         // so this is always the developer's real home.
         let realClaude = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude").path
 
-        withIsolatedHome {
+        await withIsolatedHome {
             let isolated = Tool.claude.defaultConfigDir.path
             #expect(isolated != realClaude,
                 "defaultConfigDir must NOT resolve to the real ~/.claude inside withIsolatedHome")

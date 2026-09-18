@@ -11,7 +11,7 @@ struct WorkspaceStructureRelocationTests {
     }
 
     @Test("renames envs/ to workspaces/ and origin/ to workspaces/origin/, env.json to workspace.json")
-    func relocatesTree() throws {
+    func relocatesTree() async throws {
         // `runWorkspaceStructureRelocationIfNeeded`'s origin-relocation branch
         // repoints `Tool.defaultConfigDir` symlinks (e.g. `~/.claude`), which
         // resolves via `userHomeURL()` — honoring `ORRERY_USER_HOME`, NOT the
@@ -20,7 +20,7 @@ struct WorkspaceStructureRelocationTests {
         // if it happens to point under `.../origin/claude`. `withIsolatedHome`
         // is the project convention for this (see TestHelpers.swift) — it sets
         // ORRERY_HOME and ORRERY_USER_HOME together and restores both.
-        try withIsolatedHome {
+        try await withIsolatedHome {
             let fm = FileManager.default
             let home = tmpHome()
             // Synthesize a v3.0.x tree.
@@ -58,8 +58,8 @@ struct WorkspaceStructureRelocationTests {
     /// This reproduces the state after such a run: the move is already done, so
     /// `origin/` is gone, and gemini is still owed its repair.
     @Test("a tool still pending after the move has its home symlink repaired")
-    func repairsSymlinkForToolPendingAfterMove() throws {
-        try withIsolatedHome {
+    func repairsSymlinkForToolPendingAfterMove() async throws {
+        try await withIsolatedHome {
             let fm = FileManager.default
             let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
 
@@ -95,8 +95,8 @@ struct WorkspaceStructureRelocationTests {
     /// pointed at valid data toward a target that may not exist. Too narrow
     /// traded for too wide.
     @Test("a link is left alone while legacy origin is still present")
-    func leavesLinkAloneWhenMoveHasNotHappened() throws {
-        try withIsolatedHome {
+    func leavesLinkAloneWhenMoveHasNotHappened() async throws {
+        try await withIsolatedHome {
             let fm = FileManager.default
             let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
 
@@ -136,8 +136,8 @@ struct WorkspaceStructureRelocationTests {
     /// not settled work. Classifying "no link" as settled is what turned one
     /// transient failure into a permanently missing config path.
     @Test("a missing link for a pending tool is created, not written off")
-    func createsMissingLinkForPendingTool() throws {
-        try withIsolatedHome {
+    func createsMissingLinkForPendingTool() async throws {
+        try await withIsolatedHome {
             let fm = FileManager.default
             let home = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
 
@@ -160,9 +160,9 @@ struct WorkspaceStructureRelocationTests {
     }
 
     @Test("idempotent — second run does not error or change the tree")
-    func idempotent() throws {
+    func idempotent() async throws {
         // Same isolation hazard as `relocatesTree()` above — see its comment.
-        try withIsolatedHome {
+        try await withIsolatedHome {
             let fm = FileManager.default
             let home = tmpHome()
             try fm.createDirectory(at: home.appendingPathComponent("origin/claude"),

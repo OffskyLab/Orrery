@@ -7,8 +7,8 @@ import Testing
 struct WorkspaceCommandTests {
 
     @Test("WorkspaceCommand runs with list subcommand")
-    func workspaceListRuns() throws {
-        try withIsolatedHome {
+    func workspaceListRuns() async throws {
+        try await withIsolatedHome {
             // The list subcommand should work when invoked through WorkspaceCommand.
             #expect(throws: Never.self) {
                 var list = try SandboxCommand.List.parse([])

@@ -7,8 +7,8 @@ import OrreryAccountKit
 @Suite("PinCommand")
 struct PinCommandTests {
     @Test("pins account to a freshly named workspace, sets workspace + creates symlinks")
-    func pinsToFreshWorkspace() throws {
-        try withIsolatedHome {
+    func pinsToFreshWorkspace() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -28,8 +28,8 @@ struct PinCommandTests {
     }
 
     @Test("repointing a previously pinned account updates symlinks")
-    func repointsAccount() throws {
-        try withIsolatedHome {
+    func repointsAccount() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -52,8 +52,8 @@ struct PinCommandTests {
     }
 
     @Test("unknown account throws ValidationError")
-    func unknownAccount() throws {
-        try withIsolatedHome {
+    func unknownAccount() async throws {
+        try await withIsolatedHome {
             let cmd = try PinCommand.parse(["no-such-acct", "--workspace", "origin"])
             #expect(throws: (any Error).self) {
                 try cmd.run()
@@ -71,8 +71,8 @@ struct PinCommandTests {
     }
 
     @Test("rejects multiple tool flags with ValidationError")
-    func rejectsMultipleToolFlags() throws {
-        try withIsolatedHome {
+    func rejectsMultipleToolFlags() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -88,8 +88,8 @@ struct PinCommandTests {
 @Suite("PinCommand integration")
 struct PinCommandIntegrationTests {
     @Test("pin produces complete v3.1 account dir layout")
-    func endToEndLayout() throws {
-        try withIsolatedHome {
+    func endToEndLayout() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 

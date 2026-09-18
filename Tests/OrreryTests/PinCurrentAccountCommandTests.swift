@@ -7,8 +7,8 @@ import Testing
 struct PinCurrentAccountCommandTests {
 
     @Test("persists the account as the origin-wide current pin for its tool")
-    func persistsToOrigin() throws {
-        try withIsolatedHome {
+    func persistsToOrigin() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -22,8 +22,8 @@ struct PinCurrentAccountCommandTests {
     }
 
     @Test("respects the --codex flag")
-    func respectsToolFlag() throws {
-        try withIsolatedHome {
+    func respectsToolFlag() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .codex, displayName: "bob")
             try acctStore.save(acct)
@@ -38,8 +38,8 @@ struct PinCurrentAccountCommandTests {
     }
 
     @Test("throws ValidationError for an unknown account")
-    func throwsForUnknown() throws {
-        try withIsolatedHome {
+    func throwsForUnknown() async throws {
+        try await withIsolatedHome {
             var cmd = try PinCurrentAccountCommand.parse(["no-such-account"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
@@ -48,8 +48,8 @@ struct PinCurrentAccountCommandTests {
     }
 
     @Test("rejects multiple tool flags")
-    func rejectsMultipleFlags() throws {
-        try withIsolatedHome {
+    func rejectsMultipleFlags() async throws {
+        try await withIsolatedHome {
             var cmd = try PinCurrentAccountCommand.parse(["alice", "--claude", "--codex"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
@@ -58,8 +58,8 @@ struct PinCurrentAccountCommandTests {
     }
 
     @Test("re-pinning overwrites the previous pin for the same tool")
-    func overwritesPreviousPin() throws {
-        try withIsolatedHome {
+    func overwritesPreviousPin() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let alice = Account(tool: .claude, displayName: "alice")
             let carol = Account(tool: .claude, displayName: "carol")
