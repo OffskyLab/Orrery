@@ -27,6 +27,11 @@ public struct RemoteAITool: AITool {
     private let description: ToolDescription
     private let connection: JSONRPCConnection
 
+    /// Present only when the plugin advertised every method the capability
+    /// needs. `nil` is a fact about this plugin, not a missing lookup.
+    public let stateTransfer: (any AIToolStateTransfer)?
+    public let identityReporting: (any AIToolIdentityReporting)?
+
     public var id: String { description.id }
     public var displayName: String { description.displayName }
     public var configDirectoryName: String { description.configDirectoryName }
@@ -57,9 +62,16 @@ public struct RemoteAITool: AITool {
         }
     }
 
-    private init(description: ToolDescription, connection: JSONRPCConnection) {
+    private init(
+        description: ToolDescription,
+        connection: JSONRPCConnection,
+        stateTransfer: (any AIToolStateTransfer)?,
+        identityReporting: (any AIToolIdentityReporting)?
+    ) {
         self.description = description
         self.connection = connection
+        self.stateTransfer = stateTransfer
+        self.identityReporting = identityReporting
     }
 
     /// Handshakes, checks the protocol major, and caches the description.
@@ -118,51 +130,45 @@ public struct RemoteAITool: AITool {
             throw RemoteAIToolError.describeMalformed(String(describing: error))
         }
 
-        let base = RemoteAITool(description: description, connection: connection)
-
-        // Which *type* comes back is the load-bearing part. A conformance is
-        // static, so one remote type would conform to `AIToolStateTransfer` for
-        // every plugin — including the ones that cannot perform the operations —
-        // and `tool is any AIToolStateTransfer` is the entire mechanism by which
-        // a host is meant to see that absence. Returning the type that matches
-        // what the plugin advertised keeps that check honest.
-        if capabilities.contains("tool/copyLoginState"),
-           capabilities.contains("tool/copyNonLoginSettings") {
-            return RemoteTransferringAITool(base: base, connection: connection)
-        }
-        return base
+        // Capabilities are carried, not encoded in the type. A conformance is
+        // static while a plugin's capability set is runtime data, so a remote
+        // type either conforms always — lying about describe-only plugins — or
+        // there is one type per combination. Two capabilities already need four
+        // types and the next needs eight, so the combination is a value here and
+        // `ToolCapability` reconciles it with the built-ins, which do conform.
+        return RemoteAITool(
+            description: description,
+            connection: connection,
+            stateTransfer: capabilities.contains("tool/copyLoginState")
+                && capabilities.contains("tool/copyNonLoginSettings")
+                ? RemoteStateTransfer(description: description, connection: connection) : nil,
+            identityReporting: capabilities.contains("tool/listIdentities")
+                && capabilities.contains("tool/showIdentity")
+                ? RemoteIdentityReporting(description: description, connection: connection) : nil)
     }
 }
 
-/// A remote tool whose plugin advertised the state-transfer operations.
+/// The state-transfer half of a remote tool, present only when its plugin
+/// advertised both methods.
 ///
-/// Composes ``RemoteAITool`` rather than inheriting from it — a struct cannot —
-/// and forwards the eight description fields to it. The duplication is eight
-/// one-line forwards, and it buys the property that matters: a describe-only
-/// plugin never produces a value that claims it can copy credentials.
-public struct RemoteTransferringAITool: AIToolStateTransfer {
-    private let base: RemoteAITool
-    private let connection: JSONRPCConnection
+/// It conforms to ``AIToolStateTransfer`` and therefore has to be an `AITool`
+/// too, which is why it carries the description: a capability is asked for
+/// *about* a tool, and handing back something that cannot say which tool it
+/// belongs to would make it unusable anywhere the id matters.
+struct RemoteStateTransfer: AIToolStateTransfer {
+    let description: ToolDescription
+    let connection: JSONRPCConnection
 
-    init(base: RemoteAITool, connection: JSONRPCConnection) {
-        self.base = base
-        self.connection = connection
-    }
+    var id: String { description.id }
+    var displayName: String { description.displayName }
+    var configDirectoryName: String { description.configDirectoryName }
+    var configDirEnvVar: String? { description.configDirEnvVar }
+    var authLoginCommand: [String]? { description.authLoginCommand }
+    var installCommand: [String]? { description.installCommand }
+    var sessionSubdirectories: [String] { description.sessionSubdirectories }
+    var ansiColor: String { description.ansiColor }
 
-    public var id: String { base.id }
-    public var displayName: String { base.displayName }
-    public var configDirectoryName: String { base.configDirectoryName }
-    public var configDirEnvVar: String? { base.configDirEnvVar }
-    public var authLoginCommand: [String]? { base.authLoginCommand }
-    public var installCommand: [String]? { base.installCommand }
-    public var sessionSubdirectories: [String] { base.sessionSubdirectories }
-    public var ansiColor: String { base.ansiColor }
-
-    public var isConnectionAlive: Bool {
-        get async { await base.isConnectionAlive }
-    }
-
-    public func copyLoginState(from sourceDir: URL?, to targetDir: URL) async throws -> Bool {
+    func copyLoginState(from sourceDir: URL?, to targetDir: URL) async throws -> Bool {
         // `.null` rather than omitting the key: nil is the instruction "your own
         // default location", which is a different thing from an absent argument.
         let result = try await connection.call("tool/copyLoginState", [
@@ -178,10 +184,87 @@ public struct RemoteTransferringAITool: AIToolStateTransfer {
         return copied
     }
 
-    public func copyNonLoginSettings(from sourceDir: URL, to targetDir: URL) async throws {
+    func copyNonLoginSettings(from sourceDir: URL, to targetDir: URL) async throws {
         _ = try await connection.call("tool/copyNonLoginSettings", [
             "sourceDir": .string(sourceDir.path),
             "targetDir": .string(targetDir.path),
         ])
+    }
+}
+
+/// The identity-reporting half of a remote tool, present only when its plugin
+/// advertised both methods.
+struct RemoteIdentityReporting: AIToolIdentityReporting {
+    let description: ToolDescription
+    let connection: JSONRPCConnection
+
+    var id: String { description.id }
+    var displayName: String { description.displayName }
+    var configDirectoryName: String { description.configDirectoryName }
+    var configDirEnvVar: String? { description.configDirEnvVar }
+    var authLoginCommand: [String]? { description.authLoginCommand }
+    var installCommand: [String]? { description.installCommand }
+    var sessionSubdirectories: [String] { description.sessionSubdirectories }
+    var ansiColor: String { description.ansiColor }
+
+    func listIdentities(in configDirs: [URL]) async throws -> [LoginIdentity?] {
+        let result = try await connection.call("tool/listIdentities", [
+            "configDirs": .array(configDirs.map { .string($0.path) }),
+        ])
+        guard case .object(let obj) = result,
+              case .array(let items)? = obj["identities"]
+        else {
+            throw RemoteAIToolError.describeMalformed(
+                "tool/listIdentities returned no 'identities' array")
+        }
+        // The count check is the whole point of the array being positional. A
+        // plugin that answered a different number of questions leaves every row
+        // after the discrepancy paired with the wrong directory, and each of
+        // those rows still looks entirely plausible.
+        guard items.count == configDirs.count else {
+            throw RemoteAIToolError.describeMalformed(
+                "tool/listIdentities: asked about \(configDirs.count) directories, got \(items.count) answers")
+        }
+        return items.map(Self.decode)
+    }
+
+    func showIdentity(in configDir: URL) async throws -> LoginIdentity? {
+        let result = try await connection.call("tool/showIdentity", [
+            "configDir": .string(configDir.path),
+        ])
+        guard case .object(let obj) = result, let identity = obj["identity"] else {
+            throw RemoteAIToolError.describeMalformed(
+                "tool/showIdentity returned no 'identity' key")
+        }
+        return Self.decode(identity)
+    }
+
+    /// `.null` is "no login in that directory" — an answer, not a malformed
+    /// reply — so it decodes to nil rather than throwing.
+    private static func decode(_ value: RPCValue) -> LoginIdentity? {
+        guard case .object(let fields) = value else { return nil }
+        func string(_ key: String) -> String? {
+            if case .string(let s)? = fields[key] { return s }
+            return nil
+        }
+        return LoginIdentity(email: string("email"), plan: string("plan"))
+    }
+}
+
+/// One way to ask what a tool can do, whichever side of the boundary answers.
+///
+/// A built-in tool answers by conforming; a remote one answers from the
+/// capability set its plugin advertised at `initialize`. Call sites go through
+/// here so they never have to know which kind they hold.
+public enum ToolCapability {
+
+    public static func stateTransfer(of tool: any AITool) -> (any AIToolStateTransfer)? {
+        if let direct = tool as? any AIToolStateTransfer { return direct }
+        return (tool as? RemoteAITool)?.stateTransfer
+    }
+
+    public static func identityReporting(of tool: any AITool) -> (any AIToolIdentityReporting)? {
+        if let direct = tool as? any AIToolIdentityReporting { return direct }
+        return (tool as? RemoteAITool)?.identityReporting
     }
 }
