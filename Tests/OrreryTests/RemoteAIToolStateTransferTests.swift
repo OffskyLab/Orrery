@@ -6,13 +6,12 @@ import AIToolKit
 
 /// Forwarding the two state-transfer operations across the process boundary.
 ///
-/// The load-bearing decision under test is not the forwarding — it is *which
-/// type* `connect` hands back. A conformance in Swift is static, so a single
-/// remote type would conform to `AIToolStateTransfer` for every plugin, whether
-/// or not the plugin can perform the operations. That would make
-/// `tool is any AIToolStateTransfer` a lie for describe-only plugins, and that
-/// check is the entire mechanism by which a host is supposed to see absence.
-/// So `connect` picks the type that matches what the plugin advertised.
+/// The load-bearing decision under test is not the forwarding — it is that a
+/// describe-only plugin cannot produce a value claiming it can copy credentials.
+/// A conformance in Swift is static while a plugin's capability set is runtime
+/// data, so `RemoteAITool` carries its capabilities as optionals rather than
+/// encoding them in its type, and `ToolCapability` asks the same question of a
+/// built-in and a remote tool alike. See `ToolCapabilityTests`.
 @Suite("RemoteAITool state transfer")
 struct RemoteAIToolStateTransferTests {
 
@@ -91,7 +90,7 @@ struct RemoteAIToolStateTransferTests {
         let tool = try await RemoteAITool.connect(
             transport: plugin(transfers: true), timeout: .seconds(1))
 
-        #expect(tool is any AIToolStateTransfer)
+        #expect(ToolCapability.stateTransfer(of: tool) != nil)
         // Still an ordinary tool in every other respect — the registry holds
         // `any AITool` and must not have to care.
         #expect(tool.id == "claude")
@@ -103,8 +102,8 @@ struct RemoteAIToolStateTransferTests {
         let tool = try await RemoteAITool.connect(
             transport: plugin(transfers: false), timeout: .seconds(1))
 
-        #expect(!(tool is any AIToolStateTransfer),
-                "conforming anyway would make the host's capability check a lie")
+        #expect(ToolCapability.stateTransfer(of: tool) == nil,
+                "exposing it anyway would make the host's capability check a lie")
         #expect(tool.id == "claude")
         #expect(tool.sessionSubdirectories == ["projects"])
     }
@@ -114,7 +113,7 @@ struct RemoteAIToolStateTransferTests {
         let wire = Wire()
         let tool = try await RemoteAITool.connect(
             transport: plugin(transfers: true, wire: wire), timeout: .seconds(1))
-        let transfer = try #require(tool as? any AIToolStateTransfer)
+        let transfer = try #require(ToolCapability.stateTransfer(of: tool))
 
         let copied = try await transfer.copyLoginState(
             from: URL(fileURLWithPath: "/tmp/src"), to: URL(fileURLWithPath: "/tmp/dst"))
@@ -134,7 +133,7 @@ struct RemoteAIToolStateTransferTests {
         let wire = Wire()
         let tool = try await RemoteAITool.connect(
             transport: plugin(transfers: true, wire: wire), timeout: .seconds(1))
-        let transfer = try #require(tool as? any AIToolStateTransfer)
+        let transfer = try #require(ToolCapability.stateTransfer(of: tool))
 
         _ = try await transfer.copyLoginState(from: nil, to: URL(fileURLWithPath: "/tmp/dst"))
 
@@ -148,7 +147,7 @@ struct RemoteAIToolStateTransferTests {
             transport: plugin(transfers: true,
                               loginReply: { (.object(["copied": .bool(false)]), nil) }),
             timeout: .seconds(1))
-        let transfer = try #require(tool as? any AIToolStateTransfer)
+        let transfer = try #require(ToolCapability.stateTransfer(of: tool))
 
         let copied = try await transfer.copyLoginState(
             from: URL(fileURLWithPath: "/tmp/src"), to: URL(fileURLWithPath: "/tmp/dst"))
@@ -166,7 +165,7 @@ struct RemoteAIToolStateTransferTests {
                 (nil, .init(code: JSONRPCError.operationFailedCode, message: "disk full"))
             }),
             timeout: .seconds(1))
-        let transfer = try #require(tool as? any AIToolStateTransfer)
+        let transfer = try #require(ToolCapability.stateTransfer(of: tool))
 
         await #expect(throws: (any Error).self) {
             _ = try await transfer.copyLoginState(
@@ -179,7 +178,7 @@ struct RemoteAIToolStateTransferTests {
         let wire = Wire()
         let tool = try await RemoteAITool.connect(
             transport: plugin(transfers: true, wire: wire), timeout: .seconds(1))
-        let transfer = try #require(tool as? any AIToolStateTransfer)
+        let transfer = try #require(ToolCapability.stateTransfer(of: tool))
 
         try await transfer.copyNonLoginSettings(
             from: URL(fileURLWithPath: "/tmp/a"), to: URL(fileURLWithPath: "/tmp/b"))
