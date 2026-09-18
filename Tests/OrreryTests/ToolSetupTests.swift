@@ -54,8 +54,8 @@ struct ToolSetupApplyRealEnvironmentTests {
     }
 
     @Test("unsetenv removes the stripped keys from the real environment that reaches the child")
-    func stripsKeysFromRealChildEnvironment() throws {
-        try withRealEnvironmentLock {
+    func stripsKeysFromRealChildEnvironment() async throws {
+        try await withRealEnvironmentLock {
             let keys = ToolSetup.strippedExecEnvKeys
             let saved = keys.map { ($0, ProcessInfo.processInfo.environment[$0]) }
             defer {

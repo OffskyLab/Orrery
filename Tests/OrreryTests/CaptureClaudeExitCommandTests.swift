@@ -7,8 +7,8 @@ import Testing
 struct CaptureClaudeExitCommandTests {
 
     @Test("splits .claude.json into identity and shared stores")
-    func splitsToStores() throws {
-        try withIsolatedHome {
+    func splitsToStores() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -56,8 +56,8 @@ struct CaptureClaudeExitCommandTests {
     }
 
     @Test("no .claude.json present is a no-op (not an error)")
-    func noClaudeJSONNoop() throws {
-        try withIsolatedHome {
+    func noClaudeJSONNoop() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -89,8 +89,8 @@ struct CaptureClaudeExitCommandTests {
 
     #if os(macOS)
     @Test("syncs the live (config-dir-hashed) Keychain credential back into the account's pool copy")
-    func syncsKeychainToPool() throws {
-        try withIsolatedHome {
+    func syncsKeychainToPool() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
@@ -125,8 +125,8 @@ struct CaptureClaudeExitCommandTests {
     }
 
     @Test("unchanged refreshToken is not treated as a login — no re-copy, no hook fired")
-    func unchangedRefreshTokenSkipsSync() throws {
-        try withIsolatedHome {
+    func unchangedRefreshTokenSkipsSync() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)

@@ -8,8 +8,8 @@ import Foundation
 struct AccountLoginFlowTests {
 
     @Test("imports a codex credential from the staging dir into the pool")
-    func importsCodexCredentialIntoPool() throws {
-        try withIsolatedHome {
+    func importsCodexCredentialIntoPool() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let account = Account(tool: .codex, displayName: "work")
             try store.save(account)
@@ -31,8 +31,8 @@ struct AccountLoginFlowTests {
     }
 
     @Test("imports a gemini credential from the staging dir into the pool")
-    func importsGeminiCredentialIntoPool() throws {
-        try withIsolatedHome {
+    func importsGeminiCredentialIntoPool() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let account = Account(tool: .gemini, displayName: "personal")
             try store.save(account)
@@ -54,8 +54,8 @@ struct AccountLoginFlowTests {
     }
 
     @Test("throws when login produced no credential in the staging dir")
-    func importThrowsWhenCredentialNotProduced() throws {
-        try withIsolatedHome {
+    func importThrowsWhenCredentialNotProduced() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let account = Account(tool: .codex, displayName: "empty")
             try store.save(account)
@@ -75,8 +75,8 @@ struct AccountLoginFlowTests {
         "imports a claude credential from the staging Keychain service into the account service",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func importsClaudeCredentialFromKeychain() throws {
-        try withIsolatedHome {
+    func importsClaudeCredentialFromKeychain() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
@@ -103,8 +103,8 @@ struct AccountLoginFlowTests {
     #endif
 
     @Test("importFrom overwrites an existing pooled credential with a new one")
-    func importFromOverwritesExistingCredential() throws {
-        try withIsolatedHome {
+    func importFromOverwritesExistingCredential() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let account = Account(tool: .codex, displayName: "overwrite-test")
             try store.save(account)

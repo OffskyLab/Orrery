@@ -208,8 +208,8 @@ struct AccountMigrationFlagTests {
     /// The backfill is the cheapest of the five to drive end to end: it needs
     /// only an accounts directory, no workspaces or credentials.
     @Test("backfill records the tools it covered instead of a bare marker")
-    func backfillRecordsCoveredTools() throws {
-        try withIsolatedHome {
+    func backfillRecordsCoveredTools() async throws {
+        try await withIsolatedHome {
             let home = orreryHomeURL()
             try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
 
@@ -227,8 +227,8 @@ struct AccountMigrationFlagTests {
     }
 
     @Test("a legacy marker still short-circuits the backfill")
-    func backfillHonoursLegacyMarker() throws {
-        try withIsolatedHome {
+    func backfillHonoursLegacyMarker() async throws {
+        try await withIsolatedHome {
             let home = orreryHomeURL()
             try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
             let url = home.appendingPathComponent(AccountMigration.infoBackfillFlagFileName)
@@ -246,8 +246,8 @@ struct AccountMigrationFlagTests {
     /// flag must claim claude and nothing else. Recording codex and gemini here
     /// would mark work complete that this migration never attempted.
     @Test("the workspace-symlink migration records only the tool it processed")
-    func workspaceSymlinksRecordsClaudeOnly() throws {
-        try withIsolatedHome {
+    func workspaceSymlinksRecordsClaudeOnly() async throws {
+        try await withIsolatedHome {
             let home = orreryHomeURL()
             try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
 
@@ -267,8 +267,8 @@ struct AccountMigrationFlagTests {
     /// bare `v1` marker on disk. Rebuilding every account's symlinks again on
     /// upgrade is not free, so the legacy marker must still stop it.
     @Test("a legacy marker still short-circuits the workspace-symlink migration")
-    func workspaceSymlinksHonoursLegacyMarker() throws {
-        try withIsolatedHome {
+    func workspaceSymlinksHonoursLegacyMarker() async throws {
+        try await withIsolatedHome {
             let home = orreryHomeURL()
             try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
             let url = home.appendingPathComponent(

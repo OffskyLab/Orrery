@@ -18,11 +18,14 @@ import OrreryAccountKit
 /// This surfaced as `WorkspaceDirLookupCommand` failing in a full run and
 /// passing on its own, after a branch that added process-spawning tests raised
 /// the odds. Four of the five suites calling this had no `.serialized` at all.
-private let stdoutCaptureLock = NSLock()
+/// An ``AsyncGate``, for the reason the home gate is one: a captured body can
+/// now suspend, and neither an `NSLock` (thread-owned) nor a global actor
+/// (reentrant, so it releases at every `await` inside) actually excludes across
+/// that.
+private let stdoutCaptureGate = AsyncGate()
 
-func captureStdout(_ body: () throws -> Void) throws -> String {
-    stdoutCaptureLock.lock()
-    defer { stdoutCaptureLock.unlock() }
+func captureStdout(_ body: () async throws -> Void) async throws -> String {
+    try await stdoutCaptureGate.withGate {
     let tmpPath = FileManager.default.temporaryDirectory
         .appendingPathComponent("orrery-cap-\(UUID().uuidString).txt").path
     FileManager.default.createFile(atPath: tmpPath, contents: nil)
@@ -39,9 +42,10 @@ func captureStdout(_ body: () throws -> Void) throws -> String {
         dup2(savedFD, fileno(stdout))
         close(savedFD)
     }
-    try body()
+    try await body()
     fflush(stdout)
     return (try? String(contentsOfFile: tmpPath, encoding: .utf8)) ?? ""
+    }
 }
 
 // MARK: - All account command tests
@@ -60,8 +64,8 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("multiple tool flags throws ValidationError")
-        func multipleToolFlags() throws {
-            try withIsolatedHome {
+        func multipleToolFlags() async throws {
+            try await withIsolatedHome {
                 #expect(throws: (any Error).self) {
                     try AddCommand.resolveTool(claude: true, codex: true, gemini: false)
                 }
@@ -69,8 +73,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("defaults to claude when no tool flag is set")
-        func defaultsToClaude() throws {
-            try withIsolatedHome {
+        func defaultsToClaude() async throws {
+            try await withIsolatedHome {
                 let cmd = try AddCommand.parse(["default-claude-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .claude)
@@ -79,8 +83,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("--codex flag creates a codex account")
-        func codexFlag() throws {
-            try withIsolatedHome {
+        func codexFlag() async throws {
+            try await withIsolatedHome {
                 let cmd = try AddCommand.parse(["--codex", "codex-test", "--skip-login"])
                 try cmd.run()
                 let accounts = try AccountStore.default.list(tool: .codex)
@@ -90,8 +94,8 @@ struct AccountCommandsAllTests {
 
         #if os(macOS)
         @Test("claude account created via add has non-nil keychainItem")
-        func claudeAccountHasKeychainItem() throws {
-            try withIsolatedHome {
+        func claudeAccountHasKeychainItem() async throws {
+            try await withIsolatedHome {
                 let tmpDir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
                 let cmd = try AddCommand.parse(["keychain-test", "--skip-login"])
                 try cmd.run()
@@ -107,8 +111,8 @@ struct AccountCommandsAllTests {
         #endif
 
         @Test("rejects a duplicate display name for the same tool")
-        func rejectsDuplicateName() throws {
-            try withIsolatedHome {
+        func rejectsDuplicateName() async throws {
+            try await withIsolatedHome {
                 try AddCommand.parse(["dup", "--skip-login"]).run()
                 // second add with the same name + tool must throw
                 #expect(throws: ValidationError.self) {
@@ -127,21 +131,21 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("empty store prints listEmpty message")
-        func empty() throws {
-            try withIsolatedHome {
+        func empty() async throws {
+            try await withIsolatedHome {
                 let cmd = try ListCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("No accounts"))
             }
         }
 
         @Test("grouped by tool shows all accounts")
-        func groupedByTool() throws {
-            try withIsolatedHome {
+        func groupedByTool() async throws {
+            try await withIsolatedHome {
                 try AccountStore.default.save(Account(tool: .claude, displayName: "work"))
                 try AccountStore.default.save(Account(tool: .codex, displayName: "personal"))
                 let cmd = try ListCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("work"))
                 #expect(output.contains("personal"))
                 #expect(output.contains("claude"))
@@ -150,12 +154,12 @@ struct AccountCommandsAllTests {
         }
 
         @Test("--codex filter shows only codex accounts")
-        func filterByTool() throws {
-            try withIsolatedHome {
+        func filterByTool() async throws {
+            try await withIsolatedHome {
                 try AccountStore.default.save(Account(tool: .claude, displayName: "should-not-show"))
                 try AccountStore.default.save(Account(tool: .codex, displayName: "yes-show"))
                 let cmd = try ListCommand.parse(["--codex"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("yes-show"))
                 #expect(!output.contains("should-not-show"))
             }
@@ -164,8 +168,8 @@ struct AccountCommandsAllTests {
         // MARK: - Info suffix tests
 
         @Test("codex account with email and plan stored shows both in list")
-        func codexAccountWithStoredEmailAndPlan() throws {
-            try withIsolatedHome {
+        func codexAccountWithStoredEmailAndPlan() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 // Simulate what write paths (login/syncback/backfill) do: store
                 // email and plan directly on the Account before saving.
@@ -175,7 +179,7 @@ struct AccountCommandsAllTests {
                 try store.save(acct)
 
                 let cmd = try ListCommand.parse(["--codex"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("work-codex"))
                 #expect(output.contains("test@example.com"))
                 #expect(output.contains("free"))
@@ -183,8 +187,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("gemini account with stored email shows email in list")
-        func geminiAccountWithStoredEmail() throws {
-            try withIsolatedHome {
+        func geminiAccountWithStoredEmail() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 // Simulate what write paths do: store email directly on Account.
                 var acct = Account(tool: .gemini, displayName: "gemini-personal")
@@ -192,21 +196,21 @@ struct AccountCommandsAllTests {
                 try store.save(acct)
 
                 let cmd = try ListCommand.parse(["--gemini"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("gemini-personal"))
                 #expect(output.contains("gemini@example.com"))
             }
         }
 
         @Test("account list does not crash with no credentials in pool dirs")
-        func noCrashWithNoCredentials() throws {
-            try withIsolatedHome {
+        func noCrashWithNoCredentials() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 try store.save(Account(tool: .claude, displayName: "no-creds-claude"))
                 try store.save(Account(tool: .codex, displayName: "no-creds-codex"))
                 try store.save(Account(tool: .gemini, displayName: "no-creds-gemini"))
                 let cmd = try ListCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 // Must not crash; all account names should appear.
                 #expect(output.contains("no-creds-claude"))
                 #expect(output.contains("no-creds-codex"))
@@ -215,8 +219,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("active account in the current sandbox is marked, inactive is not")
-        func activeAccountMarked() throws {
-            try withIsolatedHome {
+        func activeAccountMarked() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 let active = Account(tool: .claude, displayName: "active-one")
                 let other = Account(tool: .claude, displayName: "other-one")
@@ -227,7 +231,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ListCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("● active-one"))
                 #expect(output.contains("- other-one"))
                 // At origin, the sandbox header is not shown.
@@ -236,8 +240,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("CODEX_HOME pointing at a different account moves the active marker")
-        func codexHomeMovesActiveMarker() throws {
-            try withIsolatedHome {
+        func codexHomeMovesActiveMarker() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let pinned = Account(tool: .codex, displayName: "codex-pinned")
                 let shellOnly = Account(tool: .codex, displayName: "codex-shell-only")
@@ -254,15 +258,15 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CODEX_HOME") }
 
                 let cmd = try ListCommand.parse(["--codex"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("● codex-shell-only"))
                 #expect(output.contains("- codex-pinned"))
             }
         }
 
         @Test("ORRERY_GEMINI_HOME pointing at a different account moves the active marker")
-        func geminiHomeMovesActiveMarker() throws {
-            try withIsolatedHome {
+        func geminiHomeMovesActiveMarker() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let pinned = Account(tool: .gemini, displayName: "gemini-pinned")
                 let shellOnly = Account(tool: .gemini, displayName: "gemini-shell-only")
@@ -277,7 +281,7 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("ORRERY_GEMINI_HOME") }
 
                 let cmd = try ListCommand.parse(["--gemini"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("● gemini-shell-only"))
                 #expect(output.contains("- gemini-pinned"))
             }
@@ -291,10 +295,10 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("unpinned rows show unpinned text for every tool")
-        func unpinnedRows() throws {
-            try withIsolatedHome {
+        func unpinnedRows() async throws {
+            try await withIsolatedHome {
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 for tool in Tool.allCases {
                     #expect(output.contains("\(tool.rawValue): (no account pinned)"))
                 }
@@ -302,22 +306,22 @@ struct AccountCommandsAllTests {
         }
 
         @Test("pinned account shows displayName")
-        func pinnedShowsDisplayName() throws {
-            try withIsolatedHome {
+        func pinnedShowsDisplayName() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "pinned-account")
                 try AccountStore.default.save(acct)
                 var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["claude"] = acct.id
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("pinned-account"))
             }
         }
 
         @Test("pinned codex account with stored email and plan shows both")
-        func pinnedCodexShowsStoredEmailAndPlan() throws {
-            try withIsolatedHome {
+        func pinnedCodexShowsStoredEmailAndPlan() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 // Simulate what write paths do: store email/plan directly on Account.
                 var acct = Account(tool: .codex, displayName: "show-codex")
@@ -331,7 +335,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("show-codex"))
                 #expect(output.contains("codex-show@example.com"))
                 #expect(output.contains("pro"))
@@ -339,15 +343,15 @@ struct AccountCommandsAllTests {
         }
 
         @Test("pinned account with no credentials shows name without parens")
-        func pinnedNoCredentialsShowsNameOnly() throws {
-            try withIsolatedHome {
+        func pinnedNoCredentialsShowsNameOnly() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "bare-account")
                 try AccountStore.default.save(acct)
                 var origin = EnvironmentStore.default.loadOriginWorkspace()
                 origin.accounts["claude"] = acct.id
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("bare-account"))
                 // No trailing " ()" — suffix is empty so no parens added.
                 #expect(!output.contains("bare-account ()"))
@@ -355,8 +359,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("ORRERY_ACTIVE_ENV named env: shows the account pinned in that env, not origin's")
-        func activeEnvVarNamedEnv() throws {
-            try withIsolatedHome {
+        func activeEnvVarNamedEnv() async throws {
+            try await withIsolatedHome {
                 let envStore = EnvironmentStore.default
                 let acctStore = AccountStore.default
 
@@ -378,15 +382,15 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("ORRERY_ACTIVE_ENV") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("env-pinned-account"))
                 #expect(!output.contains("origin-pinned-account"))
             }
         }
 
         @Test("CLAUDE_CONFIG_DIR pointing at a different account overrides the claude row and notes the default")
-        func claudeConfigDirOverridesRow() throws {
-            try withIsolatedHome {
+        func claudeConfigDirOverridesRow() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let pinned = Account(tool: .claude, displayName: "pinned-default")
                 let shellOnly = Account(tool: .claude, displayName: "shell-only-account")
@@ -401,7 +405,7 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CLAUDE_CONFIG_DIR") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("shell-only-account"))
                 #expect(output.contains("this shell only"))
                 #expect(output.contains("pinned-default")) // still mentioned as the default
@@ -409,8 +413,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("CLAUDE_CONFIG_DIR matching the persisted pin shows the normal row, no override marker")
-        func claudeConfigDirMatchingPinIsUnannotated() throws {
-            try withIsolatedHome {
+        func claudeConfigDirMatchingPinIsUnannotated() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let acct = Account(tool: .claude, displayName: "same-account")
                 try acctStore.save(acct)
@@ -423,15 +427,15 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CLAUDE_CONFIG_DIR") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("same-account"))
                 #expect(!output.contains("this shell only"))
             }
         }
 
         @Test("CLAUDE_CONFIG_DIR pointing at an unknown account falls back to the persisted pin")
-        func claudeConfigDirUnknownFallsBack() throws {
-            try withIsolatedHome {
+        func claudeConfigDirUnknownFallsBack() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let acct = Account(tool: .claude, displayName: "still-shown")
                 try acctStore.save(acct)
@@ -444,15 +448,15 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CLAUDE_CONFIG_DIR") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("still-shown"))
                 #expect(!output.contains("this shell only"))
             }
         }
 
         @Test("CODEX_HOME pointing at a different account overrides the codex row and notes the default")
-        func codexHomeOverridesRow() throws {
-            try withIsolatedHome {
+        func codexHomeOverridesRow() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let pinned = Account(tool: .codex, displayName: "codex-pinned-default")
                 let shellOnly = Account(tool: .codex, displayName: "codex-shell-only")
@@ -467,7 +471,7 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CODEX_HOME") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("codex-shell-only"))
                 #expect(output.contains("this shell only"))
                 #expect(output.contains("codex-pinned-default")) // still mentioned as the default
@@ -475,8 +479,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("CODEX_HOME matching the persisted pin shows the normal row, no override marker")
-        func codexHomeMatchingPinIsUnannotated() throws {
-            try withIsolatedHome {
+        func codexHomeMatchingPinIsUnannotated() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let acct = Account(tool: .codex, displayName: "codex-same-account")
                 try acctStore.save(acct)
@@ -489,15 +493,15 @@ struct AccountCommandsAllTests {
                 defer { unsetenv("CODEX_HOME") }
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("codex-same-account"))
                 #expect(!output.contains("this shell only"))
             }
         }
 
         @Test("default output shows Auth and Workspace labels but no path/created (verbose-only)")
-        func defaultOutputOmitsVerboseFields() throws {
-            try withIsolatedHome {
+        func defaultOutputOmitsVerboseFields() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 var acct = Account(tool: .claude, displayName: "rich-account")
                 acct.email = "rich@example.com"
@@ -509,7 +513,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("rich@example.com, pro"))
                 #expect(output.contains("Workspace:"))
                 #expect(output.contains("origin"))
@@ -519,8 +523,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("--verbose adds account path, workspace path, and created date")
-        func verboseAddsPathsAndCreatedDate() throws {
-            try withIsolatedHome {
+        func verboseAddsPathsAndCreatedDate() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let acct = Account(tool: .claude, displayName: "verbose-account")
                 try acctStore.save(acct)
@@ -530,7 +534,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ShowCommand.parse(["--verbose"])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains(acctStore.accountDir(id: acct.id, tool: .claude).path))
                 #expect(output.contains(EnvironmentStore.default.claudeWorkspaceDir(workspace: acct.workspace).path))
                 #expect(output.contains("Created:"))
@@ -538,8 +542,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("pinned account shows its content-workspace name, not just the active sandbox")
-        func showsPinnedWorkspaceName() throws {
-            try withIsolatedHome {
+        func showsPinnedWorkspaceName() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 var acct = Account(tool: .claude, displayName: "workspace-pinned")
                 acct.workspace = "team-workspace"
@@ -550,7 +554,7 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try ShowCommand.parse([])
-                let output = try captureStdout { try cmd.run() }
+                let output = try await captureStdout { try await cmd.run() }
                 #expect(output.contains("team-workspace"))
             }
         }
@@ -563,8 +567,8 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("claudeThrows: UseCommand.run() throws ValidationError for --claude, pointing at shell function")
-        func claudeThrows() throws {
-            try withIsolatedHome {
+        func claudeThrows() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "alice")
                 try AccountStore.default.save(acct)
 
@@ -579,8 +583,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("notFound: throws when codex account does not exist")
-        func notFound() throws {
-            try withIsolatedHome {
+        func notFound() async throws {
+            try await withIsolatedHome {
                 let savedEnv = ProcessInfo.processInfo.environment["ORRERY_ACTIVE_ENV"]
                 unsetenv("ORRERY_ACTIVE_ENV")
                 defer {
@@ -604,8 +608,8 @@ struct AccountCommandsAllTests {
         // materializesCredential test below.
 
         @Test("materializes: account use places the codex credential into the live config dir")
-        func materializesCredential() throws {
-            try withIsolatedHome {
+        func materializesCredential() async throws {
+            try await withIsolatedHome {
                 let envStore = EnvironmentStore.default
                 let acctStore = AccountStore.default
 
@@ -643,9 +647,9 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("creates account in store, staging dir on disk, and prints staging path")
-        func prepareClaude() throws {
-            try withIsolatedHome {
-                let output = try captureStdout {
+        func prepareClaude() async throws {
+            try await withIsolatedHome {
+                let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["prep-test"])
                     try cmd.run()
                 }
@@ -675,9 +679,9 @@ struct AccountCommandsAllTests {
         }
 
         @Test("stdout contains only the staging path when a name is given")
-        func stdoutOnlyStagingPath() throws {
-            try withIsolatedHome {
-                let output = try captureStdout {
+        func stdoutOnlyStagingPath() async throws {
+            try await withIsolatedHome {
+                let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["stdout-only-test"])
                     try cmd.run()
                 }
@@ -692,9 +696,9 @@ struct AccountCommandsAllTests {
         }
 
         @Test("rejects duplicate display name")
-        func prepareDuplicate() throws {
-            try withIsolatedHome {
-                let output = try captureStdout {
+        func prepareDuplicate() async throws {
+            try await withIsolatedHome {
+                let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["dup-prep"])
                     try cmd.run()
                 }
@@ -733,8 +737,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("finalize imports credential and prints success, removes staging dir")
-        func finalizeImportsCredential() throws {
-            try withIsolatedHome {
+        func finalizeImportsCredential() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 var acct = Account(tool: .codex, displayName: "finalize-test")
                 try store.save(acct)
@@ -747,7 +751,7 @@ struct AccountCommandsAllTests {
                 let authURL = staging.appendingPathComponent("auth.json")
                 try Data(#"{"token":"fake"}"#.utf8).write(to: authURL)
 
-                let output = try captureStdout {
+                let output = try await captureStdout {
                     let cmd = try AccountAddFinalizeCommand.parse(["--staging", staging.path])
                     try cmd.run()
                 }
@@ -766,8 +770,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("finalize rolls back account when importFrom fails (no credential)")
-        func finalizeRollsBackOnFailure() throws {
-            try withIsolatedHome {
+        func finalizeRollsBackOnFailure() async throws {
+            try await withIsolatedHome {
                 let store = AccountStore.default
                 let acct = Account(tool: .codex, displayName: "rollback-test")
                 try store.save(acct)
@@ -797,8 +801,8 @@ struct AccountCommandsAllTests {
             "finalize applies v3.1 layout to newly-added claude account",
             .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
         )
-        func finalizeAppliesV31LayoutToClaudeAccount() throws {
-            try withIsolatedHome {
+        func finalizeAppliesV31LayoutToClaudeAccount() async throws {
+            try await withIsolatedHome {
                 let acctStore = AccountStore.default
                 let envStore = EnvironmentStore.default
 
@@ -856,8 +860,8 @@ struct AccountCommandsAllTests {
         init() {}
 
         @Test("removesUnreferenced: removes account that is not pinned to any env")
-        func removesUnreferenced() throws {
-            try withIsolatedHome {
+        func removesUnreferenced() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "to-delete")
                 try AccountStore.default.save(acct)
 
@@ -870,8 +874,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("blocksWhenReferenced: throws ValidationError when account is pinned to an env")
-        func blocksWhenReferenced() throws {
-            try withIsolatedHome {
+        func blocksWhenReferenced() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "in-use")
                 try AccountStore.default.save(acct)
 
@@ -890,8 +894,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("blocks removal when a named env references the account")
-        func blocksWhenNamedEnvReferences() throws {
-            try withIsolatedHome {
+        func blocksWhenNamedEnvReferences() async throws {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "named-ref")
                 try AccountStore.default.save(acct)
 
@@ -908,8 +912,8 @@ struct AccountCommandsAllTests {
         }
 
         @Test("notFound: throws ValidationError when account does not exist")
-        func notFound() throws {
-            try withIsolatedHome {
+        func notFound() async throws {
+            try await withIsolatedHome {
                 let cmd = try RemoveCommand.parse(["ghost"])
                 #expect(throws: ValidationError.self) {
                     try cmd.run()
@@ -918,9 +922,9 @@ struct AccountCommandsAllTests {
         }
 
         @Test("interactive path with no accounts prints a message instead of opening the picker")
-        func interactiveNoAccounts() throws {
-            try withIsolatedHome {
-                let output = try captureStdout {
+        func interactiveNoAccounts() async throws {
+            try await withIsolatedHome {
+                let output = try await captureStdout {
                     try RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
                 }
                 #expect(output.contains("No claude accounts to remove."))
@@ -928,12 +932,12 @@ struct AccountCommandsAllTests {
         }
 
         @Test("interactive path removes nothing when the picker returns an empty selection")
-        func interactiveEmptySelectionRemovesNothing() throws {
+        func interactiveEmptySelectionRemovesNothing() async throws {
             // MultiSelect.run() falls back to an empty selection whenever /dev/tty
             // isn't available (e.g. under `swift test`), so this exercises the same
             // "nothing selected → no-op" safety path a user hits by confirming with
             // no boxes checked.
-            try withIsolatedHome {
+            try await withIsolatedHome {
                 let acct = Account(tool: .claude, displayName: "untouched")
                 try AccountStore.default.save(acct)
 

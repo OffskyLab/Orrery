@@ -113,7 +113,11 @@ func sweepClaudeKeychain(home: URL) {
 /// Process-global lock serializing every test that mutates the global ORRERY_HOME
 /// env var. swift-testing's `.serialized` only serializes within a single suite;
 /// this lock serializes across ALL suites that touch ORRERY_HOME.
-private let orreryHomeLock = NSLock()
+/// An ``AsyncGate``, not an `NSLock`: this now holds across `await`, and a lock
+/// released from a thread other than the one that took it is undefined
+/// behaviour. A global actor would not serve either — actors are reentrant, so
+/// the body would still interleave at every suspension inside it.
+private let orreryHomeGate = AsyncGate()
 
 /// Runs `body` with `ORRERY_HOME` pointed at a fresh temp directory.
 /// Holds a process-global lock for the duration so concurrent suites cannot race.
@@ -124,10 +128,9 @@ private let orreryHomeLock = NSLock()
 /// run `orrery use` for claude) would otherwise leak that state into commands
 /// like `orrery show`, which read both from the process environment. Restored
 /// afterwards.
-func withIsolatedHome(_ body: () throws -> Void) rethrows {
+func withIsolatedHome(_ body: () async throws -> Void) async rethrows {
     ensureAccountKitRegistered()
-    orreryHomeLock.lock()
-    defer { orreryHomeLock.unlock() }
+    try await orreryHomeGate.withGate {
 
     let tmpDir = FileManager.default.temporaryDirectory
         .appendingPathComponent("orrery-test-\(UUID().uuidString)")
@@ -173,22 +176,21 @@ func withIsolatedHome(_ body: () throws -> Void) rethrows {
         try? FileManager.default.removeItem(at: tmpDir)
     }
 
-    try body()
+    try await body()
+    }
 }
 
-/// Process-global lock serializing every test that mutates the real process
+/// Process-global gate serializing every test that mutates the real process
 /// environment directly via `setenv`/`unsetenv` (as opposed to `ORRERY_HOME`,
-/// covered by `orreryHomeLock` above). `setenv`/`unsetenv`/`getenv` are not
+/// covered by `orreryHomeGate` above). `setenv`/`unsetenv`/`getenv` are not
 /// thread-safe against each other in the C runtime — concurrent calls from
 /// different swift-testing suites (which run in parallel by default) can
 /// corrupt or drop updates to the shared `environ` table, not just race on
 /// individual key values. Any test that calls `setenv`/`unsetenv` on the
 /// real process environment (outside of `withIsolatedHome`) must hold this
 /// lock for the duration.
-private let realEnvironmentLock = NSLock()
+private let realEnvironmentGate = AsyncGate()
 
-func withRealEnvironmentLock(_ body: () throws -> Void) rethrows {
-    realEnvironmentLock.lock()
-    defer { realEnvironmentLock.unlock() }
-    try body()
+func withRealEnvironmentLock(_ body: () async throws -> Void) async rethrows {
+    try await realEnvironmentGate.withGate(body)
 }

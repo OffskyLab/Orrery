@@ -7,13 +7,13 @@ import Testing
 struct WorkspaceDirLookupCommandTests {
 
     @Test("resolves origin without a UUID scan")
-    func resolvesOrigin() throws {
-        try withIsolatedHome {
+    func resolvesOrigin() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let claudeDir = envStore.originConfigDir(tool: .claude)
             try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try WorkspaceDirLookupCommand.parse(["origin", "--claude"])
                 try cmd.run()
             }
@@ -22,8 +22,8 @@ struct WorkspaceDirLookupCommandTests {
     }
 
     @Test("resolves a UUID-keyed workspace by its name, not a literal path join")
-    func resolvesUUIDKeyedWorkspaceByName() throws {
-        try withIsolatedHome {
+    func resolvesUUIDKeyedWorkspaceByName() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let env = Workspace(name: "work", tools: [.claude])
             try envStore.save(env)
@@ -34,7 +34,7 @@ struct WorkspaceDirLookupCommandTests {
             // a naive `<home>/workspaces/work/claude` join would miss it.
             #expect(!claudeDir.path.contains("/workspaces/work/"))
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try WorkspaceDirLookupCommand.parse(["work", "--claude"])
                 try cmd.run()
             }
@@ -43,8 +43,8 @@ struct WorkspaceDirLookupCommandTests {
     }
 
     @Test("throws ValidationError for an unknown workspace")
-    func throwsForUnknownWorkspace() throws {
-        try withIsolatedHome {
+    func throwsForUnknownWorkspace() async throws {
+        try await withIsolatedHome {
             var cmd = try WorkspaceDirLookupCommand.parse(["no-such-workspace", "--claude"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
@@ -53,8 +53,8 @@ struct WorkspaceDirLookupCommandTests {
     }
 
     @Test("throws ValidationError when the workspace exists but lacks that tool's dir")
-    func throwsWhenToolDirMissing() throws {
-        try withIsolatedHome {
+    func throwsWhenToolDirMissing() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let env = Workspace(name: "codex-only", tools: [.codex])
             try envStore.save(env)
@@ -67,8 +67,8 @@ struct WorkspaceDirLookupCommandTests {
     }
 
     @Test("rejects multiple tool flags")
-    func rejectsMultipleFlags() throws {
-        try withIsolatedHome {
+    func rejectsMultipleFlags() async throws {
+        try await withIsolatedHome {
             var cmd = try WorkspaceDirLookupCommand.parse(["origin", "--claude", "--codex"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
@@ -77,13 +77,13 @@ struct WorkspaceDirLookupCommandTests {
     }
 
     @Test("defaults to claude when no tool flag is given")
-    func defaultsToClaudeTool() throws {
-        try withIsolatedHome {
+    func defaultsToClaudeTool() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let claudeDir = envStore.originConfigDir(tool: .claude)
             try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try WorkspaceDirLookupCommand.parse(["origin"])
                 try cmd.run()
             }

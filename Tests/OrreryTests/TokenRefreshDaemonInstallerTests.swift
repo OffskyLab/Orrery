@@ -55,8 +55,8 @@ struct TokenRefreshDaemonInstallerTests {
 @Suite("TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink (isolated $ORRERY_HOME, no launchctl)")
 struct TokenRefreshDaemonInstallerSymlinkTests {
     @Test("creates a symlink pointing at the real agent binary and returns its path")
-    func createsSymlink() throws {
-        try withIsolatedHome {
+    func createsSymlink() async throws {
+        try await withIsolatedHome {
             let realPath = "/usr/local/bin/orrery-agent"
             let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
 
@@ -69,8 +69,8 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
     }
 
     @Test("is idempotent when the target hasn't changed")
-    func idempotentWhenUnchanged() throws {
-        try withIsolatedHome {
+    func idempotentWhenUnchanged() async throws {
+        try await withIsolatedHome {
             let realPath = "/usr/local/bin/orrery-agent"
             _ = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
             let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: realPath)
@@ -84,8 +84,8 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
     }
 
     @Test("repoints the symlink when the real binary path changes (e.g. after an upgrade)")
-    func repointsOnBinaryPathChange() throws {
-        try withIsolatedHome {
+    func repointsOnBinaryPathChange() async throws {
+        try await withIsolatedHome {
             _ = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: "/usr/local/bin/orrery-agent")
             let newPath = "/opt/homebrew/bin/orrery-agent"
             let result = TokenRefreshDaemonInstaller.ensureFriendlyAgentSymlink(pointingTo: newPath)
@@ -99,8 +99,8 @@ struct TokenRefreshDaemonInstallerSymlinkTests {
     }
 
     @Test("removeStaleLegacySymlinks cleans up the old 'Orrery Inc.' symlink briefly shipped in v3.2.0")
-    func removesStaleLegacySymlink() throws {
-        try withIsolatedHome {
+    func removesStaleLegacySymlink() async throws {
+        try await withIsolatedHome {
             let legacyURL = orreryHomeURL().appendingPathComponent("bin/Orrery Inc.")
             try FileManager.default.createDirectory(
                 at: legacyURL.deletingLastPathComponent(), withIntermediateDirectories: true

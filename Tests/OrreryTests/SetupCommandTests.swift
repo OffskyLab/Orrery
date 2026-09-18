@@ -14,8 +14,8 @@ struct SetupCommandTests {
     /// real `~/.zshrc` / `~/.bashrc`. `rcFile(for:)` must honor the same
     /// override `Tool.defaultConfigDir` and `activateFile()` already do.
     @Test("rcFile(for:) honors ORRERY_USER_HOME, does not resolve to the real home")
-    func rcFileHonorsUserHomeOverride() throws {
-        try withIsolatedHome {
+    func rcFileHonorsUserHomeOverride() async throws {
+        try await withIsolatedHome {
             let userHome = ProcessInfo.processInfo.environment["ORRERY_USER_HOME"] ?? ""
             #expect(!userHome.isEmpty)
             #expect(SetupCommand.rcFile(for: "zsh").path == "\(userHome)/.zshrc")

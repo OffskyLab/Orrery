@@ -7,8 +7,8 @@ import Testing
 struct AccountDirLookupCommandTests {
 
     @Test("prints account dir path for v3.1-migrated account")
-    func printsDirForMigrated() throws {
-        try withIsolatedHome {
+    func printsDirForMigrated() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -17,7 +17,7 @@ struct AccountDirLookupCommandTests {
             try ClaudeAccountMigration.migrateAccount(
                 acct, accountStore: acctStore, environmentStore: envStore)
 
-            let dir = try captureStdout {
+            let dir = try await captureStdout {
                 var cmd = try AccountDirLookupCommand.parse(["alice"])
                 try cmd.run()
             }.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -28,8 +28,8 @@ struct AccountDirLookupCommandTests {
     }
 
     @Test("throws ValidationError when account is not migrated to v3.1")
-    func throwsForUnmigrated() throws {
-        try withIsolatedHome {
+    func throwsForUnmigrated() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -43,8 +43,8 @@ struct AccountDirLookupCommandTests {
     }
 
     @Test("throws ValidationError when account does not exist")
-    func throwsForUnknown() throws {
-        try withIsolatedHome {
+    func throwsForUnknown() async throws {
+        try await withIsolatedHome {
             var cmd = try AccountDirLookupCommand.parse(["no-such-acct"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()
