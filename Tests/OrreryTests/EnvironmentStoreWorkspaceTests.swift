@@ -5,8 +5,8 @@ import Testing
 @Suite("EnvironmentStore.claudeWorkspaceDir")
 struct EnvironmentStoreWorkspaceTests {
     @Test("origin's claude dir lives under workspaces/origin/")
-    func originWorkspaceDir() throws {
-        try withIsolatedHome {
+    func originWorkspaceDir() async throws {
+        try await withIsolatedHome {
             let store = EnvironmentStore.default
             let home = orreryHomeURL()
             let dir = store.claudeWorkspaceDir(workspace: "origin")
@@ -15,8 +15,8 @@ struct EnvironmentStoreWorkspaceTests {
     }
 
     @Test("named workspace's claude dir lives under workspaces/<name>/")
-    func namedWorkspaceDir() throws {
-        try withIsolatedHome {
+    func namedWorkspaceDir() async throws {
+        try await withIsolatedHome {
             let store = EnvironmentStore.default
             let home = orreryHomeURL()
             let dir = store.claudeWorkspaceDir(workspace: "work")

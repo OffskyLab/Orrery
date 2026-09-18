@@ -22,8 +22,8 @@ struct PhantomAccountTriggerTests {
     // MARK: - Not-under-phantom guard
 
     @Test("throws not-under-phantom when there is no live registry entry and no legacy env var")
-    func throwsWhenNotUnderPhantom() throws {
-        try withIsolatedHome {
+    func throwsWhenNotUnderPhantom() async throws {
+        try await withIsolatedHome {
             // The account must resolve first — otherwise this would just be
             // testing the (unrelated) account-not-found error.
             try AccountStore.default.save(Account(tool: .claude, displayName: "x"))
@@ -44,8 +44,8 @@ struct PhantomAccountTriggerTests {
     // MARK: - Account-not-found guard fires before any phantom/registry lookup
 
     @Test("throws account-not-found for an unknown account, even with no phantom state")
-    func throwsAccountNotFoundBeforePhantomLookup() throws {
-        try withIsolatedHome {
+    func throwsAccountNotFoundBeforePhantomLookup() async throws {
+        try await withIsolatedHome {
             let saved = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
             unsetenv("ORRERY_PHANTOM_SHELL_PID")
             defer {
@@ -63,7 +63,7 @@ struct PhantomAccountTriggerTests {
     // MARK: - Tool-flag resolution fires before account/phantom lookups
 
     @Test("throws on conflicting tool flags before any account or phantom lookup")
-    func throwsOnConflictingToolFlags() throws {
+    func throwsOnConflictingToolFlags() async throws {
         // Conflicting --claude/--codex flags fail tool resolution, which is the
         // very first thing run() does — this must throw regardless of account
         // or phantom/registry state.
@@ -79,7 +79,7 @@ struct PhantomAccountTriggerTests {
         // when the var IS present (see the `if let legacyPid = env[...]`
         // guard in `run()`). Isolating this defensively costs nothing and
         // removes that failure mode entirely.
-        try withIsolatedHome {
+        try await withIsolatedHome {
             let saved = ProcessInfo.processInfo.environment["ORRERY_PHANTOM_SHELL_PID"]
             unsetenv("ORRERY_PHANTOM_SHELL_PID")
             defer {

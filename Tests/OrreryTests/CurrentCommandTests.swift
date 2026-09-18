@@ -7,9 +7,9 @@ import Testing
 struct CurrentCommandTests {
 
     @Test("shows all three tools as unpinned when nothing is pinned")
-    func allUnpinned() throws {
-        try withIsolatedHome {
-            let output = try captureStdout {
+    func allUnpinned() async throws {
+        try await withIsolatedHome {
+            let output = try await captureStdout {
                 var cmd = try CurrentCommand.parse([])
                 try cmd.run()
             }
@@ -20,8 +20,8 @@ struct CurrentCommandTests {
     }
 
     @Test("shows the pinned account's display name for its tool")
-    func showsPinnedAccount() throws {
-        try withIsolatedHome {
+    func showsPinnedAccount() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
@@ -30,7 +30,7 @@ struct CurrentCommandTests {
             var pin = try PinCurrentAccountCommand.parse(["alice"])
             try pin.run()
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try CurrentCommand.parse([])
                 try cmd.run()
             }
@@ -40,15 +40,15 @@ struct CurrentCommandTests {
     }
 
     @Test("filters to a single tool when its flag is given")
-    func filtersByFlag() throws {
-        try withIsolatedHome {
+    func filtersByFlag() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCurrentAccountCommand.parse(["alice"])
             try pin.run()
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try CurrentCommand.parse(["--claude"])
                 try cmd.run()
             }
@@ -59,8 +59,8 @@ struct CurrentCommandTests {
     }
 
     @Test("rejects multiple tool flags")
-    func rejectsMultipleFlags() throws {
-        try withIsolatedHome {
+    func rejectsMultipleFlags() async throws {
+        try await withIsolatedHome {
             var cmd = try CurrentCommand.parse(["--claude", "--codex"])
             #expect(throws: ValidationError.self) {
                 try cmd.run()

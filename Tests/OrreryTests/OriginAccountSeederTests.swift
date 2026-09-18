@@ -21,8 +21,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("creates a codex origin account capturing auth.json from the workspace")
-    func seedsCodex() throws {
-        try withIsolatedHome {
+    func seedsCodex() async throws {
+        try await withIsolatedHome {
             try seedWorkspaceCredential(tool: .codex, fileName: "auth.json", contents: #"{"OPENAI_API_KEY":"x"}"#)
 
             OriginAccountSeeder.seedOriginAccountsIfNeeded(keychain: noClaudeLogin)
@@ -37,8 +37,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("creates a gemini origin account capturing oauth_creds.json")
-    func seedsGemini() throws {
-        try withIsolatedHome {
+    func seedsGemini() async throws {
+        try await withIsolatedHome {
             try seedWorkspaceCredential(tool: .gemini, fileName: "oauth_creds.json", contents: #"{"access_token":"x"}"#)
 
             OriginAccountSeeder.seedOriginAccountsIfNeeded(keychain: noClaudeLogin)
@@ -53,8 +53,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("creates a claude origin account: pinned, link-only; keychain copied with correct services")
-    func seedsClaude() throws {
-        try withIsolatedHome {
+    func seedsClaude() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let acctStore = AccountStore.default
             // Post-takeover: origin workspace claude dir exists (with a shared dir to mirror).
@@ -88,8 +88,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("no capturable login → no account created")
-    func skipsWhenNoLogin() throws {
-        try withIsolatedHome {
+    func skipsWhenNoLogin() async throws {
+        try await withIsolatedHome {
             OriginAccountSeeder.seedOriginAccountsIfNeeded(keychain: noClaudeLogin)
             let codexAcct = try AccountStore.default.findByDisplayName("origin", tool: .codex)
             let claudeAcct = try AccountStore.default.findByDisplayName("origin", tool: .claude)
@@ -99,8 +99,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("existing origin account → no-op (idempotent, existing installs untouched)")
-    func skipsWhenOriginAccountExists() throws {
-        try withIsolatedHome {
+    func skipsWhenOriginAccountExists() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
             let acctStore = AccountStore.default
             // Pre-existing origin codex account + pin.
@@ -123,8 +123,8 @@ struct OriginAccountSeederTests {
     }
 
     @Test("running twice creates the account only once")
-    func idempotentAcrossRuns() throws {
-        try withIsolatedHome {
+    func idempotentAcrossRuns() async throws {
+        try await withIsolatedHome {
             let ws = EnvironmentStore.default.originConfigDir(tool: .codex)
             try FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
             try Data("x".utf8).write(to: ws.appendingPathComponent("auth.json"))

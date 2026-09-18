@@ -7,8 +7,8 @@ import Testing
 struct PrepareClaudeLaunchCommandTests {
 
     @Test("writes merged .claude.json from identity + shared stores")
-    func mergesIdentityAndShared() throws {
-        try withIsolatedHome {
+    func mergesIdentityAndShared() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -53,8 +53,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("empty stores produce an empty .claude.json (not an error)")
-    func emptyStoresOK() throws {
-        try withIsolatedHome {
+    func emptyStoresOK() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -81,8 +81,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("launch mirrors a workspace dir into the account and does NOT migrate account dirs")
-    func launchMirrorsWorkspaceDirWithoutMigrating() throws {
-        try withIsolatedHome {
+    func launchMirrorsWorkspaceDirWithoutMigrating() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
@@ -127,8 +127,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("--links-only syncs workspace symlinks without merging .claude.json")
-    func linksOnlySkipsClaudeJsonMerge() throws {
-        try withIsolatedHome {
+    func linksOnlySkipsClaudeJsonMerge() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
@@ -168,8 +168,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("--account-dir follows a symlinked account dir (the ~/.claude origin case)")
-    func followsSymlinkedAccountDir() throws {
-        try withIsolatedHome {
+    func followsSymlinkedAccountDir() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
@@ -222,8 +222,8 @@ struct PrepareClaudeLaunchCommandTests {
     /// back to the identity store, and the next launch re-triggers the same
     /// replacement: an infinite re-login loop, one round per account switch.
     @Test("keychain rehydration preserves the account-identity fields in oauthAccount")
-    func keychainRehydrationPreservesIdentityFields() throws {
-        try withIsolatedHome {
+    func keychainRehydrationPreservesIdentityFields() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
@@ -280,8 +280,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("patchAuthSuccessHook adds the Notification/auth_success hook, preserving existing settings")
-    func patchAuthSuccessHookAddsEntry() throws {
-        try withIsolatedHome {
+    func patchAuthSuccessHookAddsEntry() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -317,8 +317,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("patchAuthSuccessHook is idempotent — a second call doesn't duplicate the entry")
-    func patchAuthSuccessHookIdempotent() throws {
-        try withIsolatedHome {
+    func patchAuthSuccessHookIdempotent() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -342,8 +342,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("patchAuthSuccessHook repoints the command when the hook binary path changes")
-    func patchAuthSuccessHookRepointsOnPathChange() throws {
-        try withIsolatedHome {
+    func patchAuthSuccessHookRepointsOnPathChange() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -367,8 +367,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("patchSessionHook adds SessionStart and SessionEnd hooks, preserving existing settings")
-    func patchSessionHookAddsEntries() throws {
-        try withIsolatedHome {
+    func patchSessionHookAddsEntries() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -409,8 +409,8 @@ struct PrepareClaudeLaunchCommandTests {
     }
 
     @Test("patchSessionHook is idempotent — a second call doesn't duplicate the entries")
-    func patchSessionHookIdempotent() throws {
-        try withIsolatedHome {
+    func patchSessionHookIdempotent() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -441,8 +441,8 @@ struct PrepareClaudeLaunchCommandTests {
 struct V31LaunchCaptureRoundTripTests {
 
     @Test("prepare → simulated claude mutation → capture preserves partitioning")
-    func roundTrip() throws {
-        try withIsolatedHome {
+    func roundTrip() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -502,8 +502,8 @@ struct V31LaunchCaptureRoundTripTests {
     }
 
     @Test("two accounts pinned to same workspace see each other's shared changes after their prep")
-    func crossAccountSharing() throws {
-        try withIsolatedHome {
+    func crossAccountSharing() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 

@@ -17,8 +17,8 @@ import Testing
 struct AddCommandNameArgumentTests {
 
     @Test("takes the name positionally, matching `orrery remove`")
-    func positionalName() throws {
-        try withIsolatedHome {
+    func positionalName() async throws {
+        try await withIsolatedHome {
             try AddCommand.parse(["--claude", "positional-test", "--skip-login"]).run()
             let accounts = try AccountStore.default.list(tool: .claude)
             #expect(accounts.contains { $0.displayName == "positional-test" })
@@ -26,8 +26,8 @@ struct AddCommandNameArgumentTests {
     }
 
     @Test("positional name works for every tool flag")
-    func positionalNamePerTool() throws {
-        try withIsolatedHome {
+    func positionalNamePerTool() async throws {
+        try await withIsolatedHome {
             try AddCommand.parse(["--codex", "codex-positional", "--skip-login"]).run()
             try AddCommand.parse(["--gemini", "gemini-positional", "--skip-login"]).run()
 
@@ -39,8 +39,8 @@ struct AddCommandNameArgumentTests {
     }
 
     @Test("positional name works with no tool flag (defaults to claude)")
-    func positionalNameDefaultsToClaude() throws {
-        try withIsolatedHome {
+    func positionalNameDefaultsToClaude() async throws {
+        try await withIsolatedHome {
             try AddCommand.parse(["default-tool-positional", "--skip-login"]).run()
             #expect(try AccountStore.default.list(tool: .claude)
                 .contains { $0.displayName == "default-tool-positional" })

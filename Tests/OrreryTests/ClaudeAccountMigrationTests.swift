@@ -7,8 +7,8 @@ import OrreryAccountKit
 struct ClaudeAccountMigrationTests {
 
     @Test("migrating an account creates per-account dir layout (idempotent)")
-    func createsLayoutIdempotent() throws {
-        try withIsolatedHome {
+    func createsLayoutIdempotent() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -32,8 +32,8 @@ struct ClaudeAccountMigrationTests {
     }
 
     @Test("migration seeds claude-identity.json with oauthAccount from Account.email")
-    func seedsIdentityFromEmail() throws {
-        try withIsolatedHome {
+    func seedsIdentityFromEmail() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             var acct = Account(tool: .claude, displayName: "alice", email: "alice@example.com")
@@ -58,8 +58,8 @@ struct ClaudeAccountMigrationTests {
     /// tokens only; `emailAddress` is all the identity migration has, and it
     /// has to survive alongside them.
     @Test("migration keeps Account.email in oauthAccount when a credential is present")
-    func seedsIdentityKeepsEmailAlongsideCredential() throws {
-        try withIsolatedHome {
+    func seedsIdentityKeepsEmailAlongsideCredential() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             var acct = Account(tool: .claude, displayName: "alice", email: "alice@example.com")
@@ -89,8 +89,8 @@ struct ClaudeAccountMigrationTests {
     #endif
 
     @Test("migration with no email writes empty identity")
-    func noEmailNoSnapshotEmptyIdentity() throws {
-        try withIsolatedHome {
+    func noEmailNoSnapshotEmptyIdentity() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")  // no email
@@ -108,8 +108,8 @@ struct ClaudeAccountMigrationTests {
     }
 
     @Test("migration leaves existing v3.0.4 credential/metadata untouched (additive)")
-    func leavesV304StateAlone() throws {
-        try withIsolatedHome {
+    func leavesV304StateAlone() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice", email: "alice@example.com")

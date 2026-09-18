@@ -13,8 +13,8 @@ struct AccountAddFinalizeCommandTests {
         "hook-triggered finalize (--keep-staging) leaves the staging dir in place; the later exit-time finalize cleans it up",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func keepStagingThenExitCleansUp() throws {
-        try withIsolatedHome {
+    func keepStagingThenExitCleansUp() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
@@ -68,8 +68,8 @@ struct AccountAddFinalizeCommandTests {
         "re-finalizing after a /login to a different account overwrites the identity's oauthAccount, not the reverse",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func reloginOverwritesStaleIdentity() throws {
-        try withIsolatedHome {
+    func reloginOverwritesStaleIdentity() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
