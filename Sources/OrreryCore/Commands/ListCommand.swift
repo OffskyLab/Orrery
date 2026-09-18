@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct ListCommand: ParsableCommand {
+public struct ListCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "list",
         abstract: L10n.Account.listAbstract
@@ -16,7 +16,7 @@ public struct ListCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         let store = AccountStore.default
 
         // Active sandbox + its per-tool account pins (mirrors ShowCommand).
@@ -104,10 +104,16 @@ public struct ListCommand: ParsableCommand {
             let maxNameLen = accts.map(\.displayName.count).max() ?? 0
             let activeID = activePins[tool.rawValue]
 
-            for acct in accts {
+            // One question for the whole group rather than one per row: a
+            // listing is exactly the case a tool should be free to answer
+            // cheaply in bulk, and the answers come back aligned with `accts`.
+            let infos = await AccountAuthInfo.identities(
+                for: accts, liveAccountID: activeID, store: store)
+
+            for (i, acct) in accts.enumerated() {
                 let isActive = acct.id == activeID
 
-                let info = AccountAuthInfo.resolve(for: acct, isLiveInThisShell: isActive, store: store)
+                let info = infos[i]
                 let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
                 let tail: String
                 if suffix.isEmpty {

@@ -145,8 +145,8 @@ struct AccountAddHealHookCommandFinalizeTests {
         "does nothing while no live credential exists yet — must not delete the in-progress account",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func noOpBeforeLoginCompletes() throws {
-        try withIsolatedHome {
+    func noOpBeforeLoginCompletes() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
@@ -173,8 +173,8 @@ struct AccountAddHealHookCommandFinalizeTests {
         "finalizes as soon as the live credential lands, without waiting for claude's auth_success hook to fire",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func finalizesOnceCredentialLands() throws {
-        try withIsolatedHome {
+    func finalizesOnceCredentialLands() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)
@@ -223,8 +223,8 @@ struct AccountAddHealHookCommandFinalizeTests {
         "picks up a /login to a different account inside the same still-open session, not just the first login",
         .disabled(if: ProcessInfo.processInfo.environment["CI"] != nil)
     )
-    func picksUpReloginToADifferentAccount() throws {
-        try withIsolatedHome {
+    func picksUpReloginToADifferentAccount() async throws {
+        try await withIsolatedHome {
             let store = AccountStore.default
             let accountID = UUID().uuidString
             let orreryService = ClaudeKeychain.serviceName(forOrreryAccount: accountID)

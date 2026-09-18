@@ -6,8 +6,8 @@ import Testing
 struct AccountLoginHooksTests {
 
     @Test("does nothing when no on-login script is present")
-    func noScriptIsNoop() throws {
-        try withIsolatedHome {
+    func noScriptIsNoop() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
@@ -19,8 +19,8 @@ struct AccountLoginHooksTests {
     }
 
     @Test("runs the on-login script with account info in the environment")
-    func runsScriptWithEnv() throws {
-        try withIsolatedHome {
+    func runsScriptWithEnv() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             var acct = Account(tool: .claude, displayName: "alice")
             acct.email = "alice@example.com"
@@ -52,8 +52,8 @@ struct AccountLoginHooksTests {
     }
 
     @Test("does not run a script that exists but isn't executable")
-    func nonExecutableScriptIsSkipped() throws {
-        try withIsolatedHome {
+    func nonExecutableScriptIsSkipped() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)

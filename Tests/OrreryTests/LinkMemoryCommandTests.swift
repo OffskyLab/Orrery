@@ -19,7 +19,7 @@ struct LinkMemoryCommandTests {
     /// `userHomeURL()`, the same seam `Tool.defaultConfigDir` and
     /// `SetupCommand.rcFile(for:)` already use.
     @Test("does not touch the real Claude config dir when CLAUDE_CONFIG_DIR is unset")
-    func doesNotTouchRealHomeWithoutClaudeConfigDir() throws {
+    func doesNotTouchRealHomeWithoutClaudeConfigDir() async throws {
         let realProjectsDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude")
             .appendingPathComponent("projects")
@@ -30,7 +30,7 @@ struct LinkMemoryCommandTests {
             .appendingPathComponent("memory")
         let realDestinationBefore = try? FileManager.default.destinationOfSymbolicLink(atPath: realMemoryLink.path)
 
-        try withIsolatedHome {
+        try await withIsolatedHome {
             try LinkMemoryCommand().run()
 
             let userHome = ProcessInfo.processInfo.environment["ORRERY_USER_HOME"] ?? ""

@@ -7,8 +7,8 @@ import Testing
 struct CurrentExportCommandTests {
 
     @Test("prints an export line for a pinned, v3.1-migrated account")
-    func exportsForMigratedPin() throws {
-        try withIsolatedHome {
+    func exportsForMigratedPin() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -21,7 +21,7 @@ struct CurrentExportCommandTests {
             origin.setAccount(acct.id, for: .claude)
             try envStore.saveOriginWorkspace(origin)
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try CurrentExportCommand.parse([])
                 try cmd.run()
             }
@@ -32,9 +32,9 @@ struct CurrentExportCommandTests {
     }
 
     @Test("prints nothing when no tool has a pin")
-    func emptyWhenUnpinned() throws {
-        try withIsolatedHome {
-            let output = try captureStdout {
+    func emptyWhenUnpinned() async throws {
+        try await withIsolatedHome {
+            let output = try await captureStdout {
                 var cmd = try CurrentExportCommand.parse([])
                 try cmd.run()
             }
@@ -43,8 +43,8 @@ struct CurrentExportCommandTests {
     }
 
     @Test("skips a tool whose account isn't in v3.1 layout")
-    func skipsUnmigratedPin() throws {
-        try withIsolatedHome {
+    func skipsUnmigratedPin() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -56,7 +56,7 @@ struct CurrentExportCommandTests {
             origin.setAccount(acct.id, for: .claude)
             try envStore.saveOriginWorkspace(origin)
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try CurrentExportCommand.parse([])
                 try cmd.run()
             }
@@ -65,8 +65,8 @@ struct CurrentExportCommandTests {
     }
 
     @Test("skips a tool whose export var is already set in this shell")
-    func skipsAlreadySetVar() throws {
-        try withIsolatedHome {
+    func skipsAlreadySetVar() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -82,7 +82,7 @@ struct CurrentExportCommandTests {
             setenv("CLAUDE_CONFIG_DIR", "/some/explicit/override", 1)
             defer { unsetenv("CLAUDE_CONFIG_DIR") }
 
-            let output = try captureStdout {
+            let output = try await captureStdout {
                 var cmd = try CurrentExportCommand.parse([])
                 try cmd.run()
             }

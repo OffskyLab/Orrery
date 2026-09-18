@@ -7,8 +7,8 @@ import OrreryAccountKit
 struct V31AutoMigrationTests {
 
     @Test("first call migrates all claude accounts and writes the flag")
-    func firstCallMigrates() throws {
-        try withIsolatedHome {
+    func firstCallMigrates() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -26,8 +26,8 @@ struct V31AutoMigrationTests {
     }
 
     @Test("second call is a no-op (flag already present)")
-    func secondCallNoop() throws {
-        try withIsolatedHome {
+    func secondCallNoop() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
 
             let acct = Account(tool: .claude, displayName: "alice", email: "alice@x.com")
@@ -40,7 +40,9 @@ struct V31AutoMigrationTests {
             let beforeMtime = (try? FileManager.default
                 .attributesOfItem(atPath: identityURL.path)[.modificationDate] as? Date) ?? Date()
 
-            Thread.sleep(forTimeInterval: 0.05)
+            // `Task.sleep`, not `Thread.sleep`: this function is async now, and
+            // the wait is only here so the mtimes either side are distinguishable.
+            try await Task.sleep(for: .milliseconds(50))
 
             AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
 
@@ -52,8 +54,8 @@ struct V31AutoMigrationTests {
     }
 
     @Test("never throws — best-effort migration")
-    func neverThrows() throws {
-        try withIsolatedHome {
+    func neverThrows() async throws {
+        try await withIsolatedHome {
             #expect(throws: Never.self) {
                 AccountMigration.runWorkspaceAccountSymlinksIfNeeded(homeURL: orreryHomeURL())
             }

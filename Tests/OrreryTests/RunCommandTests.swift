@@ -8,8 +8,8 @@ import Foundation
 struct RunCommandPrepareMaterializeTests {
 
     @Test("materializeNamedEnvSymlinksCodexAuth: symlink is created in env config dir")
-    func materializeNamedEnvSymlinksCodexAuth() throws {
-        try withIsolatedHome {
+    func materializeNamedEnvSymlinksCodexAuth() async throws {
+        try await withIsolatedHome {
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
 
@@ -41,8 +41,8 @@ struct RunCommandPrepareMaterializeTests {
     }
 
     @Test("noPinnedAccountIsNoOp: no account pinned, prepareMaterialize does not throw")
-    func noPinnedAccountIsNoOp() throws {
-        try withIsolatedHome {
+    func noPinnedAccountIsNoOp() async throws {
+        try await withIsolatedHome {
             // No account pinned — prepareMaterialize should be a silent no-op
             try RunCommand.prepareMaterialize(tool: .codex, envName: nil)
             // No assertion needed beyond "it doesn't throw"
@@ -50,8 +50,8 @@ struct RunCommandPrepareMaterializeTests {
     }
 
     @Test("materializeThrowsWhenPinnedAccountMissing: throws when pinned account is absent from store")
-    func materializeThrowsWhenPinnedAccountMissing() throws {
-        try withIsolatedHome {
+    func materializeThrowsWhenPinnedAccountMissing() async throws {
+        try await withIsolatedHome {
             let envStore = EnvironmentStore.default
 
             // Pin a ghost account id — do NOT create the account in AccountStore
@@ -67,8 +67,8 @@ struct RunCommandPrepareMaterializeTests {
     }
 
     @Test("claude: prepareMaterialize is a no-op (v3.1 shell-function managed)")
-    func claudePrepareMaterializeIsNoOp() throws {
-        try withIsolatedHome {
+    func claudePrepareMaterializeIsNoOp() async throws {
+        try await withIsolatedHome {
             // Even with a pinned claude account, prepareMaterialize must be a no-op.
             let acctStore = AccountStore.default
             let envStore = EnvironmentStore.default
@@ -87,8 +87,8 @@ struct RunCommandPrepareMaterializeTests {
     // real Keychain entries) and must never be mutated or read by automated tests.
 
     @Test("origin: throws when origin pins a missing account")
-    func originPinnedAccountMissingThrows() throws {
-        try withIsolatedHome {
+    func originPinnedAccountMissingThrows() async throws {
+        try await withIsolatedHome {
             var origin = EnvironmentStore.default.loadOriginWorkspace()
             origin.setAccount("ghost-origin-id", for: .codex)
             try EnvironmentStore.default.saveOriginWorkspace(origin)
@@ -151,8 +151,8 @@ struct RunCommandApplyRealEnvironmentTests {
     }
 
     @Test("unsetenv removes the stripped keys from the real environment that reaches the child")
-    func stripsKeysFromRealChildEnvironment() throws {
-        try withRealEnvironmentLock {
+    func stripsKeysFromRealChildEnvironment() async throws {
+        try await withRealEnvironmentLock {
             let keys = RunCommand.strippedExecEnvKeys + ["ANTHROPIC_API_KEY"]
             let saved = keys.map { ($0, ProcessInfo.processInfo.environment[$0]) }
             defer {
@@ -182,8 +182,8 @@ struct RunCommandApplyRealEnvironmentTests {
     }
 
     @Test("unsetenv removes tool config-dir vars from the real environment when targeting origin")
-    func stripsToolConfigDirKeysFromRealChildEnvironmentForOrigin() throws {
-        try withRealEnvironmentLock {
+    func stripsToolConfigDirKeysFromRealChildEnvironmentForOrigin() async throws {
+        try await withRealEnvironmentLock {
             let keys = Tool.allCases.map(\.envVarName)
             let saved = keys.map { ($0, ProcessInfo.processInfo.environment[$0]) }
             defer {
@@ -216,8 +216,8 @@ struct RunCommandApplyRealEnvironmentTests {
     }
 
     @Test("tool config-dir keys do not leak into a real child when envName is nil (the ordinary case)")
-    func stripsToolConfigDirKeysFromRealChildEnvironmentForNilEnvName() throws {
-        try withRealEnvironmentLock {
+    func stripsToolConfigDirKeysFromRealChildEnvironmentForNilEnvName() async throws {
+        try await withRealEnvironmentLock {
             let keys = Tool.allCases.map(\.envVarName)
             let saved = keys.map { ($0, ProcessInfo.processInfo.environment[$0]) }
             defer {
