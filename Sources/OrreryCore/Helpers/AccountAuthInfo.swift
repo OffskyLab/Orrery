@@ -120,63 +120,37 @@ enum AccountAuthInfo {
         return store.accountDir(id: account.id, tool: account.tool)
     }
 
-    // MARK: - The implementation that has not moved yet
+    // MARK: - Tools that have no plugin yet
 
-    /// - Parameter isLiveInThisShell: whether `account` is the one this shell would
-    ///   actually use right now (e.g. `CLAUDE_CONFIG_DIR` points at it). Only then is
-    ///   a live credential-source read attempted; otherwise persisted/cached info is used.
-    /// The name the two commands still call.
+    /// What a tool's identity is when nothing can be asked.
     ///
-    /// They keep calling it because routing them through the async entry points
-    /// above makes `run()` async, which makes `withIsolatedHome` async, which
-    /// reaches 160 call sites across 30 test files. That migration is real and
-    /// coming; it is not this change.
-    static func resolve(
-        for account: Account, isLiveInThisShell: Bool, store: AccountStore
-    ) -> (email: String?, plan: String?) {
-        legacyResolve(for: account, isLiveInThisShell: isLiveInThisShell, store: store)
-    }
-
+    /// Two different situations land here and they deserve different names, so
+    /// this only covers one of them: a tool orrery still reads for itself,
+    /// because no plugin exists to hand the reading to. codex and gemini are
+    /// both in that position.
+    ///
+    /// The other situation — a tool that *has* a plugin which did not load —
+    /// deliberately falls through to the account's own recorded fields and
+    /// nothing else. Reading claude's files here anyway is what made the plugin
+    /// unobservable: delete `orrery-claude` and every answer stayed identical,
+    /// which is indistinguishable from never having consulted it. The bootstrap
+    /// says a missing shipped plugin is a broken install, and an answer produced
+    /// behind its back contradicts that one call site at a time.
     static func legacyResolve(
         for account: Account, isLiveInThisShell: Bool, store: AccountStore
     ) -> (email: String?, plan: String?) {
         switch account.tool {
         case .claude:
-            // Prefer the live CLAUDE_CONFIG_DIR (reflects an in-session `/login`
-            // immediately), then the persisted identity store (fresh as of the last
-            // session exit — `_capture-claude-exit` refreshes it), then the
-            // metadata.json cache, which can drift on newer Claude versions that
-            // stopped writing `emailAddress` anywhere `refreshInfo` can re-derive it.
-            var liveEmail: String?
-            var livePlan: String?
-            if isLiveInThisShell {
-                let configDir = ProcessInfo.processInfo.environment["CLAUDE_CONFIG_DIR"]
-                let freshInfo = ClaudeKeychain.accountInfo(for: configDir)
-                liveEmail = freshInfo.email
-                livePlan = freshInfo.plan
-            }
-            let idInfo = claudeIdentityInfo(for: account, store: store)
-            return (liveEmail ?? idInfo.email ?? account.email, livePlan ?? idInfo.plan ?? account.plan)
+            // Answered by the plugin, or not at all. What remains is orrery's
+            // own record — a cache it wrote itself, not claude knowledge.
+            return (account.email, account.plan)
 
         case .codex, .gemini:
-            // codex/gemini don't have live config dirs in v3.1 — read from the pool.
+            // No plugin to ask yet, so orrery still reads the pool directly.
+            // This goes the same way claude's did, once those plugins exist.
             let freshInfo = ToolAuth.accountInfo(forPoolAccount: account, accountStore: store)
             return (freshInfo.email ?? account.email, freshInfo.plan ?? account.plan)
         }
     }
 
-    /// Read email + plan for a claude account from its persisted identity store
-    /// (`claude-identity.json` → `oauthAccount.emailAddress` / `subscriptionType`).
-    /// Returns nils when the file or fields are absent (callers fall back further).
-    private static func claudeIdentityInfo(
-        for account: Account, store: AccountStore
-    ) -> (email: String?, plan: String?) {
-        let accountDir = store.accountDir(id: account.id, tool: .claude)
-        let identityURL = ClaudeJsonMerge.identityFileURL(accountDir: accountDir)
-        guard let identity = ClaudeJsonMerge.loadJSON(at: identityURL),
-              let oauth = identity["oauthAccount"] as? [String: Any] else {
-            return (nil, nil)
-        }
-        return (oauth["emailAddress"] as? String, oauth["subscriptionType"] as? String)
-    }
 }
