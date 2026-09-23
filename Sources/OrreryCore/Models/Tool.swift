@@ -59,9 +59,17 @@ public enum Tool: String, Codable, CaseIterable, Sendable {
     /// Interactive auth login command, nil if not applicable (e.g. API key-based tools).
     public var authLoginCommand: [String]? {
         switch self {
+        // Both nil cases authenticate on first interactive launch rather than
+        // through a subcommand. gemini used to be spelled
+        // `["gemini", "auth", "login"]` here, but gemini-cli has no `auth`
+        // subcommand — its commands are `mcp`, `extensions`, `skills`, `hooks`,
+        // `gemma`, plus a default `[query..]`. So `auth login` parsed as a
+        // prompt and opened the interactive chat UI, which then waited for
+        // input forever ("Positional arguments now default to interactive
+        // mode", as its own output said).
         case .claude: return nil
+        case .gemini: return nil
         case .codex:  return ["codex", "login"]
-        case .gemini: return ["gemini", "auth", "login"]
         }
     }
 

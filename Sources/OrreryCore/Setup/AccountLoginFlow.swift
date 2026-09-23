@@ -101,33 +101,45 @@ public enum AccountLoginFlow {
         let stagingDir = fm.temporaryDirectory
             .appendingPathComponent("orrery-login-\(UUID().uuidString)")
         try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
-        defer { try? fm.removeItem(at: stagingDir) }
+        defer {
+            try? fm.removeItem(at: stagingDir)
+            // gemini's isolation wrapper is a SIBLING of the staging dir, not a
+            // child, so removing the staging dir alone would leave it behind
+            // (holding a now-dangling `.gemini` symlink). No-op for other tools.
+            try? fm.removeItem(at: stagingDir.deletingLastPathComponent()
+                .appendingPathComponent(stagingDir.lastPathComponent + "-home"))
+        }
 
         if let authCmd = account.tool.authLoginCommand {
-            // Tool has a scriptable login subcommand (e.g. codex / gemini):
-            // just launch it — no preamble needed, the subcommand is self-explanatory.
+            // Tool has a scriptable login subcommand (codex): just launch it —
+            // no preamble needed, the subcommand is self-explanatory.
             try spawnInteractive(
                 command: authCmd,
-                envVarName: account.tool.envVarName,
+                tool: account.tool,
                 configDir: stagingDir
             )
         } else {
-            // Tool has no scriptable login subcommand (e.g. claude): launch it
-            // interactively and let the user complete login themselves.
+            // Tool authenticates on first interactive launch (claude, gemini):
+            // launch it and let the user complete login themselves, then quit.
             //
-            // NOTE: This is the defensive fallback path — the normal path for claude
-            // goes through the orrery shell function (`account)` case in the generated
-            // activate.sh), which sets CLAUDE_CONFIG_DIR and runs `command claude`
-            // directly from the shell so it gets a proper foreground TTY process group.
-            // Swift's Process does not give the child the foreground process group, so
-            // Claude Code detects "not foreground" and silently exits.
+            // For CLAUDE this is the defensive fallback path only — the normal
+            // path goes through the orrery shell function (`add)` case in the
+            // generated activate.sh), which runs `command claude` straight from
+            // the shell so it gets a proper foreground TTY process group.
+            // Swift's Process does not give the child the foreground process
+            // group, so Claude Code detects "not foreground" and silently exits.
+            // If a user invokes `orrery-bin add --claude` directly (bypassing
+            // the shell function) we still try, but warn them.
             //
-            // If a user somehow invokes `orrery-bin account add --claude` directly
-            // (bypassing the shell function), we still try — but warn them.
-            print(L10n.Account.loginManualFallbackHint(account.tool.rawValue))
+            // GEMINI reaches this branch as its normal path, and does work from
+            // here: its TUI has no foreground-process-group check, which is why
+            // the old broken invocation hung visibly instead of exiting.
+            if account.tool == .claude {
+                print(L10n.Account.loginManualFallbackHint(account.tool.rawValue))
+            }
             try spawnInteractive(
                 command: [account.tool.rawValue],
-                envVarName: account.tool.envVarName,
+                tool: account.tool,
                 configDir: stagingDir
             )
         }
@@ -138,18 +150,66 @@ public enum AccountLoginFlow {
     /// Runs `command` as an interactive subprocess that inherits the parent's
     /// stdin/stdout/stderr (so it can drive the TTY), with `envVarName` pointed
     /// at `configDir`. Throws if the process exits non-zero.
+    /// The environment an interactive login runs under, isolated to
+    /// `stagingDir` so the credential it produces lands where `importFrom`
+    /// looks for it — and, just as importantly, nowhere near the user's real
+    /// config.
+    ///
+    /// Most tools take a config-dir environment variable. gemini-cli does not:
+    /// it ignores `GEMINI_CONFIG_DIR` and only ever reads `$HOME/.gemini` (see
+    /// `GeminiAdapter`, and `EnvironmentStore.ensureGeminiHomeWrapper`, which
+    /// solve the same problem for every other gemini path). This login flow
+    /// was the one place still setting that ignored variable, which meant a
+    /// gemini login would have written to the real `~/.gemini` and left the
+    /// staging dir empty. Isolation for gemini is therefore a redirected HOME
+    /// pointing at a wrapper whose `.gemini` symlink leads to `stagingDir`.
+    ///
+    /// Creates the wrapper as a side effect; idempotent.
+    static func prepareLoginEnvironment(
+        tool: Tool,
+        stagingDir: URL,
+        base: [String: String]
+    ) throws -> [String: String] {
+        var env = base
+
+        guard tool == .gemini else {
+            env[tool.envVarName] = stagingDir.path
+            return env
+        }
+
+        let fm = FileManager.default
+        let wrapper = stagingDir.deletingLastPathComponent()
+            .appendingPathComponent(stagingDir.lastPathComponent + "-home")
+        try fm.createDirectory(at: wrapper, withIntermediateDirectories: true)
+
+        let link = wrapper.appendingPathComponent(".gemini")
+        if (try? fm.destinationOfSymbolicLink(atPath: link.path)) != nil
+            || fm.fileExists(atPath: link.path) {
+            try fm.removeItem(at: link)
+        }
+        try fm.createSymbolicLink(at: link, withDestinationURL: stagingDir)
+
+        env["HOME"] = wrapper.path
+        // Leave GEMINI_CONFIG_DIR unset rather than pointing it anywhere: it
+        // does nothing, and setting it invites the next reader to believe it
+        // does.
+        env.removeValue(forKey: Tool.gemini.envVarName)
+        return env
+    }
+
     private static func spawnInteractive(
         command: [String],
-        envVarName: String,
+        tool: Tool,
         configDir: URL
     ) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = command
-
-        var env = ProcessInfo.processInfo.environment
-        env[envVarName] = configDir.path
-        process.environment = env
+        process.environment = try prepareLoginEnvironment(
+            tool: tool,
+            stagingDir: configDir,
+            base: ProcessInfo.processInfo.environment
+        )
 
         // Do NOT redirect stdio — inheriting it keeps the child interactive on the TTY.
         try process.run()

@@ -132,12 +132,17 @@ public struct ShellFunctionGenerator {
               fi
               ;;
             add)
-              # `orrery add --claude` needs a real TTY-attached claude REPL.
-              # Swift's Process doesn't give the child the foreground process group,
-              # so claude silently exits. Route the claude case through the shell
-              # so `command claude` gets the controlling terminal directly.
-              # codex/gemini work fine via the regular orrery-bin path (their login
-              # subcommands open a browser and don't need TTY foreground).
+              # `orrery add --claude` and `--gemini` both need a real TTY-attached
+              # REPL. Swift's Process doesn't give the child the foreground process
+              # group, so the tool ends up in a background group: claude notices and
+              # silently exits, gemini takes SIGTTIN the moment it puts stdin in raw
+              # mode and is STOPPED before drawing anything (observed as `STAT T`
+              # with the child's PGID != the terminal's TPGID). Route both through
+              # the shell so the tool gets the controlling terminal directly.
+              #
+              # codex genuinely is fine on the plain orrery-bin path: `codex login`
+              # opens a browser and waits on a network callback, so it never reads
+              # the terminal and never trips the foreground check.
               #
               # Help requests bypass the claude TTY interception so the user sees
               # the public `add` help, not the internal prepare/finalize.
@@ -147,12 +152,27 @@ public struct ShellFunctionGenerator {
                 esac
               done
 
-              local _is_claude=1
+              local _is_claude=1 _is_gemini=0
               for _a in "${@:2}"; do
                 case "$_a" in
-                  --codex|--gemini) _is_claude=0; break ;;
+                  --codex)  _is_claude=0 ;;
+                  --gemini) _is_claude=0; _is_gemini=1 ;;
                 esac
               done
+              if [ $_is_gemini -eq 1 ]; then
+                local _staging
+                _staging=$(command orrery-bin _account-add-prepare "${@:2}") || return $?
+                [ -z "$_staging" ] && { echo "orrery: prepare returned empty staging dir" >&2; return 1; }
+                printf "\(L10n.Account.loginReadyHintGemini)\\n"
+                # gemini-cli ignores GEMINI_CONFIG_DIR and only reads $HOME/.gemini,
+                # so the staging dir reaches it through the wrapper that
+                # _account-add-prepare just built ("<staging>-home", holding
+                # .gemini -> <staging>). Running it here, rather than from
+                # orrery-bin, is what keeps it in the foreground process group.
+                HOME="${_staging}-home" command gemini
+                command orrery-bin _account-add-finalize --staging "$_staging"
+                return $?
+              fi
               if [ $_is_claude -eq 1 ]; then
                 local _staging
                 _staging=$(command orrery-bin _account-add-prepare "${@:2}") || return $?

@@ -70,6 +70,10 @@ public struct AccountAddPrepareCommand: ParsableCommand {
         }
         #endif
 
+        if tool == .gemini {
+            try Self.ensureGeminiHomeWrapper(stagingDir: stagingDir)
+        }
+
         // Print only the staging dir path — the shell captures this with $(...).
         print(stagingDir.path)
     }
@@ -121,6 +125,29 @@ public struct AccountAddPrepareCommand: ParsableCommand {
         RunningExecutablePath.resolved()
     }
     #endif
+
+    /// Builds the `<stagingDir>-home` wrapper the shell's gemini add branch
+    /// points `HOME` at, containing `.gemini -> stagingDir`.
+    ///
+    /// gemini-cli ignores `GEMINI_CONFIG_DIR` and only ever reads
+    /// `$HOME/.gemini` (see `GeminiAdapter`), so a redirected HOME is the only
+    /// isolation it honors. The wrapper is a sibling of the staging dir rather
+    /// than a child so that `.gemini` can point straight at the staging dir —
+    /// which is where `_account-add-finalize` looks for the credential
+    /// afterwards. Idempotent.
+    public static func ensureGeminiHomeWrapper(stagingDir: URL) throws {
+        let fm = FileManager.default
+        let wrapper = stagingDir.deletingLastPathComponent()
+            .appendingPathComponent(stagingDir.lastPathComponent + "-home")
+        try fm.createDirectory(at: wrapper, withIntermediateDirectories: true)
+
+        let link = wrapper.appendingPathComponent(".gemini")
+        if (try? fm.destinationOfSymbolicLink(atPath: link.path)) != nil
+            || fm.fileExists(atPath: link.path) {
+            try fm.removeItem(at: link)
+        }
+        try fm.createSymbolicLink(at: link, withDestinationURL: stagingDir)
+    }
 
     private func resolveName() throws -> String {
         if let n = name, !n.isEmpty { return n }
