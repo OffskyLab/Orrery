@@ -143,4 +143,64 @@ struct AccountIdentityTests {
 
         #expect(found.isEmpty)
     }
+
+    // MARK: - What absence looks like now the plugin answers
+
+    /// The property the fallback was quietly destroying.
+    ///
+    /// While the host could read claude's own files, deleting `orrery-claude`
+    /// changed nothing a user could see — which is indistinguishable from never
+    /// having consulted the plugin at all. The bootstrap says out loud that a
+    /// missing shipped plugin is a broken install; a fallback that then answers
+    /// anyway contradicts it, one call site at a time.
+    ///
+    /// So with no tool registered, claude's identity is now whatever orrery
+    /// itself recorded — its own cache — and nothing more.
+    @Test("without the plugin, claude's identity is orrery's own record and nothing more")
+    func absentPluginLeavesOnlyOrreryRecord() async throws {
+        let home = try makeHome()
+        defer { try? FileManager.default.removeItem(at: home) }
+        let acctStore = store(home)
+        let account = Account(
+            tool: .claude, displayName: "cached",
+            email: "cache@example.com", plan: "Pro", workspace: "origin")
+        try acctStore.save(account)
+
+        // A claude identity file sitting right there, which the host used to
+        // read. It must now be invisible: reading it is the plugin's job.
+        let accountDir = acctStore.accountDir(id: account.id, tool: .claude)
+        try FileManager.default.createDirectory(at: accountDir, withIntermediateDirectories: true)
+        let identity: [String: Any] = [
+            "oauthAccount": ["emailAddress": "from-file@example.com", "subscriptionType": "Max"],
+        ]
+        try JSONSerialization.data(withJSONObject: identity)
+            .write(to: accountDir.appendingPathComponent("claude-identity.json"))
+
+        let found = await AccountAuthInfo.identity(
+            for: account, isLiveInThisShell: false, store: acctStore, registry: AIToolRegistry())
+
+        #expect(found.email == "cache@example.com",
+                "the host must not be reading claude's files any more")
+        #expect(found.plan == "Pro")
+    }
+
+    /// codex and gemini keep their host-side reading, because they have no
+    /// plugin to hand it to yet. Removing theirs at the same time would have
+    /// been a regression dressed as consistency.
+    @Test("a tool with no plugin at all still reads through the host")
+    func toolsWithoutPluginsAreUnaffected() async throws {
+        let home = try makeHome()
+        defer { try? FileManager.default.removeItem(at: home) }
+        let acctStore = store(home)
+        let account = Account(
+            tool: .codex, displayName: "codex-acct",
+            email: "codex@example.com", plan: nil, workspace: "origin")
+        try acctStore.save(account)
+
+        let found = await AccountAuthInfo.identity(
+            for: account, isLiveInThisShell: false, store: acctStore, registry: AIToolRegistry())
+
+        #expect(found.email == "codex@example.com")
+    }
+
 }
