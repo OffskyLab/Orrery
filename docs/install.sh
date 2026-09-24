@@ -23,7 +23,7 @@ BINARY_NAME="orrery-bin"
 # left inside the tarball is a plugin orrery cannot find. Every loop below
 # guards on the file existing, so naming one an older tarball lacks is a
 # no-op rather than a failed install.
-EXTRA_BINARY_NAMES=("orrery-agent" "orrery-claude-hook" "orrery-claude")
+EXTRA_BINARY_NAMES=("orrery-agent" "orrery-claude-hook" "orrery-claude" "orrery-codex")
 OLD_BINARY_NAME="orrery"   # legacy name (< 2.4); removed on install
 BUILD_FROM_SOURCE=false
 INCLUDE_PRERELEASE=false

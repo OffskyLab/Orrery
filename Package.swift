@@ -9,6 +9,7 @@ let package = Package(
         .executable(name: "orrery-agent", targets: ["orrery-agent"]),
         .executable(name: "orrery-claude-hook", targets: ["orrery-claude-hook"]),
         .executable(name: "orrery-claude", targets: ["orrery-claude"]),
+        .executable(name: "orrery-codex", targets: ["orrery-codex"]),
         .library(name: "OrreryCore", targets: ["OrreryCore"]),
         .library(name: "OrreryThirdParty", targets: ["OrreryThirdParty"]),
         .library(name: "OrreryAccountKit", targets: ["OrreryAccountKit"]),
@@ -45,6 +46,13 @@ let package = Package(
                 .product(name: "AIToolKit", package: "Orrery-AIToolKit"),
             ],
             path: "Sources/orrery-claude"
+        ),
+        .executableTarget(
+            name: "orrery-codex",
+            dependencies: [
+                .product(name: "AIToolKit", package: "Orrery-AIToolKit"),
+            ],
+            path: "Sources/orrery-codex"
         ),
         .target(
             name: "OrreryCore",
