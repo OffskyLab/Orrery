@@ -51,11 +51,19 @@ extension ClaudeTool {
 // Exposing it makes that pinnable from a test against the shipped binary. It
 // also gives a plugin author a way to ask what the host will look for, which is
 // the kind of question that is otherwise answered by reading someone's source.
+//
+// Guarded, because what it exposes is: there is no Keychain off macOS, so
+// `keychainService` does not exist there either. Calling it unconditionally
+// compiled fine on the machine it was written on and broke the Linux build —
+// which only the release workflow builds, so nothing said so until a release
+// was being prepared.
+#if os(macOS)
 if CommandLine.arguments.count == 3,
    CommandLine.arguments[1] == "--keychain-service" {
     print(ClaudeIdentity.keychainService(
         forConfigDir: URL(fileURLWithPath: CommandLine.arguments[2])))
     exit(0)
 }
+#endif
 
 await PluginServer.serve(tool: ClaudeTool())
