@@ -1,5 +1,47 @@
 # Changelog
 
+## v3.5.5 - 2026-09-25
+
+### Fixed
+
+- **A plugin's pipe could be read after it was closed, and a closed descriptor
+  could be shut a second time.** v3.5.4 shipped against a transport that treated
+  a pipe descriptor as owned forever. After a plugin was terminated, the read
+  loop kept polling a number the OS had already freed — and descriptor numbers
+  get reused, so it could consume an unrelated pipe and, if that data happened to
+  parse, accept it as the plugin's reply. Separately, termination closed the raw
+  numbers while the pipes' own file handles still held them, so a later
+  deallocation closed a number that had since been reissued, shutting an
+  unrelated file belonging to some other part of the process. Both are fixed by
+  AIToolKit 0.0.1-dev.8; this is the first release to carry it.
+
+### Changed
+
+- **Claude Code's account identity is now read by `orrery-claude`, not by orrery
+  itself.** `orrery list` and `orrery show` print the same email and plan as
+  before — what changed is who works them out. Where orrery used to know that
+  claude keeps an address in `.claude.json` and a plan in a Keychain item named
+  after a hash of the config directory, it now asks the plugin, which is the
+  process that should know.
+
+  If `orrery-claude` is missing, claude's row falls back to what orrery recorded
+  at the last login rather than to reading claude's files behind the plugin's
+  back. A plugin that can be deleted with no visible effect is one nothing was
+  ever really asking.
+
+### Added
+
+- **`orrery-codex` ships alongside the other binaries.** The second tool plugin,
+  and the one that shows the plugin protocol was not quietly shaped around Claude
+  Code: codex keeps its credentials in one file rather than a platform keychain,
+  carries its identity inside a JWT rather than a JSON field, and has an API-key
+  mode — a login with no user at all — that Claude has no equivalent for. None of
+  that needed a protocol change.
+
+  Installed but not yet in use: orrery still reads codex's identity itself. The
+  switch comes in a later release, once the binary has had time to reach
+  machines — the same sequence `orrery-claude` followed.
+
 ## v3.5.4 - 2026-08-25
 
 ### Fixed
