@@ -34,18 +34,30 @@ struct ToolFactsTests {
         #expect(dir != Tool.claude.defaultConfigDir)
     }
 
+    /// Inside `withIsolatedHome`, which this test needs for two reasons.
+    ///
+    /// It holds the gate that serializes `ORRERY_USER_HOME`, so no other suite
+    /// can move the home between the two resolutions below — without it this
+    /// compares two different moments and reports the suite's scheduling. And it
+    /// pins the home to a known temporary directory, which lets the assertion be
+    /// the stronger one: the answer lands under the *isolated* home, rather than
+    /// under whatever `userHomeURL()` happens to return at that instant.
     @Test("the config dir is resolved against the isolation seam, not the real home")
-    func configDirHonoursTheHomeSeam() throws {
-        let registry = AIToolRegistry()
-        try registry.register(Impostor(id: "codex"))
+    func configDirHonoursTheHomeSeam() async throws {
+        try await withIsolatedHome {
+            let registry = AIToolRegistry()
+            try registry.register(Impostor(id: "codex"))
 
-        let dir = try #require(Tool.codex.configDir(in: registry))
+            let dir = try #require(Tool.codex.configDir(in: registry))
+            let isolated = try #require(
+                ProcessInfo.processInfo.environment["ORRERY_USER_HOME"])
 
-        // `userHomeURL()` is what ORRERY_USER_HOME redirects. A seam that
-        // reached for the real home instead would put this test's answer in the
-        // developer's home directory — the incident RealHomeIsolationTests
-        // guards, arriving through a new door.
-        #expect(dir.deletingLastPathComponent().path == userHomeURL().path)
+            // A seam that reached for the real home instead would put this
+            // answer in the developer's home directory — the incident
+            // `RealHomeIsolationTests` guards, arriving through a new door.
+            #expect(dir.deletingLastPathComponent().path == isolated)
+            #expect(dir.lastPathComponent == ".not-what-the-enum-says")
+        }
     }
 
     @Test("a tool that is not registered has no config dir")
@@ -96,10 +108,58 @@ struct ToolFactsTests {
             warn: { _ in })
 
         #expect(registry.tool(id: "claude") is RemoteAITool, "the premise: claude is remote")
+
         // Here the plugin and the enum do agree, and that is the point: the
         // migration must not change what any call site sees.
-        #expect(Tool.claude.configDir(in: registry) == Tool.claude.defaultConfigDir)
-        #expect(Tool.codex.configDir(in: registry) == Tool.codex.defaultConfigDir)
+        //
+        // The *directory name*, not the whole path. Both sides resolve
+        // `userHomeURL()` on their own, and other suites move
+        // `ORRERY_USER_HOME` while this one runs — so comparing full paths
+        // compares two different moments and reports the suite's scheduling
+        // rather than the behaviour this test is named for. It failed exactly
+        // that way on CI, with one side on the runner's real home and the other
+        // on an isolated one, having passed on the same commit minutes earlier.
+        #expect(Tool.claude.configDir(in: registry)?.lastPathComponent
+                == Tool.claude.defaultConfigDir.lastPathComponent)
+        #expect(Tool.codex.configDir(in: registry)?.lastPathComponent
+                == Tool.codex.defaultConfigDir.lastPathComponent)
+    }
+
+    /// Why the assertions above compare directory names rather than paths.
+    ///
+    /// Both `configDir(in:)` and `defaultConfigDir` resolve the home themselves,
+    /// so a full-path comparison spans two resolutions. The suite runs in
+    /// parallel and other tests move `ORRERY_USER_HOME`, so those two moments
+    /// can see different homes — and then the comparison reports the scheduler
+    /// rather than the behaviour under test.
+    ///
+    /// That is not a hypothesis: CI printed both values on a commit that had
+    /// passed minutes earlier on the same code, one side on the runner's real
+    /// home and the other on an isolated one. It could not be reproduced
+    /// locally, so this demonstrates the mechanism deterministically instead,
+    /// by moving the home between the two reads on purpose.
+    ///
+    /// Holds the home gate: it mutates `ORRERY_USER_HOME` itself, and doing that
+    /// outside the gate is the very race it documents.
+    @Test("a full-path comparison would span two home resolutions; a name comparison does not")
+    func pathComparisonSpansTwoResolutions() async throws {
+        try await withIsolatedHome {
+            let registry = AIToolRegistry()
+            try AIToolRegistration.registerBuiltInTools(into: registry)
+
+            let first = try #require(Tool.codex.configDir(in: registry))
+
+            // Exactly what a concurrent suite's `withIsolatedHome` does, at the
+            // instant that makes the difference visible.
+            let moved = NSTemporaryDirectory() + "moved-home-\(UUID().uuidString)"
+            setenv("ORRERY_USER_HOME", moved, 1)
+            let second = Tool.codex.defaultConfigDir
+
+            #expect(first.path != second.path,
+                    "the paths differ once the home moves — which is the failure CI saw")
+            #expect(first.lastPathComponent == second.lastPathComponent,
+                    "the directory name is what both sides actually agree about")
+        }
     }
 
     private final class BundleMarker {}
