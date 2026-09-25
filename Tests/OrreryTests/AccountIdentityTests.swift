@@ -50,8 +50,11 @@ struct AccountIdentityTests {
         let home = try makeHome()
         defer { try? FileManager.default.removeItem(at: home) }
         let acctStore = store(home)
-        let accounts = try (0..<3).map { i -> Account in
-            let a = Account(tool: .claude, displayName: "acct-\(i)", workspace: "origin")
+        // `OrreryCore.Account` spelled out: AIToolKit now has an `Account` too,
+        // and this file imports both. Two types with one name is a transition
+        // state — the host's copy goes when the `Tool` enum does.
+        let accounts = try (0..<3).map { i -> OrreryCore.Account in
+            let a = OrreryCore.Account(tool: .claude, displayName: "acct-\(i)", workspace: "origin")
             try acctStore.save(a)
             return a
         }

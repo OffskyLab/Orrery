@@ -103,6 +103,7 @@ public enum AIToolRegistration {
         toolIDs: [String],
         timeout: Duration,
         environment: [String: String] = ProcessInfo.processInfo.environment,
+        stateRoot: URL = orreryHomeURL().appendingPathComponent("plugins"),
         warn: @Sendable (String) -> Void = { message in
             FileHandle.standardError.write(Data(message.utf8))
         }
@@ -134,8 +135,19 @@ public enum AIToolRegistration {
                 continue
             }
 
+            // Each plugin is handed a directory of its own and owns everything
+            // beneath it. orrery supplies the root because a plugin must never
+            // derive a home — that seam is what keeps an isolated run from
+            // reading the developer's real config — and it never looks inside,
+            // because a host that knew the layout would be back to owning the
+            // pool and asking the plugin to look things up in it.
+            let stateDir = stateRoot.appendingPathComponent(toolID)
+            try? FileManager.default.createDirectory(
+                at: stateDir, withIntermediateDirectories: true)
+
             let transport = StdioTransport(
-                executable: binary, arguments: [], environment: [:])
+                executable: binary, arguments: [],
+                environment: [PluginState.directoryEnvVar: stateDir.path])
 
             // `connect`'s own timeout is sufficient — the transport's read is
             // cancellable, so nothing external has to intervene.

@@ -31,6 +31,7 @@ public struct RemoteAITool: AITool {
     /// needs. `nil` is a fact about this plugin, not a missing lookup.
     public let stateTransfer: (any AIToolStateTransfer)?
     public let identityReporting: (any AIToolIdentityReporting)?
+    public let accounts: (any AIToolAccounts)?
 
     public var id: String { description.id }
     public var displayName: String { description.displayName }
@@ -66,12 +67,14 @@ public struct RemoteAITool: AITool {
         description: ToolDescription,
         connection: JSONRPCConnection,
         stateTransfer: (any AIToolStateTransfer)?,
-        identityReporting: (any AIToolIdentityReporting)?
+        identityReporting: (any AIToolIdentityReporting)?,
+        accounts: (any AIToolAccounts)?
     ) {
         self.description = description
         self.connection = connection
         self.stateTransfer = stateTransfer
         self.identityReporting = identityReporting
+        self.accounts = accounts
     }
 
     /// Handshakes, checks the protocol major, and caches the description.
@@ -144,7 +147,9 @@ public struct RemoteAITool: AITool {
                 ? RemoteStateTransfer(description: description, connection: connection) : nil,
             identityReporting: capabilities.contains("tool/listIdentities")
                 && capabilities.contains("tool/showIdentity")
-                ? RemoteIdentityReporting(description: description, connection: connection) : nil)
+                ? RemoteIdentityReporting(description: description, connection: connection) : nil,
+            accounts: RemoteAccounts.requiredMethods.isSubset(of: capabilities)
+                ? RemoteAccounts(description: description, connection: connection) : nil)
     }
 }
 
@@ -266,5 +271,10 @@ public enum ToolCapability {
     public static func identityReporting(of tool: any AITool) -> (any AIToolIdentityReporting)? {
         if let direct = tool as? any AIToolIdentityReporting { return direct }
         return (tool as? RemoteAITool)?.identityReporting
+    }
+
+    public static func accounts(of tool: any AITool) -> (any AIToolAccounts)? {
+        if let direct = tool as? any AIToolAccounts { return direct }
+        return (tool as? RemoteAITool)?.accounts
     }
 }
