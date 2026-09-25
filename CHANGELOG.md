@@ -4,6 +4,29 @@
 
 ### Fixed
 
+- **The installer could stop just before configuring anything.** If installing
+  the `orrery-magi` sidecar failed, `curl … install.sh | bash` put the binaries
+  in place and then quit before `orrery-bin setup` — leaving no `~/.orrery`, no
+  shell rc entry and no `orrery` command, since that is a shell function `setup`
+  writes. The last line printed was a warning that reads as harmless, so the
+  install looked like it had merely skipped an optional extra.
+
+  The installer runs under `set -e`, and the magi step returns non-zero whenever
+  it could not install: the download failed, there was no Swift to build from
+  source, the build itself failed. Those are warnings by design — `orrery magi`
+  hard-fails later and the rest of orrery works — but as a bare call the
+  non-zero return ended the script, taking `setup` and the activation
+  instructions with it. A dropped connection during one download was enough.
+
+  Hit on a clean Linux machine where the sidecar download failed mid-fetch and
+  no Swift was installed to fall back to.
+
+- **A failed sidecar download blamed the platform.** `curl` exits the same way
+  for a missing asset and for a connection that dropped, and the installer
+  reported both as "not available for ${os}-${arch}" — sending anyone who hit a
+  flaky network looking for a port that already exists. It now says the fetch
+  failed and names both possibilities.
+
 - **A plugin's pipe could be read after it was closed, and a closed descriptor
   could be shut a second time.** v3.5.4 shipped against a transport that treated
   a pipe descriptor as owned forever. After a plugin was terminated, the read

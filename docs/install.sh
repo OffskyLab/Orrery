@@ -253,7 +253,12 @@ install_magi() {
   local url="https://github.com/${MAGI_REPO}/releases/latest/download/${asset}"
   info "Downloading orrery-magi pre-built binary..."
   if ! curl -fsSL -o "$TMP_DIR/$asset" "$url" 2>/dev/null; then
-    warn "orrery-magi pre-built binary not available for ${os}-${arch} — falling back to source build."
+    # Says "could not fetch", not "not available for this platform": curl fails
+    # the same way for a 404 and for a connection that dropped, and the wrong
+    # one of those sends someone looking for a port that already exists. The
+    # asset for linux-x86_64 does exist; a slow link failing mid-fetch is what
+    # this message was blaming on the platform.
+    warn "Could not fetch orrery-magi for ${os}-${arch} (missing asset or network failure) — falling back to source build."
     install_magi_from_source
     return
   fi
@@ -269,7 +274,20 @@ install_magi() {
   info "Installed orrery-magi to $MAGI_DIR/$MAGI_BINARY"
 }
 
-install_magi
+# `|| true` because this script runs under `set -e` and every path out of
+# install_magi that could not install it returns 1 — the asset download failed,
+# there is no Swift to build from source, the build itself failed. Those are
+# warnings by design: `orrery magi` hard-fails later, the rest of orrery works.
+# Without this, that non-zero return ends the script right here, and everything
+# below — the PATH check, the version banner, `orrery-bin setup` and the
+# activate.sh instructions — silently never runs.
+#
+# Observed on a clean Linux machine: the magi download failed mid-fetch on a slow
+# link, no Swift was present to fall back to, and the install ended with the
+# binaries in place but no ~/.orrery, no rc entry and no `orrery` command — which
+# is a shell function that `setup` writes. The last line printed was a warning
+# that reads as harmless. Any transient network failure reaches this.
+install_magi || true
 
 # Verify
 if ! command -v "$BINARY_NAME" &>/dev/null; then
