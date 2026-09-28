@@ -83,47 +83,43 @@ public struct ListCommand: AsyncParsableCommand {
                                 gemini ? Tool.gemini : nil].compactMap { $0 }
         let filter: Tool? = selected.count == 1 ? selected[0] : nil
 
-        let grouped: [Tool: [Account]]
-        if let f = filter {
-            let xs = try store.list(tool: f)
-            grouped = xs.isEmpty ? [:] : [f: xs]
-        } else {
-            grouped = try store.listAll()
+        // Rows come from `AccountListing`, which asks a tool's plugin when the
+        // tool has one and reads orrery's pool when it does not. This command
+        // does not know which it got, and must not: the difference is exactly
+        // what is being removed.
+        let listing = AccountListing(store: store)
+        let tools = filter.map { [$0] } ?? Tool.allCases
+
+        var groups: [(tool: Tool, rows: [AccountListing.Row])] = []
+        for tool in tools {
+            let rows = try await listing.rows(
+                for: tool, liveAccountID: activePins[tool.rawValue])
+            if !rows.isEmpty { groups.append((tool, rows)) }
         }
 
-        if grouped.isEmpty {
+        if groups.isEmpty {
             print(L10n.Account.listEmpty)
             return
         }
 
-        for tool in Tool.allCases {
-            guard let accts = grouped[tool], !accts.isEmpty else { continue }
+        for (tool, rows) in groups {
             print(L10n.Account.listToolHeader(tool.rawValue))
 
             // Pad display names to the longest in this group, plus 2 spaces.
-            let maxNameLen = accts.map(\.displayName.count).max() ?? 0
+            let maxNameLen = rows.map(\.displayName.count).max() ?? 0
             let activeID = activePins[tool.rawValue]
 
-            // One question for the whole group rather than one per row: a
-            // listing is exactly the case a tool should be free to answer
-            // cheaply in bulk, and the answers come back aligned with `accts`.
-            let infos = await AccountAuthInfo.identities(
-                for: accts, liveAccountID: activeID, store: store)
-
-            for (i, acct) in accts.enumerated() {
-                let isActive = acct.id == activeID
-
-                let info = infos[i]
-                let suffix = [info.email, info.plan].compactMap { $0 }.joined(separator: ", ")
+            for row in rows {
+                let suffix = [row.email, row.plan].compactMap { $0 }.joined(separator: ", ")
                 let tail: String
                 if suffix.isEmpty {
                     tail = ""
                 } else {
-                    let padding = String(repeating: " ", count: max(0, maxNameLen - acct.displayName.count + 2))
+                    let padding = String(repeating: " ", count: max(0, maxNameLen - row.displayName.count + 2))
                     tail = "\(padding)\(suffix)"
                 }
-                let marker = isActive ? "●" : "-"
-                print(L10n.Account.listRow(marker, acct.displayName, tail))
+                let marker = row.id == activeID ? "●" : "-"
+                print(L10n.Account.listRow(marker, row.displayName, tail))
             }
         }
     }
