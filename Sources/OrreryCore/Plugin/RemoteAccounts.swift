@@ -4,15 +4,13 @@ import AIToolKit
 /// The account half of a remote tool, present only when its plugin advertised
 /// every account method.
 ///
-/// All five or none. A plugin that could list accounts but not delete one would
-/// leave the host with a pool it can fill and never empty, and discovering that
-/// at the first delete is worse than not offering the capability.
+/// All of them or none. A plugin that could list accounts but not delete one
+/// would leave the host with a pool it can fill and never empty, and discovering
+/// that at the first delete is worse than not offering the capability.
 ///
-/// `AIToolKit.Account` is spelled out at every use because OrreryCore still has
-/// an `Account` of its own — the one carrying `tool`, `displayName` and
-/// `workspace`. Two types with one name is a transition state, not a design: the
-/// host's copy goes when the `Tool` enum does. Until then the qualification is
-/// what keeps it obvious which side of the boundary a value came from.
+/// What is here is what only the tool can answer. Pinning, designating and
+/// deleting are on ``RemoteAccount``, which carries the connection, because they
+/// are things done to an account the caller is already holding.
 struct RemoteAccounts: AIToolAccounts {
     let description: ToolDescription
     let connection: JSONRPCConnection
@@ -20,7 +18,7 @@ struct RemoteAccounts: AIToolAccounts {
     /// The methods a plugin must advertise for this capability to be present.
     static let requiredMethods: Set<String> = [
         "tool/list", "tool/current", "tool/setCurrent",
-        "tool/addAccount", "tool/deleteAccount",
+        "tool/addAccount", "tool/deleteAccount", "tool/pin",
     ]
 
     var id: String { description.id }
@@ -32,7 +30,7 @@ struct RemoteAccounts: AIToolAccounts {
     var sessionSubdirectories: [String] { description.sessionSubdirectories }
     var ansiColor: String { description.ansiColor }
 
-    func list() async throws -> [AIToolKit.Account] {
+    func list() async throws -> [any AIToolKit.Account] {
         let result = try await connection.call("tool/list", nil)
         guard case .object(let obj) = result,
               case .array(let rows)? = obj["accounts"]
@@ -43,55 +41,49 @@ struct RemoteAccounts: AIToolAccounts {
         // row looks complete, and the host would go on to offer a pool that is
         // quietly short of what the plugin holds.
         return try rows.map { row in
-            guard let account = Self.decode(row) else {
+            guard let record = Self.decode(row) else {
                 throw RemoteAIToolError.describeMalformed("tool/list returned an undecodable account")
             }
-            return account
+            return RemoteAccount(record: record, connection: connection)
         }
     }
 
-    func current() async throws -> AIToolKit.Account? {
+    func current() async throws -> (any AIToolKit.Account)? {
         let result = try await connection.call("tool/current", nil)
         guard case .object(let obj) = result, let value = obj["account"] else {
             throw RemoteAIToolError.describeMalformed("tool/current returned no 'account' key")
         }
-        // `.null` is "nothing pinned" — an answer a fresh install gives — so it
-        // decodes to nil rather than throwing.
-        return Self.decode(value)
+        // `.null` is "nothing designated" — an answer a fresh install gives — so
+        // it decodes to nil rather than throwing.
+        guard let record = Self.decode(value) else { return nil }
+        return RemoteAccount(record: record, connection: connection)
     }
 
-    func setCurrent(id: AccountID) async throws {
-        _ = try await connection.call("tool/setCurrent", ["id": .string(id)])
-    }
-
-    func addAccount(id: AccountID, name: String) async throws -> AIToolKit.Account {
+    func addAccount(id: AccountID, name: String) async throws -> any AIToolKit.Account {
         let result = try await connection.call("tool/addAccount", [
             "id": .string(id),
             "name": .string(name),
         ])
         guard case .object(let obj) = result,
               let value = obj["account"],
-              let account = Self.decode(value)
+              let record = Self.decode(value)
         else {
             throw RemoteAIToolError.describeMalformed("tool/addAccount returned no account")
         }
-        return account
-    }
-
-    func deleteAccount(id: AccountID) async throws {
-        _ = try await connection.call("tool/deleteAccount", ["id": .string(id)])
+        return RemoteAccount(record: record, connection: connection)
     }
 
     /// - Returns: nil for `.null`, which is an answer rather than a malformed
     ///   reply. A missing `id` or `name` is malformed: those two are what the
     ///   host asked for and cannot do without.
-    private static func decode(_ value: RPCValue) -> AIToolKit.Account? {
+    private static func decode(_ value: RPCValue) -> AccountRecord? {
         guard case .object(let fields) = value else { return nil }
         func string(_ key: String) -> String? {
             if case .string(let s)? = fields[key] { return s }
             return nil
         }
         guard let id = string("id"), let name = string("name") else { return nil }
-        return AIToolKit.Account(id: id, name: name, email: string("email"), plan: string("plan"))
+        return AccountRecord(id: id, name: name, email: string("email"),
+                             plan: string("plan"), workspace: string("workspace"))
     }
 }

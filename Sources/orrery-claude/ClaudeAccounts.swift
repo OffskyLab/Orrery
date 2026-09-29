@@ -3,64 +3,46 @@ import AIToolKit
 
 /// Claude's accounts, answered by claude's own process.
 ///
-/// Every method here is a host feature reaching a tool that owns the answer:
-/// `orrery list` reaches `list()`, `orrery use` reaches `setCurrent(id:)`,
-/// `orrery add` reaches `addAccount(id:name:)`. The host decides which account
-/// and when; where it lives and what is in it never leaves this side.
+/// What is here is what only the tool can answer: which accounts exist, which one
+/// is designated, and making a new one. Everything done *to* an account —
+/// pinning, designating, deleting — is on ``ClaudeAccount``, because a caller
+/// doing one of those is already holding the account.
 ///
 /// ## Identity is filled in here, not by the host
 ///
-/// `list()` returns accounts already carrying email and plan, read from each
-/// account's own directory. The host does not fetch identities separately and
-/// stitch them onto rows — it asked one question and got whole accounts back.
-/// This is also why the listing stays cheap: identities come from files, with the
-/// credential store left alone, exactly as `listIdentities` does.
+/// The accounts returned already carry email and plan, read from each account's
+/// own directory. The host does not fetch identities separately and stitch them
+/// onto rows — it asked one question and got whole accounts back. The listing
+/// stays cheap because it reads files only, exactly as `listIdentities` does; the
+/// credential store is worth a spawn for a single account and not for a table.
 extension ClaudeTool: AIToolAccounts {
 
-    func list() async throws -> [Account] {
+    func list() async throws -> [any Account] {
         let store = try ClaudeAccountStore()
-        return try store.list().map { account in
-            enriched(account, in: store.configDir(for: account.id))
+        return try store.list().map { record in
+            let account = ClaudeAccount(record: record, store: store)
+            return account.withIdentity(
+                ClaudeIdentity.fromFiles(in: store.configDir(for: record.id)))
         }
     }
 
-    func current() async throws -> Account? {
+    func current() async throws -> (any Account)? {
         let store = try ClaudeAccountStore()
-        guard let account = try store.current() else { return nil }
+        guard let record = try store.current() else { return nil }
+        let account = ClaudeAccount(record: record, store: store)
         // A detail view, so the credential store is worth one spawn: an
         // in-session `/login` lands there before it lands anywhere else.
-        let record = ClaudeIdentity.fresh(in: store.configDir(for: account.id))
-        return Account(id: account.id, name: account.name,
-                       email: record.email ?? account.email,
-                       plan: record.plan ?? account.plan)
+        return account.withIdentity(
+            ClaudeIdentity.fresh(in: store.configDir(for: record.id)))
     }
 
-    func setCurrent(id: AccountID) async throws {
-        try ClaudeAccountStore().setCurrent(id: id)
-    }
-
-    func addAccount(id: AccountID, name: String) async throws -> Account {
+    func addAccount(id: AccountID, name: String) async throws -> any Account {
         let store = try ClaudeAccountStore()
-        let account = try store.add(id: id, name: name)
+        let record = try store.add(id: id, name: name)
         // The config directory is created here because the account is not usable
         // without one, and the host must not be the thing that knows claude keeps
         // its state in a directory called `.claude`.
         try store.prepareConfigDir(for: id)
-        return account
-    }
-
-    func deleteAccount(id: AccountID) async throws {
-        try ClaudeAccountStore().delete(id: id)
-    }
-
-    /// An account with whatever its directory can say about who it belongs to.
-    ///
-    /// Missing identity is not an error and not an absent account: a directory
-    /// that was created but never logged into is a real account with no user yet.
-    private func enriched(_ account: Account, in configDir: URL) -> Account {
-        let record = ClaudeIdentity.fromFiles(in: configDir)
-        return Account(id: account.id, name: account.name,
-                       email: record.email ?? account.email,
-                       plan: record.plan ?? account.plan)
+        return ClaudeAccount(record: record, store: store)
     }
 }
