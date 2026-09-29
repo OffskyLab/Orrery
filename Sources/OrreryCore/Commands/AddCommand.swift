@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct AddCommand: ParsableCommand {
+public struct AddCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "add",
         abstract: L10n.Account.addAbstract
@@ -22,16 +22,45 @@ public struct AddCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         AddCommand.announceDefaultToolIfNoFlag(claude: claude, codex: codex, gemini: gemini)
         let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let displayName = try resolveName()
 
-        if try AccountStore.default.findByDisplayName(displayName, tool: tool) != nil {
+        let listing = AccountListing(store: .default)
+
+        // A plugin-owned tool answers for its own duplicates: its pool is the
+        // only one that exists, so asking orrery's would be checking a table
+        // nothing writes to.
+        let existingNames = try await listing.rows(for: tool, liveAccountID: nil)
+            .map(\.displayName)
+        if existingNames.contains(displayName) {
             throw ValidationError(L10n.Account.addDuplicateName(displayName, tool.rawValue))
         }
 
-        var account = Account(tool: tool, displayName: displayName)
+        // The host chooses the id either way, so both paths agree on what an
+        // account is called even while they disagree on where it lives.
+        let newID = UUID().uuidString
+
+        if try await listing.addIfPluginOwned(
+            tool: tool, id: newID, displayName: displayName) != nil {
+            print(L10n.Account.addCreated(tool.rawValue, displayName))
+            // Said out loud rather than skipped quietly. `AccountLoginFlow` works
+            // on orrery's own `Account` — staging dirs, a Keychain item name —
+            // and none of that exists for an account the plugin owns. Moving
+            // credentials across the boundary is its own piece of work, and
+            // printing nothing here would leave someone holding an account that
+            // looks finished and cannot be used.
+            if !skipLogin {
+                let note = "orrery: \(tool.rawValue) accounts are owned by its plugin, and "
+                    + "logging in through orrery is not wired to it yet — run "
+                    + "`\(tool.rawValue)` in this account and log in there.\n"
+                FileHandle.standardError.write(Data(note.utf8))
+            }
+            return
+        }
+
+        var account = OrreryCore.Account(id: newID, tool: tool, displayName: displayName)
         #if os(macOS)
         if tool == .claude {
             account.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: account.id)

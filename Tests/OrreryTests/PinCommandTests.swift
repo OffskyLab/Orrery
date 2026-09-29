@@ -16,7 +16,7 @@ struct PinCommandTests {
             try acctStore.save(acct)
 
             let cmd = try PinCommand.parse(["alice", "--workspace", "work"])
-            try cmd.run()
+            try await cmd.run()
 
             let reloaded = try acctStore.load(id: acct.id, tool: .claude)
             #expect(reloaded.workspace == "work")
@@ -38,11 +38,11 @@ struct PinCommandTests {
 
             // Pin once to origin
             let first = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try first.run()
+            try await first.run()
 
             // Pin again to work
             let second = try PinCommand.parse(["alice", "--workspace", "work"])
-            try second.run()
+            try await second.run()
 
             let reloaded = try acctStore.load(id: acct.id, tool: .claude)
             #expect(reloaded.workspace == "work")
@@ -55,8 +55,8 @@ struct PinCommandTests {
     func unknownAccount() async throws {
         try await withIsolatedHome {
             let cmd = try PinCommand.parse(["no-such-acct", "--workspace", "origin"])
-            #expect(throws: (any Error).self) {
-                try cmd.run()
+            await #expect(throws: (any Error).self) {
+                try await cmd.run()
             }
         }
     }
@@ -78,8 +78,8 @@ struct PinCommandTests {
             try acctStore.save(acct)
 
             let cmd = try PinCommand.parse(["alice", "--workspace", "origin", "--claude", "--codex"])
-            #expect(throws: ValidationError.self) {
-                try cmd.run()
+            await #expect(throws: ValidationError.self) {
+                try await cmd.run()
             }
         }
     }
@@ -99,7 +99,7 @@ struct PinCommandIntegrationTests {
             // Use the public parse(...).run() entry point like other tests.
             var cmd = try PinCommand.parse(
                 ["alice", "--workspace", "shared-team"])
-            try cmd.run()
+            try await cmd.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "shared-team")
@@ -134,7 +134,7 @@ struct PinCommandIntegrationTests {
             try acctStore.save(bob)
             var cmd2 = try PinCommand.parse(
                 ["bob", "--workspace", "shared-team"])
-            try cmd2.run()
+            try await cmd2.run()
 
             let bobDir = acctStore.accountDir(id: bob.id, tool: .claude)
             for sub in ClaudeAdapter.baseSharedSubdirs {

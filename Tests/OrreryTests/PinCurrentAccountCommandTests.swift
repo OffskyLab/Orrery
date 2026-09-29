@@ -14,7 +14,7 @@ struct PinCurrentAccountCommandTests {
             try acctStore.save(acct)
 
             var cmd = try PinCurrentAccountCommand.parse(["alice"])
-            try cmd.run()
+            try await cmd.run()
 
             let origin = EnvironmentStore.default.loadOriginWorkspace()
             #expect(origin.account(for: .claude) == acct.id)
@@ -29,7 +29,7 @@ struct PinCurrentAccountCommandTests {
             try acctStore.save(acct)
 
             var cmd = try PinCurrentAccountCommand.parse(["bob", "--codex"])
-            try cmd.run()
+            try await cmd.run()
 
             let origin = EnvironmentStore.default.loadOriginWorkspace()
             #expect(origin.account(for: .codex) == acct.id)
@@ -41,8 +41,8 @@ struct PinCurrentAccountCommandTests {
     func throwsForUnknown() async throws {
         try await withIsolatedHome {
             var cmd = try PinCurrentAccountCommand.parse(["no-such-account"])
-            #expect(throws: ValidationError.self) {
-                try cmd.run()
+            await #expect(throws: ValidationError.self) {
+                try await cmd.run()
             }
         }
     }
@@ -51,8 +51,8 @@ struct PinCurrentAccountCommandTests {
     func rejectsMultipleFlags() async throws {
         try await withIsolatedHome {
             var cmd = try PinCurrentAccountCommand.parse(["alice", "--claude", "--codex"])
-            #expect(throws: ValidationError.self) {
-                try cmd.run()
+            await #expect(throws: ValidationError.self) {
+                try await cmd.run()
             }
         }
     }
@@ -67,9 +67,9 @@ struct PinCurrentAccountCommandTests {
             try acctStore.save(carol)
 
             var first = try PinCurrentAccountCommand.parse(["alice"])
-            try first.run()
+            try await first.run()
             var second = try PinCurrentAccountCommand.parse(["carol"])
-            try second.run()
+            try await second.run()
 
             let origin = EnvironmentStore.default.loadOriginWorkspace()
             #expect(origin.account(for: .claude) == carol.id)

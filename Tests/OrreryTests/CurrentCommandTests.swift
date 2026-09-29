@@ -28,7 +28,7 @@ struct CurrentCommandTests {
             try acctStore.save(acct)
 
             var pin = try PinCurrentAccountCommand.parse(["alice"])
-            try pin.run()
+            try await pin.run()
 
             let output = try await captureStdout {
                 var cmd = try CurrentCommand.parse([])
@@ -46,7 +46,7 @@ struct CurrentCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCurrentAccountCommand.parse(["alice"])
-            try pin.run()
+            try await pin.run()
 
             let output = try await captureStdout {
                 var cmd = try CurrentCommand.parse(["--claude"])

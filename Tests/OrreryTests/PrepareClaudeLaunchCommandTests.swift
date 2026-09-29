@@ -16,7 +16,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "work"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
@@ -59,7 +59,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             var cmd = try PrepareClaudeLaunchCommand.parse(["--account-dir", acctDir.path])
@@ -87,7 +87,7 @@ struct PrepareClaudeLaunchCommandTests {
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
-            try PinCommand.parse(["alice", "--workspace", "work"]).run()
+            try await PinCommand.parse(["alice", "--workspace", "work"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
@@ -133,7 +133,7 @@ struct PrepareClaudeLaunchCommandTests {
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
-            try PinCommand.parse(["alice", "--workspace", "work"]).run()
+            try await PinCommand.parse(["alice", "--workspace", "work"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
@@ -174,7 +174,7 @@ struct PrepareClaudeLaunchCommandTests {
             let envStore = EnvironmentStore.default
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
-            try PinCommand.parse(["alice", "--workspace", "origin"]).run()
+            try await PinCommand.parse(["alice", "--workspace", "origin"]).run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "origin")
@@ -229,7 +229,7 @@ struct PrepareClaudeLaunchCommandTests {
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             defer { ClaudeKeychain.deleteKeychainItem(service: acct.keychainItem!) }
@@ -286,7 +286,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
 
             // Pre-existing settings.json, as if the user (or another tool)
@@ -323,7 +323,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
 
             PrepareClaudeLaunchCommand.patchAuthSuccessHook(
@@ -348,7 +348,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
 
             PrepareClaudeLaunchCommand.patchAuthSuccessHook(
@@ -373,7 +373,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
 
             // Pre-existing settings.json with an unrelated key and an
@@ -415,7 +415,7 @@ struct PrepareClaudeLaunchCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
 
             PrepareClaudeLaunchCommand.patchSessionHook(
@@ -449,7 +449,7 @@ struct V31LaunchCaptureRoundTripTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "team"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "team")
@@ -512,8 +512,8 @@ struct V31LaunchCaptureRoundTripTests {
             let bob = Account(tool: .claude, displayName: "bob")
             try acctStore.save(alice)
             try acctStore.save(bob)
-            try PinCommand.parse(["alice", "--workspace", "team"]).run()
-            try PinCommand.parse(["bob", "--workspace", "team"]).run()
+            try await PinCommand.parse(["alice", "--workspace", "team"]).run()
+            try await PinCommand.parse(["bob", "--workspace", "team"]).run()
 
             let aliceDir = acctStore.accountDir(id: alice.id, tool: .claude)
             let bobDir = acctStore.accountDir(id: bob.id, tool: .claude)

@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct RemoveCommand: ParsableCommand {
+public struct RemoveCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "remove",
         abstract: L10n.Account.removeAbstract
@@ -22,19 +22,33 @@ public struct RemoveCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         let tool = try AddCommand.resolveTool(claude: claude, codex: codex, gemini: gemini)
         let acctStore = AccountStore.default
         if let name {
-            try Self.removeOne(name: name, tool: tool, acctStore: acctStore)
+            try await Self.removeOne(name: name, tool: tool, acctStore: acctStore)
         } else {
-            try Self.removeInteractive(tool: tool, force: force, acctStore: acctStore)
+            try await Self.removeInteractive(tool: tool, force: force, acctStore: acctStore)
         }
     }
 
     // MARK: - Single-target
 
-    static func removeOne(name: String, tool: Tool, acctStore: AccountStore) throws {
+    static func removeOne(name: String, tool: Tool, acctStore: AccountStore) async throws {
+        // Looked up through the listing, because for a plugin-owned tool
+        // orrery's own pool holds nothing to find.
+        let listing = AccountListing(store: acctStore)
+        guard let row = try await listing.rows(for: tool, liveAccountID: nil)
+            .first(where: { $0.displayName == name })
+        else {
+            throw ValidationError(L10n.Account.removeNotFound(name, tool.rawValue))
+        }
+
+        if try await listing.deleteIfPluginOwned(tool: tool, id: row.id) {
+            print(L10n.Account.removeRemoved(tool.rawValue, name))
+            return
+        }
+
         guard let acct = try acctStore.findByDisplayName(name, tool: tool) else {
             throw ValidationError(L10n.Account.removeNotFound(name, tool.rawValue))
         }
@@ -44,7 +58,7 @@ public struct RemoveCommand: ParsableCommand {
 
     // MARK: - Multi-select
 
-    static func removeInteractive(tool: Tool, force: Bool, acctStore: AccountStore) throws {
+    static func removeInteractive(tool: Tool, force: Bool, acctStore: AccountStore) async throws {
         let accounts = try acctStore.list(tool: tool)
         guard !accounts.isEmpty else {
             print(L10n.Account.removeNoAccounts(tool.rawValue))
@@ -71,7 +85,10 @@ public struct RemoveCommand: ParsableCommand {
 
         for acct in selected {
             do {
-                try removeAccount(acct, tool: tool, acctStore: acctStore)
+                if try await AccountListing(store: acctStore)
+                    .deleteIfPluginOwned(tool: tool, id: acct.id) == false {
+                    try removeAccount(acct, tool: tool, acctStore: acctStore)
+                }
                 print(L10n.Account.removeRemoved(tool.rawValue, acct.displayName))
             } catch {
                 FileHandle.standardError.write(Data("⚠️  \(acct.displayName): \(error.localizedDescription)\n".utf8))

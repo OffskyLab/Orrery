@@ -15,7 +15,7 @@ struct CaptureClaudeExitCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "work"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let wsDir = envStore.toolConfigDir(tool: .claude, environment: "work")
@@ -62,7 +62,7 @@ struct CaptureClaudeExitCommandTests {
             let acct = Account(tool: .claude, displayName: "alice")
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             // No .claude.json written.
@@ -96,7 +96,7 @@ struct CaptureClaudeExitCommandTests {
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let liveService = ClaudeKeychain.service(for: acctDir.path)
@@ -132,7 +132,7 @@ struct CaptureClaudeExitCommandTests {
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let liveService = ClaudeKeychain.service(for: acctDir.path)
