@@ -14,7 +14,7 @@ struct ClaudeLoginSyncTests {
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let liveService = ClaudeKeychain.service(for: acctDir.path)
@@ -59,7 +59,7 @@ struct ClaudeLoginSyncTests {
             acct.keychainItem = ClaudeKeychain.serviceName(forOrreryAccount: acct.id)
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             let liveService = ClaudeKeychain.service(for: acctDir.path)
@@ -83,7 +83,7 @@ struct ClaudeLoginSyncTests {
             let acct = Account(tool: .claude, displayName: "alice") // keychainItem left nil
             try acctStore.save(acct)
             var pin = try PinCommand.parse(["alice", "--workspace", "origin"])
-            try pin.run()
+            try await pin.run()
 
             let acctDir = acctStore.accountDir(id: acct.id, tool: .claude)
             #expect(ClaudeLoginSync.syncIfChanged(accountDir: acctDir) == false)

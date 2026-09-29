@@ -76,7 +76,7 @@ struct AccountCommandsAllTests {
         func defaultsToClaude() async throws {
             try await withIsolatedHome {
                 let cmd = try AddCommand.parse(["default-claude-test", "--skip-login"])
-                try cmd.run()
+                try await cmd.run()
                 let accounts = try AccountStore.default.list(tool: .claude)
                 #expect(accounts.contains { $0.displayName == "default-claude-test" })
             }
@@ -86,7 +86,7 @@ struct AccountCommandsAllTests {
         func codexFlag() async throws {
             try await withIsolatedHome {
                 let cmd = try AddCommand.parse(["--codex", "codex-test", "--skip-login"])
-                try cmd.run()
+                try await cmd.run()
                 let accounts = try AccountStore.default.list(tool: .codex)
                 #expect(accounts.contains { $0.displayName == "codex-test" })
             }
@@ -98,7 +98,7 @@ struct AccountCommandsAllTests {
             try await withIsolatedHome {
                 let tmpDir = URL(fileURLWithPath: ProcessInfo.processInfo.environment["ORRERY_HOME"]!)
                 let cmd = try AddCommand.parse(["keychain-test", "--skip-login"])
-                try cmd.run()
+                try await cmd.run()
                 let store = AccountStore(homeURL: tmpDir)
                 let accounts = try store.list(tool: .claude)
                 guard let account = accounts.first(where: { $0.displayName == "keychain-test" }) else {
@@ -113,13 +113,13 @@ struct AccountCommandsAllTests {
         @Test("rejects a duplicate display name for the same tool")
         func rejectsDuplicateName() async throws {
             try await withIsolatedHome {
-                try AddCommand.parse(["dup", "--skip-login"]).run()
+                try await AddCommand.parse(["dup", "--skip-login"]).run()
                 // second add with the same name + tool must throw
-                #expect(throws: ValidationError.self) {
-                    try AddCommand.parse(["dup", "--skip-login"]).run()
+                await #expect(throws: ValidationError.self) {
+                    try await AddCommand.parse(["dup", "--skip-login"]).run()
                 }
                 // a same-name account under a DIFFERENT tool is still allowed
-                try AddCommand.parse(["--codex", "dup", "--skip-login"]).run()
+                try await AddCommand.parse(["--codex", "dup", "--skip-login"]).run()
             }
         }
     }
@@ -592,8 +592,8 @@ struct AccountCommandsAllTests {
                 }
 
                 let cmd = try UseCommand.parse(["--codex", "ghost"])
-                #expect(throws: ValidationError.self) {
-                    try cmd.run()
+                await #expect(throws: ValidationError.self) {
+                    try await cmd.run()
                 }
             }
         }
@@ -651,7 +651,7 @@ struct AccountCommandsAllTests {
             try await withIsolatedHome {
                 let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["prep-test"])
-                    try cmd.run()
+                    try await cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
                 #expect(!stagingPath.isEmpty)
@@ -683,7 +683,7 @@ struct AccountCommandsAllTests {
             try await withIsolatedHome {
                 let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["stdout-only-test"])
-                    try cmd.run()
+                    try await cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
                 // stdout must be exactly the staging path — no extra chatter
@@ -700,7 +700,7 @@ struct AccountCommandsAllTests {
             try await withIsolatedHome {
                 let output = try await captureStdout {
                     let cmd = try AccountAddPrepareCommand.parse(["dup-prep"])
-                    try cmd.run()
+                    try await cmd.run()
                 }
                 let stagingPath = output.trimmingCharacters(in: .whitespacesAndNewlines)
                 defer { try? FileManager.default.removeItem(atPath: stagingPath) }
@@ -753,7 +753,7 @@ struct AccountCommandsAllTests {
 
                 let output = try await captureStdout {
                     let cmd = try AccountAddFinalizeCommand.parse(["--staging", staging.path])
-                    try cmd.run()
+                    try await cmd.run()
                 }
 
                 // Staging dir must be cleaned up by finalize.
@@ -838,7 +838,7 @@ struct AccountCommandsAllTests {
 
                 // Run finalize — this should import the credential AND apply v3.1 layout.
                 let cmd = try AccountAddFinalizeCommand.parse(["--staging", staging.path])
-                try cmd.run()
+                try await cmd.run()
 
                 // v3.1 layout: symlinks must be valid.
                 #expect(try AccountDirectoryRuntime.manager(for: .claude).verifySymlinks(
@@ -866,7 +866,7 @@ struct AccountCommandsAllTests {
                 try AccountStore.default.save(acct)
 
                 let cmd = try RemoveCommand.parse(["to-delete"])
-                try cmd.run()
+                try await cmd.run()
 
                 let accounts = try AccountStore.default.list(tool: .claude)
                 #expect(!accounts.contains { $0.displayName == "to-delete" })
@@ -884,8 +884,8 @@ struct AccountCommandsAllTests {
                 try EnvironmentStore.default.saveOriginWorkspace(origin)
 
                 let cmd = try RemoveCommand.parse(["in-use"])
-                #expect(throws: ValidationError.self) {
-                    try cmd.run()
+                await #expect(throws: ValidationError.self) {
+                    try await cmd.run()
                 }
 
                 let accounts = try AccountStore.default.list(tool: .claude)
@@ -903,8 +903,8 @@ struct AccountCommandsAllTests {
                 env.setAccount(acct.id, for: .claude)
                 try EnvironmentStore.default.save(env)
 
-                #expect(throws: ValidationError.self) {
-                    try RemoveCommand.parse(["named-ref"]).run()
+                await #expect(throws: ValidationError.self) {
+                    try await RemoveCommand.parse(["named-ref"]).run()
                 }
                 // account must still be in the pool
                 #expect(try AccountStore.default.findByDisplayName("named-ref", tool: .claude) != nil)
@@ -915,8 +915,8 @@ struct AccountCommandsAllTests {
         func notFound() async throws {
             try await withIsolatedHome {
                 let cmd = try RemoveCommand.parse(["ghost"])
-                #expect(throws: ValidationError.self) {
-                    try cmd.run()
+                await #expect(throws: ValidationError.self) {
+                    try await cmd.run()
                 }
             }
         }
@@ -925,7 +925,7 @@ struct AccountCommandsAllTests {
         func interactiveNoAccounts() async throws {
             try await withIsolatedHome {
                 let output = try await captureStdout {
-                    try RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
+                    try await RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
                 }
                 #expect(output.contains("No claude accounts to remove."))
             }
@@ -941,7 +941,7 @@ struct AccountCommandsAllTests {
                 let acct = Account(tool: .claude, displayName: "untouched")
                 try AccountStore.default.save(acct)
 
-                try RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
+                try await RemoveCommand.removeInteractive(tool: .claude, force: true, acctStore: .default)
 
                 let accounts = try AccountStore.default.list(tool: .claude)
                 #expect(accounts.contains { $0.displayName == "untouched" })

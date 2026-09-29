@@ -12,7 +12,7 @@ import Foundation
 /// `ShowCommand`'s "this shell only" detection). Deliberately independent of
 /// `ORRERY_ACTIVE_ENV` / workspaces — the pin always lives on the origin
 /// workspace, matching `orrery current`'s global-not-per-workspace scope.
-public struct PinCurrentAccountCommand: ParsableCommand {
+public struct PinCurrentAccountCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "_pin-current",
         abstract: "(internal) Persist the globally-current account for a tool.",
@@ -31,7 +31,7 @@ public struct PinCurrentAccountCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         let selected: [Tool] = [claude ? Tool.claude : nil,
                                 codex ? Tool.codex : nil,
                                 gemini ? Tool.gemini : nil].compactMap { $0 }
@@ -40,14 +40,25 @@ public struct PinCurrentAccountCommand: ParsableCommand {
         }
         let tool: Tool = selected.first ?? .claude
 
+        // Looked up through the listing: for a plugin-owned tool orrery's own
+        // pool holds nothing to find.
         let acctStore = AccountStore.default
-        guard let acct = try acctStore.findByDisplayName(name, tool: tool) else {
+        let listing = AccountListing(store: acctStore)
+        guard let row = try await listing.rows(for: tool, liveAccountID: nil)
+            .first(where: { $0.displayName == name })
+        else {
             throw ValidationError("Account '\(name)' not found in the \(tool.rawValue) pool.")
         }
 
+        // This command is the global current, which is exactly what
+        // `Account.makeCurrent()` records — no workspace, matching `orrery
+        // current`'s scope. Pinning to a workspace is `orrery pin`, and stays a
+        // separate fact.
+        if try await listing.makeCurrentIfPluginOwned(tool: tool, id: row.id) { return }
+
         let envStore = EnvironmentStore.default
         var origin = envStore.loadOriginWorkspace()
-        origin.setAccount(acct.id, for: tool)
+        origin.setAccount(row.id, for: tool)
         try envStore.saveOriginWorkspace(origin)
     }
 }

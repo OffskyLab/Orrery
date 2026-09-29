@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-public struct PinCommand: ParsableCommand {
+public struct PinCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "pin",
         abstract: L10n.Pin.abstract
@@ -22,7 +22,7 @@ public struct PinCommand: ParsableCommand {
 
     public init() {}
 
-    public func run() throws {
+    public func run() async throws {
         let selected: [Tool] = [claude ? Tool.claude : nil,
                                 codex ? Tool.codex : nil,
                                 gemini ? Tool.gemini : nil].compactMap { $0 }
@@ -32,6 +32,16 @@ public struct PinCommand: ParsableCommand {
         let tool = resolvedTool()
         let acctStore = AccountStore.default
         let envStore = EnvironmentStore.default
+
+        // A plugin-owned account records its own workspace, so the pin goes to
+        // the account rather than into orrery's copy of it.
+        let listing = AccountListing(store: acctStore)
+        if let row = try await listing.rows(for: tool, liveAccountID: nil)
+            .first(where: { $0.displayName == accountName }),
+           try await listing.pinIfPluginOwned(tool: tool, id: row.id, workspace: workspace) {
+            print(L10n.Pin.success(accountName, workspace))
+            return
+        }
 
         guard var acct = try acctStore.findByDisplayName(accountName, tool: tool) else {
             throw ValidationError(L10n.Pin.errorAccountNotFound(accountName, tool.rawValue))

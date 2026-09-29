@@ -18,6 +18,17 @@ import AIToolKit
 /// lookup.
 ///
 /// Keeping the branch here means that removal is one file, not fourteen.
+enum AccountListingError: Error, CustomStringConvertible {
+    case noSuchAccount(id: AccountID, tool: Tool)
+
+    var description: String {
+        switch self {
+        case .noSuchAccount(let id, let tool):
+            return "\(tool.rawValue) has no account '\(id)'"
+        }
+    }
+}
+
 struct AccountListing {
 
     /// One account as a command needs to render it.
@@ -74,6 +85,71 @@ struct AccountListing {
             Row(id: account.id, displayName: account.displayName,
                 email: info.email, plan: info.plan)
         }
+    }
+
+    // MARK: - Writing
+
+    /// Create an account and return the id it was given.
+    ///
+    /// The host chooses the id either way, so the two paths agree on what an
+    /// account is called even while they disagree on where it lives.
+    ///
+    /// - Returns: nil when this tool has no plugin, meaning the caller keeps its
+    ///   existing path. Deliberately not a fallback that writes to the pool:
+    ///   `AccountListing` knowing how to create an orrery-side account would put
+    ///   a second creation path behind one call, and the two would drift.
+    func addIfPluginOwned(tool: Tool, id: AccountID, displayName: String) async throws -> Row? {
+        guard let accounts = accountsCapability(tool) else { return nil }
+        let account = try await accounts.addAccount(id: id, name: displayName)
+        return Row(id: account.id, displayName: account.name,
+                   email: account.email, plan: account.plan)
+    }
+
+    /// Delete an account through whichever side owns it.
+    ///
+    /// - Returns: false when this tool has no plugin, so the caller does its own
+    ///   removal.
+    /// - Throws: when the account is plugin-owned but not there. A delete that
+    ///   removed nothing must not be reported as done.
+    func deleteIfPluginOwned(tool: Tool, id: AccountID) async throws -> Bool {
+        guard let account = try await pluginAccount(tool: tool, id: id) else { return false }
+        try await account.delete()
+        return true
+    }
+
+    /// Designate an account as the tool's current one.
+    ///
+    /// Separate from ``pinIfPluginOwned(tool:id:workspace:)`` because orrery has
+    /// them separate too: `_pin-current` records a global current, `orrery pin`
+    /// binds an account to a workspace, and the two survive each other changing.
+    ///
+    /// - Returns: false when this tool has no plugin.
+    func makeCurrentIfPluginOwned(tool: Tool, id: AccountID) async throws -> Bool {
+        guard let account = try await pluginAccount(tool: tool, id: id) else { return false }
+        try await account.makeCurrent()
+        return true
+    }
+
+    /// Record which workspace an account belongs to.
+    ///
+    /// - Returns: false when this tool has no plugin.
+    func pinIfPluginOwned(tool: Tool, id: AccountID, workspace: String) async throws -> Bool {
+        guard let account = try await pluginAccount(tool: tool, id: id) else { return false }
+        try await account.pin(to: workspace)
+        return true
+    }
+
+    /// The plugin's own account, if this tool has one.
+    ///
+    /// - Returns: nil when the tool has no plugin — the caller keeps its own path.
+    /// - Throws: when the tool is plugin-owned but has no such account, because
+    ///   then an operation reported as done would have done nothing.
+    private func pluginAccount(tool: Tool, id: AccountID) async throws -> (any AIToolKit.Account)? {
+        guard let accounts = accountsCapability(tool) else { return nil }
+        guard let account = try await accounts.list().first(where: { $0.id == id }) else {
+            throw AccountListingError.noSuchAccount(id: id, tool: tool)
+        }
+        return account
     }
 
     /// One account's freshest identity, for a detail view.
