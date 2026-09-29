@@ -91,7 +91,7 @@ struct ClaudeAccountStore {
 
     // MARK: - Reading
 
-    func list() throws -> [Account] {
+    func list() throws -> [AccountRecord] {
         let fm = FileManager.default
         guard fm.fileExists(atPath: accountsDir.path) else { return [] }
 
@@ -110,15 +110,15 @@ struct ClaudeAccountStore {
         .sorted { $0.name < $1.name }
     }
 
-    func load(id: AccountID) throws -> Account {
+    func load(id: AccountID) throws -> AccountRecord {
         let url = metadataURL(id)
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw AccountError.noSuchAccount(id)
         }
-        return try decoder.decode(Account.self, from: try Data(contentsOf: url))
+        return try decoder.decode(AccountRecord.self, from: try Data(contentsOf: url))
     }
 
-    func current() throws -> Account? {
+    func current() throws -> AccountRecord? {
         guard let data = try? Data(contentsOf: currentURL),
               let id = String(data: data, encoding: .utf8)?
                   .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -133,14 +133,27 @@ struct ClaudeAccountStore {
 
     // MARK: - Writing
 
-    func add(id: AccountID, name: String) throws -> Account {
+    func add(id: AccountID, name: String) throws -> AccountRecord {
         guard !exists(id) else { throw AccountError.alreadyExists(id) }
 
-        let account = Account(id: id, name: name)
+        let account = AccountRecord(id: id, name: name)
         try FileManager.default.createDirectory(
             at: accountDir(id), withIntermediateDirectories: true)
         try encoder.encode(account).write(to: metadataURL(id), options: .atomic)
         return account
+    }
+
+    /// Record which workspace an account belongs to.
+    ///
+    /// Rewrites that account's own metadata rather than keeping a table
+    /// elsewhere: one workspace per account, so the account is where it goes, and
+    /// deleting the account takes the relation with it.
+    func setWorkspace(_ workspace: String, for id: AccountID) throws {
+        let existing = try load(id: id)
+        let updated = AccountRecord(id: existing.id, name: existing.name,
+                                    email: existing.email, plan: existing.plan,
+                                    workspace: workspace)
+        try encoder.encode(updated).write(to: metadataURL(id), options: .atomic)
     }
 
     func setCurrent(id: AccountID) throws {

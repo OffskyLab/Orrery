@@ -37,6 +37,12 @@ struct ClaudePluginAccountTests {
         return (accounts, transport, state)
     }
 
+    /// Reaching an account and asking it to act — the path a host takes now that
+    /// the operations live on `Account` rather than on the tool.
+    private func account(_ id: AccountID, in accounts: any AIToolAccounts) async throws -> any AIToolKit.Account {
+        try #require(try await accounts.list().first { $0.id == id })
+    }
+
     @Test("the shipped binary advertises the account capability")
     func advertisesTheCapability() async throws {
         let (_, transport, _) = try await connect()
@@ -98,7 +104,7 @@ struct ClaudePluginAccountTests {
         defer { Task { await transport.terminate() } }
         _ = try await accounts.addAccount(id: "a1", name: "work")
         _ = try await accounts.addAccount(id: "a2", name: "personal")
-        try await accounts.setCurrent(id: "a2")
+        try await account("a2", in: accounts).makeCurrent()
         #expect(try await accounts.current()?.id == "a2")
     }
 
@@ -120,7 +126,7 @@ struct ClaudePluginAccountTests {
 
         let (first, firstTransport) = try await session()
         _ = try await first.addAccount(id: "a1", name: "work")
-        try await first.setCurrent(id: "a1")
+        try await account("a1", in: first).makeCurrent()
         await firstTransport.terminate()
 
         let (second, secondTransport) = try await session()
@@ -141,31 +147,33 @@ struct ClaudePluginAccountTests {
         #expect(try await accounts.list().count == 1)
     }
 
-    @Test("pinning an account that does not exist fails and leaves the pin alone")
-    func pinUnknownFails() async throws {
+    /// Resolving an id to an account is the server's step now, and the only place
+    /// "no such account" can arise — a held account cannot name a missing one.
+    @Test("designating an account that does not exist leaves the designation alone")
+    func designateUnknownFails() async throws {
         let (accounts, transport, _) = try await connect()
         defer { Task { await transport.terminate() } }
         _ = try await accounts.addAccount(id: "a1", name: "work")
-        try await accounts.setCurrent(id: "a1")
+        try await account("a1", in: accounts).makeCurrent()
 
-        await #expect(throws: (any Error).self) {
-            try await accounts.setCurrent(id: "ghost")
-        }
+        #expect(try await accounts.list().first { $0.id == "ghost" } == nil,
+                "there is nothing to hold, which is the point")
         #expect(try await accounts.current()?.id == "a1")
     }
 
-    @Test("deleting removes the account, and deleting again fails")
+    @Test("deleting removes the account")
     func deleteAccount() async throws {
         let (accounts, transport, _) = try await connect()
         defer { Task { await transport.terminate() } }
         _ = try await accounts.addAccount(id: "a1", name: "work")
 
-        try await accounts.deleteAccount(id: "a1")
+        try await account("a1", in: accounts).delete()
         #expect(try await accounts.list().isEmpty)
 
-        await #expect(throws: (any Error).self) {
-            try await accounts.deleteAccount(id: "a1")
-        }
+        // Deleting twice is no longer expressible: `delete()` is on the account,
+        // and after the first call there is nothing left to hold. What used to be
+        // an error the caller had to handle is now a state it cannot reach.
+        #expect(try await accounts.list().first { $0.id == "a1" } == nil)
     }
 
     /// Leaving `current()` naming a deleted account would have the host render a
@@ -175,9 +183,9 @@ struct ClaudePluginAccountTests {
         let (accounts, transport, _) = try await connect()
         defer { Task { await transport.terminate() } }
         _ = try await accounts.addAccount(id: "a1", name: "work")
-        try await accounts.setCurrent(id: "a1")
+        try await account("a1", in: accounts).makeCurrent()
 
-        try await accounts.deleteAccount(id: "a1")
+        try await account("a1", in: accounts).delete()
         #expect(try await accounts.current() == nil)
     }
 
@@ -193,7 +201,7 @@ struct ClaudePluginAccountTests {
             .subpathsOfDirectory(atPath: state.path)
         #expect(!contentsAfterAdd.isEmpty, "adding an account must put something on disk")
 
-        try await accounts.deleteAccount(id: "a1")
+        try await account("a1", in: accounts).delete()
         let remaining = try FileManager.default
             .subpathsOfDirectory(atPath: state.path)
             .filter { $0.contains("a1") }
