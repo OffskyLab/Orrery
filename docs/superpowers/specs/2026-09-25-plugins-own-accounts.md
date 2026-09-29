@@ -51,6 +51,7 @@ public protocol AIToolAccounts: AITool {
     func setCurrent(id: AccountID) async throws
     func addAccount(id: AccountID, name: String) async throws -> Account
     func deleteAccount(id: AccountID) async throws
+    func pin(id: AccountID, to workspace: String) async throws
 }
 ```
 
@@ -104,14 +105,31 @@ That is why `Account` lives in AIToolKit rather than in either side.
 
 ## Workspaces
 
-A workspace is a management layer of its own, and eventually its own plugin, not
-a field on `Account`.
+A workspace is a management layer of its own, and eventually its own plugin.
+orrery still decides the pinning — it knows the workspace layout and this shell —
+and the plugin persists the decision.
 
-What the tool plugin holds is the **account ↔ workspace pin table**: which
-account is pinned to which workspace. The plugin stores it, and orrery can read
-it. orrery still decides the pinning — it knows the workspace layout and this
-shell — and the plugin persists the decision, the same split `setCurrent(id:)`
-follows.
+**The relation is carried on the account**, not in a table keyed by workspace:
+`Account.workspace`, set by `pin(id:to:)`. It is one workspace per account, which
+is already true of orrery's own `Account`, so the account is where it belongs; a
+host wanting the accounts of one workspace filters a listing it already has
+rather than asking a second question.
+
+An earlier draft of this section said workspace was *not* a field on `Account`.
+The reason it was wrong is worth keeping: the pin was imagined as a table the
+plugin keeps and the host queries, which needs two methods and a second notion of
+membership. Carried on the account it needs one.
+
+### Pinning is not `setCurrent`
+
+They answer different questions. `current` is *which account is designated right
+now*; a pin is *where this account belongs*, and it survives the current one
+changing.
+
+The alternative considered was scoping the pair — `current(in:)` and
+`setCurrent(id:in:)`. It was rejected because it leaves "which account is
+current" with no answer until the caller also says where, and that plain question
+is the one a host asks.
 
 ## The `Tool` enum goes
 
@@ -174,5 +192,6 @@ so orrery is free to move first.
 
 ## Open
 
-- **`Account`'s fields.** `id` and `name` are given; `email` and `plan` are the
-  facts `list` and `show` need. Settled: `workspace` is not one of them.
+Nothing on `Account`'s shape. `id`, `name`, `email`, `plan` and `workspace` are
+settled; `nil` for workspace means not pinned, and the framework ships no
+default, because every candidate name for one is host vocabulary.
