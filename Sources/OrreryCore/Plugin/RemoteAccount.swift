@@ -43,4 +43,14 @@ struct RemoteAccount: AIToolKit.Account {
     func delete() async throws {
         _ = try await connection.call("tool/deleteAccount", ["id": .string(record.id)])
     }
+
+    /// The directory is sent as a path because that is all it is to this side.
+    /// What the plugin finds in it — a file, an entry in a keychain the path only
+    /// names — is not orrery's to know, which is why nothing is read here first.
+    func adoptLogin(from directory: URL) async throws {
+        _ = try await connection.call("tool/adoptLogin", [
+            "id": .string(record.id),
+            "directory": .string(directory.path),
+        ])
+    }
 }

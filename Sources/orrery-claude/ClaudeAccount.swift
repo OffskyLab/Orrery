@@ -36,6 +36,13 @@ struct ClaudeAccount: Account {
         try store.delete(id: record.id)
     }
 
+    /// The host ran claude's login against `directory` and is handing it over.
+    /// What it wrote there — or into the login keychain, which the directory only
+    /// names — is this side's business.
+    func adoptLogin(from directory: URL) async throws {
+        try ClaudeCredentials.adopt(from: directory, to: store.configDir(for: record.id))
+    }
+
     /// The same account with whatever its config directory can say about who it
     /// belongs to.
     ///

@@ -139,6 +139,42 @@ struct AccountListing {
         return true
     }
 
+    /// Run this tool's login and hand the result to the account.
+    ///
+    /// The two halves of the boundary, in order. orrery stages the login — it
+    /// knows how to give a subprocess a terminal, and the tool-specific inputs
+    /// come off the tool's own description — then passes the directory over and
+    /// asks nothing about what is in it.
+    ///
+    /// The staging directory is removed afterwards either way, including when the
+    /// adoption fails: it holds a credential, and leaving one in a temporary
+    /// directory because an error interrupted the cleanup is not a failure mode
+    /// worth having.
+    ///
+    /// - Returns: false when this tool has no plugin.
+    /// - Throws: when the login produced nothing to adopt. The account is left in
+    ///   place — created but not logged in, which is a state `orrery list` shows
+    ///   honestly — rather than deleted behind the caller's back.
+    func logInIfPluginOwned(tool: Tool, id: AccountID) async throws -> Bool {
+        guard let account = try await pluginAccount(tool: tool, id: id) else { return false }
+        guard let described = registry.tool(id: tool.rawValue) else { return false }
+
+        let fm = FileManager.default
+        let staging = fm.temporaryDirectory
+            .appendingPathComponent("orrery-login-\(UUID().uuidString)")
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: staging) }
+
+        try AccountLoginFlow.stageLogin(
+            toolID: described.id,
+            authLoginCommand: described.authLoginCommand,
+            configDirEnvVar: described.configDirEnvVar,
+            into: staging)
+
+        try await account.adoptLogin(from: staging)
+        return true
+    }
+
     /// The plugin's own account, if this tool has one.
     ///
     /// - Returns: nil when the tool has no plugin — the caller keeps its own path.

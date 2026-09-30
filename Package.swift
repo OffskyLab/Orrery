@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
-        .package(url: "https://github.com/OffskyLab/Orrery-AIToolKit", exact: "0.0.1-dev.11"),
+        .package(url: "https://github.com/OffskyLab/Orrery-AIToolKit", exact: "0.0.1-dev.12"),
     ],
     targets: [
         .executableTarget(
