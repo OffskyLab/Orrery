@@ -92,6 +92,40 @@ public enum AccountLoginFlow {
         try fm.copyItem(at: source, to: destination)
     }
 
+    // MARK: - Staging a login for a tool orrery does not model
+
+    /// Run a tool's login against a directory, and stop there.
+    ///
+    /// The counterpart to `Account.adoptLogin(from:)`: this half is the host's
+    /// because giving a subprocess a terminal is, and every tool-specific input
+    /// it needs — the login command, the variable that points the tool at a
+    /// config directory — comes off that tool's own description. What the tool
+    /// then wrote is not read here, and deliberately so.
+    ///
+    /// Distinct from ``run(account:)``, which is the path for a tool orrery still
+    /// models itself: that one goes on to import the credential using knowledge
+    /// this one does not have and must not acquire.
+    public static func stageLogin(
+        toolID: String,
+        authLoginCommand: [String]?,
+        configDirEnvVar: String?,
+        into stagingDir: URL
+    ) throws {
+        guard let envVar = configDirEnvVar else {
+            throw LoginError.credentialNotProduced(.claude)
+        }
+        if let authCmd = authLoginCommand {
+            try spawnInteractive(command: authCmd, envVarName: envVar, configDir: stagingDir)
+        } else {
+            // No scriptable login subcommand, so the tool is launched and the
+            // person completes it. See `run(account:)` for why this is a rough
+            // path outside the shell function: Swift's Process does not hand the
+            // child the foreground process group.
+            print(L10n.Account.loginManualFallbackHint(toolID))
+            try spawnInteractive(command: [toolID], envVarName: envVar, configDir: stagingDir)
+        }
+    }
+
     // MARK: - Interactive login (integration path, not unit-testable)
 
     /// Triggers the tool's interactive login against a fresh staging config dir,

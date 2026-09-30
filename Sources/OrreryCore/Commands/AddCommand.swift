@@ -45,17 +45,12 @@ public struct AddCommand: AsyncParsableCommand {
         if try await listing.addIfPluginOwned(
             tool: tool, id: newID, displayName: displayName) != nil {
             print(L10n.Account.addCreated(tool.rawValue, displayName))
-            // Said out loud rather than skipped quietly. `AccountLoginFlow` works
-            // on orrery's own `Account` — staging dirs, a Keychain item name —
-            // and none of that exists for an account the plugin owns. Moving
-            // credentials across the boundary is its own piece of work, and
-            // printing nothing here would leave someone holding an account that
-            // looks finished and cannot be used.
+            // The account exists but has no login yet. If that step fails the
+            // account stays — created and not logged in, which `orrery list`
+            // shows honestly — rather than being deleted behind the user, who
+            // can retry the login without losing the name they chose.
             if !skipLogin {
-                let note = "orrery: \(tool.rawValue) accounts are owned by its plugin, and "
-                    + "logging in through orrery is not wired to it yet — run "
-                    + "`\(tool.rawValue)` in this account and log in there.\n"
-                FileHandle.standardError.write(Data(note.utf8))
+                _ = try await listing.logInIfPluginOwned(tool: tool, id: newID)
             }
             return
         }

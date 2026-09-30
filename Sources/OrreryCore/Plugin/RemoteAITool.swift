@@ -29,7 +29,6 @@ public struct RemoteAITool: AITool {
 
     /// Present only when the plugin advertised every method the capability
     /// needs. `nil` is a fact about this plugin, not a missing lookup.
-    public let stateTransfer: (any AIToolStateTransfer)?
     public let identityReporting: (any AIToolIdentityReporting)?
     public let accounts: (any AIToolAccounts)?
 
@@ -66,13 +65,11 @@ public struct RemoteAITool: AITool {
     private init(
         description: ToolDescription,
         connection: JSONRPCConnection,
-        stateTransfer: (any AIToolStateTransfer)?,
         identityReporting: (any AIToolIdentityReporting)?,
         accounts: (any AIToolAccounts)?
     ) {
         self.description = description
         self.connection = connection
-        self.stateTransfer = stateTransfer
         self.identityReporting = identityReporting
         self.accounts = accounts
     }
@@ -142,58 +139,11 @@ public struct RemoteAITool: AITool {
         return RemoteAITool(
             description: description,
             connection: connection,
-            stateTransfer: capabilities.contains("tool/copyLoginState")
-                && capabilities.contains("tool/copyNonLoginSettings")
-                ? RemoteStateTransfer(description: description, connection: connection) : nil,
             identityReporting: capabilities.contains("tool/listIdentities")
                 && capabilities.contains("tool/showIdentity")
                 ? RemoteIdentityReporting(description: description, connection: connection) : nil,
             accounts: RemoteAccounts.requiredMethods.isSubset(of: capabilities)
                 ? RemoteAccounts(description: description, connection: connection) : nil)
-    }
-}
-
-/// The state-transfer half of a remote tool, present only when its plugin
-/// advertised both methods.
-///
-/// It conforms to ``AIToolStateTransfer`` and therefore has to be an `AITool`
-/// too, which is why it carries the description: a capability is asked for
-/// *about* a tool, and handing back something that cannot say which tool it
-/// belongs to would make it unusable anywhere the id matters.
-struct RemoteStateTransfer: AIToolStateTransfer {
-    let description: ToolDescription
-    let connection: JSONRPCConnection
-
-    var id: String { description.id }
-    var displayName: String { description.displayName }
-    var configDirectoryName: String { description.configDirectoryName }
-    var configDirEnvVar: String? { description.configDirEnvVar }
-    var authLoginCommand: [String]? { description.authLoginCommand }
-    var installCommand: [String]? { description.installCommand }
-    var sessionSubdirectories: [String] { description.sessionSubdirectories }
-    var ansiColor: String { description.ansiColor }
-
-    func copyLoginState(from sourceDir: URL?, to targetDir: URL) async throws -> Bool {
-        // `.null` rather than omitting the key: nil is the instruction "your own
-        // default location", which is a different thing from an absent argument.
-        let result = try await connection.call("tool/copyLoginState", [
-            "sourceDir": sourceDir.map { RPCValue.string($0.path) } ?? .null,
-            "targetDir": .string(targetDir.path),
-        ])
-        // A reply that does not say whether it copied is not a usable answer:
-        // guessing either way risks reporting work that never happened.
-        guard case .object(let obj) = result, case .bool(let copied)? = obj["copied"] else {
-            throw RemoteAIToolError.describeMalformed(
-                "tool/copyLoginState returned no 'copied' flag")
-        }
-        return copied
-    }
-
-    func copyNonLoginSettings(from sourceDir: URL, to targetDir: URL) async throws {
-        _ = try await connection.call("tool/copyNonLoginSettings", [
-            "sourceDir": .string(sourceDir.path),
-            "targetDir": .string(targetDir.path),
-        ])
     }
 }
 
@@ -262,11 +212,6 @@ struct RemoteIdentityReporting: AIToolIdentityReporting {
 /// capability set its plugin advertised at `initialize`. Call sites go through
 /// here so they never have to know which kind they hold.
 public enum ToolCapability {
-
-    public static func stateTransfer(of tool: any AITool) -> (any AIToolStateTransfer)? {
-        if let direct = tool as? any AIToolStateTransfer { return direct }
-        return (tool as? RemoteAITool)?.stateTransfer
-    }
 
     public static func identityReporting(of tool: any AITool) -> (any AIToolIdentityReporting)? {
         if let direct = tool as? any AIToolIdentityReporting { return direct }

@@ -18,7 +18,7 @@ struct RemoteAccounts: AIToolAccounts {
     /// The methods a plugin must advertise for this capability to be present.
     static let requiredMethods: Set<String> = [
         "tool/list", "tool/current", "tool/setCurrent",
-        "tool/addAccount", "tool/deleteAccount", "tool/pin",
+        "tool/addAccount", "tool/deleteAccount", "tool/pin", "tool/adoptLogin",
     ]
 
     var id: String { description.id }

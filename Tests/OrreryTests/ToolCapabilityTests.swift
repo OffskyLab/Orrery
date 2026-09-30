@@ -25,11 +25,17 @@ struct ToolCapabilityTests {
         let displayName = "Plain"
     }
 
-    private struct Transferring: AIToolStateTransfer {
-        let id = "transferring"
-        let displayName = "Transferring"
-        func copyLoginState(from sourceDir: URL?, to targetDir: URL) async throws -> Bool { true }
-        func copyNonLoginSettings(from sourceDir: URL, to targetDir: URL) async throws {}
+    /// A built-in tool that owns accounts, standing in for whichever capability
+    /// exists when this is next read. What is under test is the reconciliation,
+    /// not this particular capability.
+    private struct Owning: AIToolAccounts {
+        let id = "owning"
+        let displayName = "Owning"
+        func list() async throws -> [any AIToolKit.Account] { [] }
+        func current() async throws -> (any AIToolKit.Account)? { nil }
+        func addAccount(id: AccountID, name: String) async throws -> any AIToolKit.Account {
+            throw AccountError.noSuchAccount(id)
+        }
     }
 
     private func describeResult() -> RPCValue {
@@ -74,8 +80,8 @@ struct ToolCapabilityTests {
 
     @Test("a built-in tool's capability is found through the same accessor")
     func builtInConformanceIsFound() {
-        #expect(ToolCapability.stateTransfer(of: Transferring()) != nil)
-        #expect(ToolCapability.stateTransfer(of: Plain()) == nil)
+        #expect(ToolCapability.accounts(of: Owning()) != nil)
+        #expect(ToolCapability.accounts(of: Plain()) == nil)
         #expect(ToolCapability.identityReporting(of: Plain()) == nil)
     }
 
@@ -85,16 +91,18 @@ struct ToolCapabilityTests {
     func remoteCapabilitiesFollowAdvertisement() async throws {
         let both = try await RemoteAITool.connect(
             transport: plugin(advertising: [
-                "tool/copyLoginState", "tool/copyNonLoginSettings",
+                "tool/list", "tool/current", "tool/setCurrent",
+                "tool/addAccount", "tool/deleteAccount", "tool/pin",
+                "tool/adoptLogin",
                 "tool/listIdentities", "tool/showIdentity",
             ]),
             timeout: .seconds(1))
-        #expect(ToolCapability.stateTransfer(of: both) != nil)
+        #expect(ToolCapability.accounts(of: both) != nil)
         #expect(ToolCapability.identityReporting(of: both) != nil)
 
         let neither = try await RemoteAITool.connect(
             transport: plugin(advertising: []), timeout: .seconds(1))
-        #expect(ToolCapability.stateTransfer(of: neither) == nil,
+        #expect(ToolCapability.accounts(of: neither) == nil,
                 "conforming anyway would make the check a lie for describe-only plugins")
         #expect(ToolCapability.identityReporting(of: neither) == nil)
     }
@@ -108,7 +116,22 @@ struct ToolCapabilityTests {
             timeout: .seconds(1))
 
         #expect(ToolCapability.identityReporting(of: identityOnly) != nil)
-        #expect(ToolCapability.stateTransfer(of: identityOnly) == nil)
+        #expect(ToolCapability.accounts(of: identityOnly) == nil)
+    }
+
+    /// All of the account methods or none. A plugin offering some of them would
+    /// give the host a pool it can fill and never empty, and the first delete is
+    /// a bad place to find that out.
+    @Test("an incomplete account surface is not the capability")
+    func partialAccountSurfaceIsNotTheCapability() async throws {
+        let almost = try await RemoteAITool.connect(
+            transport: plugin(advertising: [
+                "tool/list", "tool/current", "tool/setCurrent",
+                "tool/addAccount", "tool/deleteAccount", "tool/pin",
+            ]),   // every one but tool/adoptLogin
+            timeout: .seconds(1))
+
+        #expect(ToolCapability.accounts(of: almost) == nil)
     }
 
     @Test("a capability reached through the accessor really talks to the plugin")
@@ -133,7 +156,7 @@ struct ToolCapabilityTests {
             transport: plugin(advertising: []), timeout: .seconds(1))
 
         #expect(tool.id == "claude", "it still describes itself")
-        #expect(ToolCapability.stateTransfer(of: tool) == nil)
+        #expect(ToolCapability.accounts(of: tool) == nil)
         #expect(ToolCapability.identityReporting(of: tool) == nil)
     }
 }
